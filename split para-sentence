@@ -1,0 +1,59 @@
+import pandas as pd
+import nltk
+from nltk.tokenize import sent_tokenize
+
+# Sample DataFrame
+data = {
+    'mailid': [1, 2, 3],
+    'label': ['spam', 'ham', 'spam'],
+    'content': [
+        "Hello! Welcome to ABC Inc. We hope you enjoy your stay. Contact us at contact@abcinc.com.",
+        "Hi there. Just wanted to check in. Let's catch up sometime.",
+        "Congratulations! You've won a prize. Contact XYZ Inc. to claim your reward."
+    ]
+}
+
+df = pd.DataFrame(data)
+
+# Define custom abbreviations and patterns
+custom_abbreviations = set(['Inc', 'Dr', 'Prof', 'Mr', 'Ms', 'Mrs'])  # Add more if needed
+email_ids = set()  # Collect email IDs from the content
+
+# Function to tokenize content into sentences while avoiding splitting at custom patterns
+def custom_sent_tokenize(text):
+    sentences = sent_tokenize(text)
+    new_sentences = []
+    buffer = []
+    
+    for sentence in sentences:
+        words = sentence.split()
+        if any(word.endswith('@') or '@' in word for word in words):
+            # Identify and preserve email IDs
+            buffer.append(sentence)
+        elif any(word in custom_abbreviations for word in words):
+            # Preserve sentences with abbreviations
+            buffer.append(sentence)
+        else:
+            if buffer:
+                new_sentences.append(' '.join(buffer))
+                buffer = []
+            new_sentences.append(sentence)
+    
+    if buffer:
+        new_sentences.append(' '.join(buffer))
+    
+    return new_sentences
+
+# Apply the custom sentence tokenizer to the content column
+df['new content'] = df['content'].apply(custom_sent_tokenize)
+
+# Explode the new content column to get one row per sentence
+df = df.explode('new content', ignore_index=True)
+
+# Drop the original content column
+df.drop('content', axis=1, inplace=True)
+
+# Reorder columns if needed
+df = df[['mailid', 'label', 'new content']]
+
+print(df)
