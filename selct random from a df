@@ -1,14 +1,12 @@
 import pandas as pd
 
-# Sample DataFrame
-data = {
-    'ID': [1, 2, 3, 1, 2, 4],
-    'predictions': [0, 0, 1, 1, 0, 1]
-}
+# Assuming you have a DataFrame 'df' with columns 'ID', 'predictions', and 'actual_labels'
 
-df = pd.DataFrame(data)
+# Filter false positives
+false_positives_df = df[(df['predictions'] == 1) & (df['actual_labels'] == 0)]
 
-# Group by 'ID' and aggregate predictions using logical OR (|) to consider 1 if any prediction is 1
-result_df = df.groupby('ID', as_index=False)['predictions'].max()
+# Sample 1000 false positive samples
+sample_size = 1000
+selected_samples = false_positives_df.sample(n=sample_size, random_state=42)  # Set an appropriate random state
 
-print(result_df)
+print(selected_samples)
