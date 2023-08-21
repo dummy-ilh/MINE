@@ -5,8 +5,23 @@ import pandas as pd
 # Filter false positives
 false_positives_df = df[(df['predictions'] == 1) & (df['actual_labels'] == 0)]
 
-# Sample 1000 false positive samples
-sample_size = 1000
-selected_samples = false_positives_df.sample(n=sample_size, random_state=42)  # Set an appropriate random state
+# Sample and remove 1000 random false positives
+sample_size_to_remove = 1000
+random_removed_samples = false_positives_df.sample(n=sample_size_to_remove, random_state=42)  # Set an appropriate random state
+remaining_samples_df = df.drop(random_removed_samples.index)
 
-print(selected_samples)
+# Count the number of true positives
+true_positives_df = df[(df['predictions'] == 1) & (df['actual_labels'] == 1)]
+num_true_positives = true_positives_df.shape[0]
+
+# Sample an equal number of true positives for balance
+balanced_samples_df = remaining_samples_df.sample(n=num_true_positives, random_state=42)  # Set an appropriate random state
+
+# Combine true positives and balanced samples
+final_balanced_df = pd.concat([true_positives_df, balanced_samples_df], ignore_index=True)
+
+print("Random false positives removed:", random_removed_samples.shape[0])
+print("Remaining balanced samples:", final_balanced_df.shape[0])
+
+# 'random_removed_samples' contains the randomly removed false positives
+# 'final_balanced_df' contains the final balanced dataset
