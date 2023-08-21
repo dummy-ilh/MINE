@@ -1,0 +1,27 @@
+from tqdm import tqdm
+
+# Define a generator function to yield batches
+def batch_generator(inputs, masks, batch_size):
+    num_samples = len(inputs)
+    for start in range(0, num_samples, batch_size):
+        end = min(start + batch_size, num_samples)
+        yield inputs[start:end], masks[start:end]
+
+print('Tokenizing data...')
+test_inputs, test_masks = preprocessing_for_bert(df_test.text)
+
+# Create a batch generator for the test set
+batch_size = 16  # You can adjust this value based on your available memory
+test_dataloader = []
+for batch_inputs, batch_masks in tqdm(batch_generator(test_inputs, test_masks, batch_size), total=len(test_inputs)//batch_size):
+    test_dataloader.append((batch_inputs, batch_masks))
+
+
+                        print('Tokenizing data...')
+test_inputs, test_masks = preprocessing_for_bert(df_test.text)
+
+# Create the DataLoader for our test set with a reduced batch size
+batch_size = 16  # You can adjust this value based on your available memory
+test_dataset = TensorDataset(test_inputs, test_masks)
+test_sampler = SequentialSampler(test_dataset)
+test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=batch_size)
