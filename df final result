@@ -1,0 +1,14 @@
+import pandas as pd
+
+# Sample DataFrame
+data = {
+    'ID': [1, 2, 3, 1, 2, 4],
+    'predictions': [0, 0, 1, 1, 0, 1]
+}
+
+df = pd.DataFrame(data)
+
+# Group by 'ID' and aggregate predictions using logical OR (|) to consider 1 if any prediction is 1
+result_df = df.groupby('ID', as_index=False)['predictions'].max()
+
+print(result_df)
