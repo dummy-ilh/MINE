@@ -1,0 +1,24 @@
+import pandas as pd
+
+# Sample data for demonstration
+data1 = {'ID': [1, 1, 2, 2],
+         'LABEL': ['A', 'A', 'A', 'C'],
+         'TEXT': ['Text 1', 'Text 2', 'Text 3', 'Text 4']}
+
+data2 = {'ID': [2, 3, 4],
+         'LABEL': ['B', 'A', 'C'],
+         'TEXT': ['Text 2', 'Text 3', 'Text 4']}
+
+DF1 = pd.DataFrame(data1)
+DF2 = pd.DataFrame(data2)
+
+# Find rows in DF1 that are not in DF2 based on both ID and Text
+merged = pd.merge(DF1, DF2, on=['ID', 'TEXT'], how='left', indicator=True)
+
+# Filter the rows that are only in DF1
+rows_not_in_DF2 = merged[merged['_merge'] == 'left_only']
+
+# Resulting DataFrame
+result = rows_not_in_DF2.drop('_merge', axis=1)
+
+print(result)
