@@ -1,0 +1,17 @@
+import pandas as pd
+
+# Create a sample DataFrame
+data = {'ID': [1, 2, 3],
+        'Sentences': ['This is the first sentence. Second sentence here.', 'Another text.', 'One more.']}
+df = pd.DataFrame(data)
+
+# Split sentences and create a new row for each sentence
+new_rows = []
+for index, row in df.iterrows():
+    sentences = row['Sentences'].split('. ')
+    for sentence in sentences:
+        new_rows.append({'ID': row['ID'], 'Sentences': sentence})
+
+new_df = pd.DataFrame(new_rows)
+
+print(new_df)
