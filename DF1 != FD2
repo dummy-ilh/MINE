@@ -22,3 +22,21 @@ rows_not_in_DF2 = merged[merged['_merge'] == 'left_only']
 result = rows_not_in_DF2.drop('_merge', axis=1)
 
 print(result)
+
+
+
+
+matching_rows = []
+
+# Iterate through each row in DF1
+for idx1, row1 in DF1.iterrows():
+    text1 = row1['TEXT']
+    
+    # Check if text1 is a substring of any 'TEXT' in DF2
+    if any(text1 in text2 for text2 in DF2['TEXT']):
+        matching_rows.append(row1)
+
+# Create the final DataFrame DF3
+DF3 = pd.DataFrame(matching_rows)
+
+print(DF3)
