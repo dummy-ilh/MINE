@@ -1,0 +1,12 @@
+def remove_text(row):
+    if row['Text'].startswith('prohibite'):
+        second_comma_index = row['Text'].find(',', row['Text'].find(',') + 1)
+        if second_comma_index != -1:
+            return row['Text'][second_comma_index + 2:]
+    return row['Text']
+
+# Apply the function to the DataFrame column
+df['Text'] = df.apply(remove_text, axis=1)
+
+# Print the modified DataFrame
+print(df)
