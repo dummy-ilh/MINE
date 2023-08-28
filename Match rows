@@ -1,0 +1,22 @@
+import pandas as pd
+
+# Sample DataFrames (replace these with your actual DataFrames)
+df1 = pd.DataFrame({'MessageID': [1, 2, 3, 2, 1, 3],
+                    'Data_df1': ['Data1', 'Data2', 'Data3', 'Data4', 'Data5', 'Data6']})
+
+df2 = pd.DataFrame({'MessageID': [3, 2, 1, 3, 1, 2, 3],
+                    'Data_df2': ['DataA', 'DataB', 'DataC', 'DataD', 'DataE', 'DataF', 'DataG']})
+
+# Create a dictionary to store matched row numbers
+matched_row_numbers_dict = {}
+
+# Iterate through each unique MessageID in df1
+unique_message_ids_df1 = df1['MessageID'].unique()
+for message_id in unique_message_ids_df1:
+    matched_row_numbers_dict[message_id] = df2[df2['MessageID'] == message_id].index.tolist()
+
+# Print the row numbers in df2 for each MessageID
+for message_id, row_numbers in matched_row_numbers_dict.items():
+    print(f"Row numbers in df2 for MessageID {message_id}:")
+    print(row_numbers)
+    print("\n")
