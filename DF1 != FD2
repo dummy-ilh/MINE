@@ -1,42 +1,39 @@
 import pandas as pd
 
-# Sample data for demonstration
-data1 = {'ID': [1, 1, 2, 2],
-         'LABEL': ['A', 'A', 'A', 'C'],
-         'TEXT': ['Text 1', 'Text 2', 'Text 3', 'Text 4']}
+# Sample DataFrames (replace these with your actual DataFrames)
+df1 = pd.DataFrame({'MessageID': [1, 2, 3, 2, 1, 3],
+                    'text': ['Data1', 'Data2', 'Data3', 'Data2', 'Data1', 'Data3']})
 
-data2 = {'ID': [2, 3, 4],
-         'LABEL': ['B', 'A', 'C'],
-         'TEXT': ['Text 2', 'Text 3', 'Text 4']}
+df2 = pd.DataFrame({'MessageID': [3, 2, 1, 3, 1, 2, 3],
+                    'text': ['Data1', 'Data2jfasjdba', 'Data1', 'sdsd Data2 ', 'DataE', 'DataF', 'DataG']})
 
-DF1 = pd.DataFrame(data1)
-DF2 = pd.DataFrame(data2)
-
-# Find rows in DF1 that are not in DF2 based on both ID and Text
-merged = pd.merge(DF1, DF2, on=['ID', 'TEXT'], how='left', indicator=True)
-
-# Filter the rows that are only in DF1
-rows_not_in_DF2 = merged[merged['_merge'] == 'left_only']
-
-# Resulting DataFrame
-result = rows_not_in_DF2.drop('_merge', axis=1)
-
-print(result)
-
-
-
-
+# Create new DataFrames for matching and non-matching rows
 matching_rows = []
+non_matching_rows = []
 
-# Iterate through each row in DF1
-for idx1, row1 in DF1.iterrows():
-    text1 = row1['TEXT']
+# Iterate through each unique MessageID in df1
+unique_message_ids_df1 = df1['MessageID'].unique()
+for message_id in unique_message_ids_df1:
+    df1_row = df1[df1['MessageID'] == message_id].iloc[0]  # Get the first row for the message_id
+    matching_df2_rows = df2[df2['MessageID'] == message_id][df2['text'].str.contains(df1_row['text'])]
     
-    # Check if text1 is a substring of any 'TEXT' in DF2
-    if any(text1 in text2 for text2 in DF2['TEXT']):
-        matching_rows.append(row1)
+    if not matching_df2_rows.empty:
+        matching_rows.extend(matching_df2_rows.values)
+    else:
+        non_matching_rows.append(df1_row.values)
 
-# Create the final DataFrame DF3
-DF3 = pd.DataFrame(matching_rows)
+# Check for unique message IDs in df1 that are not in df2
+unique_message_ids_not_in_df2 = [message_id for message_id in unique_message_ids_df1 if message_id not in df2['MessageID'].unique()]
+for message_id in unique_message_ids_not_in_df2:
+    non_matching_rows.extend(df1[df1['MessageID'] == message_id].values)
 
-print(DF3)
+# Create DataFrames from the collected rows
+columns = df2.columns
+matching_df = pd.DataFrame(matching_rows, columns=columns)
+non_matching_df = pd.DataFrame(non_matching_rows, columns=df1.columns)
+
+# Print or further process the new DataFrames
+print("Matching Rows:")
+print(matching_df)
+print("\nNon-Matching Rows:")
+print(non_matching_df)
