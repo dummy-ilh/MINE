@@ -1,0 +1,18 @@
+import pandas as pd
+import nltk
+nltk.download('punkt')
+from nltk.tokenize import sent_tokenize
+
+# Load your DataFrame
+# df = pd.read_csv('your_data.csv')
+
+# Tokenize content into sentences
+df['sentences'] = df['content'].apply(sent_tokenize)
+
+# Assuming you have a function to predict sentences
+def predict_sentence(sentence):
+    sentence_vector = tfidf_vectorizer.transform([sentence])
+    return model.predict(sentence_vector)
+
+# Apply sentence-level prediction to each sentence
+df['sentence_predictions'] = df['sentences'].apply(lambda sentences: [predict_sentence(sentence) for sentence in sentences])
