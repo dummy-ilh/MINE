@@ -16,3 +16,11 @@ def predict_sentence(sentence):
 
 # Apply sentence-level prediction to each sentence
 df['sentence_predictions'] = df['sentences'].apply(lambda sentences: [predict_sentence(sentence) for sentence in sentences])
+
+
+# Aggregate sentence predictions to document level
+def aggregate_document(predictions):
+    return 1 if any(predictions) else 0
+
+df['document_predictions'] = df['sentence_predictions'].apply(aggregate_document)
+
