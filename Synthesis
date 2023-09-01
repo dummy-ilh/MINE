@@ -1,0 +1,172 @@
+import random
+
+financial_words = ["stocks", "bonds", "investments", "dividends", "portfolio", "mutual funds", "options", "equities", "asset allocation", "capital gains", "market volatility"]
+price_values = ["$100", "$500", "$1000", "$5000", "$10000", "$50000", "$100000", "$500000"]
+
+sentence_templates = [
+    "I'm considering investing in {financial_word} with a value of {price}.",
+    "The {financial_word} market seems promising, especially with a {price} investment.",
+    "I'm looking to diversify my {financial_word} holdings with a {price} purchase.",
+    "Given the current {financial_word} trends, I'm thinking about allocating {price} towards it.",
+    "I've been reading about {financial_word} and I'm intrigued by the potential of a {price} investment.",
+    "The potential {price} return from {financial_word} looks appealing for my {portfolio}.",
+    "Considering the recent {financial_word} performance, I'm planning to invest {price}."
+]
+
+num_sentences = 10
+
+for _ in range(num_sentences):
+    financial_word = random.choice(financial_words)
+    price = random.choice(price_values)
+    sentence_template = random.choice(sentence_templates)
+    sentence = sentence_template.format(financial_word=financial_word, price=price)
+    print(sentence)
+
+import random
+
+financial_words = [
+    "stocks", "bonds", "investments", "dividends", "portfolio", "mutual funds",
+    "options", "equities", "asset allocation", "capital gains", "market volatility",
+    "yield", "percentage", "put options", "call options", "long-term strategy"
+]
+
+price_values = ["$100", "$500", "$1000", "$5000", "$10000", "$50000", "$100000", "$500000"]
+percentage_values = ["2%", "5%", "8%", "10%", "15%", "20%", "25%"]
+yield_values = ["3%", "6%", "9%", "12%", "18%", "24%", "30%"]
+
+sentence_templates = [
+    "I'm considering investing in {financial_word} with a value of {price}.",
+    "The {financial_word} market seems promising, especially with a {price} investment.",
+    "I'm looking to diversify my {financial_word} holdings with a {price} purchase.",
+    "Given the current {financial_word} trends, I'm thinking about allocating {price} towards it.",
+    "I've been reading about {financial_word} and I'm intrigued by the potential of a {price} investment.",
+    "The potential {price} return from {financial_word} looks appealing for my {portfolio}.",
+    "Considering the recent {financial_word} performance, I'm planning to invest {price}.",
+    "With a yield of {yield_value}, {financial_word} is catching my attention for a {long_term_strategy}.",
+    "I'm exploring {put_call} options for {financial_word} to take advantage of market movements.",
+    "A {percentage} annual return from {financial_word} would be a great addition to my {portfolio}."
+]
+
+num_sentences = 15
+
+for _ in range(num_sentences):
+    financial_word = random.choice(financial_words)
+    price = random.choice(price_values)
+    percentage = random.choice(percentage_values)
+    yield_value = random.choice(yield_values)
+    put_call = random.choice(["put", "call"])
+    long_term_strategy = random.choice(["long-term investment", "retirement plan", "financial goals"])
+    
+    sentence_template = random.choice(sentence_templates)
+    sentence = sentence_template.format(
+        financial_word=financial_word, price=price, percentage=percentage,
+        yield_value=yield_value, put_call=put_call, long_term_strategy=long_term_strategy
+    )
+    
+    print(sentence)
+
+
+financial_words = [
+    "stocks", "bonds", "investments", "dividends", "portfolio", "mutual funds",
+    "options", "equities", "asset allocation", "capital gains", "market volatility",
+    "yield", "percentage", "put options", "call options", "long-term strategy",
+    "commodities", "forex", "inflation", "economic indicators", "technical analysis",
+    "fundamental analysis", "risk tolerance", "short selling", "diversification",
+    "emerging markets", "blue-chip stocks", "bull market", "bear market", "day trading",
+    "passive income", "liquidity", "financial planning", "tax optimization",
+    "retirement planning", "crypto", "initial public offering", "return on investment"
+    # Add more financial words here
+]
+
+# ... Previous code ...
+
+positive_templates = [
+    "Investing in {financial_word} with a value of {price} could offer promising returns.",
+    "Considering the potential {price} return from {financial_word}, it's worth exploring.",
+    "With a yield of {yield_value}, {financial_word} aligns well with a {long_term_strategy}.",
+    "The {financial_word} market is showing strong performance, making a {price} investment appealing.",
+    "Diversifying your portfolio with {financial_word} could provide stability and growth potential.",
+    "Given your risk tolerance, adding {financial_word} with a {price} investment could be beneficial.",
+    "Exploring {financial_word} options could help maximize your returns in the current market.",
+    "A well-structured {financial_word} strategy can contribute to your long-term financial goals.",
+    "The potential for {percentage} annual return from {financial_word} is worth considering.",
+    "Including {financial_word} in your investment mix may enhance your overall portfolio performance."
+    # Add more positive templates here
+]
+
+caution_templates = [
+    "I advise against buying {financial_word} right now; the market conditions are uncertain.",
+    "The timing isn't ideal for {financial_word}. Consider waiting for more favorable conditions.",
+    "Given the current {financial_word} trends, it's best to hold off on a {price} investment.",
+    "Be cautious about investing in {financial_word} at this time due to increased market volatility.",
+    "Considering the recent {financial_word} performance, it's prudent to delay a {price} purchase.",
+    "The market outlook for {financial_word} is unclear, so it's recommended to hold off for now.",
+    "It's important to assess potential risks before committing to {financial_word} with a {price} investment.",
+    "Given the economic indicators, a {price} investment in {financial_word} may not be advisable.",
+    "Hold off on {financial_word} until there's a clearer picture of the market's direction.",
+    "I recommend reevaluating your {financial_word} investment strategy before making a {price} move."
+    # Add more cautionary templates here
+]
+
+# ... Rest of the code ...
+
+
+
+import random
+
+financial_words = [
+    "stocks", "bonds", "investments", "dividends", "portfolio", "mutual funds",
+    "options", "equities", "asset allocation", "capital gains", "market volatility",
+    "yield", "percentage", "put options", "call options", "long-term strategy",
+    "commodities", "forex", "inflation", "economic indicators", "technical analysis",
+    "fundamental analysis", "risk tolerance", "short selling", "diversification",
+    "emerging markets", "blue-chip stocks", "bull market", "bear market", "day trading",
+    "passive income", "liquidity", "financial planning", "tax optimization",
+    "retirement planning", "crypto", "initial public offering", "return on investment"
+    # Add more financial words here
+]
+
+price_values = ["$100", "$500", "$1000", "$5000", "$10000", "$50000", "$100000", "$500000"]
+percentage_values = ["2%", "5%", "8%", "10%", "15%", "20%", "25%"]
+yield_values = ["3%", "6%", "9%", "12%", "18%", "24%", "30%"]
+
+positive_templates = [
+    "Investing in {financial_word} with a value of {price} could offer promising returns.",
+    "Considering the potential {price} return from {financial_word}, it's worth exploring.",
+    "With a yield of {yield_value}, {financial_word} aligns well with a {long_term_strategy}."
+    # Add more positive templates here
+]
+
+caution_templates = [
+    "I advise against buying {financial_word} right now; the market conditions are uncertain.",
+    "The timing isn't ideal for {financial_word}. Consider waiting for more favorable conditions.",
+    "Given the current {financial_word} trends, it's best to hold off on a {price} investment."
+    # Add more cautionary templates here
+]
+
+num_sentences = 500
+
+for _ in range(num_sentences):
+    financial_word = random.choice(financial_words)
+    price = random.choice(price_values)
+    percentage = random.choice(percentage_values)
+    yield_value = random.choice(yield_values)
+    put_call = random.choice(["put", "call"])
+    long_term_strategy = random.choice(["long-term investment", "retirement plan", "financial goals"])
+    
+    if random.choice([True, False]):
+        sentence_template = random.choice(positive_templates)
+    else:
+        sentence_template = random.choice(caution_templates)
+    
+    sentence = sentence_template.format(
+        financial_word=financial_word, price=price, percentage=percentage,
+        yield_value=yield_value, put_call=put_call, long_term_strategy=long_term_strategy
+    )
+    
+    print(sentence)
+
+
+
+
+
