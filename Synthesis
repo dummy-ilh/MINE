@@ -165,7 +165,17 @@ for _ in range(num_sentences):
     )
     
     print(sentence)
-
+-------------------------------------------------
+    "You can sell {financial_word} now for potential profit.",
+    "Consider buying {financial_word} as it shows promise.",
+    "This is a good investment opportunity with {financial_word}.",
+    "This is a great opportunity to explore {financial_word}.",
+    "It's a good time to review your {financial_word} holdings.",
+    "Exploring {financial_word} options may be beneficial.",
+    "This could be a valuable addition to your {portfolio}.",
+    "Don't overlook {financial_word} for potential gains.",
+    "A strategic move might be to invest in {financial_word}.",
+    "You might want to consider {financial_word} for diversification."
 
 
 
