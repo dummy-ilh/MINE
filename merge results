@@ -1,0 +1,24 @@
+# Create dataframes
+df1 = pd.DataFrame(data1)
+df2 = pd.DataFrame(data2)
+
+# Merge dataframes
+merged_df = pd.merge(df1, df2, left_on='ID', right_on='ID')
+
+# Group by ID and prediction and create lists of sentences
+grouped_df = merged_df.groupby(['ID', 'prediction'])['Sentence'].apply(list).reset_index()
+
+# Pivot the dataframe to get separate columns for prediction 1 and prediction 2
+pivot_df = grouped_df.pivot(index='ID', columns='prediction', values='Sentence').reset_index()
+
+# Rename columns
+pivot_df.columns = ['ID', 'List of Sentences Labelled 1', 'List of Sentences Labelled 2']
+
+# Fill missing values with empty lists
+pivot_df = pivot_df.fillna('[]')
+
+# Merge with original df1
+final_df = pd.merge(df1[['ID', 'text']], pivot_df, on='ID')
+
+# Display final dataframe
+print(final_df)
