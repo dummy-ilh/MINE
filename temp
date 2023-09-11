@@ -1,0 +1,5 @@
+df[['col1', 'col2']] = df['your_column'].str.extract(r'\[(\d+),(\d+)\]')
+
+# Convert the extracted values to numeric (optional, depending on your use case)
+df['col1'] = pd.to_numeric(df['col1'])
+df['col2'] = pd.to_numeric(df['col2'])
