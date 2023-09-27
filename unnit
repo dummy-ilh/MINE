@@ -1,0 +1,26 @@
+import unittest
+from unittest.mock import Mock
+import torch
+
+class A(unittest.TestCase):
+    def test1(self):
+        m = A()
+        out = Mock()
+        out.logits = [torch.tensor([0.9, 0.1])]  # Added a closing square bracket
+        a = Mock(return_value=out)
+        tokeniser = Mock(return_value={"a": [], "b": []})  # Corrected the Mock object and dictionary
+
+        m.trained_model = a  # Changed 'pia' to 'a'
+        m.set_tokeniser(tokeniser)
+        p, conf = m.predict(["test"])[0]
+        assert p == 0
+        assert conf > 0.0
+
+if __name__ == "__main__":  # Corrected the syntax for '__main__'
+    unittest.main()
+
+
+
+
+
+
