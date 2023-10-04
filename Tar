@@ -1,0 +1,32 @@
+import tarfile
+from transformers import AutoModelForSequenceClassification, AutoConfig, AutoTokenizer
+
+# Specify the paths to the downloaded model checkpoint and tokenizer directories
+model_checkpoint_path = '/path/to/your/model/checkpoint'
+tokenizer_path = '/path/to/your/tokenizer'
+
+# Load the model checkpoint and associated configuration
+model = AutoModelForSequenceClassification.from_pretrained(model_checkpoint_path)
+config = AutoConfig.from_pretrained(model_checkpoint_path)
+
+# Load the tokenizer
+tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+
+# Create a dictionary to store model artifacts
+model_artifacts = {
+    'model_state_dict': model.state_dict(),
+    'config': config,
+    'tokenizer': tokenizer,
+}
+
+# Create a .tar file to save the model artifacts
+with tarfile.open('model_artifacts.tar', 'w') as tar:
+    # Add the model artifacts to the .tar file
+    for key, value in model_artifacts.items():
+        with tarfile.open(f'{key}.pkl', 'wb') as file:
+            file.write(pickle.dumps(value))
+        tar.add(f'{key}.pkl')
+
+# Clean up temporary pickle files
+for key in model_artifacts:
+    os.remove(f'{key}.pkl')
