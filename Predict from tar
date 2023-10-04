@@ -1,0 +1,21 @@
+import tarfile
+import pickle
+from transformers import AutoModelForSequenceClassification, AutoConfig, AutoTokenizer
+
+# Open the .tar file for reading
+with tarfile.open('model_artifacts.tar', 'r') as tar:
+    # Extract the model artifacts
+    model_artifacts = {}
+    for member in tar.getmembers():
+        if member.isfile():
+            file = tar.extractfile(member)
+            key = member.name.replace('.pkl', '')
+            model_artifacts[key] = pickle.loads(file.read())
+
+# Reconstruct the model and configuration
+loaded_config = model_artifacts['config']
+loaded_model = AutoModelForSequenceClassification(config=loaded_config)
+loaded_model.load_state_dict(model_artifacts['model_state_dict'])
+
+# Load the tokenizer
+tokenizer = model_artifacts['tokenizer']
