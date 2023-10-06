@@ -20,3 +20,37 @@ with open(pickle_file_path, 'wb') as pickle_file:
     pickle.dump(model_and_tokenizer, pickle_file)
 
 print(f'Model checkpoint saved as a pickle file: {pickle_file_path}')
+
+
+import torch
+import pickle
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+# Load the model and tokenizer from the pickle file
+pickle_file_path = 'model_checkpoint.pkl'
+
+with open(pickle_file_path, 'rb') as pickle_file:
+    model_and_tokenizer = pickle.load(pickle_file)
+
+loaded_model = AutoModelForSequenceClassification.from_pretrained(
+    pretrained_model_name_or_path=None,  # You can set this to None since the model is loaded from the pickle
+    state_dict=model_and_tokenizer['model_state_dict']
+)
+
+loaded_tokenizer = model_and_tokenizer['tokenizer']
+
+# Input text to predict
+input_text = "Your input text here."
+
+# Tokenize the input text
+inputs = loaded_tokenizer(input_text, return_tensors='pt')
+
+# Forward pass through the model to get predictions
+with torch.no_grad():
+    outputs = loaded_model(**inputs)
+
+# Get the predicted class probabilities
+predicted_probabilities = torch.softmax(outputs.logits, dim=1).tolist()[0]
+
+# The predicted_probabilities list now contains the class probabilities for each class in your sequence classification model
+print(predicted_probabilities)
