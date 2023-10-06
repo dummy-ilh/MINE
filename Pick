@@ -1,0 +1,22 @@
+import torch
+import pickle
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+# Load your trained model and tokenizer
+model = AutoModelForSequenceClassification.from_pretrained("your_model_name_or_path")
+tokenizer = AutoTokenizer.from_pretrained("your_model_name_or_path")
+
+# Save the model and tokenizer in a dictionary
+model_and_tokenizer = {
+    'model_state_dict': model.state_dict(),
+    'tokenizer': tokenizer,
+}
+
+# Specify the path for the pickle file
+pickle_file_path = 'model_checkpoint.pkl'
+
+# Serialize the dictionary and save it as a pickle file
+with open(pickle_file_path, 'wb') as pickle_file:
+    pickle.dump(model_and_tokenizer, pickle_file)
+
+print(f'Model checkpoint saved as a pickle file: {pickle_file_path}')
