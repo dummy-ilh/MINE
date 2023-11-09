@@ -7,8 +7,8 @@ from sklearn.metrics import make_scorer, recall_score, confusion_matrix
 # X, y = ...
 
 # Create a function to calculate False Positive % (Noise Reduction) from the confusion matrix.
-def calculate_false_positive_rate(confusion_matrix):
-    tn, fp, fn, tp = confusion_matrix.ravel()
+def calculate_false_positive_rate(y_true, y_pred):
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
     false_positive_rate = fp / (fp + tn)
     return false_positive_rate
 
@@ -36,4 +36,7 @@ grid_search.fit(X, y)
 results_df = pd.DataFrame(grid_search.cv_results_)[['param_max_depth', 'param_n_estimators', 'mean_test_Recall', 'mean_test_FalsePositiveRate']]
 results_df.rename(columns={'param_max_depth': 'max_depth', 'param_n_estimators': 'n_est', 'mean_test_Recall': 'Recall', 'mean_test_FalsePositiveRate': 'FalsePositiveRate'}, inplace=True)
 
-# Now, results_df contains the hyperparameter combinations, Recall, and False Positive %.
+# Sort the DataFrame based on Recall and False Positive Rate.
+results_df.sort_values(by=['Recall', 'FalsePositiveRate'], ascending=[False, True], inplace=True)
+
+# Now, results_df contains the hyperparameter combinations, Recall, and False Positive %, sorted by Recall and then False Positive Rate.
