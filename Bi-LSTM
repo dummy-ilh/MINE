@@ -1,6 +1,7 @@
 import numpy as np
 from tensorflow import keras
 from tensorflow.keras import layers
+from tensorflow.keras import metrics
 from kerastuner.tuners import RandomSearch
 
 max_features = 20000
@@ -17,7 +18,7 @@ def build_model(hp):
     
     model.compile(optimizer=keras.optimizers.Adam(hp.Choice("learning_rate", values=[1e-2, 1e-3, 1e-4])),
                   loss="binary_crossentropy",
-                  metrics=["accuracy"])
+                  metrics=[metrics.Recall()])  # Use Recall as the metric
     
     return model
 
@@ -35,7 +36,7 @@ test_labels = np.random.randint(0, 2, size=(300,))
 # Instantiate the tuner
 tuner = RandomSearch(
     build_model,
-    objective="val_accuracy",
+    objective="val_recall",  # Optimize for recall
     max_trials=5,
     directory="my_dir",
     project_name="my_project"
@@ -45,7 +46,7 @@ tuner = RandomSearch(
 tuner.search(train_data, train_labels, epochs=3, validation_data=(val_data, val_labels))
 
 # Get the best hyperparameters
-best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+best_hps = tuner.oracle.get_best_trials(1)[0].hyperparameters
 
 # Build the model with the best hyperparameters
 model = tuner.hypermodel.build(best_hps)
@@ -54,28 +55,4 @@ model = tuner.hypermodel.build(best_hps)
 model.fit(train_data, train_labels, epochs=3, validation_data=(val_data, val_labels))
 
 # Evaluate the model on the test dataset
-test_result = model.evaluate(test_data, test_labels)
-print(f"Test Accuracy: {test_result[1]}")
-
-# Retrieve all hyperparameter configurations and results
-all_trials = tuner.oracle.get_best_trials(num_trials=tuner.oracle.num_trials)
-
-# Iterate through all hyperparameter configurations and evaluate on the test dataset
-test_results = []
-
-for trial in all_trials:
-    # Build the model with the hyperparameters from the trial
-    model = tuner.hypermodel.build(trial.hyperparameters)
-
-    # Fit the model using the train and validation datasets
-    model.fit(train_data, train_labels, epochs=3, validation_data=(val_data, val_labels))
-
-    # Evaluate the model on the test dataset
-    test_result = model.evaluate(test_data, test_labels)
-
-    # Append the hyperparameters and test results to the list
-    test_results.append((trial.hyperparameters.values, test_result[1]))
-
-# Print or analyze the results
-for hyperparams, result in test_results:
-    print(f"Hyperparameters: {hyperparams}, Test Accuracy: {result}")
+test_result = model
