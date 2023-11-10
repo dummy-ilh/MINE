@@ -84,3 +84,17 @@ for trial in all_trials:
 # Print or analyze the results
 for hyperparams, result in test_results:
     print(f"Hyperparameters: {hyperparams}, Test Results: {result}")
+
+
+
+def recall_objective(y_true, y_pred):
+    return -metrics.Recall()(y_true, y_pred)
+
+# Instantiate the tuner with the custom objective function
+tuner = RandomSearch(
+    build_model,
+    objective=recall_objective,
+    max_trials=5,  # Adjust the number of trials as needed
+    directory="my_dir",
+    project_name="my_project"
+)
