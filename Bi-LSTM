@@ -56,3 +56,28 @@ model.fit(train_data, train_labels, epochs=3, validation_data=(val_data, val_lab
 
 # Evaluate the model on the test dataset
 test_result = model
+
+print(f"Test Recall: {test_result[1]}")
+
+# Retrieve all hyperparameter configurations and results
+all_trials = tuner.oracle.get_best_trials(1)
+
+# Iterate through all hyperparameter configurations and evaluate on the test dataset
+test_results = []
+
+for trial in all_trials:
+    # Build the model with the hyperparameters from the trial
+    model = tuner.hypermodel.build(trial.hyperparameters)
+
+    # Fit the model using the train and validation datasets
+    model.fit(train_data, train_labels, epochs=3, validation_data=(val_data, val_labels))
+
+    # Evaluate the model on the test dataset
+    test_result = model.evaluate(test_data, test_labels)
+
+    # Append the hyperparameters and test results to the list
+    test_results.append((trial.hyperparameters.values, test_result[1]))
+
+# Print or analyze the results
+for hyperparams, result in test_results:
+    print(f"Hyperparameters: {hyperparams}, Test Recall: {result}")
