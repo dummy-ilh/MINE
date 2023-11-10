@@ -1,0 +1,58 @@
+import pandas as pd
+from tensorflow import keras
+from tensorflow.keras import layers
+
+# Define a list of hyperparameter configurations
+hyperparameter_configs = [
+    {"filters": 32, "kernel_size": 3},
+    {"filters": 64, "kernel_size": 5},
+    {"filters": 128, "kernel_size": 7},
+    # Add more configurations as needed
+]
+
+# Create a DataFrame to store hyperparameters and results
+columns = ["filters", "kernel_size", "validation_accuracy", "test_accuracy"]
+df_results = pd.DataFrame(columns=columns)
+
+# Dummy data (replace with your actual data)
+max_features = 20000
+maxlen = 200
+train_data = ...
+train_labels = ...
+val_data = ...
+val_labels = ...
+test_data = ...
+test_labels = ...
+
+# Iterate through hyperparameter configurations
+for index, row in df_hyperparameters.iterrows():
+    # Create the model using the current hyperparameter configuration
+    inputs = keras.Input(shape=(maxlen,), dtype="int32")
+    x = layers.Embedding(max_features, 128)(inputs)
+    x = layers.Dropout(0.5)(x)
+    x = layers.Conv1D(row["filters"], row["kernel_size"], padding="valid", activation="relu", strides=3)(x)
+    x = layers.GlobalMaxPooling1D()(x)
+    x = layers.Dense(128, activation="relu")(x)
+    x = layers.Dropout(0.5)(x)
+    outputs = layers.Dense(1, activation="sigmoid")(x)
+    model = keras.Model(inputs, outputs)
+
+    # Compile and fit the model on the training data
+    model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
+    model.fit(train_data, train_labels, epochs=3, validation_data=(val_data, val_labels))
+    
+    # Evaluate the model on the validation and test datasets
+    val_result = model.evaluate(val_data, val_labels)
+    test_result = model.evaluate(test_data, test_labels)
+
+    # Store results in the DataFrame
+    result_row = {
+        "filters": row["filters"],
+        "kernel_size": row["kernel_size"],
+        "validation_accuracy": val_result[1],
+        "test_accuracy": test_result[1]
+    }
+    df_results = df_results.append(result_row, ignore_index=True)
+
+# Print or analyze the results DataFrame
+print(df_results)
