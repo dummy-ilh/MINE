@@ -1,0 +1,86 @@
+import tensorflow as tf
+from tensorflow.keras import layers
+from kerastuner.tuners import RandomSearch
+
+# Define the model-building function
+def build_model(hp):
+    # A integer input for vocab indices.
+    inputs = tf.keras.Input(shape=(None,), dtype="int64")
+    
+    # Next, we add a layer to map those vocab indices into a space of dimensionality
+    # 'embedding_dim'.
+    x = layers.Embedding(max_features, hp.Int("embedding_dim", min_value=32, max_value=256, step=32))(inputs)
+    x = layers.Dropout(0.5)(x)
+    
+    # Conv1D + global max pooling
+    x = layers.Conv1D(hp.Int("conv1d_filters", min_value=32, max_value=256, step=32),
+                      hp.Int("conv1d_kernel_size", min_value=3, max_value=15, step=2),
+                      padding="valid", activation="relu", strides=3)(x)
+    x = layers.Conv1D(hp.Int("conv1d_filters", min_value=32, max_value=256, step=32),
+                      hp.Int("conv1d_kernel_size", min_value=3, max_value=15, step=2),
+                      padding="valid", activation="relu", strides=3)(x)
+    x = layers.GlobalMaxPooling1D()(x)
+    
+    # We add a vanilla hidden layer:
+    x = layers.Dense(hp.Int("dense_units", min_value=32, max_value=256, step=32), activation="relu")(x)
+    x = layers.Dropout(0.5)(x)
+    
+    # We project onto a single unit output layer, and squash it with a sigmoid:
+    predictions = layers.Dense(1, activation="sigmoid", name="predictions")(x)
+    
+    model = tf.keras.Model(inputs, predictions)
+    
+    # Compile the model with binary crossentropy loss and an adam optimizer.
+    model.compile(loss="binary_crossentropy", optimizer="adam", metrics=["accuracy"])
+    
+    return model
+
+# Load your datasets (train_ds, val_ds, test_ds)
+
+# Instantiate the tuner
+tuner = RandomSearch(
+    build_model,
+    objective="val_accuracy",
+    max_trials=5,  # Adjust the number of trials as needed
+    directory="my_dir",
+    project_name="my_project"
+)
+
+# Search for the best hyperparameter configuration
+tuner.search(train_ds, validation_data=val_ds, epochs=3)
+
+# Get the best hyperparameters
+best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+
+# Build the model with the best hyperparameters
+model = tuner.hypermodel.build(best_hps)
+
+# Fit the model using the train and validation datasets
+model.fit(train_ds, validation_data=val_ds, epochs=3)
+
+# Evaluate the model on the test dataset
+test_result = model.evaluate(test_ds)
+print(f"Test Results: {test_result}")
+
+# Retrieve all hyperparameter configurations and results
+all_trials = tuner.oracle.get_best_trials(num_trials=tuner.oracle.num_trials)
+
+# Iterate through all hyperparameter configurations and evaluate on the test dataset
+test_results = []
+
+for trial in all_trials:
+    # Build the model with the hyperparameters from the trial
+    model = tuner.hypermodel.build(trial.hyperparameters)
+
+    # Fit the model using the train and validation datasets
+    model.fit(train_ds, validation_data=val_ds, epochs=3)
+
+    # Evaluate the model on the test dataset
+    test_result = model.evaluate(test_ds)
+
+    # Append the hyperparameters and test results to the list
+    test_results.append((trial.hyperparameters.values, test_result))
+
+# Print or analyze the results
+for hyperparams, result in test_results:
+    print(f"Hyperparameters: {hyperparams}, Test Results: {result}")
