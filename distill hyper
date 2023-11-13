@@ -1,74 +1,70 @@
 import torch
 import pandas as pd
-from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
+from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, Trainer, TrainingArguments
 from sklearn.metrics import recall_score
 from sklearn.model_selection import train_test_split
 
 # Assuming you have your data in X_train, y_train, X_val, y_val, X_test, y_test
 
-# Create a DataFrame to store hyperparameter tuning results
-columns = ['learning_rate', 'epochs', 'test_recall', 'val_recall']
+# Tokenize and encode the data
+tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+train_encodings = tokenizer(X_train, padding=True, truncation=True, return_tensors="pt", max_length=512)
+val_encodings = tokenizer(X_val, padding=True, truncation=True, return_tensors="pt", max_length=512)
+test_encodings = tokenizer(X_test, padding=True, truncation=True, return_tensors="pt", max_length=512)
+
+# Convert labels to tensors
+train_labels = torch.tensor(y_train)
+val_labels = torch.tensor(y_val)
+test_labels = torch.tensor(y_test)
+
+# Load pre-trained DistilBERT model
+model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased')
+
+# Set up Trainer arguments
+hyperparameter_grid = {
+    'learning_rate': [0.001, 0.01, 0.1],
+    'num_train_epochs': [3, 5, 7],
+}
+
+columns = ['learning_rate', 'num_train_epochs', 'test_recall', 'val_recall']
 tuning_results = pd.DataFrame(columns=columns)
 
-# Function to train and evaluate the model
-def train_and_evaluate(learning_rate, epochs):
-    # Load pre-trained DistilBERT model and tokenizer
-    tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-    model = DistilBertForSequenceClassification.from_pretrained('distilbert-base-uncased')
+for lr in hyperparameter_grid['learning_rate']:
+    for epochs in hyperparameter_grid['num_train_epochs']:
+        # Define Trainer arguments
+        training_args = TrainingArguments(
+            output_dir=f"./distilbert-tuning/lr_{lr}_epochs_{epochs}",
+            per_device_train_batch_size=8,
+            per_device_eval_batch_size=8,
+            learning_rate=lr,
+            num_train_epochs=epochs,
+            logging_dir="./logs",
+        )
 
-    # Tokenize and encode the training data
-    train_inputs = tokenizer(X_train, padding=True, truncation=True, return_tensors="pt", max_length=512)
-    train_labels = torch.tensor(y_train)
+        # Create Trainer
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            compute_metrics=lambda p: {"recall": recall_score(p.label_ids, torch.argmax(torch.from_numpy(p.predictions), dim=1).numpy(), average='macro')},
+            train_dataset=torch.utils.data.TensorDataset(train_encodings['input_ids'], train_labels),
+            eval_dataset=torch.utils.data.TensorDataset(val_encodings['input_ids'], val_labels),
+        )
 
-    # Tokenize and encode the validation data
-    val_inputs = tokenizer(X_val, padding=True, truncation=True, return_tensors="pt", max_length=512)
-    val_labels = torch.tensor(y_val)
+        # Train the model
+        trainer.train()
 
-    # Tokenize and encode the test data
-    test_inputs = tokenizer(X_test, padding=True, truncation=True, return_tensors="pt", max_length=512)
-    test_labels = torch.tensor(y_test)
+        # Evaluate on validation set
+        results = trainer.evaluate(eval_dataset=torch.utils.data.TensorDataset(val_encodings['input_ids'], val_labels))
+        val_recall = results['eval_recall']
 
-    # Set up optimizer and loss function
-    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-    criterion = torch.nn.CrossEntropyLoss()
+        # Evaluate on test set
+        test_results = trainer.predict(test_dataset=torch.utils.data.TensorDataset(test_encodings['input_ids']))
+        test_recall = recall_score(y_test, torch.argmax(torch.from_numpy(test_results.predictions), dim=1).numpy(), average='macro')
 
-    # Training loop
-    for epoch in range(epochs):
-        # Forward pass
-        outputs = model(**train_inputs)
-        logits = outputs.logits
-        loss = criterion(logits, train_labels)
-
-        # Backward pass
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-    # Evaluation on validation set
-    with torch.no_grad():
-        val_outputs = model(**val_inputs)
-        val_logits = val_outputs.logits
-        val_preds = torch.argmax(val_logits, dim=1).numpy()
-        val_recall = recall_score(y_val, val_preds, average='macro')
-
-        # Evaluation on test set
-        test_outputs = model(**test_inputs)
-        test_logits = test_outputs.logits
-        test_preds = torch.argmax(test_logits, dim=1).numpy()
-        test_recall = recall_score(y_test, test_preds, average='macro')
-
-    return test_recall, val_recall
-
-# Hyperparameter tuning loop
-learning_rates = [0.001, 0.01, 0.1]
-epochs_list = [3, 5, 7]
-
-for learning_rate in learning_rates:
-    for epochs in epochs_list:
-        test_recall, val_recall = train_and_evaluate(learning_rate, epochs)
+        # Append results to DataFrame
         tuning_results = tuning_results.append({
-            'learning_rate': learning_rate,
-            'epochs': epochs,
+            'learning_rate': lr,
+            'num_train_epochs': epochs,
             'test_recall': test_recall,
             'val_recall': val_recall
         }, ignore_index=True)
