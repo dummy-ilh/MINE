@@ -1,0 +1,90 @@
+import pandas as pd
+from tensorflow import keras
+from tensorflow.keras import layers
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import Tokenizer
+from sklearn.preprocessing import LabelEncoder
+import tarfile
+import os
+
+# Define a list of hyperparameter configurations
+hyperparameter_configs = [
+    {"filters": 32, "kernel_size": 3},
+    {"filters": 64, "kernel_size": 5},
+    {"filters": 128, "kernel_size": 7},
+    # Add more configurations as needed
+]
+
+# Create a DataFrame to store hyperparameters and results
+columns = ["filters", "kernel_size", "validation_accuracy", "test_accuracy"]
+df_results = pd.DataFrame(columns=columns)
+
+# Define data path
+data_path = "path/to/news20.tar.gz"  # Replace with the actual path to news20.tar.gz
+
+# Extract data if not already extracted
+if not os.path.exists("20_newsgroup"):
+    with tarfile.open(data_path, "r:gz") as tar:
+        tar.extractall()
+
+# Load data
+def load_data():
+    texts = []
+    labels = []
+    for category in os.listdir("20_newsgroup"):
+        if os.path.isdir(os.path.join("20_newsgroup", category)):
+            for doc_name in os.listdir(os.path.join("20_newsgroup", category)):
+                with open(os.path.join("20_newsgroup", category, doc_name), "r", encoding="latin-1") as file:
+                    texts.append(file.read())
+                labels.append(category)
+    return texts, labels
+
+texts, labels = load_data()
+
+# Tokenize and encode labels
+max_features = 20000
+maxlen = 200
+
+tokenizer = Tokenizer(num_words=max_features)
+tokenizer.fit_on_texts(texts)
+sequences = tokenizer.texts_to_sequences(texts)
+X = keras.preprocessing.sequence.pad_sequences(sequences, maxlen=maxlen)
+le = LabelEncoder()
+y = le.fit_transform(labels)
+
+# Split the data into train, validation, and test sets
+X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, random_state=42)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
+
+# Iterate through hyperparameter configurations
+for row in hyperparameter_configs:
+    # Create the model using the current hyperparameter configuration
+    inputs = keras.Input(shape=(maxlen,))
+    x = layers.Embedding(max_features, 128)(inputs)
+    x = layers.Dropout(0.5)(x)
+    x = layers.Conv1D(row["filters"], row["kernel_size"], padding="valid", activation="relu", strides=3)(x)
+    x = layers.GlobalMaxPooling1D()(x)
+    x = layers.Dense(128, activation="relu")(x)
+    x = layers.Dropout(0.5)(x)
+    outputs = layers.Dense(len(set(labels)), activation="softmax")(x)  # Adjust output layer based on the number of classes
+    model = keras.Model(inputs, outputs)
+
+    # Compile and fit the model on the training data
+    model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+    model.fit(X_train, y_train, epochs=3, validation_data=(X_val, y_val))
+
+    # Evaluate the model on the validation and test datasets
+    val_result = model.evaluate(X_val, y_val)
+    test_result = model.evaluate(X_test, y_test)
+
+    # Store results in the DataFrame
+    result_row = {
+        "filters": row["filters"],
+        "kernel_size": row["kernel_size"],
+        "validation_accuracy": val_result[1],
+        "test_accuracy": test_result[1]
+    }
+    df_results = df_results.append(result_row, ignore_index=True)
+
+# Print or analyze the results DataFrame
+print(df_results)
