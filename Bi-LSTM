@@ -1,83 +1,27 @@
-import numpy as np
-from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras import metrics
-from kerastuner.tuners import RandomSearch
-
-max_features = 20000
-maxlen = 200
-
-# Define the model-building function
-def build_model(hp):
+for index, row in df_hyperparameters.iterrows():
+    # Create the model using the current hyperparameter configuration
     inputs = keras.Input(shape=(None,), dtype="int32")
-    x = layers.Embedding(max_features, hp.Int("embedding_dim", min_value=32, max_value=256, step=32))(inputs)
-    x = layers.Bidirectional(layers.LSTM(hp.Int("lstm_units", min_value=32, max_value=256, step=32), return_sequences=True))(x)
-    x = layers.Bidirectional(layers.LSTM(hp.Int("lstm_units", min_value=32, max_value=256, step=32)))(x)
+    x = layers.Embedding(max_features, row["embedding_dim"])(inputs)
+    x = layers.Bidirectional(layers.LSTM(row["lstm_units"], return_sequences=True))(x)
+    x = layers.Bidirectional(layers.LSTM(row["lstm_units"]))(x)
     outputs = layers.Dense(1, activation="sigmoid")(x)
     model = keras.Model(inputs, outputs)
-    
-    model.compile(optimizer=keras.optimizers.Adam(hp.Choice("learning_rate", values=[1e-2, 1e-3, 1e-4])),
-                  loss="binary_crossentropy",
-                  metrics=[metrics.Recall()])  # Use Recall as the metric
-    
-    return model
 
-# Generate some dummy data or use your actual datasets (train_ds, val_ds, test_ds)
-np.random.seed(42)
-train_data = np.random.randint(0, max_features, size=(1000, maxlen))
-train_labels = np.random.randint(0, 2, size=(1000,))
-
-val_data = np.random.randint(0, max_features, size=(200, maxlen))
-val_labels = np.random.randint(0, 2, size=(200,))
-
-test_data = np.random.randint(0, max_features, size=(300, maxlen))
-test_labels = np.random.randint(0, 2, size=(300,))
-
-# Instantiate the tuner
-tuner = RandomSearch(
-    build_model,
-    objective="val_recall",  # Optimize for recall
-    max_trials=5,
-    directory="my_dir",
-    project_name="my_project"
-)
-
-# Search for the best hyperparameter configuration
-tuner.search(train_data, train_labels, epochs=3, validation_data=(val_data, val_labels))
-
-# Get the best hyperparameters
-best_hps = tuner.oracle.get_best_trials(1)[0].hyperparameters
-
-# Build the model with the best hyperparameters
-model = tuner.hypermodel.build(best_hps)
-
-# Fit the model using the train and validation datasets
-model.fit(train_data, train_labels, epochs=3, validation_data=(val_data, val_labels))
-
-# Evaluate the model on the test dataset
-test_result = model
-
-print(f"Test Recall: {test_result[1]}")
-
-# Retrieve all hyperparameter configurations and results
-all_trials = tuner.oracle.get_best_trials(1)
-
-# Iterate through all hyperparameter configurations and evaluate on the test dataset
-test_results = []
-
-for trial in all_trials:
-    # Build the model with the hyperparameters from the trial
-    model = tuner.hypermodel.build(trial.hyperparameters)
-
-    # Fit the model using the train and validation datasets
+    # Compile and fit the model on the training data
+    model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy", keras.metrics.Recall()])
     model.fit(train_data, train_labels, epochs=3, validation_data=(val_data, val_labels))
 
-    # Evaluate the model on the test dataset
+    # Evaluate the model on the validation and test datasets
+    val_result = model.evaluate(val_data, val_labels)
     test_result = model.evaluate(test_data, test_labels)
 
-    # Append the hyperparameters and test results to the list
-    test_results.append((trial.hyperparameters.values, test_result[1]))
-
-# Print or analyze the results
-for hyperparams, result in test_results:
-    print(f"Hyperparameters: {hyperparams}, Test Recall: {result}")
+    # Store results in the DataFrame
+    result_row = {
+        "embedding_dim": row["embedding_dim"],
+        "lstm_units": row["lstm_units"],
+        "validation_accuracy": val_result[1],
+        "test_accuracy": test_result[1],
+        "validation_recall": val_result[2],
+        "test_recall": test_result[2]
+    }
+    df_results = df_results.append(result_row, ignore_index=True)
