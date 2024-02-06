@@ -1,0 +1,23 @@
+def explain_prediction(sample, tree, feature_names, class_names):
+    node = tree
+    while node.left:
+        if sample[feature_names.index(node.feature)] <= node.threshold:
+            node = node.left
+        else:
+            node = node.right
+    predicted_class = node.predicted_class
+    print("Prediction Explanation:")
+    print(f"Sample features: {sample}")
+    print(f"Traversed path:")
+    while node:
+        if node.feature is not None:
+            print(f"  If {feature_names[node.feature]} <= {node.threshold}: Go to node {node.left.node_id}")
+        else:
+            print(f"  Leaf node reached, predicted class: {class_names[predicted_class]}")
+        if node.parent is None:
+            break
+        node = node.parent
+
+# Example usage
+sample = [1, 2, 3, 4]  # Example sample features
+explain_prediction(sample, clf.tree_, iris.feature_names, iris.target_names)
