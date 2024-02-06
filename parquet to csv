@@ -1,0 +1,24 @@
+import os
+import pandas as pd
+
+# Set the directory containing the Parquet files
+folder_path = 'path_to_folder_containing_parquet_files'
+
+# Get a list of all files in the directory
+file_list = os.listdir(folder_path)
+
+# Filter out only the Parquet files
+parquet_files = [file for file in file_list if file.endswith('.parquet')]
+
+# Loop through each Parquet file and convert to CSV
+for file_name in parquet_files:
+    # Read the Parquet file into a pandas DataFrame
+    df = pd.read_parquet(os.path.join(folder_path, file_name))
+    
+    # Extract the name of the file without the extension
+    csv_file_name = os.path.splitext(file_name)[0] + '.csv'
+    
+    # Write the DataFrame to a CSV file
+    df.to_csv(os.path.join(folder_path, csv_file_name), index=False)
+
+print("Conversion completed.")
