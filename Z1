@@ -26,6 +26,40 @@ for cluster_num, cluster_group in grouped:
     cluster_dicts.append(cluster_dict)
 
 # Create a new DataFrame from the list of dictionaries
+result_df = pd.DataFrame(clust
+
+_---
+
+
+import pandas as pd
+
+# Assuming df is your original DataFrame with 9 features and a 'cluster' column
+# Group the DataFrame by the 'cluster' column
+grouped = df.groupby('cluster')
+
+# Create an empty list to store dictionaries for each cluster
+cluster_dicts = []
+
+# Iterate over each cluster group
+for cluster_num, cluster_group in grouped:
+    # Create a dictionary to store feature-value pairs for the current cluster
+    cluster_dict = {'cluster': cluster_num}
+    
+    # Iterate over each feature in the DataFrame
+    for feature in df.columns:
+        # Skip the 'cluster' column
+        if feature == 'cluster':
+            continue
+        
+        # Check if all values in the current feature are the same within the cluster
+        if cluster_group[feature].nunique() == 1:
+            # Add the feature-value pair to the dictionary
+            cluster_dict[feature] = cluster_group[feature].iloc[0]
+    
+    # Append the dictionary to the list
+    cluster_dicts.append(cluster_dict)
+
+# Create a new DataFrame from the list of dictionaries
 result_df = pd.DataFrame(cluster_dicts)
 
 # Print the result DataFrame
