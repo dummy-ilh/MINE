@@ -1,0 +1,26 @@
+import os
+import pickle
+
+# Load the model code from the code file
+with open('model_code_dir/code_file.py', 'r') as f:
+    exec(f.read())
+
+# Load the model from the pkl file
+with open('model.pkl', 'rb') as f:
+    model = pickle.load(f)
+
+# Define a function to use the model and API
+def get_model_output(input_data):
+    # Use the model
+    output = model.predict(input_data)
+    
+    # Use the API (assuming predict function is in the code file)
+    api_output = predict(input_data)
+    
+    return output, api_output
+
+# Example usage
+input_data = [1, 2, 3, 4, 5]
+model_output, api_output = get_model_output(input_data)
+print("Model output:", model_output)
+print("API output:", api_output)
