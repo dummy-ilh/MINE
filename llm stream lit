@@ -1,0 +1,38 @@
+import streamlit as st
+
+# Dummy machine learning model function
+def run_ml_model(input_text):
+    # This is just a placeholder function. Replace this with your actual LLM model code.
+    # For the sake of demonstration, let's just reverse the input text.
+    output_text = input_text[::-1]
+    return output_text
+
+# Main function to run the Streamlit app
+def main():
+    # Page title
+    st.title("LLM Model Demo")
+    
+    # Instructions
+    st.write("Enter some text in the box below and click 'Run' to see the output.")
+    
+    # Input text area
+    input_text = st.text_area("Input Text", height=200)
+    
+    # Button to run the LLM model
+    if st.button("Run"):
+        # Run the LLM model
+        output_text = run_ml_model(input_text)
+        
+        # Display the output
+        st.write("Output:")
+        st.write(output_text)
+    
+    # Display last input and output in the side panel
+    st.sidebar.title("Last Input & Output")
+    st.sidebar.subheader("Last Input:")
+    st.sidebar.write(input_text)
+    st.sidebar.subheader("Last Output:")
+    st.sidebar.write(output_text if 'output_text' in locals() else "")
+
+if __name__ == "__main__":
+    main()
