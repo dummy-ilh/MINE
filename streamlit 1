@@ -16,13 +16,26 @@ def create_charts(dataframe):
     fig2 = px.line(dataframe, x='Violator', y='Severity', title='Severity by Violator')
     return fig1, fig2
 
+# Apply custom styling to the dataframe
+def style_dataframe(dataframe):
+    return dataframe.style \
+        .set_table_styles(
+            [{
+                'selector': 'thead th',
+                'props': [('background-color', '#f0f0f0'), ('color', 'black')]
+            }],
+            overwrite=False
+        ) \
+        .set_properties(**{'text-align': 'center'}) \
+        .bar(subset=['Incidents'], color='#d65f5f') \
+        .bar(subset=['Severity'], color='#5fba7d')
+
 # Page 1: DataFrame and Charts
 def page1():
-    st.title("DataFrame and Interactive Charts")
     col1, col2 = st.columns(2)
     
     with col1:
-        st.dataframe(df)
+        st.dataframe(style_dataframe(df))
 
     with col2:
         fig1, fig2 = create_charts(df)
@@ -31,13 +44,12 @@ def page1():
 
 # Page 2: Violator Dashboard
 def page2():
-    st.title("Violator Dashboard")
     search = st.text_input("Search for a Violator")
     
     if search:
         result_df = df[df['Violator'].str.contains(search, case=False)]
         if not result_df.empty:
-            st.dataframe(result_df)
+            st.dataframe(style_dataframe(result_df))
             fig3 = px.bar(result_df, x='Violator', y='Incidents', title='Ranking by Incidents')
             st.plotly_chart(fig3)
         else:
@@ -45,23 +57,28 @@ def page2():
 
 # Page 3: Placeholder
 def page3():
-    st.title("Page 3")
     st.write("This is page 3")
 
 # Page 4: Placeholder
 def page4():
-    st.title("Page 4")
     st.write("This is page 4")
 
 # Streamlit app
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Page 1", "Page 2", "Page 3", "Page 4"])
+st.title("Violator Analysis App")
+tabs = st.tabs(["Page 1", "Page 2", "Page 3", "Page 4"])
 
-if page == "Page 1":
+with tabs[0]:
+    st.header("DataFrame and Interactive Charts")
     page1()
-elif page == "Page 2":
+    
+with tabs[1]:
+    st.header("Violator Dashboard")
     page2()
-elif page == "Page 3":
+    
+with tabs[2]:
+    st.header("Page 3")
     page3()
-elif page == "Page 4":
+    
+with tabs[3]:
+    st.header("Page 4")
     page4()
