@@ -1,0 +1,67 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+
+# Sample DataFrame
+data = {
+    'Violator': ['A', 'B', 'C', 'D', 'E'],
+    'Incidents': [10, 20, 15, 30, 25],
+    'Severity': [3, 4, 2, 5, 4]
+}
+df = pd.DataFrame(data)
+
+# Function to create charts
+def create_charts(dataframe):
+    fig1 = px.bar(dataframe, x='Violator', y='Incidents', title='Incidents by Violator')
+    fig2 = px.line(dataframe, x='Violator', y='Severity', title='Severity by Violator')
+    return fig1, fig2
+
+# Page 1: DataFrame and Charts
+def page1():
+    st.title("DataFrame and Interactive Charts")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.dataframe(df)
+
+    with col2:
+        fig1, fig2 = create_charts(df)
+        st.plotly_chart(fig1)
+        st.plotly_chart(fig2)
+
+# Page 2: Violator Dashboard
+def page2():
+    st.title("Violator Dashboard")
+    search = st.text_input("Search for a Violator")
+    
+    if search:
+        result_df = df[df['Violator'].str.contains(search, case=False)]
+        if not result_df.empty:
+            st.dataframe(result_df)
+            fig3 = px.bar(result_df, x='Violator', y='Incidents', title='Ranking by Incidents')
+            st.plotly_chart(fig3)
+        else:
+            st.write("No results found")
+
+# Page 3: Placeholder
+def page3():
+    st.title("Page 3")
+    st.write("This is page 3")
+
+# Page 4: Placeholder
+def page4():
+    st.title("Page 4")
+    st.write("This is page 4")
+
+# Streamlit app
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Page 1", "Page 2", "Page 3", "Page 4"])
+
+if page == "Page 1":
+    page1()
+elif page == "Page 2":
+    page2()
+elif page == "Page 3":
+    page3()
+elif page == "Page 4":
+    page4()
