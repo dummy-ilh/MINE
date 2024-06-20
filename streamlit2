@@ -1,0 +1,81 @@
+import streamlit as st
+import pandas as pd
+
+# Sample data for demonstration purposes
+data = {
+    'id': [1, 2, 3, 4, 5],
+    'violator': ['Alice', 'Bob', 'Alice', 'Charlie', 'Bob'],
+    'violation group': ['Group A', 'Group B', 'Group A', 'Group B', 'Group A']
+}
+
+df = pd.DataFrame(data)
+
+# Function to display top violations by frequency
+def get_top_violations(df):
+    return df['violation group'].value_counts().head()
+
+# Function to display top violators by frequency
+def get_top_violators(df):
+    return df['violator'].value_counts().head()
+
+# Function to get total violations for a specific violator
+def get_violator_violations(df, violator):
+    return df[df['violator'] == violator]['violation group'].value_counts()
+
+# Function to get the rank of a specific violator
+def get_violator_rank(df, violator):
+    violator_counts = df['violator'].value_counts()
+    if violator in violator_counts:
+        return violator_counts.rank(ascending=False)[violator]
+    else:
+        return None
+
+# Page 1
+def page1():
+    st.title("Page 1: Data Overview")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.header("Data Frame")
+        st.dataframe(df)
+
+    with col2:
+        st.header("Top Violations")
+        top_violations = get_top_violations(df)
+        st.write(top_violations)
+
+        st.header("Top Violators")
+        top_violators = get_top_violators(df)
+        st.write(top_violators)
+
+# Page 2
+def page2():
+    st.title("Page 2: Search Violator")
+
+    violator_name = st.text_input("Enter Violator Name")
+
+    if violator_name:
+        st.header(f"Violations for {violator_name}")
+        violator_violations = get_violator_violations(df, violator_name)
+        if not violator_violations.empty:
+            st.write(violator_violations)
+        else:
+            st.write("No violations found for this violator.")
+
+        st.header("Violator Ranking")
+        rank = get_violator_rank(df, violator_name)
+        if rank is not None:
+            st.markdown(f"**Rank: {rank}**")
+        else:
+            st.write("Violator not found.")
+
+# Sidebar for navigation
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Page 1", "Page 2"])
+
+if page == "Page 1":
+    page1()
+else:
+    page2()
+
