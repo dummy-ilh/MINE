@@ -1,0 +1,35 @@
+import pandas as pd
+import torch
+from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
+
+# Load the trained model and tokenizer from the checkpoint
+model_checkpoint = 'path/to/your/model/checkpoint'
+tokenizer = DistilBertTokenizer.from_pretrained(model_checkpoint)
+model = DistilBertForSequenceClassification.from_pretrained(model_checkpoint)
+
+# Ensure the model is in evaluation mode
+model.eval()
+
+# Sample DataFrame with text data
+data = {'text': ["This is a positive example.", "This is a negative example."]}
+df = pd.DataFrame(data)
+
+# Tokenize the text data
+inputs = tokenizer(df['text'].tolist(), return_tensors="pt", padding=True, truncation=True)
+
+# Make predictions
+with torch.no_grad():
+    outputs = model(**inputs)
+    logits = outputs.logits
+
+# Convert logits to probabilities (optional)
+probabilities = torch.softmax(logits, dim=-1)
+
+# Get predicted classes
+predicted_classes = torch.argmax(logits, dim=-1)
+
+# Add predictions to the DataFrame
+df['predicted_class'] = predicted_classes.numpy()
+df['probability'] = probabilities.max(dim=1).values.numpy()
+
+print(df)
