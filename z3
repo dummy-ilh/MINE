@@ -24,22 +24,22 @@ def predict_text(df, batch_size=8):
     all_predictions = []
     num_samples = len(df)
     print(f"Total samples: {num_samples}")
-    
+
     for i in range(0, num_samples, batch_size):
-        print(f"Processing batch {i // batch_size + 1}")
-        batch_texts = df["text"].tolist()[i:i + batch_size]
-        inputs = tokenizer(batch_texts, padding=True, truncation=True, return_tensors="pt")
-        
-        with torch.no_grad():
-            outputs = model(**inputs)
-            logits = outputs.logits
-            predictions = torch.argmax(logits, dim=-1)
-            all_predictions.extend(predictions.tolist())
-    
-    return all_predictions
+        end_index = min(i + batch_size, num_samples)
+        print(f"Processing batch {i // batch_size + 1}, indexes {i} to {end_index - 1}")
 
-# Make predictions
-Df['predictions'] = predict_text(Df, batch_size=2)
+        batch_texts = df["text"].tolist()[i:end_index]
+        if len(batch_texts) == 0:
+            print(f"No texts in batch {i // batch_size + 1}")
+            continue
 
-# Print the DataFrame with predictions
-print(Df)
+        try:
+            inputs = tokenizer(batch_texts, padding=True, truncation=True, return_tensors="pt")
+            with torch.no_grad():
+                outputs = model(**inputs)
+                logits = outputs.logits
+                predictions = torch.argmax(logits, dim=-1)
+                all_predictions.extend(predictions.tolist())
+        except Exception as e:
+            print(f"Error
