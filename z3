@@ -19,9 +19,11 @@ Df = pd.DataFrame({
     ]
 })
 
-# Function to process text in batches
+# Function to process text in batches and make predictions
 def predict_text(df, batch_size=8):
     all_predictions = []
+    all_scores = []
+    all_labels = []
     num_samples = len(df)
     print(f"Total samples: {num_samples}")
 
@@ -39,7 +41,31 @@ def predict_text(df, batch_size=8):
             with torch.no_grad():
                 outputs = model(**inputs)
                 logits = outputs.logits
-                predictions = torch.argmax(logits, dim=-1)
-                all_predictions.extend(predictions.tolist())
+                predictions = torch.argmax(logits, dim=-1).tolist()
+                scores = torch.softmax(logits, dim=1).max(dim=1).values.tolist()
+                labels = [model.config.id2label[pred] for pred in predictions]
+
+                all_predictions.extend(predictions)
+                all_scores.extend(scores)
+                all_labels.extend(labels)
         except Exception as e:
-            print(f"Error
+            print(f"Error processing batch {i // batch_size + 1}: {e}")
+            break
+
+        # Additional debug: print batch predictions
+        print(f"Batch {i // batch_size + 1} predictions: {predictions}")
+        print(f"Batch {i // batch_size + 1} scores: {scores}")
+        print(f"Batch {i // batch_size + 1} labels: {labels}")
+
+    return all_predictions, all_scores, all_labels
+
+# Make predictions
+predictions, scores, labels = predict_text(Df, batch_size=2)
+if predictions:
+    Df['predictions'] = predictions
+    Df['scores'] = scores
+    Df['labels'] = labels
+    # Print the DataFrame with predictions
+    print(Df)
+else:
+    print("No predictions were made.")
