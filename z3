@@ -1,28 +1,37 @@
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import chi2
+import torch
+from transformers import BertTokenizer, BertForSequenceClassification
 import pandas as pd
 
-# Assuming df is your DataFrame with 18 categorical columns and a target column 'target'
-# Replace 'target' with your actual target column name
+# Path to the checkpoint
+checkpoint_path = 'path/to/your/checkpoint'
 
-# Separate features and target
-X = df.drop('target', axis=1)
-y = df['target']
+# Load the tokenizer and model from the checkpoint
+tokenizer = BertTokenizer.from_pretrained(checkpoint_path)
+model = BertForSequenceClassification.from_pretrained(checkpoint_path)
 
-# Apply SelectKBest class to extract top 10 best features
-best_features = SelectKBest(score_func=chi2, k=10)
-fit = best_features.fit(X, y)
+# Assume Df is your DataFrame containing the text column
+Df = pd.DataFrame({
+    'text': [
+        "Sample text 1",
+        "Sample text 2",
+        "Sample text 3",
+    ]
+})
 
-# Get feature scores
-feature_scores = pd.DataFrame(fit.scores_)
-feature_columns = pd.DataFrame(X.columns)
+# Preprocess the text data
+inputs = tokenizer(Df["text"].tolist(), padding=True, truncation=True, return_tensors="pt")
 
-# Concatenate the dataframes for better visualization
-feature_scores_df = pd.concat([feature_columns, feature_scores], axis=1)
-feature_scores_df.columns = ['Feature', 'Score']
+# Make predictions
+model.eval()
+with torch.no_grad():
+    outputs = model(**inputs)
+    logits = outputs.logits
 
-# Sort features by score in descending order
-feature_scores_df.sort_values(by='Score', ascending=False, inplace=True)
+# Get predicted class (for classification)
+predictions = torch.argmax(logits, dim=-1)
 
-# Display top 10 features
-print(feature_scores_df.head(10))
+# Convert predictions to a list and add to the DataFrame
+Df['predictions'] = predictions.tolist()
+
+# Print the DataFrame with predictions
+print(Df)
