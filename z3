@@ -15,23 +15,25 @@ Df = pd.DataFrame({
         "Sample text 1",
         "Sample text 2",
         "Sample text 3",
+        # Add more text samples as needed
     ]
 })
 
-# Preprocess the text data
-inputs = tokenizer(Df["text"].tolist(), padding=True, truncation=True, return_tensors="pt")
+# Function to process text in batches
+def predict_text(df, batch_size=8):
+    all_predictions = []
+    for i in range(0, len(df), batch_size):
+        batch_texts = df["text"].tolist()[i:i + batch_size]
+        inputs = tokenizer(batch_texts, padding=True, truncation=True, return_tensors="pt")
+        with torch.no_grad():
+            outputs = model(**inputs)
+            logits = outputs.logits
+            predictions = torch.argmax(logits, dim=-1)
+            all_predictions.extend(predictions.tolist())
+    return all_predictions
 
 # Make predictions
-model.eval()
-with torch.no_grad():
-    outputs = model(**inputs)
-    logits = outputs.logits
-
-# Get predicted class (for classification)
-predictions = torch.argmax(logits, dim=-1)
-
-# Convert predictions to a list and add to the DataFrame
-Df['predictions'] = predictions.tolist()
+Df['predictions'] = predict_text(Df, batch_size=8)
 
 # Print the DataFrame with predictions
 print(Df)
