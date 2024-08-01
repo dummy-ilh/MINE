@@ -1,0 +1,92 @@
+import streamlit as st
+import pandas as pd
+import openai
+from st_annotated_text import annotated_text
+
+# Set your OpenAI API key here
+openai.api_key = 'your_openai_api_key'
+
+# Function to generate label and highlight text using GPT-3.5 Turbo
+def generate_label_and_highlight(text):
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that provides labels and highlights key phrases in text."},
+            {"role": "user", "content": f"Read the following text and provide a suitable label. Highlight the key phrase:\n\nText: {text}"}
+        ],
+        max_tokens=100
+    )
+    
+    generated_text = response.choices[0].message['content'].strip()
+
+    # Assume the format "Label: <label>; Highlight: <highlight>"
+    label, highlighted_text = generated_text.split("; Highlight: ")
+
+    return label.replace("Label: ", "").strip(), highlighted_text.strip()
+
+# Load data from Excel file
+@st.cache
+def load_data(file):
+    data = pd.read_excel(file)
+    return data
+
+# Save data to Excel file
+def save_data(data, file):
+    data.to_excel(file, index=False)
+
+# Highlight text using st-annotated-text
+def highlight_text(text, highlight):
+    parts = text.split(highlight)
+    annotated_text(
+        *[part for tup in zip(parts, [highlight] * len(parts)) for part in tup if part],
+        (highlight, "HIGHLIGHT", "#faa")
+    )
+
+# Main function
+def main():
+    st.title("Data Labeling Tool with GPT-3.5 Turbo and Highlighting")
+
+    # Upload Excel file
+    file = st.file_uploader("Upload Excel file", type=["xlsx"])
+    if file is not None:
+        data = load_data(file)
+
+        # Identify rows without labels
+        unlabeled_data = data[data['Label'].isnull()]
+
+        if not unlabeled_data.empty:
+            index = 0
+            text_to_label = unlabeled_data.iloc[index]['Text']
+
+            # Generate label and highlighted text using GPT-3.5 Turbo
+            suggested_label, highlighted_text = generate_label_and_highlight(text_to_label)
+
+            # Display the highlighted text
+            st.write("**Text with Highlighted Phrase:**")
+            highlight_text(text_to_label, highlighted_text)
+            st.write(f"**Suggested Label:** {suggested_label}")
+
+            # User feedback
+            agree = st.button("Yes, this is correct")
+            disagree = st.button("No, this is incorrect")
+
+            if disagree:
+                new_label = st.text_input("Provide your label:")
+                submit = st.button("Submit Label")
+
+                if submit and new_label:
+                    data.at[unlabeled_data.index[index], 'Label'] = new_label
+                    index += 1
+            elif agree:
+                data.at[unlabeled_data.index[index], 'Label'] = suggested_label
+                index += 1
+
+            if index >= len(unlabeled_data):
+                st.success("All data labeled!")
+                save_data(data, "labeled_data.xlsx")
+
+        else:
+            st.success("All data is already labeled!")
+
+if __name__ == "__main__":
+    main()
