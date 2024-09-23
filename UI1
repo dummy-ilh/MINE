@@ -1,0 +1,72 @@
+import streamlit as st
+from langchain.chat_models import AzureChatOpenAI
+import matplotlib.pyplot as plt
+import networkx as nx
+
+# Initialize LLM
+llm = AzureChatOpenAI(deployment_name="gpt-35-turbo", model_name="gpt-35-turbo")
+
+# Sample violation insights
+violation_types = {
+    'Fraudulent Transactions': 12,
+    'Data Privacy Breach': 5,
+    'Unauthorized Access': 7,
+}
+
+# Sample mails to send
+mails_to_send = [
+    "Project Update to Client",
+    "Weekly Team Report",
+    "Follow-up with Legal Team"
+]
+
+# Function to generate dummy bidirectional graph
+def create_graph():
+    G = nx.DiGraph()
+    G.add_edges_from([("Manager", "Team"), ("Team", "Legal"), ("Client", "Manager")])
+    return G
+
+# App Layout
+st.set_page_config(layout="wide")
+st.title("Inbox Insights")
+
+# First Column - Todo List
+with st.container():
+    col1, col2, col3 = st.columns(3)
+
+    # Column 1: Todo List
+    with col1:
+        st.header("Todo List")
+        if "todos" not in st.session_state:
+            st.session_state.todos = ['Check compliance violations', 'Review pending emails']
+            st.session_state.completed_todos = []
+
+        for i, todo in enumerate(st.session_state.todos):
+            if st.checkbox(todo, key=f"todo_{i}"):
+                st.session_state.completed_todos.append(todo)
+
+        st.write("### Recently Completed")
+        if st.session_state.completed_todos:
+            for completed in st.session_state.completed_todos:
+                st.write(f"- {completed}")
+
+    # Column 2: Insights and Mails to Send
+    with col2:
+        st.header("Insights from Last Month")
+        for violation, count in violation_types.items():
+            st.write(f"{violation}: {count} violations")
+
+        # Mails to Send
+        st.write("### Mails to Send")
+        for mail in mails_to_send:
+            st.write(f"- {mail}")
+
+    # Column 3: Bidirectional Graph of Messages
+    with col3:
+        st.header("Message Graph")
+        G = create_graph()
+
+        fig, ax = plt.subplots()
+        pos = nx.spring_layout(G)
+        nx.draw(G, pos, with_labels=True, ax=ax, node_color="skyblue", node_size=3000, arrows=True)
+        st.pyplot(fig)
