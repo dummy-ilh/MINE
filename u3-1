@@ -1,0 +1,52 @@
+import streamlit as st
+
+st.set_page_config(layout="wide")
+
+st.sidebar.header("Side Panel")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.header("Column 1a: To-Do List")
+    todo_list = ["Task 1", "Task 2", "Task 3"]
+    checkboxes = [st.checkbox(task) for task in todo_list]
+
+with col1:
+    st.header("Column 1b: Completed Items")
+    completed_items = [task for task, checkbox in zip(todo_list, checkboxes) if checkbox]
+    st.write(completed_items)
+
+def update_todo_list():
+    for task, checkbox in zip(todo_list, checkboxes):
+        if not checkbox:
+            completed_items.remove(task)
+            todo_list.append(task)
+
+st.button("Update", on_click=update_todo_list)
+
+with col2:
+    st.header("Column 2: Chatbot")
+    # Implement your chatbot logic here
+    st.write("Chatbot goes here")
+
+with col3:
+    st.header("Column 3: Tables")
+    table1 = st.table(["Column 1", "Column 2"])
+    table2 = st.table(["Column 3", "Column 4"])
+
+st.write("""
+<style>
+    [data-testid="column"] {
+        background-color: #ffe6f7; /* Light pink */
+        padding: 10px;
+        border-radius: 10px;
+        margin: 10px;
+    }
+    [data-testid="column"]:nth-child(2) {
+        background-color: #c9f7c5; /* Light green */
+    }
+    [data-testid="column"]:nth-child(3) {
+        background-color: #f7d2c4; /* Light orange */
+    }
+</style>
+""", unsafe_allow_html=True)
