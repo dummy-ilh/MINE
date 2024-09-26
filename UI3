@@ -1,17 +1,9 @@
 import streamlit as st
 import pandas as pd
+import networkx as nx
+import matplotlib.pyplot as plt
 
-# Initial Data
-todo_list = ["Reply to manager's email", "Update project document", "Send meeting invites", "Review the budget"]
-recently_completed = []
-
-# Setup session state to hold the list items across reruns
-if 'todo' not in st.session_state:
-    st.session_state.todo = todo_list
-if 'completed' not in st.session_state:
-    st.session_state.completed = recently_completed
-
-# CSS Styling for light grey background and multi-column layout
+# Custom CSS for different colored widgets and grid layout
 st.markdown(
     """
     <style>
@@ -27,6 +19,7 @@ st.markdown(
         font-size: 28px;
         font-weight: bold;
         text-align: center;
+        margin-bottom: 40px;
     }
     .todo-container {
         background-color: #e0e0e0;
@@ -39,40 +32,105 @@ st.markdown(
         border-radius: 10px;
         margin-bottom: 20px;
     }
-    .light-text {
-        font-size: 18px;
-        color: #424242;
+    .emergency {
+        background-color: #ffebee;
+        padding: 20px;
+        border-radius: 10px;
+        border: 2px solid #e57373;
+    }
+    .chatbot {
+        background-color: #e8f5e9;
+        padding: 20px;
+        border-radius: 10px;
+        border: 2px solid #81c784;
+    }
+    .knowledge-graph {
+        background-color: #e3f2fd;
+        padding: 20px;
+        border-radius: 10px;
+        border: 2px solid #64b5f6;
+    }
+    .delegation {
+        background-color: #fbe9e7;
+        padding: 20px;
+        border-radius: 10px;
+        border: 2px solid #ffccbc;
+    }
+    .sentiment {
+        background-color: #f3e5f5;
+        padding: 20px;
+        border-radius: 10px;
+        border: 2px solid #ba68c8;
+    }
+    .grid-layout {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-gap: 20px;
     }
     </style>
     """, unsafe_allow_html=True
 )
 
-# Main Header
+# Header
 st.markdown("<h2 class='header-title'>Inbox Insight Dashboard</h2>", unsafe_allow_html=True)
 
-# To-Do Widget Layout
-st.markdown("<h3 class='light-text'>Task Management</h3>", unsafe_allow_html=True)
+# Emergency Replies Table: Urgent Emails
+st.markdown("<h3>Emergency Replies Table</h3>", unsafe_allow_html=True)
+urgent_emails = pd.DataFrame({
+    "Sender": ["Boss", "Client A", "Project Lead"],
+    "Subject": ["Budget Approval", "Contract Issue", "Urgent Meeting Request"],
+    "Urgency": ["High", "Critical", "High"]
+})
+st.markdown("<div class='emergency'>", unsafe_allow_html=True)
+st.dataframe(urgent_emails)
+st.markdown("</div>", unsafe_allow_html=True)
+
+# To-Do and Recently Completed Widget with Light Grey background
+st.markdown("<h3>Task Management</h3>", unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 
-# Display To-Do list on the left side
+# To-Do List
 with col1:
     st.markdown("<div class='todo-widget'><h4>To-Do List</h4>", unsafe_allow_html=True)
+    if 'todo' not in st.session_state:
+        st.session_state.todo = ["Reply to manager's email", "Update project document", "Send meeting invites", "Review the budget"]
     for i, task in enumerate(st.session_state.todo):
         if st.checkbox(task, key=f"todo_{i}"):
-            # If task is checked, move it to recently completed
             st.session_state.completed.append(task)
             st.session_state.todo.remove(task)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Display Recently Completed on the right side
+# Recently Completed
 with col2:
     st.markdown("<div class='todo-widget'><h4>Recently Completed</h4>", unsafe_allow_html=True)
+    if 'completed' not in st.session_state:
+        st.session_state.completed = []
     for i, task in enumerate(st.session_state.completed):
         if st.checkbox(task, key=f"completed_{i}", value=True):
-            # If task is unchecked, move it back to the todo list
             st.session_state.todo.append(task)
             st.session_state.completed.remove(task)
     st.markdown("</div>", unsafe_allow_html=True)
+
+# Knowledge Graph Placeholder
+st.markdown("<h3>Knowledge Graph</h3>", unsafe_allow_html=True)
+st.markdown("<div class='knowledge-graph'><p>Knowledge Graph Coming Soon...</p></div>", unsafe_allow_html=True)
+
+# Delegation Tool
+st.markdown("<h3>Delegation Tool</h3>", unsafe_allow_html=True)
+st.markdown("<div class='delegation'><p>Assign tasks to your team from here.</p></div>", unsafe_allow_html=True)
+
+# Sentiment Analysis
+st.markdown("<h3>Sentiment Analysis</h3>", unsafe_allow_html=True)
+sentiment_data = {"Positive": 30, "Neutral": 10, "Negative": 5}
+st.markdown("<div class='sentiment'>", unsafe_allow_html=True)
+st.bar_chart(pd.DataFrame(sentiment_data, index=[0]))
+st.markdown("</div>", unsafe_allow_html=True)
+
+# Chatbot Section
+st.markdown("<h3>Inbox Chatbot</h3>", unsafe_allow_html=True)
+st.markdown("<div class='chatbot'>", unsafe_allow_html=True)
+st.text_area("Chat with your inbox assistant here...", placeholder="Type a message...")
+st.markdown("</div>", unsafe_allow_html=True)
 
 # Summary of Task Movement
 st.markdown("<div class='container'>", unsafe_allow_html=True)
