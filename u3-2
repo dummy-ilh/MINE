@@ -14,20 +14,24 @@ if page == "Home":
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.header("Column 1a: To-Do List")
-        todo_list = ["Task 1", "Task 2", "Task 3"]
-        checkboxes = [st.checkbox(task) for task in todo_list]
-
-    with col1:
-        st.header("Column 1b: Completed Items")
-        completed_items = [task for task, checkbox in zip(todo_list, checkboxes) if checkbox]
-        st.write(completed_items)
+        col1a, col1b = st.columns(2)
+        with col1a:
+            st.header("Column 1a: To-Do List")
+            todo_list = ["Task 1", "Task 2", "Task 3"]
+            checkboxes_a = [st.checkbox(task) for task in todo_list]
+        with col1b:
+            st.header("Column 1b: Completed Items")
+            completed_items = [task for task, checkbox in zip(todo_list, checkboxes_a) if checkbox]
+            checkboxes_b = [st.checkbox(task) for task in completed_items]
 
     def update_todo_list():
-        for task, checkbox in zip(todo_list, checkboxes):
-            if not checkbox:
-                completed_items.remove(task)
+        for task, checkbox_a, checkbox_b in zip(todo_list, checkboxes_a, checkboxes_b):
+            if checkbox_a and not checkbox_b:
+                completed_items.append(task)
+                todo_list.remove(task)
+            elif not checkbox_a and checkbox_b:
                 todo_list.append(task)
+                completed_items.remove(task)
 
     st.button("Update", on_click=update_todo_list)
 
@@ -37,13 +41,13 @@ if page == "Home":
         st.write("Chatbot goes here")
 
     with col3:
-        st.header("Column 3: Tables and Image")
-        col3a, col3b = st.columns(2)
+        col3a, col3b, col3c = st.columns(3)
         with col3a:
             table1 = st.table(["Column 1", "Column 2"])
         with col3b:
             table2 = st.table(["Column 3", "Column 4"])
-        st.image("image.png", width=200)  # Replace with your image file
+        with col3c:
+            st.image("image.png", width=200)  # Replace with your image file
 
 elif page == "About":
     st.write("About page")
