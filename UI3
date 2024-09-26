@@ -1,117 +1,81 @@
 import streamlit as st
 import pandas as pd
-import networkx as nx
-import matplotlib.pyplot as plt
 
-# Custom CSS
+# Initial Data
+todo_list = ["Reply to manager's email", "Update project document", "Send meeting invites", "Review the budget"]
+recently_completed = []
+
+# Setup session state to hold the list items across reruns
+if 'todo' not in st.session_state:
+    st.session_state.todo = todo_list
+if 'completed' not in st.session_state:
+    st.session_state.completed = recently_completed
+
+# CSS Styling for light grey background and multi-column layout
 st.markdown(
     """
     <style>
-    .main-container {
-        background-color: #f0f0f5;
+    .container {
+        background-color: #f7f7f7;
+        padding: 20px;
+        border-radius: 10px;
+        margin: 10px 0;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
     .header-title {
-        font-size: 32px;
         color: #4CAF50;
-        text-align: center;
+        font-size: 28px;
         font-weight: bold;
+        text-align: center;
     }
-    .widget-box {
-        background-color: #ffffff;
+    .todo-container {
+        background-color: #e0e0e0;
         padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+        border-radius: 10px;
+    }
+    .todo-widget {
+        background-color: #f7f7f7;
+        padding: 20px;
+        border-radius: 10px;
         margin-bottom: 20px;
     }
-    .todo-list {
-        background-color: #e8f4f8;
-        padding: 10px;
-        border-radius: 8px;
-    }
-    .delegation {
-        background-color: #fbe9e7;
-        padding: 10px;
-        border-radius: 8px;
-    }
-    .sentiment {
-        background-color: #e1f5fe;
-        padding: 10px;
-        border-radius: 8px;
+    .light-text {
+        font-size: 18px;
+        color: #424242;
     }
     </style>
-    """,
-    unsafe_allow_html=True
+    """, unsafe_allow_html=True
 )
 
-# Page Title
-st.markdown('<p class="header-title">Inbox Insight Dashboard</p>', unsafe_allow_html=True)
+# Main Header
+st.markdown("<h2 class='header-title'>Inbox Insight Dashboard</h2>", unsafe_allow_html=True)
 
-# Todo List Checker
-st.markdown('<div class="widget-box">', unsafe_allow_html=True)
-st.subheader("1. Todo List Checker")
-sentence_list = st.text_area("Input your tasks or sentences to check:")
-if st.button("Check Todo List"):
-    st.markdown('<div class="todo-list">', unsafe_allow_html=True)
-    todos = sentence_list.split("\n")
-    for task in todos:
-        if task.strip():
-            st.checkbox(task.strip(), value=False)
-    st.markdown('</div>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
+# To-Do Widget Layout
+st.markdown("<h3 class='light-text'>Task Management</h3>", unsafe_allow_html=True)
+col1, col2 = st.columns(2)
 
-# Emergency Replies Table
-st.markdown('<div class="widget-box">', unsafe_allow_html=True)
-st.subheader("2. Emergency Replies Needed")
-data = {
-    "Email Subject": ["Meeting Reminder", "Urgent: Project Deadline", "Team Update"],
-    "Sender": ["Alice", "Bob", "Carol"],
-    "Urgency": ["High", "High", "Low"]
-}
-df = pd.DataFrame(data)
-st.dataframe(df)
-st.markdown('</div>', unsafe_allow_html=True)
+# Display To-Do list on the left side
+with col1:
+    st.markdown("<div class='todo-widget'><h4>To-Do List</h4>", unsafe_allow_html=True)
+    for i, task in enumerate(st.session_state.todo):
+        if st.checkbox(task, key=f"todo_{i}"):
+            # If task is checked, move it to recently completed
+            st.session_state.completed.append(task)
+            st.session_state.todo.remove(task)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# Inbox Chatbot
-st.markdown('<div class="widget-box">', unsafe_allow_html=True)
-st.subheader("3. Inbox Chatbot")
-user_input = st.text_input("Ask something:")
-if user_input:
-    st.write(f"Bot: You asked '{user_input}', let me get back to you!")
-st.markdown('</div>', unsafe_allow_html=True)
+# Display Recently Completed on the right side
+with col2:
+    st.markdown("<div class='todo-widget'><h4>Recently Completed</h4>", unsafe_allow_html=True)
+    for i, task in enumerate(st.session_state.completed):
+        if st.checkbox(task, key=f"completed_{i}", value=True):
+            # If task is unchecked, move it back to the todo list
+            st.session_state.todo.append(task)
+            st.session_state.completed.remove(task)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# Knowledge Graph (Dummy)
-st.markdown('<div class="widget-box">', unsafe_allow_html=True)
-st.subheader("4. Knowledge Graph (Placeholder)")
-G = nx.Graph()
-G.add_edges_from([("Email", "Project A"), ("Project A", "Deadline"), ("Team", "Carol")])
-fig, ax = plt.subplots()
-nx.draw(G, with_labels=True, node_color="skyblue", node_size=1500, ax=ax)
-st.pyplot(fig)
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Delegation Tool
-st.markdown('<div class="widget-box">', unsafe_allow_html=True)
-st.subheader("5. Delegation Tool")
-st.markdown('<div class="delegation">', unsafe_allow_html=True)
-task = st.selectbox("Assign a task", ["Task 1", "Task 2", "Task 3"])
-person = st.selectbox("Delegate to", ["Alice", "Bob", "Carol"])
-if st.button("Delegate Task"):
-    st.write(f"Assigned {task} to {person}")
-st.markdown('</div>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Sentiment Analysis
-st.markdown('<div class="widget-box">', unsafe_allow_html=True)
-st.subheader("6. Sentiment Analysis")
-st.markdown('<div class="sentiment">', unsafe_allow_html=True)
-message = st.text_area("Enter a message to analyze its sentiment:")
-if st.button("Analyze Sentiment"):
-    # Dummy sentiment analysis result
-    sentiment = "Positive" if "good" in message.lower() else "Negative"
-    st.write(f"Sentiment: {sentiment}")
-st.markdown('</div>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Footer
-st.markdown("---")
-st.markdown('<p style="text-align: center;">© 2024 Inbox Insight App</p>', unsafe_allow_html=True)
+# Summary of Task Movement
+st.markdown("<div class='container'>", unsafe_allow_html=True)
+st.write("You have", len(st.session_state.todo), "tasks remaining in your To-Do list.")
+st.write("Recently completed:", len(st.session_state.completed), "tasks.")
+st.markdown("</div>", unsafe_allow_html=True)
