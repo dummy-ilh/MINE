@@ -4,11 +4,11 @@ from datetime import datetime, timedelta
 
 # Helper function to generate random dates
 def random_date(start, end):
-    return start + timedelta(days=random.randint(0, int((end - start).days)))
+    return start + timedelta(days=random.randint(0, (end - start).days))
 
-# Define start and end dates between August 15 and September 30, 2023
-start_date = datetime(2023, 8, 15)
-end_date = datetime(2023, 9, 30)
+# Define start and end dates between August 15 and September 30, 2024
+start_date = datetime(2024, 8, 15)
+end_date = datetime(2024, 9, 30)
 
 # Lists for random generation of email data
 subjects = [
@@ -19,7 +19,8 @@ subjects = [
     "Conversation End: Final Thoughts", "Request for Financial Projections", 
     "URGENT: Client Issue", "Team Project Status", "Revised Financials",
     "IT Shutdown Notification", "Newsletter: Market Insights", "Hackathon Registration",
-    "Employee Training: Financial Analysis Tools", "System Maintenance Announcement"
+    "Employee Training: Financial Analysis Tools", "System Maintenance Announcement",
+    "Monthly Newsletter - September Highlights", "Special Offer on Financial Tools"
 ]
 
 actions_in_body = [
@@ -38,6 +39,7 @@ generic_replies = [
     "Got it, thanks for the heads up!",
     "This looks good, thanks for the update.",
     "I'll check in with the team and follow up with you tomorrow.",
+    "Thanks for the information. I'll keep it in mind.",
 ]
 
 conversation_enders = [
@@ -52,12 +54,6 @@ email_addresses = [
     "sarah.williams@investwell.com", "michael.brown@capitalgroup.com",
     "elizabeth.davis@vpm.com", "john.doe@vpm.com", "anna.moore@equityadvisors.com",
     "peter.clark@vpm.com", "nancy.garcia@financegroup.com"
-]
-
-email_threads = [
-    "Re: Investment Proposal Review", "Re: Q2 Performance Report", 
-    "Re: Client Investment Query", "Re: Approval Required for New Deal", 
-    "Re: Request for Financial Projections"
 ]
 
 # Generate longer emails >500 words
@@ -83,46 +79,40 @@ def generate_long_email():
 
 # Generate the email dataset
 emails = []
+email_mapping = {}
 
 for i in range(500):
     date = random_date(start_date, end_date).strftime("%Y-%m-%d")
     subject = random.choice(subjects)
     from_email = random.choice(email_addresses)
     to_email = random.choice([email for email in email_addresses if email != from_email])
-    cc_email = random.choice([random.choice(email_addresses) if random.random() > 0.7 else None])
-    bcc_email = random.choice([random.choice(email_addresses) if random.random() > 0.9 else None])
     
-    # Determine if this is a long email (30% chance)
-    if random.random() < 0.3:
-        body = generate_long_email()
+    # Determine the parent email to create a thread
+    if i > 0 and random.random() < 0.7:  # 70% chance of being a reply
+        parent_email = random.choice(email_mapping)
+        subject = f"Re: {email_mapping[parent_email]['subject']}"  # Update subject for reply
+        body = f"In response to your email, {random.choice(actions_in_body)}"  # Body as a reply
+        date = random_date(datetime.strptime(email_mapping[parent_email]['date'], "%Y-%m-%d"), end_date).strftime("%Y-%m-%d")  # Date should be after parent email
     else:
-        if random.random() > 0.8:  # Action item email
-            body = random.choice(actions_in_body)
-        elif random.random() > 0.7:  # Generic reply
-            body = random.choice(generic_replies)
-        elif random.random() > 0.6:  # Conversation ender
-            body = random.choice(conversation_enders)
-        elif random.random() > 0.5:  # Long thread email
-            subject = random.choice(email_threads)
-            body = f"In response to your earlier message, {random.choice(actions_in_body)}"
-        else:
-            body = "Please let me know if you have any further questions or concerns."
-
-    # Add the email to the list
-    emails.append({
+        body = generate_long_email() if random.random() < 0.3 else "Please let me know if you have any further questions or concerns."
+    
+    # Save the email details
+    email_entry = {
+        "id": i + 1,
         "date": date,
         "subject": subject,
         "body": body,
         "to": to_email,
-        "from": from_email,
-        "cc": cc_email if cc_email else "",
-        "bcc": bcc_email if bcc_email else ""
-    })
+        "from": from_email
+    }
+    
+    emails.append(email_entry)
+    email_mapping[i + 1] = email_entry  # Map email ID to its details
 
 # Convert the list of emails to a pandas DataFrame
 df = pd.DataFrame(emails)
 
 # Save the emails to a CSV file
-df.to_csv("investment_banker_emails.csv", index=False)
+df.to_csv("investment_banker_email_threads.csv", index=False)
 
-print("Email dataset generated with 500 entries.")
+print("Email dataset with threaded replies generated with 500 entries.")
