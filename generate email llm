@@ -1,0 +1,122 @@
+import openai
+from langchain.prompts import PromptTemplate
+from langchain.llms import OpenAI
+import pandas as pd
+from datetime import datetime, timedelta
+import random
+
+# Set up the OpenAI API key and LangChain
+openai.api_key = 'YOUR_API_KEY'
+
+# Initialize the LLM model
+llm = OpenAI(model_name="gpt-4")
+
+# Define the categories and subjects for the emails
+categories = [
+    "Todo items", "Meetings", "Weekly newsletter", "Monthly newsletter",
+    "Tutorials", "Business presentations", "Townhall", "Townhall summary",
+    "AWS server issue"
+]
+
+subjects = {
+    "Todo items": "Pending Action Items",
+    "Meetings": "Meeting Scheduled for",
+    "Weekly newsletter": "Weekly Update",
+    "Monthly newsletter": "Monthly Recap",
+    "Tutorials": "New Tutorial: ",
+    "Business presentations": "Business Presentation for",
+    "Townhall": "Townhall Meeting on",
+    "Townhall summary": "Summary of Townhall on",
+    "AWS server issue": "URGENT: AWS Server Down"
+}
+
+# Define a prompt template for LangChain to generate the entire email (participants + content)
+prompt_template = PromptTemplate(
+    input_variables=["category", "subject"],
+    template="""
+    You are an AI assistant generating a professional email.
+
+    Category: {category}
+    Subject: {subject}
+    
+    Please generate:
+    1. A realistic 'From' email address and name.
+    2. A list of 'To' email addresses with names (1-4 participants).
+    3. Optionally, 'CC' and 'BCC' fields.
+    4. A professional email body based on the category and subject.
+    
+    Provide the generated details in the following format:
+    - From: [From Name] <from@example.com>
+    - To: [Name1] <email1@example.com>, [Name2] <email2@example.com>, ...
+    - CC: [optional]
+    - BCC: [optional]
+    - Email Body: [email content]
+    """
+)
+
+# Function to generate random dates in the past 2 years
+def generate_random_date():
+    random_days = random.randint(0, 730)  # Past 2 years
+    return datetime.now() - timedelta(days=random_days)
+
+# Function to generate email data using LLM
+def generate_email(category, subject):
+    # Create the prompt for the LLM
+    prompt = prompt_template.format(
+        category=category,
+        subject=subject
+    )
+    
+    # Generate the email content (including participants and body) using the LLM
+    response = llm(prompt)
+    
+    # Parse the LLM response to extract the email details
+    email_content = response.strip()  # LLM's generated email content
+    
+    # Split the response by lines to extract fields
+    lines = email_content.split("\n")
+    from_line = lines[0].replace("From: ", "").strip()
+    to_line = lines[1].replace("To: ", "").strip()
+    cc_line = lines[2].replace("CC: ", "").strip() if "CC: " in lines[2] else ""
+    bcc_line = lines[3].replace("BCC: ", "").strip() if "BCC: " in lines[3] else ""
+    body_lines = lines[4:] if len(lines) > 4 else []
+
+    body = "\n".join(body_lines).replace("Email Body: ", "").strip()  # Extract email body
+    subject_body = f"{subject} {body}"  # Combine subject and body
+    
+    participants = {
+        "FROM": from_line,
+        "TO": to_line,
+        "CC": cc_line,
+        "BCC": bcc_line
+    }
+    
+    return body, subject_body, participants
+
+# Generate a dataset of 666 emails
+emails = []
+for _ in range(666):
+    # Randomly pick a category and its associated subject
+    category = random.choice(categories)
+    subject = subjects[category]
+    
+    # Generate the email content and participants using LLM
+    body, subject_body, participants = generate_email(category, subject)
+    
+    # Append to email list
+    emails.append({
+        "date": generate_random_date(),
+        "subject": subject,
+        "body": body,
+        "participants": participants,
+        "subject_body": subject_body
+    })
+
+# Convert to DataFrame
+df_emails = pd.DataFrame(emails)
+
+# Save to CSV (optional)
+df_emails.to_csv('dummy_emails_llm.csv', index=False)
+
+# Preview the dataset
+df_emails.head()
