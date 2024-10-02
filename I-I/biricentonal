@@ -90,9 +90,12 @@ print(df.head(20))
 _________
 
 from langchain.prompts import PromptTemplate
-from langchain.llms import OpenAI
+from langchain.llms import AzureChatOpenAI
 import networkx as nx
 import matplotlib.pyplot as plt
+
+# Azure ChatGPT LLM
+llm = AzureChatOpenAI(deployment_name="your_deployment_name")
 
 # Langchain prompt template to summarize each email thread
 template = """
@@ -100,15 +103,13 @@ Summarize the following email thread in one concise sentence, focusing on the ke
 {conversation}
 """
 
-# Initialize the LLM and the prompt template
-llm = OpenAI()  # Use OpenAI LLM
 prompt = PromptTemplate(input_variables=["conversation"], template=template)
 
 # Function to summarize conversations
 def summarize_conversation(conversation):
     summary_prompt = prompt.format(conversation=conversation)
-    summary = llm.generate(summary_prompt)
-    return summary
+    response = llm([HumanMessage(content=summary_prompt)])
+    return response.content
 
 # Step 2: Create a graph using networkx
 G = nx.DiGraph()
@@ -135,3 +136,7 @@ edges = G.edges(data=True)
 color_map = {participant: plt.cm.tab20(i) for i, participant in enumerate(participants)}
 node_colors = [color_map[G.nodes[n]['participant']] for n in G.nodes]
 
+# Plot the graph
+pos = nx.spring_layout(G)
+nx.draw(G, pos, with_labels=True, node_color=node_colors, labels=labels, edge_color='gray', font_size=8)
+plt.show()
