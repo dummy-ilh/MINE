@@ -1,0 +1,62 @@
+import streamlit as st
+
+# Step 1: Generate Multiples for Each Transaction
+def generate_multiples(transactions, limit):
+    return {t: [t * i for i in range(1, limit // t + 1)] for t in transactions}
+
+# Step 2: Generate All Unique Sums of Multiples Using Iterative Method
+def generate_valid_sums(multiples, limit):
+    valid_sums = set()
+    valid_sums.add(0)  # Start with the base sum of 0
+
+    # Iterate through each set of multiples
+    for multiple_list in multiples.values():
+        current_sums = list(valid_sums)  # Copy existing sums to iterate
+        for base_sum in current_sums:
+            for multiple in multiple_list:
+                new_sum = base_sum + multiple
+                if new_sum <= limit:
+                    valid_sums.add(new_sum)
+
+    valid_sums.discard(0)  # Remove the initial dummy sum (0)
+    return sorted(valid_sums)
+
+# Step 3: Fraud Detection
+def is_fraud(new_bill, valid_sums):
+    return new_bill not in valid_sums
+
+# Streamlit App Layout
+st.title("Fraud Detector")
+
+# Input Section
+st.sidebar.header("Input Transactions and Limits")
+transactions = st.sidebar.text_input("Enter Transactions (comma-separated):", "4, 5, 10, 28")
+limit = st.sidebar.number_input("Enter Limit:", min_value=1, value=100, step=1)
+new_bill = st.sidebar.number_input("Enter New Bill Amount to Check:", min_value=1, value=11, step=1)
+
+# Convert transactions to list of integers
+try:
+    transactions = [int(x.strip()) for x in transactions.split(",") if x.strip().isdigit()]
+except ValueError:
+    st.error("Please enter valid integers for transactions.")
+
+# Fraud Detection Logic
+if st.sidebar.button("Detect Fraud"):
+    # Generate multiples and valid sums
+    multiples = generate_multiples(transactions, limit)
+    valid_sums = generate_valid_sums(multiples, limit)
+
+    # Check fraud
+    fraud_status = is_fraud(new_bill, valid_sums)
+
+    # Display Results
+    st.subheader("Results")
+    st.write(f"Transactions: {transactions}")
+    st.write(f"Limit: {limit}")
+    st.write(f"New Bill: {new_bill}")
+    st.write(f"Fraudulent: {'Yes' if fraud_status else 'No'}")
+
+    st.subheader("Details")
+    st.write(f"Multiples: {multiples}")
+    st.write(f"Valid Sums Below {limit}: {valid_sums}")
+
