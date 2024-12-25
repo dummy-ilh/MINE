@@ -1,0 +1,69 @@
+Title:
+System and Method for Automated Data Labeling Using Large Language Models with Dynamic Feedback Loop
+
+Abstract:
+The invention provides a system and method for automated data labeling leveraging Large Language Models (LLMs). The system dynamically generates label descriptions, processes unlabeled data iteratively, and labels data based on prompts generated from user-defined rules. It incorporates a feedback loop for validation, enabling continuous improvement by updating prompts and validation criteria based on user feedback. This ensures efficient and accurate labeling of datasets, reducing manual effort and enhancing model training for machine learning applications.
+
+Background:
+Traditional data labeling processes are labor-intensive and prone to human errors, particularly when dealing with large datasets. Existing automated systems lack the ability to dynamically adapt labeling criteria based on real-time feedback. The integration of LLMs introduces a novel mechanism to understand and apply complex labeling rules, ensuring scalability and accuracy. However, challenges remain in validation, adaptability, and reducing bias in labeled outputs.
+
+Summary:
+The proposed system comprises the following components:
+
+Prompt Generator: Dynamically creates label descriptions based on user-provided rules or dataset context.
+Data Processor: Iteratively processes unlabeled data, applying LLM-based prompts to generate labels.
+Validation Module: Compares labeled data against predefined criteria or user-provided feedback.
+Feedback Loop: Records incorrect labels, tracks feedback items, and updates prompts when a predefined threshold (e.g., 5 feedback items) is reached.
+Permutation Subsystem: Computes valid permutations for specific labeling tasks, ensuring comprehensive coverage of possible label assignments.
+Output Module: Produces labeled data, with indicators for validation confidence and any anomalies.
+The system operates continuously until all data is labeled and validated, enabling the use of high-quality labeled data for machine learning model training.
+
+Detailed Description:
+System Architecture:
+
+Input Preparation: Accepts raw data and user-defined rules for labeling. Rules include descriptions, classification criteria, or hierarchical dependencies.
+Prompt Generator: Analyzes rules and dataset context to generate detailed prompts compatible with LLMs.
+LLM Labeling Engine: Applies generated prompts to each data instance, leveraging pre-trained LLM capabilities to infer labels.
+Validation Module: Evaluates labeled data for correctness, using predefined metrics or manual oversight.
+Feedback Loop:
+Stores incorrect labels and updates validation criteria dynamically.
+Tracks the number of feedback items and triggers updates to the Prompt Generator upon reaching the threshold.
+Permutation Subsystem: Ensures permutations of label combinations are generated where applicable, providing exhaustive labeling coverage.
+Operation Flow:
+
+Load and preprocess data.
+Create prompts dynamically.
+Label data iteratively using the LLM Labeling Engine.
+Validate labeled data using the Validation Module.
+Store incorrect labels in the Feedback Loop.
+Update prompts dynamically and relabel data if feedback thresholds are met.
+Key Features:
+
+Dynamic Prompt Generation: Tailors prompts to dataset context, improving LLM performance.
+Adaptive Feedback: Continuously improves labeling accuracy through iterative feedback.
+Validation Confidence Scoring: Assigns confidence levels to labeled data for downstream applications.
+Combinatorial Permutations: Generates all valid label permutations to ensure comprehensive labeling.
+Claims:
+A system for automated data labeling using LLMs, comprising:
+
+A prompt generator for creating label descriptions based on user-defined rules.
+A data processor for iteratively applying LLM-generated labels to raw data.
+A validation module for evaluating labeled data against predefined criteria.
+A feedback loop for dynamically updating prompts based on incorrect labels.
+The system of claim 1, wherein the feedback loop updates prompts upon reaching a predefined threshold of feedback items.
+
+The system of claim 1, wherein the validation module assigns confidence scores to labeled data.
+
+The system of claim 1, further comprising a permutation subsystem for generating valid label combinations.
+
+A method for automated data labeling using LLMs, comprising:
+
+Generating prompts dynamically.
+Labeling data iteratively.
+Validating labeled data and recording feedback.
+Updating prompts dynamically based on feedback thresholds.
+Drawings:
+System Flowchart (attached as diagram).
+Detailed Sub-step Diagram for Permutation Calculation.
+Novelty:
+The system uniquely combines dynamic prompt generation, feedback-driven adaptability, and exhaustive permutation validation to ensure high-quality labeling. Its integration with LLMs enables scalability and efficiency, distinguishing it from traditional data labeling systems.
