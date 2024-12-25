@@ -1,1 +1,136 @@
+Patent Application
+
+Title: System and Method for Fraud Detection in POS Transactions via Unit Cost Analysis
+
+Field of the Invention:
+The present invention relates to the field of fraud detection systems, specifically for Point-of-Sale (POS) transactions. More particularly, it relates to a novel system and method that identifies fraud based on the analysis of unit costs of items being sold.
+
+Background of the Invention:
+Fraud in POS transactions has traditionally been detected using third-party and vendor models, which rely on a multitude of factors such as customer behavior, historical purchase patterns, and transaction anomalies. While effective to an extent, these models often lack the speed and precision required for real-time fraud detection. Additionally, they do not directly consider the granular unit cost of individual items sold, which can be a critical factor in detecting fraudulent activities.
+
+Summary of the Invention:
+The invention provides a preliminary fraud detection model that utilizes the unit cost of items sold at a shop to identify potentially fraudulent transactions. By leveraging the unique code assigned to each shop and systematically analyzing all transactions, the invention establishes a database of unit costs and uses this information to evaluate the validity of future transactions in near real-time.
+
+Description of the Invention:
+
+1. Initial Data Collection:
+For each shop, identified by its unique code, the system collects all historical transaction data. This forms the foundational dataset for the fraud detection process.
+
+2. Unit Cost Identification:
+The system processes the historical transaction data to determine all possible unit costs of items sold at the shop. The mathematical relationship used is:
+
+
+
+Where:
+
+ represent the quantities of items purchased,
+
+ represent the unit costs of the items, and
+
+ is the total amount charged for the transaction.
+
+By solving this equation for all transactions, the system identifies the set of possible unit costs.
+
+3. Potential Bill Generation:
+Using the identified unit costs, the system generates all possible valid bill amounts based on potential combinations of item quantities .
+
+4. Fraud Detection for New Transactions:
+When a new transaction occurs, the system evaluates the bill amount against the set of precomputed valid bill amounts. If the new bill amount does not match any valid bill, it is flagged as potentially fraudulent.
+
+5. Feedback Loop:
+To improve accuracy, the system incorporates a feedback mechanism. If a flagged transaction is later verified as legitimate, the system updates the database and adjusts its fraud detection model accordingly.
+
+What Makes This Invention Unique:
+
+Unit Cost-Based Approach: Unlike existing models that primarily rely on behavioral or transactional patterns, this invention focuses directly on the mathematical analysis of unit costs. This provides a granular level of insight into transaction validity that is not available in traditional methods.
+
+Real-Time Fraud Detection: The precomputed database of valid bill amounts enables the system to detect fraud in real time, offering unparalleled speed compared to other models.
+
+Feedback-Driven Learning: The incorporation of a feedback loop allows the system to learn from flagged transactions, thereby improving accuracy over time and reducing false positives.
+
+Scalability: The method is universal and can be applied to any shop or retail environment, regardless of the size or diversity of the inventory.
+
+Comparison to Similar Works:
+This invention draws inspiration from mathematical principles such as Benford's Law, which is widely used in detecting anomalies in numerical data. Benford's Law identifies deviations from expected distributions of leading digits in datasets to flag irregularities. Similarly, this invention uses the systematic generation and validation of unit-cost-based bill amounts to flag fraudulent transactions. However, unlike Benford's Law, which operates on statistical principles, this model employs deterministic computation based on predefined unit costs, making it more precise for POS applications.
+
+Other related works include anomaly detection algorithms in machine learning and rule-based fraud detection systems. While these models rely on training data and heuristic rules, this invention leverages explicit unit cost calculations, providing a novel and efficient alternative.
+
+Advantages of the Invention:
+
+Unit Cost-Based Analysis:
+Unlike existing models, this invention identifies and utilizes unit costs of items, enabling a granular and highly accurate analysis of transactions.
+
+Speed:
+By precomputing valid bill amounts, the system evaluates new transactions in near real-time, making it exceptionally fast compared to traditional fraud detection methods.
+
+Feedback Integration:
+The feedback loop ensures continuous learning and improvement of the model, reducing false positives over time.
+
+Universality:
+The model can be applied to any shop, regardless of size or type, making it highly scalable and adaptable.
+
+Claims:
+
+A fraud detection system for POS transactions, comprising:
+
+A database for storing historical transaction data associated with a shop;
+
+A unit cost identification module configured to determine all possible unit costs of items sold based on the equation ;
+
+A potential bill generation module configured to compute all valid bill amounts based on identified unit costs;
+
+A fraud detection module configured to compare the bill amount of a new transaction against the set of valid bill amounts and flag discrepancies;
+
+A feedback loop module configured to update the model based on verification of flagged transactions.
+
+The fraud detection system of claim 1, wherein the unit cost identification module uses historical transaction data unique to each shop identified by a unique code.
+
+The fraud detection system of claim 1, wherein the potential bill generation module computes valid bill amounts by evaluating all possible combinations of item quantities.
+
+The fraud detection system of claim 1, wherein the fraud detection module flags a transaction as potentially fraudulent if its bill amount does not match any valid bill amount.
+
+The fraud detection system of claim 1, wherein the feedback loop module updates the database and adjusts the model based on user feedback regarding flagged transactions.
+
+Detailed Description with Example:
+
+Consider a shop where historical transactions indicate the following unit costs:
+
+Item A: $4
+
+Item B: $5
+
+Item C: $10
+
+For a new transaction with a bill amount of $11, the system evaluates all combinations of quantities of A, B, and C:
+
+1. Generate Multiples for Each Unit Cost:
+
+Multiples of $4: 
+
+Multiples of $5: 
+
+Multiples of $10: 
+
+2. Compute All Valid Sums Below Limit (e.g., $100):
+
+Using combinations of these multiples, valid sums are calculated:
+
+
+For example, $11 is not included as it cannot be formed from any combination of multiples of $4, $5, or $10.
+
+3. Evaluate New Bill Amount ($11):
+
+The system checks whether $11 matches any value in the valid sums list.
+
+Since $11 does not match any valid sum, the transaction is flagged as fraudulent.
+
+Concrete Illustration:
+
+If a transaction bill amount is $14, it can be validated because $14 can be formed as $4 (1 unit of Item A) + $10 (1 unit of Item C).
+
+However, for a bill amount of $11, no combination of $4, $5, or $10 can sum to $11. Therefore, $11 is flagged as fraudulent.
+
+Conclusion:
+This invention provides a novel, efficient, and scalable method for fraud detection in POS transactions. By focusing on unit cost analysis, it introduces a unique approach that is both faster and more accurate than existing models.
+
 
