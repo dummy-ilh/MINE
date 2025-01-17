@@ -1,0 +1,106 @@
+import streamlit as st
+import pandas as pd
+from azure.ai.openai import OpenAIClient
+from azure.core.credentials import AzureKeyCredential
+
+# Azure OpenAI Configuration
+API_KEY = "<your_api_key>"
+ENDPOINT = "<your_endpoint>"
+DEPLOYMENT_NAME = "<your_deployment_name>"
+MODEL_NAME = "<your_model_name>"
+client = OpenAIClient(endpoint=ENDPOINT, credential=AzureKeyCredential(API_KEY))
+
+# Function to process text with Azure OpenAI
+def get_violations(base_prompt, text):
+    response = client.chat_completions.create(
+        deployment_name=DEPLOYMENT_NAME,
+        messages=[
+            {"role": "system", "content": base_prompt},
+            {"role": "user", "content": text},
+        ]
+    )
+    return response.choices[0].message["content"]
+
+# Initialize session state
+if "base_prompt" not in st.session_state:
+    st.session_state.base_prompt = "Your initial base prompt here."
+
+if "latest_prompt" not in st.session_state:
+    st.session_state.latest_prompt = st.session_state.base_prompt
+
+if "feedback_counter" not in st.session_state:
+    st.session_state.feedback_counter = 0
+
+if "messages_left" not in st.session_state:
+    st.session_state.messages_left = 5
+
+if "data" not in st.session_state:
+    st.session_state.data = None
+
+# Sidebar for tab navigation
+st.sidebar.title("Navigation")
+tabs = ["Data CSV", "Prompt Management", "Questions"]
+selected_tab = st.sidebar.radio("Select a tab:", tabs)
+
+if selected_tab == "Data CSV":
+    st.title("Data CSV")
+
+    uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+    if uploaded_file:
+        st.session_state.data = pd.read_csv(uploaded_file)
+        st.write("### Uploaded Data")
+        st.dataframe(st.session_state.data)
+
+        # Process rows with blank labels
+        blank_rows = st.session_state.data[st.session_state.data["label"].isna()]
+        if not blank_rows.empty:
+            st.write("### Rows to Process")
+            for index, row in blank_rows.iterrows():
+                st.write(f"#### Row {index}")
+                st.write(row["text"], unsafe_allow_html=True)
+
+                highlights = get_violations(st.session_state.base_prompt, row["text"])
+                st.text_area("Highlights (editable):", highlights, key=f"highlight_{index}", help="Highlighted text will appear in yellow.")
+
+                col1, col2, col3 = st.columns(3)
+                if col1.button("Approve", key=f"approve_{index}"):
+                    st.session_state.data.at[index, "label"] = True
+                    st.session_state.data.at[index, "highlights"] = highlights
+
+                if col2.button("Decline", key=f"decline_{index}"):
+                    st.session_state.data.at[index, "label"] = False
+                    st.session_state.data.at[index, "highlights"] = ""
+
+                if col3.button("Modify", key=f"modify_{index}"):
+                    modified_highlight = st.session_state[f"highlight_{index}"]
+                    st.session_state.data.at[index, "label"] = True
+                    st.session_state.data.at[index, "highlights"] = modified_highlight
+
+                st.session_state.feedback_counter += 1
+                st.session_state.messages_left -= 1
+
+                st.write(f"**Messages left before prompt update: {st.session_state.messages_left}**")
+
+        # Feedback loop logic
+        if st.session_state.feedback_counter >= 5:
+            st.write("Updating base prompt based on feedback...")
+            st.session_state.latest_prompt = "Updated prompt logic here."
+            st.session_state.feedback_counter = 0
+            st.session_state.messages_left = 5
+
+elif selected_tab == "Prompt Management":
+    st.title("Prompt Management")
+
+    st.write("### Base Prompt")
+    base_prompt = st.text_area("Edit Base Prompt:", st.session_state.base_prompt)
+    if st.button("Save Base Prompt"):
+        st.session_state.base_prompt = base_prompt
+        st.write("Base prompt updated.")
+
+    st.write("### Latest Updated Prompt")
+    st.text_area("Latest Updated Prompt:", st.session_state.latest_prompt, disabled=True)
+
+elif selected_tab == "Questions":
+    st.title("Questions")
+    st.text_area("Ask a question or leave feedback:")
+    st.button("Submit")
