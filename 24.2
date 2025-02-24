@@ -1,0 +1,30 @@
+import re
+
+# List of disclaimers (or patterns to identify them)
+disclaimers = [
+    "This email and any attachments may contain confidential information.",
+    "Confidential: This message contains privileged content.",
+    "Notice: The contents of this email are proprietary."
+]
+
+# Convert disclaimers into regex patterns (e.g., first 3 words)
+patterns = [re.escape(" ".join(d.split()[:3])) for d in disclaimers]
+
+# Combine patterns into a single regex pattern
+disclaimer_regex = re.compile(r"\b(" + "|".join(patterns) + r").*?", re.IGNORECASE | re.DOTALL)
+
+# Sample email body
+email_body = """Hello,
+
+Please find the attached report for your reference.
+
+This email and any attachments may contain confidential information. If you are not the intended recipient, delete it.
+
+Regards,
+John Doe
+"""
+
+# Remove disclaimer if found
+cleaned_email = disclaimer_regex.sub("", email_body).strip()
+
+print(cleaned_email)
