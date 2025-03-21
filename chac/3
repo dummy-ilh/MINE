@@ -4,22 +4,25 @@ import pandas as pd
 def extract_email_details(email_text):
     """
     Extracts 'From', 'To', 'Sent', 'Subject', and 'Body' from an email thread.
-    Handles missing fields and identifies email boundaries.
+    Handles missing fields, case insensitivity, and prevents incorrect splitting on "On ... wrote:".
     """
+    if not isinstance(email_text, str) or email_text.strip() == "":
+        return {"From": None, "To": None, "Sent": None, "Subject": None, "Body": None}
+
     # Standardize newlines & remove extra spaces
     email_text = re.sub(r'\r\n|\r', '\n', email_text).strip()
 
-    # Split emails based on 'From:' pattern (case-insensitive)
-    email_parts = re.split(r'(?i)\nFrom: ', email_text)
+    # Ensure "From: " is at the start of a new line to avoid splitting on "On ..."
+    email_parts = re.split(r'(?m)^\s*From:\s', email_text)  # Multi-line safe split
     extracted_emails = []
-    
+
     for i, email in enumerate(email_parts):
         email = email.strip()
         if not email:
             continue
 
         # Extract Fields
-        from_match = re.search(r'(?i)^(.+?)\n', email)
+        from_match = re.search(r'^(.*?)(?=\n)', email, re.IGNORECASE)
         from_email = from_match.group(1).strip() if from_match else None
 
         to_match = re.search(r'(?i)To:\s*(.+)', email)
@@ -34,6 +37,9 @@ def extract_email_details(email_text):
         # Identify Body (Everything after Subject until Signature)
         body_start = subject_match.end() if subject_match else 0
         body = email[body_start:].strip()
+
+        # Remove any quoted email replies ("On ... wrote:")
+        body = re.split(r'(?i)^On .*? wrote:', body, maxsplit=1)[0].strip()
 
         # Signature Detection (Scan from bottom)
         signature_match = re.search(r'(?i)(Best regards,|Thanks,|Sincerely,)', body)
@@ -55,34 +61,17 @@ def extract_email_details(email_text):
         if not extracted_emails[i]["To"]:
             extracted_emails[i]["To"] = extracted_emails[i+1]["From"]
 
-    return extracted_emails
+    return extracted_emails[0] if extracted_emails else {"From": None, "To": None, "Sent": None, "Subject": None, "Body": None}
 
-# Sample DataFrame
-data = {
-    "mail": [
-        """Dear Robert, Following our conversation, I've prepared a preliminary portfolio review.
-        Best regards, Jane Doe Senior Analyst Disclaimer: Confidential Info.
+# Load DataFrame (Assume df exists)
+df = pd.read_csv("your_file.csv")  # Replace with actual file if needed
 
-        From: robert.miller@example.com
-        Sent: 2024-02-19 09:00:00 PM
-        To: jane.doe@financialfirm.com
-        Sub: Portfolio Review
-        
-        Dear Jane, Thanks for the review. I'm available next week to discuss it. Could you also provide details?
-        
-        Thanks, Robert Miller
+# Apply extraction function to 'Message content'
+email_details = df["Message content"].apply(extract_email_details).apply(pd.Series)
 
-        On Wed, Apr 3, 2034 at 1:12 PM XXX <xx.com> wrote:
-        Blah blah...
-        """
-    ]
-}
+# Merge extracted details with the original df
+df = pd.concat([df, email_details], axis=1)
 
-df = pd.DataFrame(data)
-
-# Apply function to extract emails
-df["parsed_mails"] = df["mail"].apply(extract_email_details)
-
-# Flatten output for readability
-email_df = pd.json_normalize(df["parsed_mails"].explode())
-print(email_df)
+# Save to CSV or print
+df.to_csv("parsed_emails.csv", index=False)
+print(df.head())
