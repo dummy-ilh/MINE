@@ -1,0 +1,34 @@
+import pandas as pd
+from fuzzywuzzy import fuzz
+
+def find_similar_threads(df):
+    df["Similar Threads"] = [[] for _ in range(len(df))]  # Initialize empty lists
+
+    for i, row1 in df.iterrows():
+        thread1, message1 = row1["Thread ID"], row1["Message content"].lower().strip()
+
+        for j, row2 in df.iterrows():
+            if i == j:  # Skip comparing the same message
+                continue
+            
+            thread2, message2 = row2["Thread ID"], row2["Message content"].lower().strip()
+
+            # Ensure different threads & length condition
+            if thread1 != thread2 and len(message1) >= 300 and len(message2) >= 300:
+                # Compute common character overlap
+                common_chars = len(set(message1) & set(message2))
+
+                # Compute fuzzy similarity score
+                similarity = fuzz.ratio(message1, message2)
+
+                # Check similarity and overlap conditions
+                if similarity >= 90 and common_chars >= 300:
+                    df.at[i, "Similar Threads"].append(thread2)  # Store matching Thread ID
+
+    return df
+
+# Apply deduplication logic
+df = find_similar_threads(df)
+
+# Display results
+print(df)
