@@ -3,67 +3,57 @@ import pandas as pd
 
 def extract_email_details(email_text):
     """
-    Extracts 'From', 'To', 'Sent', 'Subject', and 'Body' from an email thread.
-    - Handles missing 'From' and 'To' by inheriting from the next available email.
-    - Detects signatures (Best regards, Thanks).
-    - Stops body before quoted text (On ... wrote).
+    Extracts 'From', 'To', 'Sent', 'Subject', and 'Body' based on:
+    - Logic 1: If email starts with "From: "
+    - Logic 2: If email starts with "On ... wrote:" (Only 'From' and 'Sent' available)
+    - Logic 3: Else, retain full text in 'Body'
     """
     if not isinstance(email_text, str) or email_text.strip() == "":
         return {"From": None, "To": None, "Sent": None, "Subject": None, "Body": None}
 
-    # Normalize line breaks
-    email_text = re.sub(r'\r\n|\r', '\n', email_text).strip()
+    email_text = re.sub(r'\r\n|\r', '\n', email_text).strip()  # Normalize newlines
 
-    # Splitting into email blocks correctly
-    email_parts = re.split(r'(?m)^\s*(?=From: )', email_text)  # Only split when "From:" starts the line
-    extracted_emails = []
-
-    for email in email_parts:
-        email = email.strip()
-        if not email:
-            continue
-
-        # Extract Fields
-        from_match = re.search(r'(?i)^From:\s*(.+)', email)
+    # **Logic 1: Starts with "From:"**
+    if re.match(r'(?i)^From:', email_text):
+        from_match = re.search(r'(?i)^From:\s*(.+)', email_text)
         from_email = from_match.group(1).strip() if from_match else None
 
-        to_match = re.search(r'(?i)To:\s*(.+)', email)
+        to_match = re.search(r'(?i)^To:\s*(.+)', email_text)
         to_email = to_match.group(1).strip() if to_match else None
 
-        sent_match = re.search(r'(?i)Sent:\s*(.+)', email)
+        sent_match = re.search(r'(?i)Sent:\s*(.+)', email_text)
         sent_time = sent_match.group(1).strip() if sent_match else None
 
-        subject_match = re.search(r'(?i)Sub(?:ject)?:\s*(.+)', email)
+        subject_match = re.search(r'(?i)Sub(?:ject)?:\s*(.+)', email_text)
         subject = subject_match.group(1).strip() if subject_match else None
 
-        # Identify Body (Everything after Subject until Signature)
+        # Extract body (after subject, stopping at signature or "On ... wrote:")
         body_start = subject_match.end() if subject_match else 0
-        body = email[body_start:].strip()
+        body = email_text[body_start:].strip()
+        body = re.split(r'(?i)^On .*? wrote:', body, maxsplit=1)[0].strip()  # Remove quoted replies
 
-        # Remove any quoted email replies ("On ... wrote:")
-        body = re.split(r'(?i)^On .*? wrote:', body, maxsplit=1)[0].strip()
-
-        # Signature Detection (Scan from bottom)
+        # Signature Detection
         signature_match = re.search(r'(?i)(Best regards,|Thanks,|Sincerely,)', body)
         if signature_match:
             body = body[:signature_match.start()].strip()
 
-        extracted_emails.append({
-            "From": from_email,
-            "To": to_email,
-            "Sent": sent_time,
-            "Subject": subject,
-            "Body": body
-        })
+        return {"From": from_email, "To": to_email, "Sent": sent_time, "Subject": subject, "Body": body}
 
-    # Handle missing 'From' fields (Infer from next email)
-    for i in range(len(extracted_emails) - 1):
-        if not extracted_emails[i]["From"]:
-            extracted_emails[i]["From"] = extracted_emails[i+1]["To"]
-        if not extracted_emails[i]["To"]:
-            extracted_emails[i]["To"] = extracted_emails[i+1]["From"]
+    # **Logic 2: Starts with "On ..." (Reply Email)**
+    elif re.match(r'(?i)^On .*? wrote:', email_text):
+        sent_match = re.search(r'(?i)^On (.+?) wrote:', email_text)
+        sent_time = sent_match.group(1).strip() if sent_match else None
 
-    return extracted_emails
+        from_match = re.search(r'(?i)^On .*? (.+) wrote:', email_text)
+        from_email = from_match.group(1).strip() if from_match else None
+
+        body = re.sub(r'(?i)^On .*? wrote:', '', email_text).strip()
+
+        return {"From": from_email, "To": None, "Sent": sent_time, "Subject": None, "Body": body}
+
+    # **Logic 3: Everything Else (First Email - No Headers)**
+    else:
+        return {"From": None, "To": None, "Sent": None, "Subject": None, "Body": email_text.strip()}
 
 # Sample DataFrame
 data = {
@@ -88,7 +78,7 @@ data = {
 df = pd.DataFrame(data)
 
 # Apply extraction function to 'Message content'
-email_details = df["Message content"].apply(extract_email_details).explode().apply(pd.Series)
+email_details = df["Message content"].apply(extract_email_details).apply(pd.Series)
 
 # Merge extracted details with the original df
 df = pd.concat([df, email_details], axis=1)
