@@ -1,0 +1,88 @@
+import re
+import pandas as pd
+
+def extract_email_details(email_text):
+    """
+    Extracts 'From', 'To', 'Sent', 'Subject', and 'Body' from an email thread.
+    Handles missing fields and identifies email boundaries.
+    """
+    # Standardize newlines & remove extra spaces
+    email_text = re.sub(r'\r\n|\r', '\n', email_text).strip()
+
+    # Split emails based on 'From:' pattern (case-insensitive)
+    email_parts = re.split(r'(?i)\nFrom: ', email_text)
+    extracted_emails = []
+    
+    for i, email in enumerate(email_parts):
+        email = email.strip()
+        if not email:
+            continue
+
+        # Extract Fields
+        from_match = re.search(r'(?i)^(.+?)\n', email)
+        from_email = from_match.group(1).strip() if from_match else None
+
+        to_match = re.search(r'(?i)To:\s*(.+)', email)
+        to_email = to_match.group(1).strip() if to_match else None
+
+        sent_match = re.search(r'(?i)Sent:\s*(.+)', email)
+        sent_time = sent_match.group(1).strip() if sent_match else None
+
+        subject_match = re.search(r'(?i)Sub(?:ject)?:\s*(.+)', email)
+        subject = subject_match.group(1).strip() if subject_match else None
+
+        # Identify Body (Everything after Subject until Signature)
+        body_start = subject_match.end() if subject_match else 0
+        body = email[body_start:].strip()
+
+        # Signature Detection (Scan from bottom)
+        signature_match = re.search(r'(?i)(Best regards,|Thanks,|Sincerely,)', body)
+        if signature_match:
+            body = body[:signature_match.start()].strip()
+
+        extracted_emails.append({
+            "From": from_email,
+            "To": to_email,
+            "Sent": sent_time,
+            "Subject": subject,
+            "Body": body
+        })
+
+    # Handle missing 'From' fields (Infer from next email)
+    for i in range(len(extracted_emails) - 1):
+        if not extracted_emails[i]["From"]:
+            extracted_emails[i]["From"] = extracted_emails[i+1]["To"]
+        if not extracted_emails[i]["To"]:
+            extracted_emails[i]["To"] = extracted_emails[i+1]["From"]
+
+    return extracted_emails
+
+# Sample DataFrame
+data = {
+    "mail": [
+        """Dear Robert, Following our conversation, I've prepared a preliminary portfolio review.
+        Best regards, Jane Doe Senior Analyst Disclaimer: Confidential Info.
+
+        From: robert.miller@example.com
+        Sent: 2024-02-19 09:00:00 PM
+        To: jane.doe@financialfirm.com
+        Sub: Portfolio Review
+        
+        Dear Jane, Thanks for the review. I'm available next week to discuss it. Could you also provide details?
+        
+        Thanks, Robert Miller
+
+        On Wed, Apr 3, 2034 at 1:12 PM XXX <xx.com> wrote:
+        Blah blah...
+        """
+    ]
+}
+
+df = pd.DataFrame(data)
+
+# Apply function to extract emails
+df["parsed_mails"] = df["mail"].apply(extract_email_details)
+
+# Flatten output for readability
+email_df = pd.json_normalize(df["parsed_mails"].explode())
+print(email_df)
