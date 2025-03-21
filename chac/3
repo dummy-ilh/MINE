@@ -5,7 +5,7 @@ def extract_email_details(email_text):
     """
     Extracts 'From', 'To', 'Sent', 'Subject', and 'Body' based on:
     - Logic 1: If email starts with "From: "
-    - Logic 2: If email starts with "On ... wrote:" (Only 'From' and 'Sent' available)
+    - Logic 2: If email starts with "On ... wrote:" (Extract only 'From' & 'Sent')
     - Logic 3: Else, retain full text in 'Body'
     """
     if not isinstance(email_text, str) or email_text.strip() == "":
@@ -41,11 +41,12 @@ def extract_email_details(email_text):
 
     # **Logic 2: Starts with "On ..." (Reply Email)**
     elif re.match(r'(?i)^On .*? wrote:', email_text):
+        # Extract 'From' and 'Sent' (Name and email correctly)
+        from_match = re.search(r'(?i)On .*? (.+?) <(.+?)> wrote:', email_text)
+        from_email = f"{from_match.group(1)} <{from_match.group(2)}>" if from_match else None
+
         sent_match = re.search(r'(?i)^On (.+?) wrote:', email_text)
         sent_time = sent_match.group(1).strip() if sent_match else None
-
-        from_match = re.search(r'(?i)^On .*? (.+) wrote:', email_text)
-        from_email = from_match.group(1).strip() if from_match else None
 
         body = re.sub(r'(?i)^On .*? wrote:', '', email_text).strip()
 
