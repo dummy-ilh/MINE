@@ -1,0 +1,82 @@
+import pandas as pd
+import re
+
+def parse_email_thread(email_text):
+    # Split emails in the thread
+    emails = re.split(r'(?=From: )', email_text)
+    parsed_emails = []
+    
+    for i, email in enumerate(emails):
+        email_data = {
+            'From': None, 'To': None, 'Sent': None,
+            'Greetings': None, 'Signatures': None, 'Disclaimer': None
+        }
+        
+        # Extract From, To, Sent (only if present)
+        from_match = re.search(r'From: (.*?)\n', email)
+        to_match = re.search(r'To: (.*?)\n', email)
+        sent_match = re.search(r'Sent: (.*?)\n', email)
+        
+        if from_match:
+            email_data['From'] = from_match.group(1).strip()
+        if to_match:
+            email_data['To'] = to_match.group(1).strip()
+        if sent_match:
+            email_data['Sent'] = sent_match.group(1).strip()
+        
+        # Extract greetings (e.g., "Dear Jane,")
+        greeting_match = re.search(r'^(Dear\s.*?),', email, re.MULTILINE)
+        if greeting_match:
+            email_data['Greetings'] = greeting_match.group(1).strip()
+        
+        # Extract signature (e.g., "Best regards, Jane Doe")
+        signature_match = re.search(r'(Best regards,|Thanks,|Sincerely,)([\s\S]*?)$', email, re.MULTILINE)
+        if signature_match:
+            email_data['Signatures'] = signature_match.group(0).strip()
+        
+        # Extract disclaimers
+        disclaimer_match = re.search(r'(Disclaimer:|This message contains confidential information[\s\S]*)$', email, re.MULTILINE)
+        if disclaimer_match:
+            email_data['Disclaimer'] = disclaimer_match.group(0).strip()
+        
+        parsed_emails.append(email_data)
+    
+    # Handle missing 'From' and 'To' in the first email
+    if len(parsed_emails) > 1 and not parsed_emails[0]['From']:
+        parsed_emails[0]['From'] = parsed_emails[1].get('To')
+        parsed_emails[0]['To'] = parsed_emails[1].get('From')
+    
+    return parsed_emails
+
+# Sample DataFrame
+data = {'text': ["""
+Dear Robert,
+
+Following our conversation, I've prepared a preliminary portfolio review. It highlights key areas for potential growth and risk mitigation.
+
+Best regards,
+Jane Doe
+Disclaimer: Confidential
+
+From: robert.miller@example.com
+Sent: 2024-02-19 09:00:00
+To: jane.doe@financialfirm.com
+
+Dear Jane,
+
+Thanks for the review. I'm available next week to discuss it. Could you also provide details on your management fees?
+
+Thanks,
+Robert Miller
+"""]}
+
+df = pd.DataFrame(data)
+
+# Apply parsing function
+df['parsed_emails'] = df['text'].apply(parse_email_thread)
+
+# Expand parsed data into multiple columns
+df_exploded = df.explode('parsed_emails')
+df_exploded = pd.concat([df_exploded.drop(columns=['parsed_emails']), df_exploded['parsed_emails'].apply(pd.Series)], axis=1)
+
+print(df_exploded)
