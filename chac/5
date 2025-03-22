@@ -1,34 +1,70 @@
 import pandas as pd
-from fuzzywuzzy import fuzz
+import hashlib
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
-def find_similar_threads(df):
-    df["Similar Threads"] = [[] for _ in range(len(df))]  # Initialize empty lists
+def preprocess_text(text):
+    """Convert text to lowercase and remove excessive spaces."""
+    return " ".join(text.lower().strip().split())
 
-    for i, row1 in df.iterrows():
-        thread1, message1 = row1["Thread ID"], row1["Message content"].lower().strip()
+def compute_hash(text):
+    """Compute a SHA-256 hash for fast comparison."""
+    return hashlib.sha256(text.encode()).hexdigest()
 
-        for j, row2 in df.iterrows():
-            if i == j:  # Skip comparing the same message
-                continue
-            
-            thread2, message2 = row2["Thread ID"], row2["Message content"].lower().strip()
+def find_similar_threads_optimized(df):
+    # Step 1: Filter only first messages (Message ID ending in "-1")
+    df_first_messages = df[df["Message ID"].str.endswith("-1")].copy()
+    
+    # Step 2: Preprocess messages
+    df_first_messages["Cleaned Content"] = df_first_messages["Message content"].apply(preprocess_text)
+    
+    # Step 3: Convert text to hash
+    df_first_messages["Content Hash"] = df_first_messages["Cleaned Content"].apply(compute_hash)
+    
+    # Step 4: Convert text to vector (for similarity comparison)
+    vectorizer = TfidfVectorizer(stop_words='english', max_features=5000)
+    tfidf_matrix = vectorizer.fit_transform(df_first_messages["Cleaned Content"])
+    
+    # Step 5: Compute pairwise cosine similarity (fast comparison)
+    similarity_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
 
-            # Ensure different threads & length condition
-            if thread1 != thread2 and len(message1) >= 300 and len(message2) >= 300:
-                # Compute common character overlap
-                common_chars = len(set(message1) & set(message2))
+    # Step 6: Compare each pair and store matching threads
+    threshold = 0.90  # 90% similarity
+    min_overlap = 300  # Minimum 300 overlapping characters
+    
+    similar_threads = [[] for _ in range(len(df_first_messages))]
+    first_message_list = df_first_messages["Cleaned Content"].tolist()
+    thread_ids = df_first_messages["Thread ID"].tolist()
 
-                # Compute fuzzy similarity score
-                similarity = fuzz.ratio(message1, message2)
+    for i in range(len(df_first_messages)):
+        for j in range(i + 1, len(df_first_messages)):  # Avoid redundant comparisons
+            if similarity_matrix[i, j] >= threshold and len(set(first_message_list[i]) & set(first_message_list[j])) >= min_overlap:
+                similar_threads[i].append(thread_ids[j])
+                similar_threads[j].append(thread_ids[i])
 
-                # Check similarity and overlap conditions
-                if similarity >= 90 and common_chars >= 300:
-                    df.at[i, "Similar Threads"].append(thread2)  # Store matching Thread ID
+    # Step 7: Store similar threads in DataFrame
+    df_first_messages["Similar Threads"] = similar_threads
 
+    # Step 8: Merge back with the original DataFrame (keeping other rows intact)
+    df = df.merge(df_first_messages[["Thread ID", "Similar Threads"]], on="Thread ID", how="left")
+    df["Similar Threads"] = df["Similar Threads"].apply(lambda x: x if isinstance(x, list) else [])  # Ensure empty lists instead of NaN
+    
     return df
 
-# Apply deduplication logic
-df = find_similar_threads(df)
+# Sample DataFrame
+df = pd.DataFrame({
+    "Thread ID": ["T-2025-0001", "T-2025-0002", "T-2025-0003", "T-2025-0004"],
+    "Message ID": ["T-2025-0001-1", "T-2025-0002-1", "T-2025-0003-1", "T-2025-0004-1"],
+    "Message content": [
+        "Dear John, please find the report attached. Regards, Jane.",
+        "Dear John, please find the report along with last month's report. Regards, Jane.",
+        "Hello Jane, can you send me last month's report as well? Thanks!",
+        "This is a completely different message with no relation to others."
+    ]
+})
+
+# Apply the optimized deduplication logic
+df = find_similar_threads_optimized(df)
 
 # Display results
-print(df)
+print(df[["Thread ID", "Message ID", "Similar Threads"]])
