@@ -1,0 +1,113 @@
+import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from mlxtend.frequent_patterns import apriori, association_rules
+from mlxtend.preprocessing import TransactionEncoder
+
+st.set_page_config(page_title="Client Insights Dashboard", layout="wide")
+st.title("📬 Client Insights Dashboard")
+
+# --------- Top Row: 3 Widgets (1, 2, 3) ---------
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("📈 Engagement Over Templates")
+    engagement_data = {
+        'Template': ['Template 1 (2+)', 'Template 2 (3+)', 'Template 3 (5+)'],
+        'Engagement Score': [2.1, 3.4, 5.6]
+    }
+    df_engagement = pd.DataFrame(engagement_data)
+    fig1, ax1 = plt.subplots()
+    ax1.plot(df_engagement['Template'], df_engagement['Engagement Score'], marker='o', color='teal', linewidth=2)
+    ax1.set_ylabel("Engagement Score")
+    ax1.set_xlabel("Mail Template")
+    ax1.set_title("Client Engagement Growth")
+    st.pyplot(fig1)
+    st.info("Clients are increasingly engaging with newer templates.")
+
+with col2:
+    st.subheader("😊 Sentiment Shift Over Campaigns")
+    sentiment_data = {
+        'Template': ['Template 1', 'Template 2', 'Template 3'],
+        'Negative': [0.7, 0.6, 0.4],
+        'Mixed': [0.2, 0.3, 0.4],
+        'Positive': [0.1, 0.1, 0.2]
+    }
+    df_sentiment = pd.DataFrame(sentiment_data)
+    df_sentiment.set_index("Template").plot(kind="bar", stacked=True, colormap="Accent", figsize=(6, 3))
+    st.pyplot(plt.gcf())
+    st.success("Negative sentiment is dropping, positive and mixed tones are rising.")
+
+# --------- Second Row: 3 Widgets (4, 5, 6) ---------
+col3, col4 = st.columns(2)
+
+with col3:
+    st.subheader("🔍 Investment Preference Evolution")
+    st.markdown("""
+    **Earlier Templates (1 & 2)**  
+    🛡️ Clients focused on **Safe Havens** like:
+    - Gold  
+    - Reverse Mortgage Notes  
+
+    **Latest Template (3)**  
+    📈 Clients are actively exploring **alternatives**:
+    - AL & Steel  
+    - Structured Notes ➡️ Fixed Income  
+    - Real Assets  
+    - Gold (still popular)  
+
+    💡 Clients are becoming more opportunity-seeking — signaling growing market confidence.
+    """)
+
+with col4:
+    st.subheader("🧺 Market Basket Analysis")
+    transactions = [
+        ['Gold', 'Structured Notes', 'Real Assets'],
+        ['Fixed Income', 'Gold'],
+        ['AL & Steel', 'Structured Notes'],
+        ['Structured Notes', 'Gold', 'Fixed Income'],
+        ['Reverse Mortgage Notes', 'Gold'],
+        ['Real Assets', 'Gold']
+    ]
+    te = TransactionEncoder()
+    te_ary = te.fit(transactions).transform(transactions)
+    df_basket = pd.DataFrame(te_ary, columns=te.columns_)
+    frequent_itemsets = apriori(df_basket, min_support=0.3, use_colnames=True)
+    rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1.0)
+    st.dataframe(rules[['antecedents', 'consequents', 'support', 'confidence', 'lift']].round(2))
+    st.info("Gold often co-occurs with Structured Notes and Real Assets — strong combo.")
+
+# --------- Third Row: Cluster Insight and Chart (7, 8) ---------
+col5, col6 = st.columns(2)
+
+with col5:
+    st.subheader("👥 Cluster 1: Stat-Loving Clients")
+    st.markdown("""
+    **Cluster 1 Traits:**
+    - 🧠 Prefers clear, statistical, macroeconomic-backed info  
+    - 📊 Engages more with data-heavy emails  
+    - 📰 Likes inflation %, trendlines, and benchmarks
+
+    **Top Headlines:**
+    - “📉 Inflation erodes 20% in 3 years — beat it smartly”  
+    - “📊 10-year gold vs. S&P returns — what wins?”  
+    - “🔍 Market insights with trendline data”
+
+    ✅ Use charts, benchmarks, and trend-based headlines for this group.
+    """)
+
+with col6:
+    st.subheader("📊 Cluster Content Preference")
+    clusters = ['Cluster 1', 'Cluster 2', 'Cluster 3']
+    types = ['Statistical Data', 'Storytelling', 'Product Mentions']
+    values = {
+        'Cluster 1': [0.9, 0.3, 0.5],
+        'Cluster 2': [0.4, 0.8, 0.6],
+        'Cluster 3': [0.5, 0.5, 0.9]
+    }
+    df_cluster_pref = pd.DataFrame(values, index=types)
+    df_cluster_pref.plot(kind='bar', figsize=(6, 3))
+    plt.title("Content Preference by Cluster")
+    plt.ylabel("Engagement Score")
+    st.pyplot(plt.gcf())
