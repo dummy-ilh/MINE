@@ -367,4 +367,74 @@ The method of claim 8, wherein the system supports both real-time streaming inpu
 
 ### 3. Adaptive Weighted Aggregation
 
-After computing the five normalized dimension scores  
+After computing the five normalized dimension scores
+
+
+
+
+**Advantages: Identifying LLM Failures and Quality Drops**
+
+1. **Early Detection of Semantic Drift**
+   • By measuring a continuous semantic‐difference score (r\_sem), the system flags when an LLM’s output meaning begins to diverge from accepted standards (e.g., hallucinations or incorrect facts).
+   • Enables automatic alerts whenever cosine‐similarity between draft and human‐corrected text falls below a threshold, signaling potential information errors.
+
+2. **Granular Visibility into Revision Patterns**
+   • Separating revisions into Syntactic, Structural, Stylistic, and Pragmatic dimensions pinpoints *which* aspect of the LLM’s output deteriorated (e.g., sudden jump in structural edits indicates paragraph reordering failures).
+   • Stakeholders can trace whether failures stem from grammar (r\_syn spikes), tone/clarity issues (r\_sty spikes), or discourse‐level contradictions (r\_prg ≠ 0).
+
+3. **Continuous Quality Monitoring Over Time**
+   • Tracking the composite Revision Gap Score (RGS) across multiple documents or periodic training runs reveals model drift before it impacts production.
+   • Dashboards can chart RGS trends, exposing gradual degradation (e.g., a 10% year-over-year increase in average r\_prg indicates growing inconsistency).
+
+4. **Automated Alerting and Escalation**
+   • Predefined thresholds per dimension trigger real‐time notifications (e.g., “Semantic score > 0.3”), allowing teams to intervene—by refining prompts, adjusting training data, or rolling back updates.
+   • Saves costly manual QA cycles, since LLM failures are surfaced automatically rather than discovered downstream.
+
+5. **Fine-Tuned Model Retraining Feedback**
+   • Explanation Engine highlights exact sentences or sections where r\_sem or r\_prg surged, providing concrete examples for retraining (e.g., “Model misrepresented legal clause in paragraph 4”).
+   • Focused feedback loops accelerate model improvement, reducing time spent tinkering with generic metrics.
+
+6. **Adaptive Weighting for Domain-Specific Risk**
+   • In high-stakes domains (legal, medical), semantic and pragmatic dimensions can be weighted more heavily. A sudden spike in r\_prg immediately triggers a “red-flag” review.
+   • In creative writing contexts, stylistic and structural dimensions take precedence—allowing nuanced detection of style drift or narrative incoherence.
+
+7. **Cross-Modal Consistency Checks**
+   • For code generation tasks, syntactic edits (compile errors, function renames) and semantic checks (API misuse) can be detected via analogous LCS or AST comparison, ensuring LLM code simply isn’t “plausible” but actually correct.
+   • Reduces runtime failures by catching code-generation defects at the draft stage.
+
+---
+
+**Novelty and Uniqueness**
+
+1. **Unified, Unsupervised Multi-Axis Scoring**
+   • No prior method simultaneously measures and weights *five orthogonal dimensions* of revision (Syntactic, Semantic, Structural, Stylistic, Pragmatic) without any human‐labeled ground truth.
+   • Existing tools focus on BLEU/ROUGE (surface overlap) or single‐axis metrics—lacking this breadth.
+
+2. **Dynamic, Domain-Adaptive Weight Learning**
+   • Incorporates an unsupervised “self-calibration” mechanism (e.g., inverse-variance weighting) that automatically adjusts dimension importance based on historical revision variability.
+   • Unlike static scoring formulas, this system learns which dimension matters most in each domain (legal vs. marketing vs. code) without requiring annotated examples.
+
+3. **Real-Time LLM Governance Signal (RGS)**
+   • The composite Revision Gap Score serves as an actionable “health index” for any deployed LLM, automatically surfacing quality drops or policy violations.
+   • No comparable existing metric provides a single, interpretable numeric signal that encapsulates multi-dimensional revision behavior in real time.
+
+4. **Integrated Explainability­­—Sentence-Level and Heatmap Views**
+   • Beyond a numeric score, the Explanation Engine outputs sentence-level annotations and heatmaps that identify *exact locations* of failure (e.g., pragmatic contradictions).
+   • This granularity of insight into LLM failure modes is novel compared to black-box evaluation tools that only report aggregate scores.
+
+5. **Multi-Modality and Structured Data Support**
+   • Extends diff techniques to source code (via AST or token comparison) and structured tables (via schema-aware matching), detecting code or data generation failures.
+   • No existing system seamlessly unifies text-based and code-based revision analysis in a single pipeline.
+
+6. **End-to-End, Label-Free Quality Assurance**
+   • From ingest (GenAI draft) to final output, the entire pipeline functions without any manually labeled “correctness” data.
+   • This end-to-end, zero-label approach (combining Levenshtein, SBERT, LCS, Flesch, NLI) is a unique integration not seen in prior art.
+
+7. **Continuous Drift Monitoring and Automated Escalation**
+   • The system provides continuous monitoring of LLM performance, automatically escalating when algebraical thresholds in any dimension are breached.
+   • This closed-loop governance approach—where a single RGS triggers downstream actions (alerts, retraining)—is a novel framework for LLM quality management.
+
+---
+
+Together, these features establish a novel, patentable framework that uniquely identifies, interprets, and mitigates LLM failures and quality drops—across text, code, and structured data—without manual intervention or labeled ground truth.
+
