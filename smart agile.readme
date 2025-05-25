@@ -133,4 +133,78 @@ Let’s build the future of agile planning:
 🌐 [smartagile.ai](https://smartagile.ai)  
 🧠 Powered exclusively by **GPT-4o**
 
----
+---+-----------------------------+
+|      Input Sources          |
+|-----------------------------|
+| - Emails                    |
+| - Zoom transcripts          |
+| - Jira tickets              |
+| - Feature requests (text)   |
++-------------+---------------+
+              |
+              v
++-----------------------------+
+|     Ingestion & Parsing     |
+|-----------------------------|
+| - GPT-4o for text parsing   |
+| - Whisper for transcripts   |
+| -> Output: Structured briefs|
++-------------+---------------+
+              |
+              v
++-------------------------------+
+| Contextual Reasoning & Memory|
+|-------------------------------|
+| - Vector DB (FAISS, Pinecone)|
+| - Embedding similarity search|
+| - Context: teams, tech stack |
+| - Cross-referencing past     |
+|   epics/modules (LLM RAG)    |
++-------------+----------------+
+              |
+              v
++--------------------------------------+
+| Backlog Generation (LLM reasoning)   |
+|--------------------------------------|
+| - GPT-4o function calling            |
+| - Classify ideas → Feature/Bug/Task  |
+|   [Classification Model]             |
+| - Generate Epics, Stories, Tasks     |
+| - Detect duplicate/linked items      |
+|   [Clustering with embeddings]       |
++-------------+------------------------+
+              |
+              v
++-----------------------------------------+
+| Governance & Strategic Alignment        |
+|-----------------------------------------|
+| - OKR alignment via similarity scoring  |
+|   [Embedding + cosine similarity]       |
+| - Priority scoring                      |
+|   [Classification + rules]              |
+| - Risk detection                        |
+|   [Anomaly detection, heuristic filters]|
++-------------+---------------------------+
+              |
+              v
++----------------------------------------------+
+| Effort Estimation & Allocation                |
+|----------------------------------------------|
+| - Effort prediction                           |
+|   [Regression model: time/complexity]         |
+| - Time series forecasting of sprint velocity  |
+|   [ARIMA / LSTM / Prophet]                    |
+| - Smart assignment: match tasks ↔ team skill  |
+|   [Recommender system]                        |
++-------------+---------------------------------+
+              |
+              v
++----------------------------------------------+
+| Final Output                                  |
+|----------------------------------------------|
+| - Sprint-ready backlog                        |
+| - Push to Jira via API                        |
+| - Notify via Slack/Email                      |
+| - Continuous feedback loop for improvement    |
++----------------------------------------------+
+
