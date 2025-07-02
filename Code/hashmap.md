@@ -367,7 +367,183 @@ def isIsomorphic(s, t):
 * For frequency comparison of strings: `Counter(s) == Counter(t)`
 
 ---
+Absolutely! Here’s a curated list of **widely used HashMap (dict) patterns/snippets** in Python—especially useful in coding interviews and competitive programming.
 
-Would you like me to integrate this cheat sheet directly into your **Hashmap Mastery Notes** document?
+---
 
-Next: Proceed with **Problem 2: Valid Anagram (LeetCode 242)?**
+## 🔥 Widely Used HashMap Snippets (Python)
+
+---
+
+### 1️⃣ **Frequency Counter**
+
+Used in most counting problems like anagrams, duplicates, majority elements, etc.
+
+```python
+from collections import Counter
+
+nums = [1, 2, 2, 3, 1, 1]
+freq = Counter(nums)
+# freq: {1: 3, 2: 2, 3: 1}
+```
+
+---
+
+### 2️⃣ **Group by Key (Sorted String / Remainder / Index etc.)**
+
+For problems like Group Anagrams, Bucket Sort variants
+
+```python
+from collections import defaultdict
+
+group = defaultdict(list)
+words = ["bat", "tab", "tan", "nat", "cat"]
+
+for word in words:
+    key = ''.join(sorted(word))
+    group[key].append(word)
+# Output: group.values() → [["bat", "tab"], ["tan", "nat"], ["cat"]]
+```
+
+---
+
+### 3️⃣ **Two Sum Pattern**
+
+Core template for all “pair with target sum” types
+
+```python
+def two_sum(nums, target):
+    seen = {}
+    for i, num in enumerate(nums):
+        if target - num in seen:
+            return [seen[target - num], i]
+        seen[num] = i
+```
+
+---
+
+### 4️⃣ **Sliding Window with HashMap**
+
+Used for substring problems, unique characters, window counts
+
+```python
+from collections import defaultdict
+
+def longest_unique_substring(s):
+    left = 0
+    seen = defaultdict(int)
+    max_len = 0
+
+    for right in range(len(s)):
+        seen[s[right]] += 1
+
+        while seen[s[right]] > 1:
+            seen[s[left]] -= 1
+            left += 1
+
+        max_len = max(max_len, right - left + 1)
+    return max_len
+```
+
+---
+
+### 5️⃣ **Prefix Sum + HashMap**
+
+Used in “subarray with sum K” problems (560, 930, etc.)
+
+```python
+def subarray_sum(nums, k):
+    count = 0
+    prefix = 0
+    seen = {0: 1}
+
+    for num in nums:
+        prefix += num
+        count += seen.get(prefix - k, 0)
+        seen[prefix] = seen.get(prefix, 0) + 1
+    return count
+```
+
+---
+
+### 6️⃣ **Check if Two Strings Are Isomorphic**
+
+Useful for problems like Isomorphic Strings (205)
+
+```python
+def is_isomorphic(s, t):
+    return len(set(zip(s, t))) == len(set(s)) == len(set(t))
+```
+
+---
+
+### 7️⃣ **Track Index of Elements**
+
+Great for “first/last occurrence”, “min index of...” etc.
+
+```python
+index_map = {}
+for i, val in enumerate(arr):
+    if val not in index_map:
+        index_map[val] = i  # first occurrence
+```
+
+---
+
+### 8️⃣ **Character Window Comparison (Anagram in a String)**
+
+Sliding window with character count match
+
+```python
+from collections import Counter
+
+def find_anagrams(s, p):
+    res = []
+    p_count = Counter(p)
+    s_count = Counter(s[:len(p)-1])
+
+    for i in range(len(p)-1, len(s)):
+        s_count[s[i]] += 1
+        if s_count == p_count:
+            res.append(i - len(p) + 1)
+        s_count[s[i - len(p) + 1]] -= 1
+        if s_count[s[i - len(p) + 1]] == 0:
+            del s_count[s[i - len(p) + 1]]
+    return res
+```
+
+---
+
+### 9️⃣ **Reversing a HashMap**
+
+Often used when values are unique
+
+```python
+original = {"a": 1, "b": 2}
+reversed_map = {v: k for k, v in original.items()}
+```
+
+---
+
+### 🔟 **Count Pairs with Sum**
+
+Extension of Two Sum — used for Count Good Meals (1711), Boomerangs
+
+```python
+from collections import defaultdict
+
+def count_pairs(arr, target):
+    freq = defaultdict(int)
+    count = 0
+    for x in arr:
+        count += freq[target - x]
+        freq[x] += 1
+    return count
+```
+
+---
+
+Would you like me to add these as a new section titled **“Widely Used HashMap Snippets”** to your notes?
+
+Or integrate them directly into the existing **Basic & Critical Operations Cheat Sheet**?
+
