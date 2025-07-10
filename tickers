@@ -1,3 +1,0 @@
-famous_tickers = ["AAPL", "GOOGL", "AMZN", "MSFT", "TSLA", "FB", "NVDA", "JPM", "DIS", "V", "MA", "WMT", "JNJ", "UNH", "VZ", "CSCO", "PG", "BA", "KO", "PEP", "INTC", "WFC", "GS", "HD", "MRK", "MCD", "CMCSA", "BAC", "XOM", "CVX", "IBM", "GE", "CAT", "AAP", "T", "NKE", "PYPL", "ADBE", "ORCL", "COST", "ABT", "MMM", "LMT", "TMO", "LOW", "TXN", "HON", "QCOM"]
-
-print(famous_tickers)
