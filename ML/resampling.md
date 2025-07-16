@@ -514,3 +514,66 @@ Let me know if you'd like:
 Want to go to ISLR Chapter 6: **Linear Model Selection** next?
 
 
+Here's a clean and complete **flowchart of resampling methods** covered in **ISLR Chapter 5**, showing:
+
+* 🔹 Types (CV vs Bootstrap)
+* 🔸 Subtypes (Validation Set, LOOCV, k-Fold, etc.)
+* 🧠 When to use each
+
+---
+
+### 🌐 Resampling Methods – Flowchart
+
+```markdown
+# 🔁 Resampling Methods Flowchart (ISLR Chapter 5)
+
+Resampling Methods
+│
+├── 📘 Cross-Validation (CV) – For Estimating Test Error
+│   │
+│   ├── 🔹 Validation Set Approach
+│   │   └─ One-time train/test split (e.g., 70/30)
+│   │      ✅ Simple, fast
+│   │      ❌ High variance, inefficient
+│   │
+│   ├── 🔹 Leave-One-Out Cross-Validation (LOOCV)
+│   │   └─ Train on n-1, test on 1, repeat for all points
+│   │      ✅ Low bias
+│   │      ❌ High variance, slow
+│   │
+│   ├── 🔹 k-Fold Cross-Validation
+│   │   └─ Split into k folds (typically 5 or 10)
+│   │      ✅ Best balance of bias/variance
+│   │
+│   └── 🔹 Repeated k-Fold CV / Stratified CV (not in ISLR)
+│       └─ Repeat k-Fold multiple times or ensure class balance
+│          ✅ Smoother estimates
+│
+└── 📘 Bootstrap – For Estimating Statistical Accuracy
+    │
+    ├── 🔹 Standard Bootstrap
+    │   └─ Resample with replacement (B times)
+    │      ✅ Estimate SE, CI, bias
+    │
+    └── 🔹 Pairs Bootstrap (Regression-specific)
+        └─ Resample (x, y) pairs
+           ✅ Preserves joint distribution
+```
+
+---
+
+### 🧠 Quick Use-Case Table
+
+| Goal                         | Use This Method         |
+| ---------------------------- | ----------------------- |
+| Estimate model’s test error  | k-Fold CV               |
+| Very small dataset           | LOOCV                   |
+| Estimate standard error      | Bootstrap               |
+| Tune model (e.g. λ in Ridge) | k-Fold CV               |
+| Class imbalance              | Stratified k-Fold CV    |
+| Quick evaluation             | Validation Set Approach |
+
+---
+
+Would you like this visualized as a real **image or diagram** (PNG/SVG)?
+I can generate one for you next!
