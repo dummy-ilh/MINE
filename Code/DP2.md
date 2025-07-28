@@ -2911,3 +2911,722 @@ print(f"Nth Row of Pascal Triangle (4) (Formula): {get_row_formula(4)}") # Outpu
 **Space Complexity:** $O(rowIndex)$ - To store the row.
 
 -----
+I will provide a detailed explanation for each problem, following the requested format. Let's start with "Min Sum in a Triangle".
+
+-----
+
+### Min Sum in a Triangle
+
+**Problem Statement:**
+Given a triangle, find the minimum path sum from top to bottom. Each step you may move to an adjacent number on the row below. Adjacent numbers for `triangle[i][j]` are `triangle[i+1][j]` and `triangle[i+1][j+1]`.
+
+**Example:**
+
+```
+Input: triangle = [[2],[3,4],[6,5,7],[4,1,8,3]]
+Output: 11
+Explanation: The minimum path sum from top to bottom is 11 (i.e., 2 + 3 + 5 + 1 = 11).
+   2
+  3 4
+ 6 5 7
+4 1 8 3
+```
+
+-----
+
+#### Approach 1: Recursion (Brute Force)
+
+**Idea:**
+From any given cell `(row, col)`, we have two choices: move to `(row+1, col)` or `(row+1, col+1)`. We recursively calculate the minimum sum from these two next possible cells and add the current cell's value to the minimum of the two. The base case is when we reach the last row, in which case the sum is just the value of the cell itself.
+
+**Algorithm:**
+
+1.  Define a recursive function `min_sum_recursive(row, col, triangle)`:
+      * **Base Case:** If `row` is the last row (`len(triangle) - 1`), return `triangle[row][col]`.
+      * **Recursive Step:**
+          * Calculate `path1 = min_sum_recursive(row + 1, col, triangle)`
+          * Calculate `path2 = min_sum_recursive(row + 1, col + 1, triangle)`
+          * Return `triangle[row][col] + min(path1, path2)`
+2.  Start the recursion from `min_sum_recursive(0, 0, triangle)`.
+
+**Time Complexity:** $O(2^N)$, where $N$ is the number of rows in the triangle. In the worst case, we might explore $2^{N-1}$ paths.
+**Space Complexity:** $O(N)$ due to the recursion stack depth.
+
+**Code (Python):**
+
+```python
+def min_sum_triangle_recursive(triangle):
+    def solve(row, col):
+        # Base case: if we are at the last row, return the value
+        if row == len(triangle) - 1:
+            return triangle[row][col]
+
+        # Recursive step:
+        # Move down-left
+        path1 = solve(row + 1, col)
+        # Move down-right
+        path2 = solve(row + 1, col + 1)
+
+        # Return current value plus the minimum of the two paths
+        return triangle[row][col] + min(path1, path2)
+
+    return solve(0, 0)
+
+# Example Usage:
+# triangle = [[2],[3,4],[6,5,7],[4,1,8,3]]
+# print(min_sum_triangle_recursive(triangle)) # Output: 11
+```
+
+-----
+
+#### Approach 2: Memoization (Top-Down DP)
+
+**Idea:**
+The recursive solution calculates the same subproblems multiple times, leading to inefficiency. We can optimize this by storing the results of already computed subproblems in a DP table (memoization table). Before computing a subproblem, we check if its result is already present in the table.
+
+**Algorithm:**
+
+1.  Create a 2D `memo` table of the same dimensions as the triangle, initialized with a sentinel value (e.g., -1) to indicate uncomputed states.
+2.  Define a recursive function `min_sum_memo(row, col, triangle, memo)`:
+      * **Base Case:** If `row` is the last row (`len(triangle) - 1`), return `triangle[row][col]`.
+      * **Memoization Check:** If `memo[row][col]` is not -1, return `memo[row][col]`.
+      * **Recursive Step:**
+          * Calculate `path1 = min_sum_memo(row + 1, col, triangle, memo)`
+          * Calculate `path2 = min_sum_memo(row + 1, col + 1, triangle, memo)`
+          * Store the result: `memo[row][col] = triangle[row][col] + min(path1, path2)`
+          * Return `memo[row][col]`
+3.  Start the recursion from `min_sum_memo(0, 0, triangle, memo)`.
+
+**Time Complexity:** $O(N^2)$, where $N$ is the number of rows. Each state `(row, col)` is computed only once. There are $O(N^2)$ states.
+**Space Complexity:** $O(N^2)$ for the `memo` table and $O(N)$ for the recursion stack depth. So, effectively $O(N^2)$.
+
+**Code (Python):**
+
+```python
+def min_sum_triangle_memoization(triangle):
+    n = len(triangle)
+    # Initialize memoization table with -1 (or some other sentinel value)
+    memo = [[-1] * len(triangle[i]) for i in range(n)]
+
+    def solve(row, col):
+        # Base case
+        if row == n - 1:
+            return triangle[row][col]
+
+        # Check if already computed
+        if memo[row][col] != -1:
+            return memo[row][col]
+
+        # Recursive step
+        path1 = solve(row + 1, col)
+        path2 = solve(row + 1, col + 1)
+
+        # Store and return result
+        memo[row][col] = triangle[row][col] + min(path1, path2)
+        return memo[row][col]
+
+    return solve(0, 0)
+
+# Example Usage:
+# triangle = [[2],[3,4],[6,5,7],[4,1,8,3]]
+# print(min_sum_triangle_memoization(triangle)) # Output: 11
+```
+
+-----
+
+#### Approach 3: Tabulation (Bottom-Up DP)
+
+**Idea:**
+Instead of starting from the top and going down (top-down), we can start from the bottom row and move upwards (bottom-up). The minimum path sum to reach any cell in the current row from the cells in the row below it is calculated. This effectively propagates the minimum sums upwards until we reach the top.
+
+**Algorithm:**
+
+1.  Create a 2D `dp` table of the same dimensions as the triangle.
+2.  Initialize the last row of `dp` with the values from the last row of the `triangle`. (`dp[n-1][j] = triangle[n-1][j]`)
+3.  Iterate from the second-to-last row (`n-2`) up to the first row (`0`).
+4.  For each cell `(row, col)` in this iteration:
+      * `dp[row][col] = triangle[row][col] + min(dp[row+1][col], dp[row+1][col+1])`
+5.  The final answer will be `dp[0][0]`.
+
+**Time Complexity:** $O(N^2)$, where $N$ is the number of rows. We iterate through each cell in the triangle once.
+**Space Complexity:** $O(N^2)$ for the `dp` table.
+
+**Code (Python):**
+
+```python
+def min_sum_triangle_tabulation(triangle):
+    n = len(triangle)
+    # Create a DP table of the same size as the triangle
+    dp = [[0] * len(triangle[i]) for i in range(n)]
+
+    # Initialize the last row of DP table with the last row of the triangle
+    for j in range(len(triangle[n-1])):
+        dp[n-1][j] = triangle[n-1][j]
+
+    # Iterate from the second-to-last row up to the first row
+    for row in range(n - 2, -1, -1):
+        for col in range(len(triangle[row])):
+            # Current cell value + minimum of the two adjacent cells in the row below
+            dp[row][col] = triangle[row][col] + min(dp[row+1][col], dp[row+1][col+1])
+
+    return dp[0][0]
+
+# Example Usage:
+# triangle = [[2],[3,4],[6,5,7],[4,1,8,3]]
+# print(min_sum_triangle_tabulation(triangle)) # Output: 11
+```
+
+**Dry Run/Visual (for Tabulation):**
+
+Let's use `triangle = [[2],[3,4],[6,5,7],[4,1,8,3]]`
+
+Initial `dp` table (after filling the last row):
+
+```
+    [[0],
+     [0, 0],
+     [0, 0, 0],
+     [4, 1, 8, 3]]
+```
+
+**Row = 2 (index `n-2 = 3-1 = 2`):**
+
+  * `col = 0`: `dp[2][0] = triangle[2][0] + min(dp[3][0], dp[3][1]) = 6 + min(4, 1) = 6 + 1 = 7`
+  * `col = 1`: `dp[2][1] = triangle[2][1] + min(dp[3][1], dp[3][2]) = 5 + min(1, 8) = 5 + 1 = 6`
+  * `col = 2`: `dp[2][2] = triangle[2][2] + min(dp[3][2], dp[3][3]) = 7 + min(8, 3) = 7 + 3 = 10`
+
+`dp` table after Row 2:
+
+```
+    [[0],
+     [0, 0],
+     [7, 6, 10],
+     [4, 1, 8, 3]]
+```
+
+**Row = 1 (index `n-2 = 2-1 = 1`):**
+
+  * `col = 0`: `dp[1][0] = triangle[1][0] + min(dp[2][0], dp[2][1]) = 3 + min(7, 6) = 3 + 6 = 9`
+  * `col = 1`: `dp[1][1] = triangle[1][1] + min(dp[2][1], dp[2][2]) = 4 + min(6, 10) = 4 + 6 = 10`
+
+`dp` table after Row 1:
+
+```
+    [[0],
+     [9, 10],
+     [7, 6, 10],
+     [4, 1, 8, 3]]
+```
+
+**Row = 0 (index `n-2 = 1-1 = 0`):**
+
+  * `col = 0`: `dp[0][0] = triangle[0][0] + min(dp[1][0], dp[1][1]) = 2 + min(9, 10) = 2 + 9 = 11`
+
+`dp` table after Row 0:
+
+```
+    [[11],
+     [9, 10],
+     [7, 6, 10],
+     [4, 1, 8, 3]]
+```
+
+Final result: `dp[0][0] = 11`.
+
+-----
+
+#### Approach 4: Space Optimized
+
+**Idea:**
+Notice that in the tabulation approach, to compute the current row's DP values, we only need the values from the *immediately* next row (which corresponds to the previous row in our bottom-up iteration). This means we don't need to store the entire $N \\times N$ DP table. We can reduce the space complexity to $O(N)$ by using a 1D DP array.
+
+Even better, we can modify the input `triangle` in-place, if allowed. Since we only need the row directly below, we can update the current row's values.
+
+**Algorithm (In-Place Modification):**
+
+1.  Iterate from the second-to-last row (`n-2`) up to the first row (`0`).
+2.  For each cell `(row, col)` in this iteration:
+      * `triangle[row][col] = triangle[row][col] + min(triangle[row+1][col], triangle[row+1][col+1])`
+3.  The final answer will be `triangle[0][0]`.
+
+**Time Complexity:** $O(N^2)$, where $N$ is the number of rows.
+**Space Complexity:** $O(1)$ if modifying the input triangle in-place. If copying to a new list for the 1D DP array, it would be $O(N)$.
+
+**Code (Python):**
+
+```python
+def min_sum_triangle_space_optimized(triangle):
+    n = len(triangle)
+
+    # Iterate from the second-to-last row up to the first row
+    for row in range(n - 2, -1, -1):
+        for col in range(len(triangle[row])):
+            # Update the current cell with its value + min of two adjacent cells in the row below
+            triangle[row][col] = triangle[row][col] + min(triangle[row+1][col], triangle[row+1][col+1])
+
+    # The minimum total sum will be at the top of the triangle
+    return triangle[0][0]
+
+# Example Usage:
+# triangle = [[2],[3,4],[6,5,7],[4,1,8,3]]
+# print(min_sum_triangle_space_optimized(triangle)) # Output: 11
+```
+
+**Visual (In-Place Modification):**
+
+Let's use `triangle = [[2],[3,4],[6,5,7],[4,1,8,3]]`
+
+Original Triangle:
+
+```
+   2
+  3 4
+ 6 5 7
+4 1 8 3
+```
+
+**Row = 2 (index `n-2 = 3-1 = 2`):**
+
+  * `triangle[2][0] = triangle[2][0] + min(triangle[3][0], triangle[3][1]) = 6 + min(4, 1) = 6 + 1 = 7`
+  * `triangle[2][1] = triangle[2][1] + min(triangle[3][1], triangle[3][2]) = 5 + min(1, 8) = 5 + 1 = 6`
+  * `triangle[2][2] = triangle[2][2] + min(triangle[3][2], triangle[3][3]) = 7 + min(8, 3) = 7 + 3 = 10`
+
+Triangle after Row 2 updates:
+
+```
+   2
+  3 4
+ 7 6 10
+4 1 8 3
+```
+
+**Row = 1 (index `n-2 = 2-1 = 1`):**
+
+  * `triangle[1][0] = triangle[1][0] + min(triangle[2][0], triangle[2][1]) = 3 + min(7, 6) = 3 + 6 = 9`
+  * `triangle[1][1] = triangle[1][1] + min(triangle[2][1], triangle[2][2]) = 4 + min(6, 10) = 4 + 6 = 10`
+
+Triangle after Row 1 updates:
+
+```
+   2
+  9 10
+ 7 6 10
+4 1 8 3
+```
+
+**Row = 0 (index `n-2 = 1-1 = 0`):**
+
+  * `triangle[0][0] = triangle[0][0] + min(triangle[1][0], triangle[1][1]) = 2 + min(9, 10) = 2 + 9 = 11`
+
+Triangle after Row 0 updates:
+
+```
+   11
+  9 10
+ 7 6 10
+4 1 8 3
+```
+
+Final result: `triangle[0][0] = 11`.
+
+-----
+
+-----
+
+### House Robber
+
+**Problem Statement:**
+You are a professional robber planning to rob houses along a street. Each house has a certain amount of money stashed. All houses are arranged in a circle. That means the first house is the neighbor of the last one. Meanwhile, adjacent houses have security systems connected, and it will automatically contact the police if two adjacent houses were broken into on the same night. Given an integer array `nums` representing the amount of money of each house, return the maximum amount of money you can rob tonight without alerting the police.
+
+**Example:**
+
+```
+Input: nums = [2,3,2]
+Output: 3
+Explanation: You cannot rob house 1 (money = 2) and then house 3 (money = 2) because they are adjacent. Robbing house 2 (money = 3) is the only option.
+```
+
+```
+Input: nums = [1,2,3,1]
+Output: 4
+Explanation: Rob house 1 (money = 1) and then house 3 (money = 3). Total amount = 1 + 3 = 4.
+```
+
+-----
+
+#### Approach 1: Recursion (Brute Force)
+
+**Idea:**
+This problem has a circular constraint, which makes it slightly different from the standard linear House Robber. If we rob the first house, we cannot rob the last house. If we don't rob the first house, we can potentially rob the last house. This suggests breaking the circular problem into two linear subproblems.
+
+First, let's consider the linear problem:
+`nums = [h1, h2, ..., hn]`
+For each house, we have two choices:
+
+1.  Rob the current house: Then we cannot rob the previous house, so we add current house's money to the max money from `(i-2)` houses.
+2.  Don't rob the current house: Then we take the max money from `(i-1)` houses.
+
+The circular constraint means `nums[0]` and `nums[n-1]` are adjacent.
+So, we can solve two linear subproblems:
+
+1.  Max money robbing houses `nums[0]` to `nums[n-2]` (excluding the last house).
+2.  Max money robbing houses `nums[1]` to `nums[n-1]` (excluding the first house).
+    The maximum of these two results will be the answer.
+
+**Algorithm (for Linear House Robber):**
+Define a recursive function `rob_linear(index, nums)`:
+
+1.  **Base Cases:**
+      * If `index < 0`, return `0` (no houses left).
+      * If `index == 0`, return `nums[0]` (only one house).
+2.  **Recursive Step:**
+      * `rob_current = nums[index] + rob_linear(index - 2, nums)` (Rob current, skip previous)
+      * `skip_current = rob_linear(index - 1, nums)` (Don't rob current)
+      * Return `max(rob_current, skip_current)`
+
+**For Circular House Robber:**
+Handle the edge case where `n=1`.
+Otherwise, call `rob_linear` twice:
+`result1 = rob_linear(n-2, nums[0:n-1])` (excluding last house)
+`result2 = rob_linear(n-1, nums[1:n])` (excluding first house)
+Return `max(result1, result2)`.
+
+**Time Complexity:** $O(2^N)$ for the linear problem, where $N$ is the number of houses. The circular problem involves two such calls.
+**Space Complexity:** $O(N)$ due to recursion stack depth.
+
+**Code (Python - Linear Helper):**
+
+```python
+def rob_linear_recursive(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+
+    def solve(index):
+        if index < 0:
+            return 0
+        
+        # Rob current house: add current money + max from (index-2)
+        rob_current = nums[index] + solve(index - 2)
+        
+        # Don't rob current house: take max from (index-1)
+        skip_current = solve(index - 1)
+        
+        return max(rob_current, skip_current)
+    
+    return solve(n - 1)
+
+def rob_circular_recursive(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1: # Edge case for a single house
+        return nums[0]
+
+    # Case 1: Rob the first house, so cannot rob the last
+    max_money1 = rob_linear_recursive(nums[:-1]) # nums[0] to nums[n-2]
+
+    # Case 2: Don't rob the first house, can rob the last
+    max_money2 = rob_linear_recursive(nums[1:]) # nums[1] to nums[n-1]
+
+    return max(max_money1, max_money2)
+
+# Example Usage:
+# nums = [2,3,2]
+# print(rob_circular_recursive(nums)) # Output: 3
+# nums = [1,2,3,1]
+# print(rob_circular_recursive(nums)) # Output: 4
+# nums = [1]
+# print(rob_circular_recursive(nums)) # Output: 1
+```
+
+-----
+
+#### Approach 2: Memoization (Top-Down DP)
+
+**Idea:**
+To optimize the recursive brute-force approach, we store the results of subproblems to avoid re-computation. We'll use a `memo` array for the `rob_linear` function.
+
+**Algorithm (for Linear House Robber with Memoization):**
+
+1.  Create a `memo` array of size `n`, initialized with -1.
+2.  Define `solve(index, nums, memo)`:
+      * **Base Cases:**
+          * If `index < 0`, return `0`.
+          * If `index == 0`, return `nums[0]`.
+      * **Memoization Check:** If `memo[index]` is not -1, return `memo[index]`.
+      * **Recursive Step:**
+          * `rob_current = nums[index] + solve(index - 2, nums, memo)`
+          * `skip_current = solve(index - 1, nums, memo)`
+          * Store and return `memo[index] = max(rob_current, skip_current)`
+
+**For Circular House Robber:**
+The logic remains the same for splitting into two linear problems.
+
+**Time Complexity:** $O(N)$ for the linear problem. Each `index` is computed once. The circular problem involves two such $O(N)$ calls. So, $O(N)$.
+**Space Complexity:** $O(N)$ for the `memo` table and $O(N)$ for the recursion stack depth. Effectively $O(N)$.
+
+**Code (Python - Linear Helper with Memoization):**
+
+```python
+def rob_linear_memoization(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+
+    memo = [-1] * n
+
+    def solve(index):
+        if index < 0:
+            return 0
+        if index == 0:
+            return nums[0] # Base case handled for first element
+
+        if memo[index] != -1:
+            return memo[index]
+
+        rob_current = nums[index] + solve(index - 2)
+        skip_current = solve(index - 1)
+
+        memo[index] = max(rob_current, skip_current)
+        return memo[index]
+    
+    return solve(n - 1)
+
+def rob_circular_memoization(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+
+    # Case 1: Rob houses from index 0 to n-2 (excluding the last house)
+    max_money1 = rob_linear_memoization(nums[:-1])
+
+    # Case 2: Rob houses from index 1 to n-1 (excluding the first house)
+    max_money2 = rob_linear_memoization(nums[1:])
+
+    return max(max_money1, max_money2)
+
+# Example Usage:
+# nums = [2,3,2]
+# print(rob_circular_memoization(nums)) # Output: 3
+# nums = [1,2,3,1]
+# print(rob_circular_memoization(nums)) # Output: 4
+```
+
+-----
+
+#### Approach 3: Tabulation (Bottom-Up DP)
+
+**Idea:**
+Build the solution iteratively from the smallest subproblems up to the final solution.
+
+**Algorithm (for Linear House Robber with Tabulation):**
+
+1.  Create a `dp` array of size `n`.
+2.  **Base Cases:**
+      * If `n == 0`, return `0`.
+      * If `n == 1`, `dp[0] = nums[0]`.
+      * If `n == 2`, `dp[1] = max(nums[0], nums[1])`.
+3.  Fill `dp` array: Iterate from `i = 2` to `n-1`:
+      * `dp[i] = max(dp[i-1], nums[i] + dp[i-2])`
+4.  Return `dp[n-1]`.
+
+**For Circular House Robber:**
+The logic for splitting into two linear problems remains the same.
+
+**Time Complexity:** $O(N)$ for the linear problem. The circular problem involves two $O(N)$ calls. So, $O(N)$.
+**Space Complexity:** $O(N)$ for the `dp` table.
+
+**Code (Python - Linear Helper with Tabulation):**
+
+```python
+def rob_linear_tabulation(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+
+    dp = [0] * n
+    dp[0] = nums[0]
+    dp[1] = max(nums[0], nums[1]) # For 2 houses, rob the max of the two
+
+    for i in range(2, n):
+        # Option 1: Don't rob current house (take max from previous house)
+        # Option 2: Rob current house (add current money + max from 2 houses ago)
+        dp[i] = max(dp[i-1], nums[i] + dp[i-2])
+    
+    return dp[n-1]
+
+def rob_circular_tabulation(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+
+    # Case 1: Rob houses from index 0 to n-2 (excluding the last house)
+    # This involves slicing, which creates a new list, essentially passing a copy
+    max_money1 = rob_linear_tabulation(nums[:-1])
+
+    # Case 2: Rob houses from index 1 to n-1 (excluding the first house)
+    max_money2 = rob_linear_tabulation(nums[1:])
+
+    return max(max_money1, max_money2)
+
+# Example Usage:
+# nums = [2,3,2]
+# print(rob_circular_tabulation(nums)) # Output: 3
+# nums = [1,2,3,1]
+# print(rob_circular_tabulation(nums)) # Output: 4
+```
+
+**Dry Run (for `rob_linear_tabulation` on `[1, 2, 3, 1]` for `nums[:-1]` i.e., `[1, 2, 3]`):**
+
+`nums = [1, 2, 3]` (for `max_money1` calculation)
+`n = 3`
+`dp = [0, 0, 0]`
+
+1.  `dp[0] = nums[0] = 1`
+    `dp = [1, 0, 0]`
+2.  `dp[1] = max(nums[0], nums[1]) = max(1, 2) = 2`
+    `dp = [1, 2, 0]`
+3.  `i = 2`:
+    `dp[2] = max(dp[1], nums[2] + dp[0]) = max(2, 3 + 1) = max(2, 4) = 4`
+    `dp = [1, 2, 4]`
+
+Return `dp[2] = 4`. So `max_money1 = 4`.
+
+**(for `rob_linear_tabulation` on `[1, 2, 3, 1]` for `nums[1:]` i.e., `[2, 3, 1]`):**
+
+`nums = [2, 3, 1]` (for `max_money2` calculation)
+`n = 3`
+`dp = [0, 0, 0]`
+
+1.  `dp[0] = nums[0] = 2`
+    `dp = [2, 0, 0]`
+2.  `dp[1] = max(nums[0], nums[1]) = max(2, 3) = 3`
+    `dp = [2, 3, 0]`
+3.  `i = 2`:
+    `dp[2] = max(dp[1], nums[2] + dp[0]) = max(3, 1 + 2) = max(3, 3) = 3`
+    `dp = [2, 3, 3]`
+
+Return `dp[2] = 3`. So `max_money2 = 3`.
+
+Final result: `max(max_money1, max_money2) = max(4, 3) = 4`.
+
+-----
+
+#### Approach 4: Space Optimized
+
+**Idea:**
+Observe that in `dp[i] = max(dp[i-1], nums[i] + dp[i-2])`, we only need `dp[i-1]` and `dp[i-2]` to calculate `dp[i]`. This means we can reduce the space complexity from $O(N)$ to $O(1)$ by only keeping track of the previous two maximums.
+
+**Algorithm (for Linear House Robber with Space Optimization):**
+
+1.  **Base Cases:**
+      * If `n == 0`, return `0`.
+      * If `n == 1`, return `nums[0]`.
+2.  Initialize `prev2 = nums[0]` (max money from `nums[0]`)
+3.  Initialize `prev1 = max(nums[0], nums[1])` (max money from `nums[0...1]`)
+4.  Iterate from `i = 2` to `n-1`:
+      * `current = max(prev1, nums[i] + prev2)`
+      * `prev2 = prev1`
+      * `prev1 = current`
+5.  Return `prev1` (which holds the max money for `n-1` houses).
+
+**For Circular House Robber:**
+The logic for splitting into two linear problems remains the same. The `rob_linear_optimized` function will be called with slices.
+
+**Time Complexity:** $O(N)$ for the linear problem. The circular problem involves two $O(N)$ calls. So, $O(N)$.
+**Space Complexity:** $O(1)$ for the `rob_linear_optimized` function. However, slicing the array `nums[:-1]` and `nums[1:]` in Python creates new lists, which uses $O(N)$ space. To truly be $O(1)$ for the overall circular problem, you would need to pass start and end indices to the `rob_linear_optimized` function.
+
+**Code (Python - Linear Helper with Space Optimization):**
+
+```python
+def rob_linear_optimized(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+    
+    prev2 = nums[0]
+    prev1 = max(nums[0], nums[1])
+
+    for i in range(2, n):
+        current = max(prev1, nums[i] + prev2)
+        prev2 = prev1
+        prev1 = current
+    
+    return prev1
+
+def rob_circular_optimized(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+
+    # Case 1: Rob houses from index 0 to n-2 (excluding the last house)
+    max_money1 = rob_linear_optimized(nums[:-1])
+
+    # Case 2: Rob houses from index 1 to n-1 (excluding the first house)
+    max_money2 = rob_linear_optimized(nums[1:])
+
+    return max(max_money1, max_money2)
+
+# Example Usage:
+# nums = [2,3,2]
+# print(rob_circular_optimized(nums)) # Output: 3
+# nums = [1,2,3,1]
+# print(rob_circular_optimized(nums)) # Output: 4
+```
+
+To achieve true $O(1)$ space for the circular problem, you could modify `rob_linear_optimized` to accept start and end indices:
+
+```python
+def rob_linear_optimized_indexed(nums, start, end):
+    n_segment = end - start + 1
+    if n_segment <= 0:
+        return 0
+    if n_segment == 1:
+        return nums[start]
+
+    prev2 = nums[start]
+    prev1 = max(nums[start], nums[start+1])
+
+    for i in range(start + 2, end + 1):
+        current = max(prev1, nums[i] + prev2)
+        prev2 = prev1
+        prev1 = current
+    
+    return prev1
+
+def rob_circular_optimized_true_O1_space(nums):
+    n = len(nums)
+    if n == 0:
+        return 0
+    if n == 1:
+        return nums[0]
+
+    # Case 1: Rob houses from index 0 to n-2 (excluding the last house)
+    max_money1 = rob_linear_optimized_indexed(nums, 0, n - 2)
+
+    # Case 2: Rob houses from index 1 to n-1 (excluding the first house)
+    max_money2 = rob_linear_optimized_indexed(nums, 1, n - 1)
+
+    return max(max_money1, max_money2)
+
+# Example Usage:
+# nums = [2,3,2]
+# print(rob_circular_optimized_true_O1_space(nums)) # Output: 3
+# nums = [1,2,3,1]
+# print(rob_circular_optimized_true_O1_space(nums)) # Output: 4
+```
