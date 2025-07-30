@@ -687,3 +687,271 @@ Question:
 ---
 
 Would you like me to **make a "Side-by-Side Visual" (SQL joins vs KG traversal)** using your *client-advisor dataset* so you can **show this difference visually to your team** (one query, two approaches, KG clearly easier)?
+Got it – let’s make a **business-grade, intense demo dataset** and show how a Knowledge Graph gives **clear business answers** that SQL or manual lookup would miss.
+
+---
+
+## **1️⃣ Intense Demo Dataset (Structured + Unstructured)**
+
+We’ll build a **multi-source dataset** across **4 silos**, similar to real-world client–advisor communications.
+
+---
+
+### **📂 CRM Data**
+
+| ClientID | Name        | Tier     | Region | Advisor       | Product           |
+| -------- | ----------- | -------- | ------ | ------------- | ----------------- |
+| C101     | Alice Wong  | Gold     | APAC   | David Smith   | Premium Insurance |
+| C102     | Bob Allen   | Silver   | NA     | David Smith   | Home Loan         |
+| C103     | Maria Evans | Platinum | APAC   | Sarah Johnson | Wealth Portfolio  |
+| C104     | John Reyes  | Gold     | EMEA   | Linda Brown   | Retirement Plan   |
+
+---
+
+### **📂 Complaints System**
+
+| TicketID | ClientID | Issue Summary            | Severity | Status  |
+| -------- | -------- | ------------------------ | -------- | ------- |
+| T701     | C101     | Overcharged premium fee  | High     | Pending |
+| T702     | C103     | Portfolio losses > 10%   | Critical | Open    |
+| T703     | C104     | Retirement calc mismatch | Medium   | Closed  |
+
+---
+
+### **📂 Email & Chat Logs (Unstructured)**
+
+* E1: *"Hi David, I'm Alice Wong. I need an urgent **upgrade of my Premium Insurance plan** after a **billing error**."*
+* E2: *"This is Bob Allen. I need help with my **Home Loan repayment**; payment portal not working."*
+* E3: *"Maria Evans here. My **Wealth Portfolio lost value** last month. Thinking of moving funds to safer options."*
+* E4: *"John Reyes. Please **review my Retirement Plan calculation**; seems off compared to last year."*
+
+---
+
+### **📂 Product Risk Data**
+
+| Product           | Risk Rating |
+| ----------------- | ----------- |
+| Premium Insurance | Medium      |
+| Home Loan         | Low         |
+| Wealth Portfolio  | High        |
+| Retirement Plan   | Medium      |
+
+---
+
+## **2️⃣ Knowledge Graph Construction**
+
+From this dataset, we create a graph like this:
+
+```
+Alice Wong --uses_product--> Premium Insurance --has_risk--> Medium
+Alice Wong --sent_email--> E1 ("upgrade", "billing error")
+Alice Wong --raised_ticket--> T701 (status: Pending)
+
+Maria Evans --uses_product--> Wealth Portfolio --has_risk--> High
+Maria Evans --sent_email--> E3 ("lost value")
+Maria Evans --raised_ticket--> T702 (status: Open, Critical)
+
+John Reyes --uses_product--> Retirement Plan
+John Reyes --sent_email--> E4 ("calculation issue")
+John Reyes --raised_ticket--> T703 (status: Closed)
+```
+
+Now **structured data + free text** are **linked** into a single, queryable network.
+
+---
+
+## **3️⃣ Business Question**
+
+> **“Which high-value (Gold/Platinum) clients in APAC have open complaints, emailed about financial issues, and are linked to high-risk products?”**
+
+---
+
+## **4️⃣ Query Result via KG Traversal**
+
+* Start with clients → filter `tier ∈ {Gold, Platinum}` & `region = APAC`
+* Traverse to `sent_email` → filter `contains(billing error, lost value)`
+* Traverse to `raised_ticket` → filter `status = Pending or Open`
+* Traverse to `uses_product` → filter `risk = High or Medium`
+
+✅ **Result:**
+
+1. **Alice Wong (Gold, APAC)**
+
+   * Email: Upgrade due to billing error
+   * Complaint: Pending (Overcharged premium fee)
+   * Product: Premium Insurance (Medium risk)
+
+2. **Maria Evans (Platinum, APAC)**
+
+   * Email: Portfolio losses
+   * Complaint: Critical, Open
+   * Product: Wealth Portfolio (High risk)
+
+---
+
+## **5️⃣ Business Value**
+
+Without KG:
+
+* Need **4 SQL joins**, manual text search in emails, manual mapping between names and IDs.
+* Would miss **Maria Evans** if email name didn’t exactly match CRM entry.
+
+With KG:
+
+* Entities are linked automatically from **both structured and unstructured data**.
+* A **single graph traversal** answers a **multi-system, business-critical question in seconds**, enabling:
+
+  * **Client risk prioritization** (flag at-risk high-value clients).
+  * **Advisor coaching** (David has multiple high-severity issues).
+  * **Product improvement signals** (Wealth Portfolio causing high losses).
+
+---
+
+Would you like me to **write the Python code** that builds this **intense graph** (with NLP entity extraction + relationships) and runs a function:
+
+```python
+get_high_value_risk_clients(graph)
+```
+
+to print results like the above (client names + issues + products), so you can **demo it live** to your team?
+import pandas as pd
+import spacy
+import networkx as nx
+import matplotlib.pyplot as plt
+
+# -----------------------------
+# 1. Load Structured Data
+# -----------------------------
+crm = pd.DataFrame([
+    ["C101", "Alice Wong", "Gold", "APAC", "David Smith", "Premium Insurance"],
+    ["C102", "Bob Allen", "Silver", "NA", "David Smith", "Home Loan"],
+    ["C103", "Maria Evans", "Platinum", "APAC", "Sarah Johnson", "Wealth Portfolio"],
+    ["C104", "John Reyes", "Gold", "EMEA", "Linda Brown", "Retirement Plan"]
+], columns=["ClientID", "Name", "Tier", "Region", "Advisor", "Product"])
+
+complaints = pd.DataFrame([
+    ["T701", "C101", "Overcharged premium fee", "High", "Pending"],
+    ["T702", "C103", "Portfolio losses > 10%", "Critical", "Open"],
+    ["T703", "C104", "Retirement calc mismatch", "Medium", "Closed"]
+], columns=["TicketID", "ClientID", "Issue Summary", "Severity", "Status"])
+
+products = pd.DataFrame([
+    ["Premium Insurance", "Medium"],
+    ["Home Loan", "Low"],
+    ["Wealth Portfolio", "High"],
+    ["Retirement Plan", "Medium"]
+], columns=["Product", "Risk"])
+
+emails = [
+    {"id": "E1", "text": "Hi David, I'm Alice Wong. I need an urgent upgrade of my Premium Insurance plan after a billing error."},
+    {"id": "E2", "text": "This is Bob Allen. I need help with my Home Loan repayment; payment portal not working."},
+    {"id": "E3", "text": "Maria Evans here. My Wealth Portfolio lost value last month. Thinking of moving funds to safer options."},
+    {"id": "E4", "text": "John Reyes. Please review my Retirement Plan calculation; seems off compared to last year."}
+]
+
+nlp = spacy.load("en_core_web_sm")
+
+# -----------------------------
+# 2. Build Knowledge Graph
+# -----------------------------
+G = nx.MultiDiGraph()
+
+for _, row in crm.iterrows():
+    G.add_node(row["Name"], type="Client", Tier=row["Tier"], Region=row["Region"])
+    risk = products.loc[products["Product"] == row["Product"], "Risk"].values[0]
+    G.add_node(row["Product"], type="Product", Risk=risk)
+    G.add_edge(row["Name"], row["Product"], relation="uses_product")
+    G.add_node(row["Advisor"], type="Advisor")
+    G.add_edge(row["Name"], row["Advisor"], relation="has_advisor")
+
+for _, row in complaints.iterrows():
+    client_name = crm.loc[crm["ClientID"] == row["ClientID"], "Name"].values[0]
+    G.add_node(row["TicketID"], type="Complaint", Severity=row["Severity"], Status=row["Status"])
+    G.add_edge(client_name, row["TicketID"], relation="raised_ticket")
+
+for email in emails:
+    doc = nlp(email["text"])
+    persons = [ent.text for ent in doc.ents if ent.label_ == "PERSON"]
+    products_mentioned = [ent.text for ent in doc.ents if ent.label_ in ["PRODUCT", "ORG"]]
+    G.add_node(email["id"], type="Email")
+    for p in persons:
+        if p not in G.nodes:
+            G.add_node(p, type="Client")
+        G.add_edge(p, email["id"], relation="sent_email")
+    for prod in products_mentioned:
+        if prod not in G.nodes:
+            G.add_node(prod, type="Product")
+        G.add_edge(email["id"], prod, relation="mentions_product")
+
+# -----------------------------
+# 3. Business Query
+# -----------------------------
+def get_high_value_risk_clients(G, emails_data):
+    results = []
+    flagged_clients = set()
+    for node, data in G.nodes(data=True):
+        if data.get('type') == "Client" and data.get('Tier') in ["Gold", "Platinum"] and data.get('Region') == "APAC":
+            client = node
+
+            complaints_nodes = [
+                nbr for nbr in G.neighbors(node)
+                if any(e.get("relation") == "raised_ticket" for e in G.get_edge_data(node, nbr).values())
+                and G.nodes[nbr].get("Status") in ["Pending", "Open"]
+            ]
+            if not complaints_nodes:
+                continue
+
+            products_nodes = [
+                nbr for nbr in G.neighbors(node)
+                if any(e.get("relation") == "uses_product" for e in G.get_edge_data(node, nbr).values())
+                and G.nodes[nbr].get("Risk") in ["High", "Medium"]
+            ]
+            if not products_nodes:
+                continue
+
+            emails_nodes = [
+                nbr for nbr in G.neighbors(node)
+                if any(e.get("relation") == "sent_email" for e in G.get_edge_data(node, nbr).values())
+            ]
+            issue_flag = False
+            for e in emails_data:
+                if e["id"] in emails_nodes and any(word in e["text"].lower() for word in ["error", "lost", "issue", "problem"]):
+                    issue_flag = True
+
+            if issue_flag:
+                results.append({"Client": client, "Products": products_nodes, "Complaints": complaints_nodes})
+                flagged_clients.add(client)
+    return results, flagged_clients
+
+results, flagged_clients = get_high_value_risk_clients(G, emails)
+
+print("🔍 High-value clients in APAC with risk factors:")
+for r in results:
+    print(f"\nClient: {r['Client']}")
+    print(f"Products: {', '.join(r['Products'])}")
+    print(f"Complaints: {', '.join(r['Complaints'])}")
+
+# -----------------------------
+# 4. Visualization
+# -----------------------------
+plt.figure(figsize=(12, 8))
+pos = nx.spring_layout(G, k=0.5, seed=42)
+
+node_colors = []
+for n, data in G.nodes(data=True):
+    if data.get("type") == "Client":
+        node_colors.append("red" if n in flagged_clients else "green")
+    elif data.get("type") == "Product":
+        node_colors.append("orange")
+    elif data.get("type") == "Complaint":
+        node_colors.append("violet")
+    elif data.get("type") == "Email":
+        node_colors.append("skyblue")
+    else:
+        node_colors.append("lightgray")
+
+nx.draw(G, pos, with_labels=True, node_color=node_colors, node_size=2000, font_size=9, font_weight='bold')
+edge_labels = nx.get_edge_attributes(G, 'relation')
+nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
+plt.title("📌 Business Knowledge Graph: Flagging High-Risk Clients", fontsize=14)
+plt.show()
