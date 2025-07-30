@@ -1,0 +1,14 @@
+📌 Detected Communities:
+Community 1: ['Client_A', 'Advisor_1', 'Client_C', 'Client_L']
+Community 2: ['Client_B', 'Client_D', 'Advisor_2', 'Client_F']
+Community 0: ['Client_E', 'Client_G', 'Advisor_3']
+Community 3: ['Client_H', 'Client_I', 'Advisor_4', 'Client_J', 'Client_K']
+
+📢 Business Insights:
+Client_C: ⚠️ Attrition Risk: Multiple advisors causing confusion.
+Advisor_1: 💡 Opportunity: Strong client base for upselling.
+Client_B: ⚠️ Attrition Risk: Multiple advisors causing confusion.
+Advisor_2: 💡 Opportunity: Strong client base for upselling.
+Client_E: ⚠️ Attrition Risk: Multiple advisors causing confusion.
+Client_H: ⚠️ Attrition Risk: Multiple advisors causing confusion.
+Advisor_4: 💡 Opportunity: Strong client base for upselling.
