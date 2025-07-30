@@ -955,3 +955,75 @@ edge_labels = nx.get_edge_attributes(G, 'relation')
 nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
 plt.title("📌 Business Knowledge Graph: Flagging High-Risk Clients", fontsize=14)
 plt.show()
+
+
+Here's a **small, simple write-up** you can use in your session to explain Knowledge Graphs, triplets, and how everything becomes a node.
+
+---
+
+# **🔹 Knowledge Graphs – A Simple Introduction**
+
+A **Knowledge Graph (KG)** is a way to represent **data as a network of interconnected facts**, rather than isolated tables or files.
+
+* Everything (people, products, events, emails, orders, etc.) becomes a **node**.
+* Relationships between them (e.g., "purchased", "belongs to", "mentions") become **edges**.
+* Each fact is stored as a **triple (Subject → Predicate → Object)**.
+
+---
+
+### **📦 Example 1 – Order with Multiple Items**
+
+Imagine you have an order:
+
+| OrderID | Items                       |
+| ------- | --------------------------- |
+| O123    | \[Laptop, Mouse, USB Cable] |
+
+In a Knowledge Graph, this single table row becomes **triples:**
+
+```
+O123 → hasItem → Laptop
+O123 → hasItem → Mouse
+O123 → hasItem → USB Cable
+Laptop → type → Product
+Mouse → type → Product
+USB Cable → type → Product
+```
+
+So instead of a flat record, you get a **network of connected entities**, where you can easily query:
+
+* "Which orders included a Laptop and a Mouse?"
+* "Which products are often bought together with a Laptop?"
+
+---
+
+### **💬 Example 2 – One Sentence**
+
+Sentence:
+*"Alice emailed support about a delayed order."*
+
+We can extract **entities and relations**:
+
+```
+Alice → sentEmail → Support
+Alice → mentioned → Order123
+Order123 → status → Delayed
+```
+
+Now this **unstructured text** becomes **structured, queryable facts**, linked to orders, customers, and actions.
+You can instantly ask:
+
+* "Which customers emailed about delayed orders?"
+* "Which orders have high email traffic about delays?"
+
+---
+
+### **✅ Why This Matters**
+
+* **Data integration:** Structured (orders) and unstructured (emails) data are linked.
+* **Flexibility:** New relationships can be added without redesigning tables.
+* **Contextual insights:** Queries can span multiple silos (clients, orders, complaints, risk).
+
+---
+
+Would you like me to make a **one-slide "visual KG diagram"** for this example (Order → 3 Items + Sentence) that you can drop directly into your presentation?
