@@ -412,3 +412,7 @@ Here, we measure a (usually) short time series on different experimental units, 
 
 6. Frequency Domain (Lesson 6 and Lesson 12)
 The periodogram and spectral density consider time series in the frequency domain. The underlying structure represents a time series as a sum of cosine and sine waves of varying frequencies. We look for the dominant frequencies.
+https://machinelearningmastery.com/time-series-forecasting-methods-in-python-cheat-sheet/
+https://machinelearningmastery.com/time-series-forecasting-methods-in-python-cheat-sheet/
+prophet
+https://github.com/marcelomijas/econometrics-cheatsheet
