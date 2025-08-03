@@ -315,3 +315,90 @@ Alright class, let's round out our discussion on ARIMA models by focusing on int
         6.  **Consider Model Complexity:** If you've already added many terms, perhaps the model is too complex or the underlying process is not well-suited for a linear ARIMA model.
 
 These questions cover a comprehensive range of ARIMA knowledge, touching on theory, practical application, and troubleshooting. Mastering these will demonstrate a strong understanding of traditional time series analysis.
+
+
+Here’s an **interview‑ready summary** of Penn State STAT 510 **Lesson 3: Identifying & Estimating ARIMA Models; Forecasting**—structured clearly, with key points & terminology highlighted for ease of recall:
+
+---
+
+## 🧠 Lesson 3: Non‑Seasonal ARIMA Models & Forecasting
+
+**Lesson Objectives**
+After this lesson you should be able to:
+
+1. Identify and interpret a non‑seasonal ARIMA model
+2. Use ACF & PACF to distinguish AR/MA components
+3. Test residual autocorrelations (e.g. Box‑Ljung)
+4. Express an ARIMA model in infinite‑order MA form (psi‑weights)
+5. Forecast future values and compute prediction intervals using ARIMA models
+   ([PennState: Statistics Online Courses][1])
+
+---
+
+### 🔧 3.1 Specifying & Identifying ARIMA(p,d,q)
+
+* An ARIMA model is denoted **(p,d,q)**:
+
+  * **p** = AR order
+  * **d** = number of differences
+  * **q** = MA order
+* **ARIMA(2,0,0)** = AR(2); **ARIMA(0,0,2)** = MA(2); **ARIMA(1,1,1)** applies to the first-differenced series
+* Begin by inspecting:
+
+  * A **time series plot** (trend, variance, outliers)
+  * Sample **ACF & PACF** plots
+
+    * AR: PACF cuts off after p; ACF tapers
+    * MA: ACF cuts off after q; PACF tapers
+    * ARMA: both taper gradually
+  * Non-stationarity: ACF stays near 1 → consider differencing
+  * White noise: insignificance across both ACF and PACF
+    ([PennState: Statistics Online Courses][1], [PennState: Statistics Online Courses][2], [PennState: Statistics Online Courses][3])
+
+---
+
+### 🔍 3.2 Estimation & Diagnostic Checks
+
+* Fit candidate models using R (e.g. `arima()` or `sarima()` from **astsa** package)
+* Examine:
+
+  * **Significance of AR/MA coefficients** (t‑values or p‑values >|1.96|)
+  * **Residual ACF/PACF**: should show no significant autocorrelation
+  * **Box‑Ljung test**: ideally non‑significant overall
+  * **Residual plots**: check for patterns, variance issues
+* When multiple models are plausible, prefer the simpler one (parsimony)
+  ([PennState: Statistics Online Courses][1], [PennState: Statistics Online Courses][2])
+
+---
+
+### 🔮 3.3 Forecasting with ARIMA
+
+* **Psi-weight representation**: convert ARIMA to infinite MA form:
+
+* Use `ARMAtoMA(...)` in R to compute psi‑weights
+* **Forecast equation**: plug in observed or forecasted values; assume future errors = 0
+* **Forecast error variance**:
+
+* **Standard error** = square root of the above; prediction interval:
+
+* As horizon lengthens, forecast converges toward the series mean with increasing uncertainty
+  ([PennState: Statistics Online Courses][1])
+
+---
+
+## 📋 Quick Reference Table
+
+| Topic               | Summary                                                             |
+| ------------------- | ------------------------------------------------------------------- |
+| ARIMA specification | ARMA(p,q) on differenced data → ARIMA(p,d,q)                        |
+| Identification      | Use ACF → MA, PACF → AR; both taper → ARMA                          |
+| Diagnostics         | Check coefficient significance, residual ACF/PACF, Box‑Ljung, plots |
+| Psi‑weights         | ARIMA → infinite MA representation via `ARMAtoMA`                   |
+| Forecasting         | Plug-in method + error variance formula → SE, prediction intervals  |
+
+---
+
+## 💼 Interview Ready Tip
+
+> *“I start by plotting the data to assess stationarity or variance issues. Then I use ACF & PACF patterns to propose ARIMA(p,d,q) candidates, fit them in R, and validate via coefficient significance and residual diagnostics like Box‑Ljung. Finally, I forecast using the fitted model, compute psi‑weights to find forecast standard errors, and build 95% prediction intervals.”*
+
