@@ -112,3 +112,122 @@
 **Important**: Do **not** test on CV folds — always keep final test data separate.
 
 ---
+Here are **advanced research-oriented interview questions** on **resampling methods** (especially based on ISLR Chapter 5) — designed to test deep conceptual understanding, edge-case handling, and real-world trade-offs. Each comes with a **strong answer**.
+
+---
+
+## 🔍 Resampling Methods – Research-Level Interview Questions
+
+---
+
+### 🔹 Q1. Why is LOOCV high variance despite using nearly the entire dataset for training?
+
+**Answer:**
+LOOCV trains on $n-1$ points and tests on 1, for each observation. Each model is almost identical, so the predictions are highly correlated. This leads to **high variance in the estimate of test error**, especially for unstable models like decision trees. Small changes in the train set can result in big changes in the fitted function on the one left-out point.
+
+---
+
+### 🔹 Q2. In what cases does the bootstrap give **biased** standard error estimates?
+
+**Answer:**
+Bootstrap tends to **underestimate variance** when:
+
+* The sample size is **very small**.
+* The **statistic is not smooth** (e.g., median, max).
+* For highly skewed distributions.
+  It assumes the sample is a good proxy for the population. If the original sample is unrepresentative, the bootstrap replicates the same bias.
+
+---
+
+### 🔹 Q3. Why is k-Fold CV (with $k = 5$ or $10$) often preferred over LOOCV or Validation Set?
+
+**Answer:**
+
+* **Less variance** than LOOCV due to averaging over more varied splits.
+* **Less bias** than validation set (uses more data for training).
+* **Efficient**: Trains only $k$ models instead of $n$.
+* Offers a **sweet spot** in the bias–variance trade-off.
+
+---
+
+### 🔹 Q4. How does cross-validation fail in time series data?
+
+**Answer:**
+Standard CV assumes data points are i.i.d. In time series, observations are **autocorrelated**. Shuffling or random folds break the temporal structure. Instead, use:
+
+* **Rolling forecast origin**
+* **TimeSeriesSplit** (scikit-learn)
+* **Blocked CV**
+
+---
+
+### 🔹 Q5. How would you estimate the **bias** of a model using resampling?
+
+**Answer:**
+Use **bootstrap**:
+
+1. Generate $B$ bootstrap datasets.
+2. Compute predictions $\hat{f}^*_b(x)$ for each.
+3. Estimate bias as:
+
+   $$
+   \text{Bias}(x) = \mathbb{E}[\hat{f}^*(x)] - f(x)
+   $$
+
+If the true $f(x)$ is unknown, estimate bias on a held-out validation set or use simulations.
+
+---
+
+### 🔹 Q6. Can resampling help with **model selection**? How?
+
+**Answer:**
+Yes, especially:
+
+* **k-Fold CV**: Used to choose hyperparameters (like λ in Ridge/Lasso).
+* **Nested CV**: Prevents information leakage when tuning and evaluating.
+
+Model with the **lowest average CV error** is selected.
+
+---
+
+### 🔹 Q7. Compare bootstrap and CV for **model performance estimation**.
+
+| Criterion   | Bootstrap                      | Cross-Validation               |
+| ----------- | ------------------------------ | ------------------------------ |
+| Assumptions | i.i.d. samples                 | i.i.d. samples                 |
+| Focus       | Accuracy of estimator (SE, CI) | Test error estimation          |
+| Bias        | Sometimes high                 | Lower (k-Fold), higher (LOOCV) |
+| Variance    | High (depends on B)            | Depends on k                   |
+| Speed       | Slower (many resamples)        | Faster (esp. low k)            |
+
+---
+
+### 🔹 Q8. Why doesn’t bootstrap work well for estimating test error?
+
+**Answer:**
+Bootstrap samples are **not disjoint** — many points are repeated, and about **36.8%** of original points are left out in each sample. This breaks the idea of testing on **truly unseen data**. For estimating test error, **CV is more reliable**, especially **k-Fold**.
+
+---
+
+### 🔹 Q9. What’s the effect of choosing a very high value of $k$ in k-Fold CV?
+
+**Answer:**
+As $k \to n$, k-Fold becomes LOOCV:
+
+* **Bias decreases** (almost all data used for training)
+* **Variance increases** (models are highly correlated)
+* **Computation increases**
+
+Use moderate $k = 5$ or $10$ to balance.
+
+---
+
+### 🔹 Q10. How would you evaluate model **stability** using resampling?
+
+**Answer:**
+Use **bootstrap or repeated k-Fold CV**:
+
+* Train multiple models on resampled sets.
+* Measure variability in predictions or coefficients.
+* If results vary a lot → **unstable model**.
+  This helps in comparing models not just on accuracy, but also **robustness**.
