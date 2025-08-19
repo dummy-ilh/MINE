@@ -61,5 +61,130 @@ $$
 with $k \ll D$ (screen size) and $M' \ll N$ (survivor models). This substantially reduces redundant evaluation while preserving—or even improving—the accuracy and reliability of the final model selection.
 
 ---
+Here’s a careful, patent-oriented rewrite of your architecture section. I’ve focused on precise language, removed ambiguous terms, emphasized inventive steps, and fixed minor logical issues (like defining “easy examples” clearly and ensuring the cumulative reward makes sense). I’ve also phrased it to better support claims.
+
+---
+
+## System Architecture Overview
+
+The proposed system operates in three sequential stages designed to efficiently select and route models for input classification, reducing computational overhead while maintaining high accuracy.
+
+### Stage 1: Probabilistic Early Rejection (PER)
+
+Let:
+
+$$
+\mathcal{E} = \{x_1, x_2, \ldots, x_k\} 
+$$
+
+denote a predefined set of “easy” examples, i.e., low-entropy inputs whose labels $y_j$ are considered trivial or highly predictable. Let $M_i$ denote the $i$-th model out of a total of $N$ candidate models.
+
+For each model $M_i$, compute the accuracy on the easy example set:
+
+$$
+A_i = \frac{1}{k} \sum_{j=1}^{k} \mathbf{1}[M_i(x_j) = y_j]
+$$
+
+where $\mathbf{1}[\cdot]$ is the indicator function.
+
+A model $M_i$ is **excluded from further consideration** if:
+
+$$
+A_i < \tau
+$$
+
+where $\tau \in (0,1)$ is a predefined threshold. This filtering step ensures that models incapable of correctly classifying trivial inputs are eliminated early, reducing unnecessary computational effort in subsequent stages.
+
+---
+
+### Stage 2: Reward-Guided Bandit Allocation (RGBA)
+
+Let $M' \subseteq \{M_1, \dots, M_N\}$ denote the subset of models surviving Stage 1. Each surviving model is treated as an arm in a **contextual multi-armed bandit framework**. At each time step $t$, an input $x_t$ is assigned to a model $M_i$ according to a policy $\pi(t)$ that maximizes expected reward.
+
+The reward associated with model $M_i$ on input $x_t$ is defined as:
+
+$$
+r_i(t) = \alpha \cdot \mathbf{1}[M_i(x_t) = y_t] + \beta \cdot \mathrm{conf}(M_i(x_t))
+$$
+
+where:
+
+* $\alpha, \beta \ge 0$ are tunable hyperparameters balancing classification correctness and model confidence,
+* $\mathrm{conf}(M_i(x_t)) \in [0,1]$ is the model’s confidence in its prediction.
+
+The cumulative reward over $T$ time steps is:
+
+$$
+R_T = \sum_{t=1}^{T} r_{\pi(t)}(t)
+$$
+
+The estimated value $Q_i(t)$ of each model $M_i$ is updated online using a standard incremental update rule:
+
+$$
+Q_i(t+1) = Q_i(t) + \eta \cdot \big( r_i(t) - Q_i(t) \big)
+$$
+
+where $\eta \in (0,1]$ is a learning rate. This approach prioritizes models that yield higher rewards, either by correct classification or higher confidence, while gradually discounting underperforming models.
+
+---
+
+### Stage 3 (Optional): Task-Specific Router (TSR)
+
+For applications requiring task-adaptive model selection, an optional **Task-Specific Router** $R(x)$ is trained. Using input features $\phi(x)$, such as embeddings or handcrafted descriptors, the router assigns inputs to the model with the highest predicted suitability:
+
+$$
+R(x) = \arg\max_i \, P(M_i \mid \phi(x))
+$$
+
+The router can be implemented using lightweight classifiers including logistic regression, support vector machines, or shallow neural networks, allowing efficient routing without significantly increasing computational cost.
+
+---
+
+### Component Overview
+
+| Component         | Function                                                                            |
+| ----------------- | ----------------------------------------------------------------------------------- |
+| EasySetSelector   | Constructs a set of low-entropy, easily classifiable examples.                      |
+| FailureDetector   | Removes models $M_i$ for which $A_i < \tau$.                                        |
+| BanditAllocator   | Assigns inputs to models according to the bandit policy $\pi(t)$.                   |
+| RewardEngine      | Computes $r_i(t) = \alpha \cdot \text{accuracy} + \beta \cdot \text{confidence}$.   |
+| ModelRouter (TSR) | Learns a mapping $R(x) = \arg\max_i P(M_i \mid \phi(x))$ for task-specific routing. |
+
+---
+
+### Complexity Comparison
+
+| Method      | Complexity                                                      |
+| ----------- | --------------------------------------------------------------- |
+| Traditional | $O(N \cdot D)$                                                  |
+| Proposed    | $O(k \cdot N) + O(M' \cdot D')$, where $k \ll D$ and $M' \ll N$ |
+
+The net effective computational cost is reduced to:
+
+$$
+O(N) + O(D)
+$$
+
+without compromising classification performance, due to early rejection and reward-guided allocation.
+
+---
+
+### Novelty and Inventive Step
+
+The present system introduces several novel mechanisms:
+
+1. **Probabilistic Early Rejection**: Dynamically removes models that fail on low-entropy inputs, reducing unnecessary computation.
+2. **Bandit-Driven Model Allocation**: Utilizes cumulative reward signals incorporating both correctness and confidence to prioritize model selection.
+3. **Task-Specific Routing (Optional)**: Employs a lightweight router to assign inputs to the most suitable model for downstream tasks.
+
+No prior system combines:
+
+* Early elimination of weak models using easy examples,
+* Multi-armed bandit allocation incorporating confidence-weighted rewards,
+* Optional task-adaptive dynamic routing for model selection.
+
+
+---
+
 
 
