@@ -1,14 +1,8 @@
 
 
-**Smart LLM Selection with Early Elimination and Bandit Optimization**
+# Smart LLM Selection with Early Elimination and Bandit Optimization
 
----
 
-## **Problem Statement**
-
-Perfect — let’s frame this clearly for your **problem statement**. I’ll structure it professor-style, but also keep it sharp for a paper or pitch.
-
----
 
 ### Problem Statement
 
