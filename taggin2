@@ -1,0 +1,64 @@
+import pandas as pd
+import re
+
+# Example DataFrame
+data = {
+    "subject": [
+        "COB - sales report ending with summary",
+        "Meeting notes for project",
+        "COB - finance update ending with draft",
+        "Reminder: submit timesheet",
+        "COB - hr policy ending with approval",
+        "Meeting follow-up for client"
+    ]
+}
+df = pd.DataFrame(data)
+df["tag"] = None  
+
+def progress():
+    tagged = df["tag"].notna().sum()
+    total = len(df)
+    print(f"✅ Tagged: {tagged} | ⏳ Left: {total - tagged} | Total: {total}")
+
+def build_pattern(start=None, end=None):
+    """
+    Build regex from starting and ending strings.
+    If only start is given → matches subjects starting with it.
+    If start + end → matches subjects that start with start AND end with end.
+    """
+    if start and end:
+        return rf"^{re.escape(start)}.*{re.escape(end)}$"
+    elif start:
+        return rf"^{re.escape(start)}.*"
+    elif end:
+        return rf".*{re.escape(end)}$"
+    else:
+        return r".*"  # matches everything
+
+def preview_matches(start=None, end=None):
+    """Show which subjects match the start/end pattern"""
+    pattern = build_pattern(start, end)
+    matches = df[df["tag"].isna() & df["subject"].str.contains(pattern, flags=re.IGNORECASE, regex=True)]
+    print(f"🔎 Using regex: {pattern}")
+    print(matches)
+    return pattern  # return pattern so user can reuse in apply_tag
+
+def apply_tag(pattern, tag):
+    """Apply a tag to matched rows"""
+    mask = df["tag"].isna() & df["subject"].str.contains(pattern, flags=re.IGNORECASE, regex=True)
+    df.loc[mask, "tag"] = tag
+    print(f"✅ Applied tag '{tag}' to {mask.sum()} rows.")
+    progress()
+
+# -------------------------
+# Example usage
+progress()
+
+# Preview subjects starting with "COB -" and ending with "summary"
+pattern = preview_matches(start="COB -", end="summary")
+
+# Apply tag "Sales"
+apply_tag(pattern, "Sales")
+
+print("\n📌 Updated DataFrame:")
+print(df)
