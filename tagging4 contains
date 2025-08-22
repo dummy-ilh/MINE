@@ -1,0 +1,81 @@
+import pandas as pd
+import re
+
+# Example DataFrame
+data = {
+    "subject": [
+        "COB - sales report ending with summary",
+        "Meeting notes for project",
+        "COB - finance update ending with draft",
+        "Reminder: submit timesheet",
+        "COB - hr policy ending with approval",
+        "Meeting follow-up for client",
+        "COB - sales report ending with summary",  # duplicate
+    ]
+}
+df = pd.DataFrame(data)
+df["tag"] = None  
+
+def progress():
+    tagged = df["tag"].notna().sum()
+    total = len(df)
+    print(f"✅ Tagged: {tagged} | ⏳ Left: {total - tagged} | Total: {total}")
+
+def build_pattern(start=None, contains=None, end=None):
+    """
+    Build regex from start, contains, and end strings
+    - If start provided, pattern begins with it
+    - If contains provided, pattern includes it somewhere
+    - If end provided, pattern ends with it
+    """
+    regex = "^" if start else ""
+    
+    if start:
+        regex += re.escape(start) + ".*"
+    else:
+        regex += ".*"
+    
+    if contains:
+        regex += re.escape(contains) + ".*"
+    
+    if end:
+        regex += re.escape(end) + "$"
+    else:
+        regex += ".*"
+    
+    return regex
+
+def preview_matches(start=None, contains=None, end=None, top_n=10):
+    """Show unique subjects + counts matching pattern"""
+    pattern = build_pattern(start, contains, end)
+    mask = df["tag"].isna() & df["subject"].str.contains(pattern, flags=re.IGNORECASE, regex=True)
+    
+    matches = df.loc[mask, "subject"].value_counts().reset_index()
+    matches.columns = ["subject", "count"]
+    
+    print(f"\n🔎 Using regex: {pattern}")
+    if matches.empty:
+        print("⚠️ No matches found.")
+    else:
+        print(matches.head(top_n))
+    return pattern  # so you can reuse in apply_tag
+
+def apply_tag(pattern, tag):
+    """Apply a tag to matched rows"""
+    mask = df["tag"].isna() & df["subject"].str.contains(pattern, flags=re.IGNORECASE, regex=True)
+    df.loc[mask, "tag"] = tag
+    print(f"✅ Applied tag '{tag}' to {mask.sum()} rows.")
+    progress()
+
+# -------------------------
+# Example usage
+progress()
+
+# Preview subjects starting with "COB -", containing "report", ending with "summary"
+pattern = preview_matches(start="COB -", contains="report", end="summary", top_n=5)
+
+# Apply tag
+apply_tag(pattern, "Sales")
+
+print("\n📌 Updated DataFrame:")
+print(df)
