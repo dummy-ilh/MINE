@@ -1,15 +1,15 @@
 import pandas as pd
 
-# Example dataframe
+# Example data
 df = pd.DataFrame({
-    "tag": ["x", "y", "z", "x", "y", "z"]
+    "tag": ["x", "y", "z", "x", "y", "z", "x"]
 })
 
-# Mapping dictionaries
+# Define mapping for a and b
 map_a = {"x": "x1", "y": "y1", "z": "z1"}
 map_b = {"x": "x2", "y": "y2", "z": "z2"}
 
-# Apply mapping
+# Apply mappings
 df["a"] = df["tag"].map(map_a)
 df["b"] = df["tag"].map(map_b)
 
