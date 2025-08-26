@@ -1,0 +1,49 @@
+import pandas as pd
+
+# ---- Example df structure ----
+# df = pd.DataFrame({
+#     "from": ["alice@example.com", "bob@example.com"],
+#     "to": [["bob@example.com", "carol@example.com"], ["alice@example.com"]],
+#     "cc": [["dave@example.com"], []],
+#     "bcc": [["eve@example.com"], []]
+# })
+
+# ---- Step 1: Flatten all roles into a long-form table ----
+records = []
+
+for _, row in df.iterrows():
+    # from (single sender)
+    records.append((row["from"], "from"))
+    # to (list)
+    for addr in row["to"]:
+        records.append((addr, "to"))
+    # cc (list)
+    for addr in row["cc"]:
+        records.append((addr, "cc"))
+    # bcc (list)
+    for addr in row["bcc"]:
+        records.append((addr, "bcc"))
+
+long_df = pd.DataFrame(records, columns=["email", "role"])
+
+# ---- Step 2: Count appearances per role ----
+counts = long_df.groupby(["email", "role"]).size().unstack(fill_value=0)
+
+# Ensure all columns exist even if missing
+for col in ["from", "to", "cc", "bcc"]:
+    if col not in counts.columns:
+        counts[col] = 0
+
+# ---- Step 3: Compute percentages ----
+total_emails = len(df)  # denominator for "sent"
+counts["%_from"] = 100 * counts["from"] / total_emails
+counts["%_to"]   = 100 * counts["to"]   / total_emails
+counts["%_cc"]   = 100 * counts["cc"]   / total_emails
+counts["%_bcc"]  = 100 * counts["bcc"]  / total_emails
+
+# ---- Step 4: Rank by activity (any role) ----
+counts["total_activity"] = counts[["from","to","cc","bcc"]].sum(axis=1)
+top5 = counts.sort_values("total_activity", ascending=False).head(5)
+
+print("=== Top 5 Email IDs Summary ===")
+print(top5.round(2))
