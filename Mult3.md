@@ -381,5 +381,56 @@ Let me know if you'd like this rewritten into a formal legal memo format with de
 [2]: https://www.reuters.com/technology/artificial-intelligence/openai-unveils-cheaper-small-ai-model-gpt-4o-mini-2024-07-18/?utm_source=chatgpt.com "OpenAI unveils cheaper small AI model GPT-4o mini"
 [3]: https://openai.com/index/gpt-4-1/?utm_source=chatgpt.com "Introducing GPT-4.1 in the API - OpenAI"
 [4]: https://galileo.ai/blog/claude-3-5-sonnet-complete-guide-ai-capabilities-analysis?utm_source=chatgpt.com "Claude 3.5 Sonnet Complete Guide: AI Capabilities & Limits"
-[5]: https://aws.amazon.com/blogs/machine-learning/anthropic-claude-3-5-sonnet-ranks-number-1-for-business-and-finance-in-sp-ai-benchmarks-by-kensho/?utm_source=chatgpt.com "Anthropic's Claude 3.5 Sonnet ranks number 1 for ..."
+[5]: https://aws.amazon.com/blogs/machine-learning/anthropic-claude-3-5-sonnet-ranks-number-1-for-business-and-finance-in-sp-ai-benchmarks-by-kensho/?utm_source=chatgpt.com "Anthropic's Claude 3.5 Sonnet ranks number 1 for 
+
+
+Perfect — for a **lawyer audience**, we’ll keep the flowchart **text-only, step-by-step**, and avoid heavy math. Think of it as a *legal procedure diagram* showing how the system decides.
+
+---
+
+# Smart Selecto Flowchart (Text Format)
+
+```
+START: 20 Models + 1,000,000 Complaints
+        |
+        v
+Stage 0: Consensus Dropout
+   - Each model votes on first 100,000 complaints (max).
+   - If a model disagrees with consensus 3 times → DROPPED.
+   - Stop early if 10% data used OR 50% models eliminated.
+        |
+        v
+   Survivors: 10 Models
+        |
+        v
+Stage 1: Reward-Guided Bandit
+   - Remaining 900,000 complaints allocated dynamically.
+   - Each model gets "reward" based on:
+       • Accuracy
+       • Confidence
+       • Benchmark score
+       • Cost (penalty if expensive)
+   - Poor reward → fewer complaints sent.
+   - High reward → more complaints sent.
+        |
+        v
+   Finalists: Top 2 Models
+        |
+        v
+Stage 2: Task-Specific Router (Optional)
+   - If complaint is SHORT → send to GPT-4o Mini (fast + cheap).
+   - If complaint is LONG → send to LLaMA 3.1 (handles context better).
+        |
+        v
+END: Deployed Setup
+   - Only 2 best models used.
+   - 90% of evaluation cost saved.
+```
+
+---
+
+This flowchart shows the **logic of elimination and selection**, step by step, in plain terms.
+
+👉 Do you want me to now **draw this as an actual visual diagram (boxes/arrows)** for presentations, or keep it purely text-based for legal notes?
+..."
 
