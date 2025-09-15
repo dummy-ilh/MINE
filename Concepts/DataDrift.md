@@ -13,9 +13,9 @@ Data drift is a key challenge in MLOps (Machine Learning Operations), as it can 
 It's crucial to distinguish between various types of drift to understand the root cause of model degradation. While often used interchangeably, these terms have specific meanings:
 
 * **Data Drift:** A broad term for any change in the data distribution.
-* **Covariate Drift (Feature Drift):** The distribution of the input features ($P(x)$) changes, while the relationship between the features and the target variable remains the same ($P(y|x)$).
-* **Concept Drift:** The relationship between the input features and the target variable changes ($P(y|x)$), even if the distribution of the features themselves remains stable.
-* **Prior Probability Shift (Label Drift):** The distribution of the target variable ($P(y)$) changes.
+* **Covariate Drift (Feature Drift):** The distribution of the input features P(x) changes, while the relationship between the features and the target variable remains the same P(y|x).
+* **Concept Drift:** The relationship between the input features and the target variable changes P(y|x), even if the distribution of the features themselves remains stable.
+* **Prior Probability Shift (Label Drift):** The distribution of the target variable P(y) changes.
 
 ### 🔎 Types of Data Drift
 
@@ -41,16 +41,7 @@ Data drift can be categorized in several ways, providing a more granular view of
 
 #### Based on Timing:
 
-* **Sudden Drift:** The change in data distribution happens all at once.
-    * **Example:** A major external event like a global pandemic or a new government regulation dramatically alters consumer behavior overnight.
-* **Gradual Drift:** The change in data distribution happens slowly and steadily over time.
-    * **Example:** The evolution of slang words in social media sentiment analysis, or a slow shift in demographic trends.
-* **Incremental Drift:** A series of small, sudden changes where an old distribution is replaced by a new one step by step.
-Perfect! You’re now asking about the **temporal patterns** of drift — i.e., *how drift unfolds over time*. This is often classified into **sudden, gradual, incremental, and recurring drift**. Let’s go through each in detail with examples and a bit of math intuition.
 
----
-
-# ⏳ Types of Drift by Time Pattern
 ![Drift Detection Diagram — Drift Types](https://cymulate.com/uploaded-files/2025/01/Drift-Detection-Diagram-Drift-Types.png)
 
 ### 1. **Sudden Drift (Abrupt Drift)**
@@ -129,8 +120,6 @@ Perfect! You’re now asking about the **temporal patterns** of drift — i.e., 
 | **Recurring**   | Old distributions come back periodically      | Seasonal sales, electricity demand            |
 
 ---
-
-👉 Would you like me to **make you a timeline-style diagram** (with curves showing sudden vs gradual vs incremental vs recurring drift) so you can *visualize* the differences clearly?
 
 ### 📊 Why Data Drift Matters
 
