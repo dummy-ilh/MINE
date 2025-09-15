@@ -32,6 +32,7 @@ Data drift can be categorized in several ways, providing a more granular view of
 3.  **Concept Drift:**
     * **Description:** The relationship between features and labels changes over time.
     * **Example:** A spam detection model's understanding of "spam" becomes outdated. Spammers invent new techniques, and words that were once "spammy" are now common, while new patterns emerge that the model doesn't recognize. Mathematically, the conditional probability $P(Y|X)$ changes.
+![DATA DRIFT]([<img width="1255" height="398" alt="types-of-drift" src="https://github.com/user-attachments/assets/ded94e55-5512-46a7-aa98-2892436b4a56" />](https://docs.deepchecks.com/stable/_images/types-of-drift.png)
 
 #### Based on Severity:
 
