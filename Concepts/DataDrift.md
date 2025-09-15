@@ -52,7 +52,8 @@ Perfect! You’re now asking about the **temporal patterns** of drift — i.e., 
 ---
 
 # ⏳ Types of Drift by Time Pattern
-[ Data Drift](https://www.youtube.com/watch?v=your-video-id)
+![Drift Detection Diagram — Drift Types](https://cymulate.com/uploaded-files/2025/01/Drift-Detection-Diagram-Drift-Types.png)
+
 ### 1. **Sudden Drift (Abrupt Drift)**
 
 * **Definition:** The data distribution changes all at once at a specific point in time.
