@@ -1,10 +1,9 @@
 
 ### 📌 What is Data Drift?
 
-Data drift is a fundamental concept in machine learning that refers to the change in the statistical properties of the input data over time, as compared to the data on which a machine learning model was originally trained. In simple terms: your model was trained on yesterday’s world, but today’s world looks different. If the input data distribution changes, the model may become less accurate and reliable because it is seeing data that no longer matches its training distribution.
-Data drift refers to the change in the statistical properties of input data over time, compared to the data on which a machine learning model was originally trained.
+Data drift is a fundamental concept in machine learning that refers to the change in the statistical properties of the input data over time, as compared to the data on which a machine learning model was originally trained. In simple terms: your model was trained on yesterday’s world, but today’s world looks different. 
+If the input data distribution changes, the model may become less accurate and reliable because it is seeing data that no longer matches its training distribution.
 
-In simple terms: your model was trained on yesterday’s world, but today’s world looks different.
 
 If the input data distribution changes, the model may become less accurate because it is seeing data that no longer matches its training distribution.
 Data drift is a key challenge in MLOps (Machine Learning Operations), as it can lead to a significant degradation in the performance of a deployed model. This phenomenon directly violates the **IID (Independently and Identically Distributed) assumption**, which underpins most machine learning models.
