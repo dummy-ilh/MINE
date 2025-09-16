@@ -150,13 +150,121 @@ Limitations:
 ✅ That’s the **first building block: the single neuron & linear vs nonlinear**.
 
 ---
+Excellent — let’s pause and **go deep** into these two points before we move forward.
 
-👉 Now, to go deep, I can proceed with a **full lecture on activation functions** next:
+---
 
-* Mathematical definitions
-* Derivatives (with explicit formulas)
-* Pros/cons in optimization
-* When to use which in practice
-* Pathologies (saturation, dying neurons) and remedies
+# 1) The **Bias Term** — meaning and use
 
-Would you like me to **drill into activations next**, or do you prefer we **derive forward-pass equations for an entire MLP first** and then return to activations?
+### Mathematical form
+
+For one neuron:
+
+$$
+z = W x + b
+$$
+
+$$
+a = \phi(z)
+$$
+
+where $W$ is a weight vector and $b$ is the **bias** (a scalar per neuron).
+
+---
+
+### Intuition: what does $b$ do?
+
+Think of a bias as an **intercept** in linear regression.
+
+* Without bias: the neuron’s output is always forced to pass through the origin (0).
+  Example: If inputs are zero, output is forced to be zero.
+
+* With bias: we can **shift the activation function** left or right (for sigmoid/tanh) or **up/down the threshold** (for ReLU).
+
+Graphical example:
+
+* Sigmoid without bias is centered at $z=0$ (threshold at input=0).
+* With bias $b$, threshold shifts to input = $-b/w$.
+
+---
+
+### Geometric interpretation
+
+A neuron’s decision boundary is:
+
+$$
+Wx + b = 0
+$$
+
+This is the equation of a **hyperplane**.
+
+* $W$ defines its orientation (slope, normal vector).
+* $b$ shifts it in space (intercept).
+
+👉 **Without bias**, the hyperplane is forced through the origin — very restrictive.
+👉 **With bias**, we can represent *any shifted hyperplane*, making the model more expressive.
+
+---
+
+### Practical importance
+
+* Bias enables networks to approximate functions that don’t pass through the origin.
+* Imagine modeling $y = x + 1$. Without bias, neuron outputs $y = w x$ can never represent this constant shift.
+* In deep nets, biases give neurons the flexibility to activate *even if all inputs are zero*.
+
+👉 **Rule:** Always include biases unless you explicitly know the network should be origin-centered (rare).
+
+---
+
+# 2) The Original Perceptron (Rosenblatt, 1958)
+
+### Perceptron model
+
+Mathematically:
+
+$$
+\hat{y} = \phi(Wx + b)
+$$
+
+* $x \in \mathbb{R}^d$: input vector.
+* $W \in \mathbb{R}^d$: weights.
+* $b$: bias.
+* $\phi$: **hard threshold function**:
+
+  $$
+  \phi(z) = \begin{cases}
+  1 & z > 0 \\
+  0 & z \le 0
+  \end{cases}
+  $$
+
+This was an early attempt to mimic biological neurons.
+
+---
+
+### Decision boundary
+
+The perceptron outputs 1 or 0 depending on which side of the hyperplane $Wx + b = 0$ the input lies.
+👉 So, it’s a **linear classifier**.
+
+---
+
+### Limitations
+
+* Works only if data is **linearly separable**.
+* Cannot solve **XOR** (classic proof).
+
+Why? XOR’s classes can’t be separated with a single straight line. You need at least two lines (i.e., multiple neurons in a hidden layer) to solve it.
+
+This limitation led to the “AI winter” in the 1970s after Minsky & Papert (1969) showed perceptrons were too weak. The breakthrough came in the 1980s with **multi-layer perceptrons + backpropagation**, which solved XOR and much more.
+
+---
+
+✅ So to summarize before we move on:
+
+* **Bias** = allows flexibility by shifting decision boundaries and activations.
+* **Perceptron** = a single linear threshold unit, limited to linearly separable problems.
+
+---
+
+
