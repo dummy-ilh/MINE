@@ -1,3 +1,122 @@
+Below is your exact content rewritten into **clean Markdown** with images embedded (I used diagrams from GeeksforGeeks and the image URL you provided). I kept your original wording and math intact, only adding headings, LaTeX blocks, and image embeds so the document is ready to use.
+
+> **Notes**
+>
+> * The main reference for definitions, math, and diagrams is the GeeksforGeeks article I fetched. ([GeeksforGeeks][1])
+> * I also embedded the Google-licensed thumbnail URL you supplied near the LSTM section.
+
+---
+
+# What is a Recurrent Neural Network (RNN)?
+
+A Recurrent Neural Network (RNN) is a type of neural network designed to handle sequential data or time series data, like text, audio, or video. Unlike a traditional Feedforward Neural Network where information flows in a single direction, an RNN has a **"loop"** that allows information to persist and be used in future calculations. This gives it a form of **"memory."** 🧠 ([GeeksforGeeks][1])
+
+Think of it like a human reading a sentence: you understand the meaning of the current word by also remembering the words that came before it. An RNN does the same, using the output from a previous step as an additional input for the current step.
+
+**Recurrent neural network architecture (GeeksforGeeks)**
+![Recurrent Neural Architecture (GeeksforGeeks)](https://images.openai.com/thumbnails/url/zReL6Hicu1mUUVJSUGylr5-al1xUWVCSmqJbkpRnoJdeXJJYkpmsl5yfq5-Zm5ieWmxfaAuUsXL0S7F0Tw52zq0IMisuijQuS3OJKovMjLcIzg23NPbxzMkscHK1LHf19_T2MI2vDE_2LPZNzsnPDEox9XPUDSxUKwYAziUpMA)
+*Figure: recurrent architecture and shared-weight unrolling (source: GeeksforGeeks).* ([GeeksforGeeks][1])
+
+To better understand this "loop," we often **unroll the RNN over time**. This makes it look like a very deep network where each layer corresponds to a time step. ([GeeksforGeeks][1])
+
+**Unrolled RNN (time steps)**
+![RNN Unrolled Over Time (GeeksforGeeks)](https://images.openai.com/thumbnails/url/9Dxb7Xicu1mSUVJSUGylr5-al1xUWVCSmqJbkpRnoJdeXJJYkpmsl5yfq5-Zm5ieWmxfaAuUsXL0S7F0Tw7Ot6zQdfKLsggwLbPMSAyuTCwqdDKINDV3d8stSPY2jSjzMi82S0pN8vI0CSypKMv3T0l3LcsoLDFMdFQrBgALUSnj)
+*Figure: RNN unrolled across time-steps.* ([GeeksforGeeks][1])
+
+---
+
+# The Math Behind an RNN
+
+The core of an RNN is its ability to update a hidden state at each time step, which acts as the network's memory.
+
+At each time step $t$, the RNN takes two inputs:
+
+* The current input, $x_t$.
+* The hidden state from the previous time step, $h_{t-1}$.
+
+The new hidden state, $h_t$, is calculated using a set of learned weights:
+
+$$
+\boxed{\,h_t = \tanh\big(W_{hh}\,h_{t-1} + W_{xh}\,x_t + b_h\big)\,}
+$$
+
+Where:
+
+* $W_{hh}$ is the weight matrix for the recurrent hidden state.
+* $W_{xh}$ is the weight matrix for the input.
+* $b_h$ is the bias vector.
+* The $\tanh$ function (or sometimes ReLU) is the activation function. ([GeeksforGeeks][1])
+
+The output, $y_t$, at time step $t$ is then calculated based on the new hidden state:
+
+$$
+\boxed{\,y_t = W_{hy}\,h_t + b_y\,}
+$$
+
+This output can be a prediction, a word, or whatever the task requires. ([GeeksforGeeks][1])
+
+---
+
+# Training an RNN
+
+Training an RNN is similar to training a regular neural network, but it uses a specialized version of backpropagation called **Backpropagation Through Time (BPTT)**. The error at the final time step is propagated backward through the unrolled network, allowing the model to update the weights based on the loss from all time steps. ([GeeksforGeeks][1])
+
+**BPTT diagram (GeeksforGeeks)**
+![Backpropagation Through Time (GeeksforGeeks)](https://images.openai.com/thumbnails/url/UUtgnHicu1mSUVJSUGylr5-al1xUWVCSmqJbkpRnoJdeXJJYkpmsl5yfq5-Zm5ieWmxfaAuUsXL0S7F0Tw5MLHRL9YpwzPV2SspM98ytCC7x1c0O0zUuNHUuM4wKTc8pDigLd86OSgxOKvJ1cUmOTwxKskhM83ePTFcrBgAlVyox)
+*Figure: gradients flow backward through time-steps during BPTT.* ([GeeksforGeeks][1])
+
+---
+
+# Challenges with RNNs
+
+* **Vanishing Gradient Problem**: During BPTT, the gradients (used to update weights) can become extremely small. This makes it difficult for the network to learn long-term dependencies, as the updates from early time steps are effectively "lost." ([GeeksforGeeks][1])
+
+* **Exploding Gradient Problem**: Conversely, the gradients can become extremely large, leading to unstable learning and the network's weights "exploding" to a value of NaN (Not a Number). This is less common but can be managed by **gradient clipping**, which caps the maximum value of the gradients. ([GeeksforGeeks][1])
+
+---
+
+# Types of RNNs and Their Evolution
+
+The challenges of vanishing/exploding gradients led to more advanced architectures.
+
+## 1. Long Short-Term Memory (LSTM)
+
+An **LSTM** is a specialized RNN designed to handle long-term dependencies. It uses a **cell state** and several **gates** that regulate information flow (sigmoid outputs between 0 and 1 act as filters):
+
+* **Forget Gate**: Decides what information to throw away from the cell state.
+* **Input Gate**: Decides what new information to store.
+* **Output Gate**: Decides what part of the cell state to output. ([GeeksforGeeks][1])
+
+**Licensed thumbnail (user-provided / Google licensed)**
+![LSTM licensed image you provided](https://encrypted-tbn3.gstatic.com/licensed-image?q=tbn\:ANd9GcRsy59GR667JiBlyvY5FkZMT9sg2tbZ-ufDD5DhPQKbReOOArprSjthAXIo49uzhaikxWKCMbNqPJ2q4g4M6Bn2drr0qQ3rQCWZmuGV6Edza20YZ1I)
+*Figure: LSTM conceptual diagram (licensed thumbnail you supplied).*
+
+> **Note:** If you want a higher-resolution LSTM diagram (PNG/SVG) I can fetch licensed copies and include proper attribution and file links.
+
+## 2. Gated Recurrent Unit (GRU)
+
+A **GRU** is a simplified LSTM: it merges the forget and input gates into a single **update gate**, and combines cell and hidden states. GRUs are computationally simpler and often perform comparably to LSTMs on many tasks. ([GeeksforGeeks][1])
+
+**GRU / RNN diagram (example)**
+![GRU/RNN diagram (example)](https://images.openai.com/thumbnails/url/rtvoeHicu1mSUVJSUGylr5-al1xUWVCSmqJbkpRnoJdeXJJYkpmsl5yfq5-Zm5ieWmxfaAuUsXL0S7F0Tw4uyiwK8A7Py8oJNi41MvQuLfYtDkwJdvVOzcgwinB3ysrxzs4z9MlKTDYuMTBKMzQuM85PjQhOc7OISFcrBgAqEinb)
+*Figure: GRU / recurrent diagram (source: GeeksforGeeks & related diagrams).* ([GeeksforGeeks][1])
+
+---
+
+# Applications of RNNs
+
+RNNs, LSTMs and GRUs are widely used for sequential tasks:
+
+* **Natural Language Processing (NLP):** machine translation, text generation, sentiment analysis. ([GeeksforGeeks][1])
+* **Speech Recognition:** converting audio to text. ([GeeksforGeeks][1])
+* **Time Series Prediction:** forecasting stock prices, weather patterns. ([GeeksforGeeks][1])
+* **Video Analysis:** action recognition and sequence-level understanding. ([GeeksforGeeks][1])
+
+---
+
+
+
+[1]: https://www.geeksforgeeks.org/machine-learning/introduction-to-recurrent-neural-network/ "Introduction to Recurrent Neural Networks - GeeksforGeeks"
 
 
 ## 📘 A Numerical Example of an RNN
