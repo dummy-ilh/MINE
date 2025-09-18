@@ -60,7 +60,72 @@ Natural Language Processing (NLP): Machine translation, text generation (e.g., c
 Speech Recognition: Converting audio signals into text.
 Time Series Prediction: Forecasting stock prices or weather patterns.
 Video Analysis: Understanding actions in video frames.
+It looks like your text file was corrupted. I've re-formatted your numerical example of an RNN into a clean, markdown-friendly format. Here is the full text, ready for use.
 
+***
+
+## 📘 A Numerical Example of an RNN
+
+Let's walk through a simple, two-word sequence ("hi there") to see how an RNN's internal calculations work. Our goal is to predict the next word in the sequence.
+
+### 1. The Setup
+
+* **Vocabulary**: "hi", "there", "class", "!"
+* **One-hot encoding**:
+    * `hi` = $[1, 0, 0, 0]$
+    * `there` = $[0, 1, 0, 0]$
+    * `class` = $[0, 0, 1, 0]$
+    * `!` = $[0, 0, 0, 1]$
+* **Initial Hidden State ($h_0$)**: $[0, 0]^T$
+* **Assigned Weights and Biases**:
+    * Input-to-hidden weights ($W_{xh}$): $\begin{pmatrix} 0.5 & 0.1 \\ -0.2 & 0.8 \end{pmatrix}$
+    * Hidden-to-hidden weights ($W_{hh}$): $\begin{pmatrix} 0.3 & 0.4 \\ 0.6 & -0.1 \end{pmatrix}$
+    * Output-to-hidden weights ($W_{hy}$): $\begin{pmatrix} 0.1 & 0.7 \\ -0.3 & 0.2 \\ 0.5 & 0.4 \\ -0.6 & -0.1 \end{pmatrix}$
+    * Hidden bias ($b_h$): $[0.1, 0.1]^T$
+    * Output bias ($b_y$): $[0, 0, 0, 0]^T$
+* **Activation Function**: $\tanh$ for the hidden state.
+
+---
+
+### 2. Time Step 1: Processing "hi"
+
+The network processes the first word, "hi". Since this is the first step, the previous hidden state, $h_0$, is a vector of zeros.
+
+* **Input**: $x_1 = [1, 0, 0, 0]^T$
+* **Previous hidden state**: $h_0 = [0, 0]^T$
+
+We calculate the new hidden state, $h_1$:
+
+$$h_1 = \tanh(W_{hh} h_0 + W_{xh} x_1 + b_h)$$$$h_1 = \tanh\left(\begin{pmatrix} 0.3 & 0.4 \\ 0.6 & -0.1 \end{pmatrix}\begin{pmatrix} 0 \\ 0 \end{pmatrix} + \begin{pmatrix} 0.5 & 0.1 \\ -0.2 & 0.8 \end{pmatrix}\begin{pmatrix} 1 \\ 0 \\ 0 \\ 0 \end{pmatrix} + \begin{pmatrix} 0.1 \\ 0.1 \end{pmatrix}\right)$$$$h_1 = \tanh\left(\begin{pmatrix} 0 \\ 0 \end{pmatrix} + \begin{pmatrix} 0.5 \\ -0.2 \end{pmatrix} + \begin{pmatrix} 0.1 \\ 0.1 \end{pmatrix}\right)$$$$h_1 = \tanh\left(\begin{pmatrix} 0.6 \\ -0.1 \end{pmatrix}\right)$$$$h_1 \approx \begin{pmatrix} 0.537 \\ -0.099 \end{pmatrix}$$
+
+This vector, $h_1$, is the network's "memory" after seeing "hi".
+
+---
+
+### 3. Time Step 2: Processing "there"
+
+Now, the network processes "there" and, critically, uses the **hidden state from the previous step** ($h_1$).
+
+* **Input**: $x_2 = [0, 1, 0, 0]^T$
+* **Previous hidden state**: $h_1 = [0.537, -0.099]^T$
+
+We calculate the next hidden state, $h_2$:
+
+$$h_2 = \tanh(W_{hh} h_1 + W_{xh} x_2 + b_h)$$$$h_2 = \tanh\left(\begin{pmatrix} 0.3 & 0.4 \\ 0.6 & -0.1 \end{pmatrix}\begin{pmatrix} 0.537 \\ -0.099 \end{pmatrix} + \begin{pmatrix} 0.5 & 0.1 \\ -0.2 & 0.8 \end{pmatrix}\begin{pmatrix} 0 \\ 1 \\ 0 \\ 0 \end{pmatrix} + \begin{pmatrix} 0.1 \\ 0.1 \end{pmatrix}\right)$$$$h_2 = \tanh\left(\begin{pmatrix} (0.3 \times 0.537) + (0.4 \times -0.099) \\ (0.6 \times 0.537) + (-0.1 \times -0.099) \end{pmatrix} + \begin{pmatrix} 0.1 \\ 0.8 \end{pmatrix} + \begin{pmatrix} 0.1 \\ 0.1 \end{pmatrix}\right)$$$$h_2 = \tanh\left(\begin{pmatrix} 0.121 \\ 0.332 \end{pmatrix} + \begin{pmatrix} 0.1 \\ 0.8 \end{pmatrix} + \begin{pmatrix} 0.1 \\ 0.1 \end{pmatrix}\right)$$$$h_2 = \tanh\left(\begin{pmatrix} 0.321 \\ 1.232 \end{pmatrix}\right)$$
+$$h_2 \approx \begin{pmatrix} 0.311 \\ 0.842 \end{pmatrix}$$
+
+The calculation of $h_2$ directly incorporates information from the word "hi" through the $h_1$ vector.
+
+---
+
+### 4. Prediction
+
+Finally, we use the final hidden state, $h_2$, to predict the next word. We'll use the $W_{hy}$ weights to get the output scores before applying a softmax function.
+
+$$y_{pred} = W_{hy} h_2 + b_y$$$$y_{pred} = \begin{pmatrix} 0.1 & 0.7 \\ -0.3 & 0.2 \\ 0.5 & 0.4 \\ -0.6 & -0.1 \end{pmatrix} \begin{pmatrix} 0.311 \\ 0.842 \end{pmatrix} + \begin{pmatrix} 0 \\ 0 \\ 0 \\ 0 \end{pmatrix}$$$$y_{pred} = \begin{pmatrix} (0.1 \times 0.311) + (0.7 \times 0.842) \\ (-0.3 \times 0.311) + (0.2 \times 0.842) \\ (0.5 \times 0.311) + (0.4 \times 0.842) \\ (-0.6 \times 0.311) + (-0.1 \times 0.842) \end{pmatrix}$$
+$$y_{pred} = \begin{pmatrix} 0.620 \\ 0.075 \\ 0.492 \\ -0.271 \end{pmatrix}$$
+
+These values are the raw scores for each possible next word. The network would then pass this vector through a softmax function to get a probability distribution, which in this case would likely point to "hi" or "class" as the most probable next word based on these learned weights.
 
 # Numerical RNN worked example (with your one-hot vocabulary)
 
