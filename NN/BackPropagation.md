@@ -1,8 +1,4 @@
-Fantastic — now you’re asking about the **backward pass**, which is the heart of how neural networks actually *learn*.
 
-The **forward pass** only computes predictions. The **backward pass (backpropagation)** computes how much each parameter (weights, biases) contributed to the error, so we can adjust them with **gradient descent**.
-
----
 
 # 📘 The Backward Pass (Backpropagation)
 
@@ -65,36 +61,52 @@ where $\delta = \frac{\partial L}{\partial a} \cdot f'(z)$ is the **error signal
 
 ## 4. **General Case: Layer-by-Layer**
 
-For layer $l$:
 
-1. **Forward pass stored values**:
+### Backpropagation for Layer $l$
 
-   * $z^{[l]} = W^{[l]} a^{[l-1]} + b^{[l]}$
-   * $a^{[l]} = f(z^{[l]})$
+**Forward pass stored values:**
 
-2. **Error signal at output layer**:
+$$
+z^{[l]} = W^{[l]} a^{[l-1]} + b^{[l]}
+$$
 
-   $$
-   \delta^{[L]} = \nabla_a L \odot f'(z^{[L]})
-   $$
+$$
+a^{[l]} = f(z^{[l]})
+$$
 
-3. **Error signal at hidden layers**:
+---
 
-   $$
-   \delta^{[l]} = \left( (W^{[l+1]})^T \delta^{[l+1]} \right) \odot f'(z^{[l]})
-   $$
+**Error signal at the output layer:**
 
-   (where $\odot$ = elementwise product).
+$$
+\delta^{[L]} = \nabla_a L \;\odot\; f'(z^{[L]})
+$$
 
-4. **Gradients for weights and biases**:
+---
 
-   $$
-   \frac{\partial L}{\partial W^{[l]}} = \delta^{[l]} (a^{[l-1]})^T
-   $$
+**Error signal at hidden layers:**
 
-   $$
-   \frac{\partial L}{\partial b^{[l]}} = \delta^{[l]}
-   $$
+$$
+\delta^{[l]} = \big( (W^{[l+1]})^T \delta^{[l+1]} \big) \;\odot\; f'(z^{[l]})
+$$
+
+> Here, $\odot$ denotes elementwise multiplication.
+
+---
+
+**Gradients for weights and biases:**
+
+$$
+\frac{\partial L}{\partial W^{[l]}} = \delta^{[l]} \, (a^{[l-1]})^T
+$$
+
+$$
+\frac{\partial L}{\partial b^{[l]}} = \delta^{[l]}
+$$
+
+---
+
+If you want, I can also make a **fully annotated version with text explanation inline** for each equation so it reads more like a textbook page. Do you want me to do that?
 
 ---
 
@@ -166,8 +178,6 @@ The backward pass = apply chain rule through the network:
 * Compute gradients wrt weights & biases.
 * Update parameters with gradient descent.
 
----
-Perfect 👌 — let’s get concrete and actually *walk numbers through* a tiny network, step by step, both **forward** and **backward**.
 
 ---
 
@@ -218,26 +228,34 @@ $$
 ## 3. **Forward Pass**
 
 ### Hidden layer:
+Here’s your LaTeX rewritten correctly and neatly for Markdown (so it renders properly with matrices and equations):
+
+---
 
 $$
-z^{[1]} = W^{[1]} x + b^{[1]}
-= \begin{bmatrix} 0.1 & 0.2 \\ 0.3 & 0.4 \end{bmatrix} 
+z^{[1]} = W^{[1]} x + b^{[1]} =
+\begin{bmatrix} 0.1 & 0.2 \\ 0.3 & 0.4 \end{bmatrix}
 \begin{bmatrix} 1 \\ 2 \end{bmatrix}
-+ \begin{bmatrix} 0.01 \\ 0.02 \end{bmatrix}
++
+\begin{bmatrix} 0.01 \\ 0.02 \end{bmatrix}
+=
+\begin{bmatrix} 0.1(1) + 0.2(2) + 0.01 \\ 0.3(1) + 0.4(2) + 0.02 \end{bmatrix}
+=
+\begin{bmatrix} 0.51 \\ 1.12 \end{bmatrix}
 $$
 
-$$
-= \begin{bmatrix} 0.1(1) + 0.2(2) + 0.01 \\ 0.3(1) + 0.4(2) + 0.02 \end{bmatrix}
-= \begin{bmatrix} 0.51 \\ 1.12 \end{bmatrix}
-$$
-
-Apply sigmoid:
+Apply the sigmoid activation:
 
 $$
-a^{[1]} = \sigma(z^{[1]}) 
-= \begin{bmatrix} \sigma(0.51) \\ \sigma(1.12) \end{bmatrix}
-= \begin{bmatrix} 0.625 \\ 0.754 \end{bmatrix}
+a^{[1]} = \sigma(z^{[1]}) =
+\begin{bmatrix} \sigma(0.51) \\ \sigma(1.12) \end{bmatrix}
+=
+\begin{bmatrix} 0.625 \\ 0.754 \end{bmatrix}
 $$
+
+---
+
+Th
 
 ---
 
@@ -366,12 +384,18 @@ $$
 
 * Update hidden weights:
 
+Here’s your weight update equation rewritten correctly in LaTeX/Markdown with proper matrix formatting:
+
 $$
-W^{[1]} = W^{[1]} - 0.1 
-\begin{bmatrix} -0.035 & -0.070 \\ -0.033 & -0.066 \end{bmatrix}
-=
-\begin{bmatrix} 0.1035 & 0.207 \\ 0.3033 & 0.4066 \end{bmatrix}
+W^{[1]} = W^{[1]} - 0.1 \begin{bmatrix} -0.035 & -0.070 \\ -0.033 & -0.066 \end{bmatrix}
 $$
+
+After performing the subtraction, you get:
+
+$$
+W^{[1]} = \begin{bmatrix} 0.1035 & 0.207 \\ 0.3033 & 0.4066 \end{bmatrix}
+$$
+
 
 And so on for biases.
 
