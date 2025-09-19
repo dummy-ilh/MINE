@@ -1,8 +1,10 @@
-Perfect — this is a **crucial topic** for understanding why neural networks can actually learn complex patterns. Let’s go deep, step by step.
 
 ---
 
 # 📘 Activation Functions in Neural Networks
+![](AF1.png)
+
+![](AF2.png)
 
 ---
 
