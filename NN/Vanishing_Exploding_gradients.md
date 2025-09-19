@@ -158,3 +158,76 @@ Several techniques are used to mitigate these issues:
 * **Gradient Clipping**: This is a direct solution for exploding gradients. It involves setting a threshold to cap the maximum size of the gradients during backpropagation, preventing them from getting too large.
 * **Batch Normalization**: This technique normalizes the output of a layer before it's passed to the next layer. By stabilizing the input distribution of each layer, it helps prevent both vanishing and exploding gradients.
 * **Skip Connections**: Architectures like Residual Networks (ResNets) use "skip connections" to allow the gradient to bypass layers. This creates a direct path for the gradient to flow backward, helping to solve the vanishing gradient problem in very deep networks.
+
+
+
+
+## 🔹 Practical Questions (Engineering & Real-world)
+
+### Q6. How do you detect vanishing or exploding gradients in practice?
+
+**Answer:**
+
+* Monitor gradient norms (`||∇W||` per layer).
+* If norms → **\~0**, you have vanishing gradients.
+* If norms → **huge spikes**, you have exploding gradients.
+* Tools: PyTorch hooks, TensorBoard histograms.
+
+---
+
+### Q7. What are techniques to fix vanishing/exploding gradients?
+
+**Answer:**
+
+* **Initialization:** Xavier/He initialization.
+* **Activations:** ReLU-family, GELU, etc.
+* **Normalization:** BatchNorm, LayerNorm.
+* **Residual connections:** skip connections help gradients flow directly.
+* **Gradient clipping:** cap gradients to avoid explosions.
+
+---
+
+### Q8. Why does gradient clipping help, and when is it used?
+
+**Answer:**
+Clipping sets a **threshold**:
+$g \leftarrow \frac{g}{\max(1, \frac{||g||}{\text{clip\_value}})}$
+This prevents unstable updates (esp. in RNNs / Transformers). Used when training diverges due to exploding gradients.
+
+---
+
+### Q9. Why do we need to store activations in the forward pass for backprop?
+
+**Answer:**
+Because gradients require both:
+
+* Downstream error (\$\delta\$).
+* Local derivative (\$f’(z)\$, depends on forward \$z\$ or \$a\$).
+  Without storing, we’d have to **recompute** forward activations, which is inefficient (though “gradient checkpointing” does this to save memory).
+
+---
+
+### Q10. In distributed training, why is backpropagation a bottleneck?
+
+**Answer:**
+
+* Each GPU computes gradients locally, but parameters are **shared across GPUs**.
+* Backprop requires **all-reduce** operations to sync gradients.
+* This makes training **communication-bound** instead of compute-bound.
+  Solutions: gradient compression, asynchronous updates, ZeRO optimizer.
+
+---
+
+## 🔹 Beyond FAANG Trick Question
+
+### Q11. Can we train a network without backpropagation?
+
+**Answer:**
+Yes, but with tradeoffs:
+
+* **Evolutionary algorithms / reinforcement learning** → gradient-free but inefficient.
+* **Hebbian learning / local rules** → more biologically plausible, less powerful.
+* **Forward-mode autodiff** → possible, but inefficient for millions of parameters.
+  Backprop remains the **most efficient general-purpose algorithm** for training deep networks.
+
+---
