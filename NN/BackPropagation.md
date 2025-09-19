@@ -231,31 +231,63 @@ $$
 Here’s your LaTeX rewritten correctly and neatly for Markdown (so it renders properly with matrices and equations):
 
 ---
+z
+[1]
+=W
+[1]
+x+b
+[1]
+=[
+0.1
+0.3
+	​
 
-$$
-z^{[1]} = W^{[1]} x + b^{[1]} =
-\begin{bmatrix} 0.1 & 0.2 \\ 0.3 & 0.4 \end{bmatrix}
-\begin{bmatrix} 1 \\ 2 \end{bmatrix}
-+
-\begin{bmatrix} 0.01 \\ 0.02 \end{bmatrix}
-=
-\begin{bmatrix} 0.1(1) + 0.2(2) + 0.01 \\ 0.3(1) + 0.4(2) + 0.02 \end{bmatrix}
-=
-\begin{bmatrix} 0.51 \\ 1.12 \end{bmatrix}
-$$
+0.2
+0.4
+	​
+
+][
+1
+2
+	​
+
+]+[
+0.01
+0.02
+	​
+
+]=[
+0.1(1)+0.2(2)+0.01
+0.3(1)+0.4(2)+0.02
+	​
+
+]=[
+0.51
+1.12
+	​
+
+]
 
 Apply the sigmoid activation:
 
-$$
-a^{[1]} = \sigma(z^{[1]}) =
-\begin{bmatrix} \sigma(0.51) \\ \sigma(1.12) \end{bmatrix}
-=
-\begin{bmatrix} 0.625 \\ 0.754 \end{bmatrix}
-$$
+a[1]=σ(z[1])=[σ(0.51)
+σ(1.12)]=[0.625
+0.754]
+a
+[1]
+=σ(z
+[1]
+)=[
+σ(0.51)
+σ(1.12)
+	​
 
----
+]=[
+0.625
+0.754
+	​
 
-Th
+]
 
 ---
 
