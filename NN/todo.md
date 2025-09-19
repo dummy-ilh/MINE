@@ -1,5 +1,7 @@
-Absolutely — you’ve covered a lot: forward pass, backward pass, activations, loss functions, and their derivatives. But to get a **complete conceptual map of ANNs**, there are still several **key topics/concepts** that are essential to understand modern networks fully. Here’s a structured list:
-
+* **Weight Initialization**: Use smart weight initialization techniques like **He initialization** or **Xavier initialization** to set the starting weights in a way that helps maintain the variance of activations and gradients across layers.
+* **Gradient Clipping**: This is a direct solution for exploding gradients. It involves setting a threshold to cap the maximum size of the gradients during backpropagation, preventing them from getting too large.
+* **Batch Normalization**: This technique normalizes the output of a layer before it's passed to the next layer. By stabilizing the input distribution of each layer, it helps prevent both vanishing and exploding gradients.
+* **Skip Connections**: Architectures like Residual Networks (ResNets) use "skip connections" to allow the gradient to bypass layers. This creates a direct path for the gradient to flow backward, helping to solve the vanishing gradient problem in very deep networks.
 ---
 
 # 📘 Remaining Important Concepts in ANNs
