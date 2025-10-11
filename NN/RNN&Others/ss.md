@@ -1642,17 +1642,17 @@ The input-output framing for each RNN type changes based on how sequences are fe
 ***
 
 In all cases, the RNN cell and learning weights remain the same; what changes is **how input tokens are fed over time and when outputs are taken from the model**, adapting the framing to fit the specific task.[1][2][3]
-![Basic RNN Architecture](https://cdn.geeksforgeeks.org/wp-content/uploads/recurrnet-neural-network.png)
 
-![RNN Cell Diagram](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Recurrent_neural_network_unfold.svg/1200px-Recurrent_neural_network_unfold.svg.png)
 
-![Sequence Processing](https://stanford.edu/~shervine/teaching/cs-230/figures/recurrent_neural_network.png)
 
-![Unfolded RNN](https://miro.medium.com/max/1400/1*NXZqWd63SchgQrzNuX03wA.png)
+![RNN Unrolling](https://kvitajakub.github.io/2016/04/14/rnn-diagrams/rnn_unroll.svg)
 
-![LSTM vs GRU](https://upload.wikimedia.org/wikipedia/commons/3/37/The_LSTM_cell.png)
+![Wikipedia RNN Diagram](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Recurrent_neural_network_unfold.svg/1200px-Recurrent_neural_network_unfold.svg.png)
 
-![BPTT](https://miro.medium.com/max/1400/1*64bJKDF8YOGSP9To_tgLsA.png)
+![Stanford RNN](https://stanford.edu/~shervine/teaching/cs-230/figures/recurrent_neural_network.png)
 
-[2](https://www.geeksforgeeks.org/deep-learning/types-of-recurrent-neural-networks-rnn-in-tensorflow/)
-[3](https://tejaskamble.com/types-of-recurrent-neural-networks-architectures-examples-and-implementation/)
+![Karpathy RNN](http://karpathy.github.io/assets/rnn/charseq.jpeg)
+
+![Medium RNN](https://miro.medium.com/max/1400/1*NXZqWd63SchgQrzNuX03wA.png)
+
+
