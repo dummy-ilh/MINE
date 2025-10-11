@@ -1546,3 +1546,113 @@ L = -Σ y_true × log(y_pred)
 3. Backpropagate gradients backward through time
 4. Update W_xh, W_hh, W_hy, biases using gradients
 
+An RNN's flexibility to handle different input-output sequence structures (one-to-one, one-to-many, many-to-one, many-to-many) comes from how its inputs and outputs are managed over time steps, not from changes in the underlying RNN cell itself. The same RNN cell can be used for all these scenarios by varying:
+
+- When and how many inputs are fed into the network (single or sequence).
+- When and how many outputs are produced (single or sequence).
+
+### Types of RNN input-output setups:
+
+| Type           | Description                                           | Example Use Case                      |
+|----------------|-------------------------------------------------------|-------------------------------------|
+| One-to-One     | Single input, single output.                         | Simple classification of an image.  |
+| One-to-Many    | Single input, sequence output (output at multiple steps) | Image captioning (one image → word sequence). |
+| Many-to-One    | Sequence input, single output (output at last step) | Sentiment analysis of a sentence.   |
+| Many-to-Many   | Sequence input, sequence output (output at each step) | Machine translation, video classification.|
+
+### How it works in practice:
+
+- **One-to-One:** Input at $$ t=1 $$, output produced immediately. No recurrence over time needed.
+- **One-to-Many:** Input at $$ t=1 $$, then RNN generates a sequence output at subsequent time steps by feeding the previous output back as input (like text generation).
+- **Many-to-One:** RNN processes an input sequence from $$ t=1 $$ to $$ t=n $$, then outputs a single label or prediction summarizing the whole sequence.
+- **Many-to-Many:** RNN processes input and produces outputs at each time step, allowing alignment of input/output sequences (like translation word-by-word).
+
+### Core RNN computations remain the same:
+At each time step,
+
+- Hidden state updates using the same weights based on current input and previous hidden state:
+  $$
+  h_t = f(W_{xh} x_t + W_{hh} h_{t-1} + b)
+  $$
+- Output may be generated at each step or selectively depending on the application.
+
+### Summary
+
+| Aspect                     | Mechanism                                         |
+|----------------------------|--------------------------------------------------|
+| Inputs                     | Single input or sequence of inputs over time      |
+| Outputs                    | Single output or sequence of outputs over time    |
+| Use of same cell           | Yes, same recurrent cell and weights               |
+| Variation                  | Different usage patterns of inputs/outputs        |
+| Implementation            | Control when inputs are fed and when outputs are read |
+
+This design allows one RNN architecture to be very general-purpose and used in many kinds of sequential tasks by adjusting the input-output sequencing, without modifying the internal recurrent computations.[1][2][3]
+The input-output framing for each RNN type changes based on how sequences are fed into the network and when outputs are collected. This framing primarily controls the length and timing of inputs and outputs at each time step.
+
+***
+
+### One-to-One
+
+- **Input:** A single input at time step $$ t=1 $$.
+- **Output:** A single output at $$ t=1 $$.
+- **Framing:** No sequence; exactly one input and one output.
+- **Example:** Classifying an image or fixed-size feature vector.
+  
+***
+
+### One-to-Many
+
+- **Input:** Single input at $$ t=1 $$.
+- **Output:** Sequence of outputs across time steps $$ t = 1 $$ to $$ T $$.
+- **Framing:** Input sequence length is 1, output sequence length > 1.
+- **How:** The initial input is fed at $$ t=1 $$ and the RNN generates output tokens serially, often feeding previous outputs back as inputs.
+- **Example:** Image captioning (one image → sentence).
+
+***
+
+### Many-to-One
+
+- **Input:** Sequence of inputs across time steps $$ t = 1 $$ to $$ T $$.
+- **Output:** Single output, typically at final step $$ t=T $$.
+- **Framing:** Input sequence length > 1, output sequence length = 1.
+- **How:** The RNN reads entire input sequence, then aggregates information into a final hidden state to produce output.
+- **Example:** Sentiment analysis of a sentence.
+
+***
+
+### Many-to-Many
+
+- **Input:** Sequence of inputs across $$ t = 1 $$ to $$ T $$.
+- **Output:** Sequence of outputs across $$ t = 1 $$ to $$ T $$.
+- **Framing:** Input and output sequences have the same length (synchronous), or output length may differ (asynchronous).
+- **How:** The RNN produces output at each time step, based on corresponding inputs and hidden states.
+- **Example:** Machine translation, where input and output are sequences of words.
+
+***
+
+### Summary Table
+
+| RNN Type   | Input Sequence Length | Output Sequence Length | Example Use Case        | Key Framing Change                                   |
+|------------|-----------------------|-----------------------|------------------------|----------------------------------------------------|
+| One-to-One | 1                     | 1                     | Image classification   | No sequences, single-time processing                |
+| One-to-Many| 1                     | >1                    | Image captioning       | Single input, multiple outputs over time            |
+| Many-to-One| >1                    | 1                     | Sentiment analysis     | Multiple inputs in sequence, but single output      |
+| Many-to-Many| >1                   | >1                    | Machine translation    | Multiple inputs and corresponding outputs over time|
+
+***
+
+In all cases, the RNN cell and learning weights remain the same; what changes is **how input tokens are fed over time and when outputs are taken from the model**, adapting the framing to fit the specific task.[1][2][3]
+![Basic RNN Architecture](https://cdn.geeksforgeeks.org/wp-content/uploads/recurrnet-neural-network.png)
+
+![RNN Cell Diagram](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Recurrent_neural_network_unfold.svg/1200px-Recurrent_neural_network_unfold.svg.png)
+
+![Sequence Processing](https://stanford.edu/~shervine/teaching/cs-230/figures/recurrent_neural_network.png)
+
+![Unfolded RNN](https://miro.medium.com/max/1400/1*NXZqWd63SchgQrzNuX03wA.png)
+
+![LSTM vs GRU](https://upload.wikimedia.org/wikipedia/commons/3/37/The_LSTM_cell.png)
+
+![BPTT](https://miro.medium.com/max/1400/1*64bJKDF8YOGSP9To_tgLsA.png)
+
+[2](https://www.geeksforgeeks.org/deep-learning/types-of-recurrent-neural-networks-rnn-in-tensorflow/)
+[3](https://tejaskamble.com/types-of-recurrent-neural-networks-architectures-examples-and-implementation/)
