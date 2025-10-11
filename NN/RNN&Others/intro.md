@@ -35,4 +35,50 @@ Recurrent Neural Networks (RNNs) and Transformers handle sequences better than t
 | Scalability             | Limited                     | Highly scalable               |
 | Typical use             | Speech, language modeling    | Translation, summarization, broad NLP tasks |
 
-This architectural superiority explains why both RNNs and especially Transformers are preferred for textual and sequence-based tasks over traditional ANNs.[3][1][2]
+# Step-by-step Token Flow: ANN vs RNN on One Sentence
+
+Let's see how one sentence (e.g., "The cat sat.") flows through an Artificial Neural Network (ANN) versus a Recurrent Neural Network (RNN). We'll highlight the key differences at each step.
+
+***
+
+## ANN Token Flow
+
+1. **Tokenization & Vectorization:** The entire sentence is split into tokens (words) and converted into a fixed-size numerical vector representation (e.g., bag-of-words or embedding aggregation). This means order and sequence context are *not* explicitly preserved.
+
+2. **Input Layer:** The full fixed-size vector representing the entire sentence is passed into the ANN at once.
+
+3. **Hidden Layers:** The vector is processed in feedforward layers applying learned weights without any memory or awareness of token order.
+
+4. **Output Layer:** The network produces an output (such as classification or regression) based solely on the aggregated sentence representation.
+
+*Key point:* The ANN sees the sentence as a static, unordered vector. It cannot model or remember the sequence of tokens.
+
+***
+
+## RNN Token Flow
+
+1. **Tokenization & Vectorization:** The sentence is split into tokens (e.g., "The", "cat", "sat", ".") and each token is converted into a vector (such as a word embedding).
+
+2. **Sequential Input:** Tokens are fed into the RNN *one at a time* in order.
+
+3. **Hidden State Update:** At each token, the RNN updates its hidden memory state based on:
+   - The current token input vector
+   - The previous hidden state (which summarizes all prior tokens)
+
+4. **Output at Each Step:** The RNN can produce an output after each token or just at the end, considering the entire sequence context from its hidden state.
+
+5. **Final Output:** The last hidden state (or the aggregated outputs) reflects the sequence's context, capturing order and dependencies.
+
+*Key point:* The RNN processes tokens step-by-step, maintaining memory of the sentence's previous tokens, enabling it to understand context and word order.
+
+***
+
+**Summary:**
+
+| Aspect             | ANN                          | RNN                                |
+|--------------------|------------------------------|----------------------------------|
+| Input processing   | Whole sentence at once       | Token-by-token sequentially       |
+| Memory/state       | None                        | Maintains hidden state over time  |
+| Sequence handling  | Order info lost              | Order explicitly preserved        |
+| Context modeling   | Poor                       | Effective (captures dependencies) |
+
