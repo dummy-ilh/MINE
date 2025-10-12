@@ -17,17 +17,20 @@ Here are some of the top recommended textbooks to master logistic regression, ba
 - Beginners may prefer **Pampel's "Logistic Regression: A Primer"** for gentle yet practical introductions.
 - For a more applied teaching style, **Osborne's "Best Practices"** is highly regarded for clarity.
 
-Would you like me to provide direct links, summaries of any of these books, or assistance with logistic regression concepts from these recommended resources?
+Here are some of the **top textbooks** & resources to master *logistic regression*, along with their strengths, what level they suit, and how they can help you deeply understand both theory and practice. If you tell me whether you prefer more math, applied, or a specific domain (ML / biostat / social sciences), I can tailor further.
 
-[1](https://www.reddit.com/r/statistics/comments/tzylem/e_book_recommendations_logistic_regression/)
-[2](https://datasciencetexts.com/subjects/logistic_regression.html)
-[3](https://ftp.idu.ac.id/wp-content/uploads/ebook/ip/REGRESI%20LOGISTIK/Practical%20Guide%20to%20Logistic%20Regression%20(%20PDFDrive%20).pdf)
-[4](https://dmrocke.ucdavis.edu/Class/EPI204-Spring-2021/2010_Book_LogisticRegression.pdf)
-[5](https://bookauthority.org/books/best-logistic-regression-books)
-[6](https://uk.sagepub.com/en-gb/eur/best-practices-in-logistic-regression/book239211)
-[7](https://stats.oarc.ucla.edu/stata/webbooks/logistic/)
-[8](https://www.routledge.com/Practical-Guide-to-Logistic-Regression/Hilbe/p/book/9781498709576)
-[9](https://www.goodreads.com/book/show/18324358-best-practices-in-logistic-regression)
-[10](https://methods.sagepub.com/book/mono/best-practices-in-logistic-regression/chpt/13-multilevel-modeling-with-logistic-regression)
-[11](https://methods.sagepub.com/book/mono/best-practices-in-logistic-regression/toc)
-[12](https://www.wiley.com/en-us/Applied+Logistic+Regression,+3rd+Edition-p-x000523791)
+---
+| Title                                                                    | Authors                                                        | What makes it good / focus                                                                                                                                                                                 | Level & Use-cases                                                                                                                                      |
+| ------------------------------------------------------------------------ | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| *Applied Logistic Regression (3rd Edition)*                              | David W. Hosmer, Stanley Lemeshow, Rodney X. Sturdivant        | Thorough treatment of logistic regression in applications (especially health / epidemiology). Lots of detail on model building, assessing fit, diagnostics, correlated outcomes etc. ([Powell's Books][1]) | Intermediate-to-advanced. Good for someone who already knows basic statistics & wants robust understanding and competence in applying logistic models. |
+| *Logistic Regression: A Self-Learning Text*                              | David G. Kleinbaum, Mitchel Klein                              | Very didactic; lots of worked examples, exercises. Covers extensions: polytomous, ordinal, correlated data etc. ([SpringerLink][2])                                                                        | Great for learners who want to build step by step, including the “how to think about it” side. Also for those in health / social / biology, etc.       |
+| *Best Practices in Logistic Regression*                                  | Jason W. Osborne                                               | More applied; focuses on pitfalls, practical modeling choices, how to interpret results, data cleaning, checking assumptions, etc. ([SAGE Publications][3])                                                | Very useful for someone doing real data work and wants to avoid common errors. Less heavy on theory, more on smart application.                        |
+| *An Introduction to Statistical Learning: with Applications in R (ISLR)* | Gareth James, Daniela Witten, Trevor Hastie, Robert Tibshirani | Covers classification (including logistic regression) in a modern statistical learning context. Very accessible with R code, intuitive explanations. ([Amazon India][4])                                   | Good for beginners / intermediate; more ML-flavored; helps you see logistic regression among many other predictive models.                             |
+| *The Elements of Statistical Learning*                                   | Hastie, Tibshirani, Friedman                                   | More theory and advanced methods. Logistic regression appears in broader contexts (regularization, generalized linear models etc.). Deeper mathematical underpinnings.                                     | Advanced. Suited if you want strong foundations, want to push beyond just getting models to work but understand why and when.                          |
+
+[1]: https://www.powells.com/book/applied-logistic-regression-3e-9780470582473?utm_source=chatgpt.com "Applied Logistic Regression: David W. Hosmer, Jr. and Stanley Lemeshow and Rodney X. Sturdivant: Hardcover: 9780470582473: Powell's Books"
+[2]: https://link.springer.com/book/10.1007/b97379?utm_source=chatgpt.com "Logistic Regression: A Self-Learning Text | SpringerLink"
+[3]: https://uk.sagepub.com/en-gb/eur/best-practices-in-logistic-regression/book239211?utm_source=chatgpt.com "Best Practices in Logistic Regression | SAGE Publications Ltd"
+[4]: https://www.amazon.in/Introduction-Statistical-Learning-Applications-Statistics-ebook/dp/B01IBM7790?utm_source=chatgpt.com "An Introduction to Statistical Learning: with Applications in R (Springer Texts in Statistics Book 103) eBook : James, Gareth, Witten, Daniela, Hastie, Trevor, Tibshirani, Robert: Amazon.in: Kindle Store"
+
+
