@@ -404,7 +404,7 @@ In any regression model, our goal is to estimate unknown parameters (e.g., β₀
 
 For linear regression, we write:
 
-[
+$
 E(Y|x) = \beta_0 + \beta_1 x
 ]
 
@@ -754,9 +754,10 @@ In **linear regression**, significance of an independent variable is assessed vi
 
 Mathematically, if ( y_i ) is the observed value and ( \hat{y}_i ) is the predicted value for the ( i )-th individual:
 
-[
+$$
 \text{SSE} = \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
-]
+$$
+
 
 * **Model without the independent variable:**
 
@@ -770,6 +771,63 @@ Mathematically, if ( y_i ) is the observed value and ( \hat{y}_i ) is the predic
   * Change in SSE attributed to **SSR** (regression source of variability)
 
 > A **large SSR** suggests the variable is important; a **small SSR** suggests it does not help predict the response.
+
+
+
+
+Ah! I see exactly what’s happening. The issue is that **you’re using backslashes and parentheses inside Markdown** in a way that many editors interpret literally instead of rendering as LaTeX. In Markdown, for formulas to render properly:
+
+1. Use **single `$...$`** for inline math.
+2. Use **double `$$...$$`** for display/block math.
+3. Avoid unnecessary spaces and extra parentheses around variables.
+
+Let me rewrite a small portion of your text properly for Markdown so that it’s **directly pasteable in GitHub, Jupyter Notebook, or VS Code**:
+
+---
+
+### Correct Markdown Example
+
+**Linear regression residuals**
+
+If (y_i) is the observed value and (\hat{y}_i) is the predicted value for the (i)-th individual:
+
+```markdown
+$$
+\text{SSE} = \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
+$$
+```
+
+**Model without the independent variable:**
+
+* Only parameter is (\beta_0)
+* Predicted values: (\hat{y}_i = \bar{y}) (mean of the response)
+
+**Model with the independent variable:**
+
+* Decrease in SSE is due to a non-zero slope coefficient
+* Regression sum-of-squares:
+
+```markdown
+$$
+\text{SSR} = \sum_{i=1}^{n} (\hat{y}_i - \bar{y})^2
+$$
+```
+
+---
+
+### Key points for Markdown LaTeX
+
+1. **Inline math**: `$y_i$`, `$x_i$`, `$n$`
+2. **Display math**: `$$ ... $$` for equations on their own line
+3. **No extra parentheses or spaces**: use `y_i` not `( y_i )`
+4. **Hat symbol**: `\hat{y}_i`
+5. **Summation**: `\sum_{i=1}^{n}`
+
+---
+
+If you want, I can **reformat your entire previous logistic vs linear regression notes** fully so that **all equations render correctly in Markdown** and are ready to paste into any Markdown editor without breaking.
+
+Do you want me to do that?
 
 ---
 
