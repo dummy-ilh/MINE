@@ -816,7 +816,252 @@ Suppose we have a binary outcome (disease: yes/no) and a predictor (X) (risk fac
 * Assuming a large deviance automatically means poor fit; it’s **relative deviance reduction** that matters for significance testing.
 
 ---
+Excellent! Let’s expand this section from **Hosmer (Sections 1.3–1.4)** into a **detailed, thorough set of notes**, covering the **likelihood ratio test, Wald test, score test, and Wald-based confidence intervals**, rewritten clearly and structured for deep understanding.
 
-If you want, I can also **draw a small diagram showing the analogy between linear regression SSE/SSR and logistic regression deviance reduction**, which makes this concept extremely intuitive.
+---
 
-Do you want me to do that next?
+# **Testing Significance and Confidence Intervals in Logistic Regression**
+
+In logistic regression, we assess whether a variable significantly improves the prediction of a binary outcome. Several statistical tests and confidence interval methods are used. We’ll go step by step.
+
+---
+
+## **1. Likelihood Ratio Test (LRT)**
+
+The **likelihood ratio test** compares two nested models:
+
+1. **Reduced model**: excludes the variable of interest.
+2. **Full model**: includes the variable of interest.
+
+The test statistic is:
+
+[
+G = -2 \ln \left( \frac{L_{\text{reduced}}}{L_{\text{full}}} \right)
+]
+
+where (L_{\text{reduced}}) and (L_{\text{full}}) are the likelihoods of the reduced and full models, respectively.
+
+* For a **single binary variable**, the reduced model has only an intercept:
+
+[
+\hat{\beta}_0 = \ln\frac{n_1}{n_0}
+]
+
+where:
+
+* (n_1 = \sum y_i) = number of “successes” (y = 1)
+* (n_0 = \sum (1 - y_i)) = number of “failures” (y = 0)
+* Predicted probability for all subjects: (\hat{\pi} = \frac{n_1}{n})
+
+The **likelihood ratio statistic (G)** can then be computed as:
+
+[
+G = 2 \sum_{i=1}^n \Big[ y_i \ln \hat{\pi}_i + (1 - y_i) \ln(1 - \hat{\pi}_i) \Big] - 2 \big[n_1 \ln(n_1/n) + n_0 \ln(n_0/n)\big]
+]
+
+* First term → log-likelihood from the **full model**
+* Second term → log-likelihood from the **reduced model**
+
+**Interpretation:**
+
+* Large (G) → variable significantly improves model fit.
+* (G) is approximately (\chi^2) distributed with df = number of parameters added.
+
+---
+
+## **2. Wald Test**
+
+The **Wald test** uses the estimated coefficient and its standard error:
+
+[
+W = \frac{\hat{\beta}_j}{\text{SE}(\hat{\beta}_j)}
+]
+
+* For large samples, under (H_0: \beta_j = 0):
+
+[
+W \sim N(0,1)
+]
+
+* Example: coefficient for AGE:
+
+[
+\hat{\beta}_1 = 0.111, \quad \text{SE}(\hat{\beta}_1) = 0.024
+]
+
+[
+W = \frac{0.111}{0.024} \approx 4.61
+]
+
+* Two-tailed p-value: (P(|z| > 4.61) < 0.001) → highly significant.
+* Software sometimes reports (W^2 = z^2), which follows a (\chi^2_1) distribution.
+
+**Notes:**
+
+* Wald test relies on the normal approximation of (\hat{\beta}_j).
+* Less robust in small samples or with extreme probabilities.
+
+---
+
+## **3. Score Test (Lagrange Multiplier Test)**
+
+The **score test** evaluates significance **without fitting the full model**:
+
+* Uses derivatives of the log-likelihood (the “score function”).
+* In the **univariate case**, the statistic is:
+
+[
+ST = \frac{\sum_{i=1}^{n} x_i (y_i - \bar{y})}{\sqrt{\bar{y}(1-\bar{y}) \sum (x_i - \bar{x})^2}}
+]
+
+where:
+
+* (\bar{y} = n_1 / n)
+
+* (\bar{x} = \text{mean of predictor } x_i)
+
+* Advantages: requires **less computation**, because you only evaluate the score at the null model ((\beta_1 = 0)).
+
+* Limitations: less widely available in software; more complex for multivariate models.
+
+---
+
+## **4. Wald-Based Confidence Intervals**
+
+Confidence intervals for logistic regression parameters are often derived from the **Wald test**:
+
+### **4.1 For coefficients**
+
+[
+\text{CI for } \beta_j: \quad \hat{\beta}*j \pm z*{1-\alpha/2} , \text{SE}(\hat{\beta}_j)
+]
+
+* (z_{1-\alpha/2}) → critical value from standard normal distribution (e.g., 1.96 for 95% CI).
+
+### **4.2 For logit (linear predictor)**
+
+[
+g(x) = \hat{\beta}_0 + \hat{\beta}_1 x_1 + \dots
+]
+
+[
+\text{CI for } g(x): \quad \hat{g}(x) \pm z_{1-\alpha/2} , \text{SE}[\hat{g}(x)]
+]
+
+### **4.3 For predicted probability**
+
+Transform back to probability scale using logistic function:
+
+[
+\pi(x) = \frac{e^{\hat{g}(x)}}{1 + e^{\hat{g}(x)}}
+]
+
+* Lower limit:
+
+[
+\pi_{\text{lower}} = \frac{e^{\hat{g}(x) - z_{1-\alpha/2} SE[\hat{g}(x)]}}{1 + e^{\hat{g}(x) - z_{1-\alpha/2} SE[\hat{g}(x)]}}
+]
+
+* Upper limit:
+
+[
+\pi_{\text{upper}} = \frac{e^{\hat{g}(x) + z_{1-\alpha/2} SE[\hat{g}(x)]}}{1 + e^{\hat{g}(x) + z_{1-\alpha/2} SE[\hat{g}(x)]}}
+]
+
+**Example:**
+
+* Age = 50, (\hat{g}(50) = 0.14), (SE[\hat{g}(50)] = 0.2)
+* CI for probability: 0.435 – 0.677 → interprets as “mean probability of CHD at age 50 with 95% confidence.”
+
+---
+
+## **5. Practical Notes and Recommendations**
+
+1. **Likelihood ratio test** is generally preferred over Wald test for significance because it is more robust, especially in small samples or extreme probabilities.
+2. **Score test** is useful when computational simplicity is desired, though less commonly implemented.
+3. **Wald-based confidence intervals** assume normality of (\hat{\beta}_j) — may be inaccurate for small samples or sparse data.
+4. **Fitted probabilities** can be used for prediction or classification, linking logistic regression to discriminant analysis (discussed in Chapter 4).
+
+---
+
+## **6. Summary Table of Tests**
+
+| Test             | Computation               | Key Statistic                              | Distribution                 | Notes                         |
+| ---------------- | ------------------------- | ------------------------------------------ | ---------------------------- | ----------------------------- |
+| Likelihood Ratio | Fit full & reduced models | (G = D_{\text{reduced}} - D_{\text{full}}) | (\chi^2_{df})                | Robust, preferred             |
+| Wald             | Only full model           | (W = \hat{\beta}/SE(\hat{\beta}))          | Normal (or (\chi^2_1 = W^2)) | Sensitive to small samples    |
+| Score            | Only reduced model        | Based on derivatives at null               | (\chi^2_{df})                | Less computation, rarely used |
+
+---
+
+Perfect! Let’s create a **conceptual diagram** that shows how the three main tests in logistic regression—**Likelihood Ratio Test (LRT), Wald Test, and Score Test**—relate to one another and to the deviance/log-likelihood. I’ll describe it in a clear, annotated ASCII-style flow for clarity.
+
+---
+
+# **Conceptual Diagram: Logistic Regression Significance Tests**
+
+```
+                ┌─────────────────────────────┐
+                │    Logistic Regression      │
+                │  (Binary outcome Y, n obs) │
+                └─────────────┬──────────────┘
+                              │
+             ┌────────────────┴─────────────────┐
+             │                                  │
+     Reduced Model (Null)                 Full Model
+   (Excludes variable of interest)      (Includes variable)
+             │                                  │
+             │                                  │
+     Compute Log-Likelihood            Compute Log-Likelihood
+       ℓ_reduced = log L(reduced)       ℓ_full = log L(full)
+             │                                  │
+             └──────────────┬──────────────────┘
+                            │
+            ┌───────────────┴───────────────┐
+            │ Compare models for significance│
+            └───────────────┬───────────────┘
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+      Likelihood Ratio      Wald Test       Score Test
+          (LRT)               │                 │
+G = -2 ln(L_reduced / L_full)  W = β̂ / SE(β̂)  ST = score^2 / var(score)
+          │                 │                 │
+χ² distribution            Normal or χ²        χ² distribution
+(df = # of added params)   (df = 1)           (df = # of params)
+          │                 │                 │
+Interpret significance   Interpret significance  Interpret significance
+by comparing G           by comparing W to      using score statistic
+to χ² critical value     z (or W² to χ²)       (reduced model only)
+```
+
+---
+
+### **Key Notes from Diagram**
+
+1. **Likelihood Ratio Test (LRT):**
+
+   * Compares full vs reduced models using **deviance/log-likelihood**.
+   * Requires fitting **both models**.
+
+2. **Wald Test:**
+
+   * Uses the estimated coefficient and standard error from the **full model only**.
+   * Easier to compute, but can be unstable in small samples or extreme probabilities.
+
+3. **Score Test:**
+
+   * Uses derivatives (score function) evaluated **at the null model**.
+   * Does not require fitting the full model.
+
+4. **Deviance Connection:**
+
+   * LRT directly compares deviance (D = -2 \log L).
+   * Wald and Score tests are approximations based on asymptotic theory.
+
+---
+
+If you like, I can also make a **second diagram showing the link between deviance, SSE (from linear regression), and reduction in deviance for a single predictor**, which makes the **analogy to linear regression** visually intuitive.
+
+Do you want me to make that second diagram as well?
+
