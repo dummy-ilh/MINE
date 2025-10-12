@@ -10,20 +10,9 @@ Here are some of the top recommended textbooks to master logistic regression, ba
 | **Applied Ordinal Logistic Regression Using Stata** | Xing Liu | Focuses on ordinal logistic and multilevel modeling with Stata software | Researchers working with ordinal data and Stata software |
 | **Regression Models for Categorical and Limited Dependent Variables Using Stata** (3rd Edition) | J. Scott Long, Jeremy Freese | Authoritative guide on categorical data modeling using Stata, covers logistic regression extensively | Stata users seeking a comprehensive reference |
 
-### Summary Recommendations
-- **Start with "Applied Logistic Regression" by Hosmer & Lemeshow** if you want a solid, classic foundation with real-world examples.
-- **"Practical Guide to Logistic Regression" by Hilbe** offers balanced theory, practical tips, and software code for multiple platforms.
-- For software-specific mastery, choose **Paul Allison’s SAS book** or **Xing Liu’s Stata book**.
-- Beginners may prefer **Pampel's "Logistic Regression: A Primer"** for gentle yet practical introductions.
-- For a more applied teaching style, **Osborne's "Best Practices"** is highly regarded for clarity.
 
-Here are some of the **top textbooks** & resources to master *logistic regression*, along with their strengths, what level they suit, and how they can help you deeply understand both theory and practice. If you tell me whether you prefer more math, applied, or a specific domain (ML / biostat / social sciences), I can tailor further.
 
----
-| Title                                                                    | Authors                                                        | What makes it good / focus                                                                                                                                                                                 | Level & Use-cases                                                                                                                                      |
-| ------------------------------------------------------------------------ | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-
-| *Logistic Regression: A Self-Learning Text*                              | David G. Kleinbaum, Mitchel Klein                              | Very didactic; lots of worked examples, exercises. Covers extensions: polytomous, ordinal, correlated data etc. ([SpringerLink][2])                                                                        | Great for learners who want to build step by step, including the “how to think about it” side. Also for those in health / social / biology, etc.       |
+| *Logistic Regression: A Self-Learning Text*                              | David G. Kleinbaum, Mitchel Klein                               |
                      |
 
 
