@@ -1,6 +1,4 @@
-Excellent — this passage is *rich* with fundamental ideas. Let’s unpack and reconstruct it into **comprehensive, professor-level notes** inspired by *Hosmer, Lemeshow, and Sturdivant (3rd ed.)*, Chapter 1 — rewritten in a clear, deeply explanatory style.
 
----
 
 ## 🔹 Introduction: Logistic Regression vs. Linear Regression
 
