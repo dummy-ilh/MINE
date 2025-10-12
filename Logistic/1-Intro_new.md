@@ -66,13 +66,14 @@ Each age interval represents a **group** of individuals, and for each group we c
 \text{Mean of } Y = \frac{\text{# with CHD (Y = 1)}}{n}
 \]
 
+
 Because \(Y = 1\) for “CHD present” and \(Y = 0\) for “CHD absent,” the mean is simply the **proportion of individuals with CHD** in that age group.
 
 This mean serves as an empirical estimate of the **conditional expectation** of \(Y\) given \(x\) (AGE):
 
-\[
+$$
 E(Y \mid x) \approx \text{Proportion with CHD in that age group}.
-\]
+$$
 
 
 ---
@@ -94,9 +95,9 @@ slow at first, then steeper in mid-ages, then leveling off at older ages — a h
 The **key regression quantity** is the *conditional mean* (E(Y|x)) — the expected value of Y given x.
 
 In **linear regression**, we model this as:
-\[
+$$
 E(Y \mid x) = \beta_0 + \beta_1 x
-\]
+$$
 
 
 But, as discussed, this can take values below 0 or above 1 — invalid for probabilities.
