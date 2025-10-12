@@ -20,7 +20,7 @@ This data set, referred to as **CHDAGE**, aims to explore the relationship betwe
 
 ---
 
-## 🔹 Step 1: Understanding the Challenge of a Binary Outcome
+## 🔹  Understanding the Challenge of a Binary Outcome
 
 If the outcome were continuous, our first step would be to **plot Y against X** (here, CHD vs. AGE) to visualize any trend or relationship.
 
@@ -34,12 +34,8 @@ Thus, the scatterplot doesn’t provide a clear *functional form* for how CHD ch
 
 ---
 
-## 🔹 Step 2: Smoothing the Binary Outcome — Grouping by Age
-Perfect — this table (Table 1.2 from *Applied Logistic Regression*, 3rd Edition) is central to understanding the **transition from raw binary data to the conceptual foundation of logistic regression**. Let’s integrate it seamlessly into our prior notes and interpret it in depth.
+## 🔹  Smoothing the Binary Outcome — Grouping by Age
 
----
-
-## 🔹 Step 2 (Expanded): Grouping AGE and Estimating the Conditional Mean — Table 1.2
 
 When the outcome is **binary**, the raw scatterplot of CHD (0 = absent, 1 = present) versus AGE provides little visual clarity because all data points lie on two horizontal lines (y = 0 or y = 1).
 To uncover any trend, Hosmer et al. propose summarizing the data by **age intervals**.
@@ -66,18 +62,18 @@ To uncover any trend, Hosmer et al. propose summarizing the data by **age interv
 
 Each age interval represents a **group** of individuals, and for each group we compute:
 
-[
-\text{Mean of Y} = \frac{\text{# with CHD (Y = 1)}}{n}
-]
+\[
+\text{Mean of } Y = \frac{\text{# with CHD (Y = 1)}}{n}
+\]
 
-Because Y = 1 for “CHD present” and Y = 0 for “CHD absent,”
-the mean is simply the **proportion of individuals with CHD** in that age group.
+Because \(Y = 1\) for “CHD present” and \(Y = 0\) for “CHD absent,” the mean is simply the **proportion of individuals with CHD** in that age group.
 
-This mean serves as an empirical estimate of the **conditional expectation** of Y given x (AGE):
+This mean serves as an empirical estimate of the **conditional expectation** of \(Y\) given \(x\) (AGE):
 
-[
-E(Y|x) \approx \text{Proportion with CHD in that age group}.
-]
+\[
+E(Y \mid x) \approx \text{Proportion with CHD in that age group}.
+\]
+
 
 ---
 
@@ -98,10 +94,10 @@ slow at first, then steeper in mid-ages, then leveling off at older ages — a h
 The **key regression quantity** is the *conditional mean* (E(Y|x)) — the expected value of Y given x.
 
 In **linear regression**, we model this as:
+\[
+E(Y \mid x) = \beta_0 + \beta_1 x
+\]
 
-[
-E(Y|x) = \beta_0 + \beta_1 x
-]
 
 But, as discussed, this can take values below 0 or above 1 — invalid for probabilities.
 
