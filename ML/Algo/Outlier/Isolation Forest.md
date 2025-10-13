@@ -778,17 +778,15 @@ s(x, n) = 2^{-\frac{E(h(x))}{c(n)}}
 
 ---
 
-Here are some **useful images/diagrams** that visually explain **Isolation Forest** — their mechanisms, intuition, and comparisons — all in **Markdown format** (so you can directly embed them in notes or notebooks).
-
 ---
 
 ### **1. Isolation Forest – Intuitive Explanation (Isolation Paths)**
 
 Shows how anomalies get isolated earlier (shorter paths) than normal points.
 
-```markdown
+
 ![Isolation Forest Intuition](https://miro.medium.com/v2/resize:fit:1400/1*1fY4xE8U5K8T3NjtmXuzUg.png)
-```
+
 
 Source: *Medium – Understanding Isolation Forest Algorithm*
 
@@ -798,9 +796,9 @@ Source: *Medium – Understanding Isolation Forest Algorithm*
 
 Visual of a single isolation tree illustrating random splits.
 
-```markdown
+
 ![Isolation Tree Example](https://editor.analyticsvidhya.com/uploads/82452if3.png)
-```
+
 
 Source: *Analytics Vidhya – Isolation Forest Explained*
 
@@ -810,9 +808,9 @@ Source: *Analytics Vidhya – Isolation Forest Explained*
 
 Illustrates how anomalies have shorter average path lengths (and thus higher anomaly scores).
 
-```markdown
+
 ![Path Length Visualization](https://miro.medium.com/v2/resize:fit:1200/1*QtvIx_wfTf2ShvP4aD1zWg.png)
-```
+
 
 Source: *Medium – Isolation Forest Explained Visually*
 
@@ -822,9 +820,9 @@ Source: *Medium – Isolation Forest Explained Visually*
 
 Comparison plot showing decision boundaries and detected anomalies for different methods.
 
-```markdown
+
 ![Isolation Forest vs Other Methods](https://scikit-learn.org/stable/_images/sphx_glr_plot_anomaly_comparison_001.png)
-```
+
 
 Source: *Scikit-learn Documentation*
 
@@ -834,9 +832,9 @@ Source: *Scikit-learn Documentation*
 
 Demonstrates random hyperplane splits instead of axis-aligned cuts.
 
-```markdown
+
 ![Extended Isolation Forest Hyperplanes](https://miro.medium.com/v2/resize:fit:1200/1*uzmShNfvhVErVEfLG8bUgg.png)
-```
+
 
 Source: *Medium – Extended Isolation Forest Article*
 
