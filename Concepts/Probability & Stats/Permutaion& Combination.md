@@ -243,3 +243,169 @@ $$
 $$
 P = \frac{10C3}{2^{10}} = \frac{120}{1024} \approx 0.117
 $$
+
+
+# Problems
+
+---
+
+## 🧠 Concept Questions
+
+---
+
+### **Concept Question 1 — Poker Hands**
+
+**Question:**  
+The probability of a one-pair hand is:  
+1. less than 5%  
+2. between 5% and 10%  
+3. between 10% and 20%  
+4. between 20% and 40%  
+5. greater than 40%
+
+**✅ Solution:**  
+We will compute this later, but perhaps surprisingly,  
+**the answer is greater than 40%.**
+
+---
+
+### **Concept Question 2 — DNA Sequences**
+
+**Question:**  
+DNA is made of sequences of nucleotides: **A, C, G, T**.  
+How many DNA sequences of length 3 are there?
+
+Choices:  
+(i) 12 (ii) 24 (iii) 64 (iv) 81
+
+**✅ Solution:**  
+Each position can be any of 4 nucleotides:  
+\[
+4 × 4 × 4 = 4^3 = 64
+\]
+**Answer:** (iii) 64
+
+---
+
+### **Concept Question 3 — DNA (No Repeats)**
+
+**Question:**  
+How many DNA sequences of length 3 are there **with no repeats**?
+
+Choices:  
+(i) 12 (ii) 24 (iii) 64 (iv) 81
+
+**✅ Solution:**  
+For the first position: 4 choices  
+Second: 3 choices (no repeat)  
+Third: 2 choices  
+\[
+4 × 3 × 2 = 24
+\]
+**Answer:** (ii) 24
+
+---
+
+## 🧩 Board Questions
+
+---
+
+### **Board Question 1 — Inclusion–Exclusion Principle**
+
+**Question:**  
+A band consists of singers and guitar players.  
+- 7 people sing  
+- 4 play guitar  
+- 2 do both  
+
+How many people are in the band?
+
+**✅ Solution:**  
+Let  
+- \( S \) = set of singers  
+- \( G \) = set of guitar players  
+- \( B = S ∪ G \)
+
+Then:
+\[
+|B| = |S| + |G| - |S ∩ G| = 7 + 4 - 2 = 9
+\]
+**Answer:** 9 people total.
+
+---
+
+### **Board Question 2 — Rule of Product**
+
+**Question:**  
+There are 5 competitors in an Olympics 100m final.  
+How many ways can gold, silver, and bronze be awarded?
+
+**✅ Solution:**  
+- 5 choices for gold  
+- 4 choices for silver  
+- 3 choices for bronze  
+
+\[
+5 × 4 × 3 = 60
+\]
+**Answer:** 60 possible outcomes.
+
+---
+
+### **Board Question 3 — Wardrobe Combinations**
+
+**Question:**  
+I won’t wear green and red together; I think black or denim goes with anything.  
+Here’s my wardrobe:
+
+- **Shirts:** 3 Blue (B), 3 Red (R), 2 Green (G)  
+- **Sweaters:** 1 Blue (B), 2 Red (R), 1 Green (G)  
+- **Pants:** 2 Denim (D), 2 Black (B)
+
+**✅ Solution:**
+
+We split based on shirt compatibility.
+
+| Shirts | Compatible Sweaters | Pants Choices | Total per Branch |
+|---------|--------------------|---------------|------------------|
+| Red (R) | 3 (B, R, G not allowed with G) | 4 | 3 × 3 × 4 |
+| Blue (B) | 4 (any color) | 4 | 3 × 4 × 4 |
+| Green (G) | 2 (no red) | 4 | 2 × 2 × 4 |
+
+\[
+(3 × 3 × 4) + (3 × 4 × 4) + (2 × 2 × 4) = 100
+\]
+
+**Answer:** 🧥 **100 possible outfits**
+
+---
+
+### **Board Question 4 — Coin Flips (Binomial Application)**
+
+**Question:**  
+(a) Count the number of ways to get **exactly 3 heads** in **10 flips**.  
+(b) For a fair coin, what is the **probability** of exactly 3 heads?
+
+---
+
+**✅ Solution (a):**  
+We choose 3 of the 10 flips to be heads:
+\[
+\binom{10}{3} = 120
+\]
+
+---
+
+**✅ Solution (b):**  
+There are \( 2^{10} = 1024 \) total possible outcomes.  
+Each outcome is equally likely for a fair coin.
+
+\[
+P(3\text{ heads}) = \frac{\binom{10}{3}}{2^{10}} = \frac{120}{1024} ≈ 0.117
+\]
+
+**Answer:**  
+- Number of outcomes: **120**  
+- Probability: **≈ 0.117 (11.7%)**
+
+---
