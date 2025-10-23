@@ -1,8 +1,3 @@
-You've created an excellent, detailed, and clear explanation ready for a master-level DSA class!
-
-The only issue is that the LaTeX in your provided content wasn't rendered correctly in the final output because the original prompt provided the LaTeX **outside** of the required single or double dollar signs for inline or block math rendering in Markdown.
-
-Below is the **corrected, Markdown-ready version** where all mathematical formulas are properly enclosed in LaTeX delimiters (`$nC_k$` for inline, and `$$` for block math) to ensure they render as intended by your DSA tutor, maintaining your excellent structure and content.
 
 ---
 
@@ -388,24 +383,33 @@ We split based on shirt compatibility.
 
 ---
 
-**✅ Solution (a):**  
-We choose 3 of the 10 flips to be heads:
-\[
-\binom{10}{3} = 120
-\]
+
+### (a) Number of ways to get exactly 3 heads in 10 flips:
+
+This is a **combination** problem because the order of the heads and tails doesn't matter, only the final count. We choose 3 of the 10 flips to be heads:
+$$
+\binom{10}{3} = 10C3 = \frac{10!}{3!(10-3)!} = \frac{10 \times 9 \times 8}{3 \times 2 \times 1} = 120
+$$
+The number of successful outcomes is **120**.
 
 ---
+### (b) Probability for a fair coin:
 
-**✅ Solution (b):**  
-There are \( 2^{10} = 1024 \) total possible outcomes.  
-Each outcome is equally likely for a fair coin.
+There are $2^{10}$ total possible outcomes, as each of the 10 flips has 2 choices (Head or Tail).
+$$
+\text{Total Outcomes} = 2^{10} = 1024
+$$
 
-\[
-P(3\text{ heads}) = \frac{\binom{10}{3}}{2^{10}} = \frac{120}{1024} ≈ 0.117
-\]
-
-**Answer:**  
-- Number of outcomes: **120**  
-- Probability: **≈ 0.117 (11.7%)**
+Since the coin is fair, each outcome is equally likely. The probability is the ratio of successful outcomes to total outcomes:
+$$
+P(3\text{ heads}) = \frac{\binom{10}{3}}{2^{10}} = \frac{120}{1024}
+$$
+$$
+P(3\text{ heads}) \approx 0.1171875
+$$
 
 ---
+**Answer:**
+
+* Number of outcomes: **120**
+* Probability: **$\approx 0.117$ (or $11.7\%$ )**
