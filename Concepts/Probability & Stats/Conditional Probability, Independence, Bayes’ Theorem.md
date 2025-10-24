@@ -963,8 +963,336 @@ Bayes combines them → gives you a new **posterior belief**.
 
 ---
 
-Would you like me to **draw this as an actual diagram** (like boxes showing the proportions, color-coded for true/false positives and negatives)?
-That picture usually makes it *click instantly*.
+Perfect — the PDF you uploaded (MIT 18.05 Class 3) already has the core material on **Conditional Probability, Independence, and Bayes’ Theorem**.
+Here’s a **set of concise notes** (ready to study from or paste into your notebook), plus **ASCII-based probability trees** that summarize how to visualize and compute these problems — including your **Evil Squirrels** example.
+
+---
+
+# 📘 MIT 18.05 Class 3 Notes — Conditional Probability, Independence, and Bayes’ Theorem
+
+---
+
+## 1️⃣ Conditional Probability
+
+**Definition**
+
+[
+P(A|B)=\frac{P(A\cap B)}{P(B)},;P(B)\neq0
+]
+
+**Intuition:** restrict attention to the subset (B); measure how much of (B) lies inside (A).
+
+**Example:**
+First toss = H in three coin tosses → sample space halves → (P(3H|1st H)=1/4).
+
+---
+
+## 2️⃣ Multiplication Rule
+
+[
+P(A\cap B)=P(A|B),P(B)
+]
+
+Useful to build joint probabilities step by step.
+
+---
+
+## 3️⃣ Law of Total Probability (LTP)
+
+If (B_1,\ldots,B_n) partition the sample space Ω,
+
+[
+P(A)=\sum_i P(A|B_i),P(B_i)
+]
+
+This lets you combine conditional probabilities across cases.
+
+---
+
+## 4️⃣ Probability Trees (ASCII)
+
+Trees visualize conditional steps; multiply along branches and sum the relevant paths.
+
+Example – Urn problem (5 red, 2 green; color replaced by opposite):
+
+```
+Root
+├── R1 (5/7)
+│   ├── R2 (4/7)
+│   └── G2 (3/7)
+└── G1 (2/7)
+    ├── R2 (6/7)
+    └── G2 (1/7)
+```
+
+Compute
+P(R2) = (5/7)(4/7) + (2/7)(6/7) = 32/49.
+
+---
+
+## 5️⃣ Independence
+
+Two events are **independent** if
+[
+P(A|B)=P(A)\quad\text{or equivalently}\quad P(A\cap B)=P(A)P(B)
+]
+
+Example: two coin tosses → independent; first = H, total = two H → not independent.
+
+---
+
+## 6️⃣ Bayes’ Theorem
+
+**Formula**
+
+[
+P(H|E)=\frac{P(E|H),P(H)}{P(E)}=\frac{P(E|H),P(H)}{P(E|H)P(H)+P(E|\neg H)P(\neg H)}
+]
+
+**Interpretation**
+
+| Term   | Meaning                  |                                |
+| ------ | ------------------------ | ------------------------------ |
+| (P(H)) | Prior belief             |                                |
+| (P(E   | H))                      | Likelihood of evidence under H |
+| (P(E)) | Total chance of seeing E |                                |
+| (P(H   | E))                      | Posterior (updated belief)     |
+
+---
+
+## 7️⃣ ASCII Tree for Bayes’ Computation
+
+Generic two-hypothesis situation (like disease test or evil squirrels):
+
+```
+Root
+├── H   (P(H))
+│   ├── E   (P(E|H))
+│   └── ¬E  (1 - P(E|H))
+└── ¬H  (1 - P(H))
+    ├── E   (P(E|¬H))
+    └── ¬E  (1 - P(E|¬H))
+```
+
+To find (P(H|E)):
+
+* Multiply along each branch to get joint probabilities.
+* Sum over all E-nodes to get P(E).
+* Divide the H∧E branch weight by total P(E).
+
+---
+
+## 8️⃣ Example – “Evil Squirrels”
+
+Given:
+
+* (P(Evil)=0.0001)
+* (P(Nice)=0.9999)
+* (P(Alarm|Evil)=0.99)
+* (P(Alarm|Nice)=0.01)
+
+### Bayes
+
+[
+P(Evil|Alarm)=\frac{0.99\cdot0.0001}{0.99\cdot0.0001+0.01\cdot0.9999}\approx0.0098
+]
+
+≈ **1% chance** a squirrel is evil given an alarm.
+
+---
+
+### ASCII Tree for Evil Squirrels
+
+```
+Root
+├── Evil (0.0001)
+│   ├── Alarm (0.99)
+│   └── No Alarm (0.01)
+└── Nice (0.9999)
+    ├── Alarm (0.01)
+    └── No Alarm (0.99)
+```
+
+→ True alarms = 99 (≈ 1%)
+→ False alarms = 9999 (≈ 99%)
+
+**Conclusion:** System produces 99% false positives — not reliable.
+
+---
+
+## 9️⃣ Common Pitfall — Base Rate Fallacy
+
+Even with high test accuracy, a low base rate causes most positive signals to be false positives.
+Always compare **posterior** (what you want) to **base rate** (prior frequency).
+
+---
+
+## 🔟 Recap Cheat Sheet
+
+| Concept           | Formula           | Keyword               |                   |                   |
+| ----------------- | ----------------- | --------------------- | ----------------- | ----------------- |
+| Conditional       | (P(A              | B)=P(A∩B)/P(B))       | Update given info |                   |
+| Multiplication    | (P(A∩B)=P(A       | B)P(B))               | Build joint       |                   |
+| Total Prob.       | (P(A)=∑P(A        | B_i)P(B_i))           | Combine cases     |                   |
+| Independence      | (P(A∩B)=P(A)P(B)) | No influence          |                   |                   |
+| Bayes             | (P(H              | E)=\frac{P(E          | H)P(H)}{P(E)})    | Reverse condition |
+| Base Rate Fallacy | Priors ≠ ignored  | Watch false positives |                   |                   |
+
+---
+Here’s a **cleanly reformatted version** of your Class 3 problems and solutions from MIT 18.05 (Spring 2022) with clear headings, numbering, and structure:
+
+---
+
+# **18.05 Class 3 — Spring 2022**
+
+**Concept Questions & In-Class Problems**
+
+---
+
+## **Concept Questions**
+
+### **1. Coin Toss Problem**
+
+Toss a coin 4 times. Let
+
+* (A) = “at least three heads”
+* (B) = “first toss is tails”
+
+**Questions:**
+
+1. (P(A|B))
+
+   * Options: (a) 1/16 (b) 1/8 (c) 1/4 (d) 1/5
+   * **Answer:** (b) 1/8
+2. (P(B|A))
+
+   * Options: (a) 1/16 (b) 1/8 (c) 1/4 (d) 1/5
+   * **Answer:** (d) 1/5
+
+**Solution:**
+
+* Total sequences: (2^4 = 16)
+* (|A| = 5), (|B| = 8), (|A \cap B| = 1)
+* [
+  P(A|B) = \frac{|A \cap B|}{|B|} = \frac{1}{8}, \quad
+  P(B|A) = \frac{|A \cap B|}{|A|} = \frac{1}{5}
+  ]
+
+---
+
+### **2–5. Tree Probabilities**
+
+Consider events (A_1, A_2, B_1, B_2, C_1, C_2) in a probability tree. Let (x, y, z) be probabilities at different nodes.
+
+| Node         | Probability             |                |
+| ------------ | ----------------------- | -------------- |
+| (x)          | (P(A_1))                |                |
+| (y)          | (P(B_2                  | A_1))          |
+| (z)          | (P(C_1                  | B_2 \cap A_1)) |
+| Circled node | (A_1 \cap B_2 \cap C_1) |                |
+
+---
+
+## **In-Class Examples**
+
+### **1. Urn Problem**
+
+* Urn: 5 orange (O) and 2 blue (B) balls.
+* Process: Draw one ball → replace with the other color → draw again.
+
+**Questions:**
+
+1. Probability the second ball is orange ((O_2))
+2. Probability the first ball was orange given the second ball is orange ((P(O_1|O_2)))
+
+**Solution:**
+
+* Total probability:
+  [
+  P(O_2) = P(O_2 \cap O_1) + P(O_2 \cap B_1) = \frac{20}{49} + \frac{12}{49} = \frac{32}{49}
+  ]
+* Bayes’ formula:
+  [
+  P(O_1|O_2) = \frac{P(O_2 \cap O_1)}{P(O_2)} = \frac{20/49}{32/49} = \frac{20}{32} = \frac{5}{8}
+  ]
+
+---
+
+## **Board Questions**
+
+### **1. Monty Hall Problem**
+
+* 1 car, 2 goats. Contestant chooses a door. Monty opens a goat door. Contestant can switch.
+
+**Question:** Best strategy?
+
+* Options: (a) Switch (b) Don’t switch (c) It doesn’t matter
+* **Answer:** (a) Switch
+
+**Solution:** Probability tree approach:
+[
+P_\text{switch}(\text{car}) = P(\text{switch wins}) = 2/3
+]
+
+---
+
+### **2. Independence of Dice Events**
+
+* Two dice roll:
+
+  * (A) = first die is 3
+  * (B) = sum is 6
+  * (C) = sum is 7
+
+**Question:** (A) is independent of?
+
+* Options: (a) B & C (b) B alone (c) C alone (d) Neither
+* **Answer:** (c) C alone
+
+**Reason:**
+[
+P(A) = 1/6, \quad P(A|B) = 1/5 \neq P(A), \quad P(A|C) = 1/6 = P(A)
+]
+
+---
+
+### **3. Evil Squirrels (Base Rate Fallacy)**
+
+* MIT campus: 1,000,000 squirrels, 100 evil. Alarm:
+
+  * (P(\text{alarm|evil}) = 0.99)
+  * (P(\text{alarm|nice}) = 0.01)
+
+**Questions:**
+
+1. (P(\text{evil | alarm}))
+2. Should MIT use the system?
+
+**Solution:**
+[
+P(\text{evil|alarm}) = \frac{0.99 \cdot 0.0001}{0.99 \cdot 0.0001 + 0.01 \cdot 0.9999} \approx 0.01
+]
+
+* **Answer:** No, false positives dominate.
+
+---
+
+### **4. Dice Game**
+
+* One 6-sided, one 8-sided die. Roller picks one die, rolls, reports number.
+
+**Question:** Given the reported number, probability it was the 6-sided die?
+
+**Solution:** Using Bayes’ theorem:
+[
+P(\text{6-sided | roll 4}) = \frac{P(\text{roll 4 | 6-sided}) P(\text{6-sided})}{P(\text{roll 4})} = \frac{(1/6)(1/2)}{(1/6)(1/2) + (1/8)(1/2)} = \frac{4}{7}
+]
+
+* Rolls 7 or 8 → (P(\text{6-sided}) = 0)
+
+---
+
+
 
 
 
