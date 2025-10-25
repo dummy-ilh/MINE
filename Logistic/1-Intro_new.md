@@ -85,9 +85,7 @@ Let:
 
 Then the expected value of ( Y ) given ( x ) is written as:
 
-[
-E(Y | x)
-]
+$E(Y | x)$
 
 and is read as “the expected value of ( Y ), given the value ( x ).”
 
@@ -129,18 +127,14 @@ To uncover any trend, Hosmer et al. propose summarizing the data by **age interv
 
 Each age interval represents a **group** of individuals, and for each group we compute:
 
-\[
-\text{Mean of } Y = \frac{\text{# with CHD (Y = 1)}}{n}
-\]
+$\text{Mean of } Y = \frac{\text{# with CHD (Y = 1)}}{n}$
 
 
 Because \(Y = 1\) for “CHD present” and \(Y = 0\) for “CHD absent,” the mean is simply the **proportion of individuals with CHD** in that age group.
 
 This mean serves as an empirical estimate of the **conditional expectation** of \(Y\) given \(x\) (AGE):
 
-$$
-E(Y \mid x) \approx \text{Proportion with CHD in that age group}.
-$$
+$E(Y \mid x) \approx \text{Proportion with CHD in that age group}.$
 
 
 ---
@@ -162,14 +156,12 @@ slow at first, then steeper in mid-ages, then leveling off at older ages — a h
 The **key regression quantity** is the *conditional mean* (E(Y|x)) — the expected value of Y given x.
 
 In **linear regression**, we model this as:
-$$
-E(Y \mid x) = \beta_0 + \beta_1 x
-$$
+$E(Y \mid x) = \beta_0 + \beta_1 x$
 
 
 But, as discussed, this can take values below 0 or above 1 — invalid for probabilities.
 
-In the **CHDAGE data**, the group means (0.10 → 0.80) stay within [0, 1], but the relationship between mean CHD and age is clearly **nonlinear**.
+In the **CHDAGE data**, the group means (0.10 → 0.80) stay within $0, 1$, but the relationship between mean CHD and age is clearly **nonlinear**.
 If we attempted to fit a straight line, it would fail to capture the curvature and might predict impossible probabilities (< 0 or > 1) for ages beyond the observed range.
 
 ---
@@ -182,15 +174,15 @@ If we attempted to fit a straight line, it would fail to capture the curvature a
 
 3. **Bridge to π(x)** — Each mean value (0.10, 0.133, 0.25, …) is an estimate of:
 
-   [
+   $
    \pi(x) = P(Y = 1 \mid x)
-   ]
+   $
 
    which logistic regression models analytically as:
 
-   [
+   $
    \pi(x) = \frac{e^{\beta_0 + \beta_1 x}}{1 + e^{\beta_0 + \beta_1 x}}.
-   ]
+   $
 
 4. **Shape validation** — When plotted, these eight mean points lie approximately on an **S-shaped curve**, confirming that the logistic function fits the data’s pattern much better than a straight line.
 
@@ -236,7 +228,7 @@ The **CHDAGE example and Table 1.2** provide the empirical groundwork for logist
 They show that:
 
 * The relationship between age and CHD is *monotonic* (increasing) but *nonlinear*.
-* A model that constrains probabilities within [0, 1] and captures an S-shaped pattern — the **logistic model** — is the natural solution.
+* A model that constrains probabilities within $0, 1$ and captures an S-shaped pattern — the **logistic model** — is the natural solution.
 
 ---
 
@@ -262,7 +254,7 @@ This S-shape reflects the fact that **the change in E(Y|x)** per unit increase i
 
 Hence, we need a model that:
 
-1. Keeps (E(Y|x)) within [0, 1].
+1. Keeps (E(Y|x)) within $0, 1$.
 2. Captures this nonlinear “S” behavior naturally.
 
 ---
@@ -271,9 +263,7 @@ Hence, we need a model that:
 
 The **logistic regression model** meets both requirements by expressing (E(Y|x)) — denoted (\pi(x)) — as:
 
-[
-\pi(x) = E(Y|x) = \frac{e^{\beta_0 + \beta_1 x}}{1 + e^{\beta_0 + \beta_1 x}}
-]
+$\pi(x) = E(Y|x) = \frac{e^{\beta_0 + \beta_1 x}}{1 + e^{\beta_0 + \beta_1 x}}$
 *(Equation 1.1)*
 
 This formulation ensures:
@@ -295,17 +285,13 @@ This formulation ensures:
 
 To connect this nonlinear probability curve to a **linear model**, we apply the **logit transformation**, defined as:
 
-[
-g(x) = \ln\left(\frac{\pi(x)}{1 - \pi(x)}\right)
-]
+$g(x) = \ln\left(\frac{\pi(x)}{1 - \pi(x)}\right)$
 
 The term inside the log, (\frac{\pi(x)}{1 - \pi(x)}), is called the **odds** of the event (Y = 1) occurring.
 
 Substituting Equation (1.1) into this expression, we find:
 
-[
-g(x) = \beta_0 + \beta_1 x
-]
+$g(x) = \beta_0 + \beta_1 x$
 
 Thus, the **logit of the probability** is a *linear function* of x.
 
@@ -321,9 +307,7 @@ Thus, the **logit of the probability** is a *linear function* of x.
 
 In **linear regression**, the outcome is modeled as:
 
-[
-y = E(Y|x) + \varepsilon
-]
+$y = E(Y|x) + \varepsilon$
 
 where:
 
@@ -333,9 +317,9 @@ where:
 But in **logistic regression**, Y can only be 0 or 1.
 So we express it as:
 
-[
+$
 y = \pi(x) + \varepsilon
-]
+$
 
 where:
 
@@ -403,7 +387,7 @@ For linear regression, we write:
 
 $
 E(Y|x) = \beta_0 + \beta_1 x
-]
+$
 
 We want β₀ and β₁ such that the fitted line gives predicted values of (Y) that are as *close as possible* to the observed data points.
 
@@ -413,15 +397,15 @@ We want β₀ and β₁ such that the fitted line gives predicted values of (Y) 
 
 The **method of least squares** finds parameter estimates that **minimize the sum of squared deviations** between observed and predicted outcomes:
 
-[
-\text{Minimize } ; S(\beta_0, \beta_1) = \sum_{i=1}^{n} [y_i - (\beta_0 + \beta_1 x_i)]^2
-]
+$
+\text{Minimize } ; S(\beta_0, \beta_1) = \sum_{i=1}^{n} $y_i - (\beta_0 + \beta_1 x_i)$^2
+$
 
 This is mathematically simple and statistically elegant **because of the normality assumption** for the error term ( \varepsilon_i ):
 
-[
+$
 y_i = \beta_0 + \beta_1 x_i + \varepsilon_i, \quad \varepsilon_i \sim N(0, \sigma^2)
-]
+$
 
 Under these assumptions:
 
@@ -438,15 +422,15 @@ In **logistic regression**, the outcome (Y_i) is **binary** — it takes values 
 
 The model is:
 
-[
+$
 \pi_i = P(Y_i = 1 | x_i) = \frac{e^{\beta_0 + \beta_1 x_i}}{1 + e^{\beta_0 + \beta_1 x_i}}
-]
+$
 
 and
 
-[
+$
 Y_i \sim \text{Bernoulli}(\pi_i)
-]
+$
 
 If we tried to apply least squares here — minimizing (\sum (y_i - \pi_i)^2) — we would run into problems:
 
@@ -474,9 +458,9 @@ ML estimation chooses parameter values that make the **observed data most probab
 
 Formally, if (L(\beta_0, \beta_1)) denotes the **likelihood function**, then the MLEs are:
 
-[
+$
 (\hat{\beta}_0, \hat{\beta}*1) = \arg \max*{\beta_0, \beta_1} L(\beta_0, \beta_1)
-]
+$
 
 ---
 
@@ -484,18 +468,18 @@ Formally, if (L(\beta_0, \beta_1)) denotes the **likelihood function**, then the
 
 Because each observation (Y_i) follows a **Bernoulli distribution** with probability (\pi_i):
 
-[
+$
 P(Y_i = y_i) = \pi_i^{y_i} (1 - \pi_i)^{1 - y_i}
-]
+$
 
 and all observations are assumed independent, the joint probability (likelihood) for the full dataset is:
 
-[
+$
 L(\beta_0, \beta_1)
 = \prod_{i=1}^{n} \pi_i^{y_i} (1 - \pi_i)^{1 - y_i}
-= \prod_{i=1}^{n} \left[ \frac{e^{\beta_0 + \beta_1 x_i}}{1 + e^{\beta_0 + \beta_1 x_i}} \right]^{y_i}
-\left[ \frac{1}{1 + e^{\beta_0 + \beta_1 x_i}} \right]^{1 - y_i}
-]
+= \prod_{i=1}^{n} \left$ \frac{e^{\beta_0 + \beta_1 x_i}}{1 + e^{\beta_0 + \beta_1 x_i}} \right$^{y_i}
+\left$ \frac{1}{1 + e^{\beta_0 + \beta_1 x_i}} \right$^{1 - y_i}
+$
 
 This is the **likelihood function**, expressing the probability of observing the data as a function of the unknown parameters β₀ and β₁.
 
@@ -506,21 +490,21 @@ This is the **likelihood function**, expressing the probability of observing the
 Because products are hard to maximize directly, we take the natural logarithm to simplify (since log is a monotonic function).
 The **log-likelihood** is:
 
-[
+$
 \ell(\beta_0, \beta_1)
-= \sum_{i=1}^{n} \left[
+= \sum_{i=1}^{n} \left$
 y_i \ln(\pi_i) + (1 - y_i)\ln(1 - \pi_i)
-\right]
-]
+\right$
+$
 
 Substituting (\pi_i = \frac{e^{\beta_0 + \beta_1 x_i}}{1 + e^{\beta_0 + \beta_1 x_i}}), we get:
 
-[
+$
 \ell(\beta_0, \beta_1)
-= \sum_{i=1}^{n} \left[
+= \sum_{i=1}^{n} \left$
 y_i (\beta_0 + \beta_1 x_i) - \ln(1 + e^{\beta_0 + \beta_1 x_i})
-\right]
-]
+\right$
+$
 
 This function is smooth, concave, and differentiable — ideal for numerical optimization.
 
@@ -530,9 +514,9 @@ This function is smooth, concave, and differentiable — ideal for numerical opt
 
 To find the estimates, we set the **score equations** (derivatives of the log-likelihood) to zero:
 
-[
+$
 \frac{\partial \ell}{\partial \beta_j} = 0, \quad j = 0, 1
-]
+$
 
 Because these equations are nonlinear in β₀ and β₁, **no closed-form solution exists**.
 Instead, we solve them **iteratively** using numerical algorithms such as:
@@ -604,7 +588,7 @@ Therefore, **maximum likelihood** is the natural and statistically sound choice.
 * Maximum likelihood provides a principled alternative that:
 
   1. Matches the true (binomial) distribution of the data,
-  2. Ensures predicted probabilities remain in [0, 1], and
+  2. Ensures predicted probabilities remain in $0, 1$, and
   3. Produces estimators with strong statistical properties.
 
 Thus, all logistic regression estimation throughout the book — and in modern practice — is based on **maximum likelihood**.
@@ -620,14 +604,14 @@ Estimated coefficients:
 * (\hat\beta_1 = 0.111)
 
 Fitted probability (predicted probability that CHD = 1 for a person of age AGE):
-[
+$
 \hat\pi(\text{AGE}) = \frac{e^{-5.309 + 0.111\times\text{AGE}}}{1 + e^{-5.309 + 0.111\times\text{AGE}}}
-]
+$
 
 Fitted logit (linear predictor):
-[
+$
 \widehat{g}(\text{AGE}) = \ln!\frac{\hat\pi}{1-\hat\pi} = -5.309 + 0.111\times\text{AGE}.
-]
+$
 
 ---
 
@@ -841,15 +825,15 @@ The guiding principle is the **same as linear regression**: compare observed res
 
 The **likelihood ratio** compares models with and without a variable:
 
-[
+$
 \Lambda = \frac{L(\text{model without variable})}{L(\text{model with variable})}
-]
+$
 
 To use this for **hypothesis testing**, we take **minus twice the log**:
 
-[
+$
 D = -2 \log \Lambda
-]
+$
 
 * ( D ) is called the **deviance**
 * For logistic regression, **deviance plays the same role as SSE in linear regression**
@@ -857,9 +841,9 @@ D = -2 \log \Lambda
 
 Using predicted probabilities ( \hat{\pi}_i = \hat{\pi}(x_i) ), the deviance can be expressed as:
 
-[
-D = -2 \sum_{i=1}^{n} \Big[ y_i \log(\hat{\pi}_i) + (1-y_i) \log(1-\hat{\pi}_i) \Big]
-]
+$
+D = -2 \sum_{i=1}^{n} \Big$ y_i \log(\hat{\pi}_i) + (1-y_i) \log(1-\hat{\pi}_i) \Big$
+$
 
 * This expression forms the basis for **likelihood ratio tests** in logistic regression
 
@@ -892,17 +876,17 @@ The **likelihood ratio test** compares two nested models:
 
 The test statistic is:
 
-[
+$
 G = -2 \ln \left( \frac{L_{\text{reduced}}}{L_{\text{full}}} \right)
-]
+$
 
 where (L_{\text{reduced}}) and (L_{\text{full}}) are the likelihoods of the reduced and full models, respectively.
 
 * For a **single binary variable**, the reduced model has only an intercept:
 
-[
+$
 \hat{\beta}_0 = \ln\frac{n_1}{n_0}
-]
+$
 
 where:
 
@@ -912,9 +896,9 @@ where:
 
 The **likelihood ratio statistic (G)** can then be computed as:
 
-[
-G = 2 \sum_{i=1}^n \Big[ y_i \ln \hat{\pi}_i + (1 - y_i) \ln(1 - \hat{\pi}_i) \Big] - 2 \big[n_1 \ln(n_1/n) + n_0 \ln(n_0/n)\big]
-]
+$
+G = 2 \sum_{i=1}^n \Big$ y_i \ln \hat{\pi}_i + (1 - y_i) \ln(1 - \hat{\pi}_i) \Big$ - 2 \big$n_1 \ln(n_1/n) + n_0 \ln(n_0/n)\big$
+$
 
 * First term → log-likelihood from the **full model**
 * Second term → log-likelihood from the **reduced model**
@@ -930,25 +914,25 @@ G = 2 \sum_{i=1}^n \Big[ y_i \ln \hat{\pi}_i + (1 - y_i) \ln(1 - \hat{\pi}_i) \B
 
 The **Wald test** uses the estimated coefficient and its standard error:
 
-[
+$
 W = \frac{\hat{\beta}_j}{\text{SE}(\hat{\beta}_j)}
-]
+$
 
 * For large samples, under (H_0: \beta_j = 0):
 
-[
+$
 W \sim N(0,1)
-]
+$
 
 * Example: coefficient for AGE:
 
-[
+$
 \hat{\beta}_1 = 0.111, \quad \text{SE}(\hat{\beta}_1) = 0.024
-]
+$
 
-[
+$
 W = \frac{0.111}{0.024} \approx 4.61
-]
+$
 
 * Two-tailed p-value: (P(|z| > 4.61) < 0.001) → highly significant.
 * Software sometimes reports (W^2 = z^2), which follows a (\chi^2_1) distribution.
@@ -967,9 +951,9 @@ The **score test** evaluates significance **without fitting the full model**:
 * Uses derivatives of the log-likelihood (the “score function”).
 * In the **univariate case**, the statistic is:
 
-[
+$
 ST = \frac{\sum_{i=1}^{n} x_i (y_i - \bar{y})}{\sqrt{\bar{y}(1-\bar{y}) \sum (x_i - \bar{x})^2}}
-]
+$
 
 where:
 
@@ -989,45 +973,45 @@ Confidence intervals for logistic regression parameters are often derived from t
 
 ### **4.1 For coefficients**
 
-[
+$
 \text{CI for } \beta_j: \quad \hat{\beta}*j \pm z*{1-\alpha/2} , \text{SE}(\hat{\beta}_j)
-]
+$
 
 * (z_{1-\alpha/2}) → critical value from standard normal distribution (e.g., 1.96 for 95% CI).
 
 ### **4.2 For logit (linear predictor)**
 
-[
+$
 g(x) = \hat{\beta}_0 + \hat{\beta}_1 x_1 + \dots
-]
+$
 
-[
-\text{CI for } g(x): \quad \hat{g}(x) \pm z_{1-\alpha/2} , \text{SE}[\hat{g}(x)]
-]
+$
+\text{CI for } g(x): \quad \hat{g}(x) \pm z_{1-\alpha/2} , \text{SE}$\hat{g}(x)$
+$
 
 ### **4.3 For predicted probability**
 
 Transform back to probability scale using logistic function:
 
-[
+$
 \pi(x) = \frac{e^{\hat{g}(x)}}{1 + e^{\hat{g}(x)}}
-]
+$
 
 * Lower limit:
 
-[
-\pi_{\text{lower}} = \frac{e^{\hat{g}(x) - z_{1-\alpha/2} SE[\hat{g}(x)]}}{1 + e^{\hat{g}(x) - z_{1-\alpha/2} SE[\hat{g}(x)]}}
-]
+$
+\pi_{\text{lower}} = \frac{e^{\hat{g}(x) - z_{1-\alpha/2} SE$\hat{g}(x)$}}{1 + e^{\hat{g}(x) - z_{1-\alpha/2} SE$\hat{g}(x)$}}
+$
 
 * Upper limit:
 
-[
-\pi_{\text{upper}} = \frac{e^{\hat{g}(x) + z_{1-\alpha/2} SE[\hat{g}(x)]}}{1 + e^{\hat{g}(x) + z_{1-\alpha/2} SE[\hat{g}(x)]}}
-]
+$
+\pi_{\text{upper}} = \frac{e^{\hat{g}(x) + z_{1-\alpha/2} SE$\hat{g}(x)$}}{1 + e^{\hat{g}(x) + z_{1-\alpha/2} SE$\hat{g}(x)$}}
+$
 
 **Example:**
 
-* Age = 50, (\hat{g}(50) = 0.14), (SE[\hat{g}(50)] = 0.2)
+* Age = 50, (\hat{g}(50) = 0.14), (SE$\hat{g}(50)$ = 0.2)
 * CI for probability: 0.435 – 0.677 → interprets as “mean probability of CHD at age 50 with 95% confidence.”
 
 ---
