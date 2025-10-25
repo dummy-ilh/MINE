@@ -11,4 +11,188 @@ Other commonly used distributions in modeling include the **lognormal**, **binom
 It is also important to note that not all probability distributions share the same number of parameters. The **Bernoulli**, **exponential**, and **Poisson** distributions are **single-parameter** distributions, and models derived from them are likewise single-parameter models. This parameter typically represents the mean or location parameter. In contrast, the **normal**, **lognormal**, **gamma**, **inverse Gaussian**, **beta**, **beta binomial**, **binomial**, and **negative binomial** distributions are **two-parameter** models. The first four of these are **continuous distributions** characterized by a mean (or shape) and a scale (or variability) parameter. The **binomial**, **beta**, and **beta binomial** distributions will be discussed later in the context of **grouped logistic regression**.
 
 
+The **probability function** for a random sample can be expressed as:
+
+[
+f(y; p) = \prod_{i=1}^{n} p_i^{y_i} (1 - p_i)^{1 - y_i}
+]
+**(Equation 1.1)**
+
+Here, the **joint probability distribution function (PDF)** is the product (Π) of the probabilities of each independent observation in the dataset, denoted by subscript ( i ). Typically, the product symbol is omitted for simplicity, since joint PDFs are understood to represent the product of independent components.
+
+The **Bernoulli distribution** for a single observation can therefore be written as:
+
+[
+f(y_i; p_i) = p_i^{y_i} (1 - p_i)^{1 - y_i}
+]
+**(Equation 1.2)**
+
+In this expression, ( y_i ) represents the response variable being modeled, and ( p_i ) is the probability that ( y_i = 1 ). The value ( y_i = 1 ) generally indicates a **success** or the **occurrence of the event of interest**, while ( y_i = 0 ) indicates **failure** or **non-occurrence**.
+
+A **probability function** generates data based on known parameters—this is the meaning of ( f(y; p) ). However, in real applications, we typically have **known data** and wish to **estimate the unknown parameters**. To achieve this, we reverse the relationship between ( y ) and ( p ) in the PDF and attempt to calculate ( p ) based on ( y ). This inverted relationship is known as the **likelihood function**.
+
+The **likelihood function** is expressed as:
+
+[
+L(p; y) = \prod_{i=1}^{n} p_i^{y_i} (1 - p_i)^{1 - y_i}
+]
+**(Equation 1.3)**
+
+This structure is often rewritten in **exponential family form**, which is mathematically equivalent to Equation 1.3:
+
+[
+L(p; y) = \exp \left[ \sum_i y_i \ln(p_i) + (1 - y_i) \ln(1 - p_i) \right]
+]
+
+One advantage of expressing the **log-likelihood function** in this exponential form is that it allows us to easily derive the **link function**, as well as the **mean** and **variance** functions of the underlying Bernoulli distribution.
+
+The **link function** corresponds to the term following ( y ) in the first part of the exponential form. For the Bernoulli distribution, this is:
+
+[
+\text{Link function: } \log\left(\frac{p}{1 - p}\right)
+]
+
+The **mean** of the distribution is obtained as the derivative of the negative of the second term with respect to the link function, while the **variance** is given by the second derivative. For the Bernoulli distribution:
+
+[
+\text{Mean: } \mu = p
+]
+[
+\text{Variance: } V(p) = p(1 - p) = \mu(1 - \mu)
+]
+
+The **linear predictor** of the logistic regression model is given by:
+
+[
+x\beta = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \beta_p x_p
+]
+**(Equation 1.7)**
+
+The **fitted (predicted) value** of the logistic regression model is determined through the **link function**, (\log\left(\frac{\mu}{1 - \mu}\right)), creating a linear relationship between the predicted probability ((\mu)) and the linear predictor ((x\beta)):
+
+[
+\ln\left(\frac{\mu_i}{1 - \mu_i}\right) = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \dots + \beta_p x_{pi}
+]
+**(Equation 1.8)**
+
+Here, (\mu_i) (like (p_i)) represents the probability that the response (y_i = 1). It can be interpreted as the probability of **presence** or **occurrence** of a characteristic, while (1 - \mu_i) represents the probability of its **absence**.
+
+The **odds** of occurrence are defined as the ratio of success probability to failure probability:
+
+[
+\text{Odds} = \frac{\mu}{1 - \mu} = \frac{p}{1 - p}
+]
+
+If (\mu = 0.7), then (1 - \mu = 0.3), and (\mu + (1 - \mu) = 1). The logarithm of the odds, (\log\left(\frac{\mu}{1 - \mu}\right)), is called the **logit function**, which gives **logistic regression** its name.
+
+To determine (\mu) from the linear predictor ((x\beta)), we solve the logit function for (\mu):
+
+[
+\mu = \frac{\exp(x\beta)}{1 + \exp(x\beta)} = \frac{1}{1 + \exp(-x\beta)}
+]
+
+This expression defines the **logistic function**, which maps any real-valued input into the interval (0, 1), making it ideal for modeling probabilities.
+
+
+-------------
+The **relationship between the logistic odds ratio and the regression coefficient** is given by:
+
+[
+\ln(\text{Odds Ratio}) = \text{Coefficient}
+]
+[
+\exp(\text{Coefficient}) = \text{Odds Ratio}
+]
+
+---
+
+### Comparison of Linear and Logistic Regression Models
+
+| Model Type                    | Functional Form               | Expression for Mean (μ)                                                         |
+| ----------------------------- | ----------------------------- | ------------------------------------------------------------------------------- |
+| **Linear Regression**         | μ = x′β                       | The predicted value is a linear combination of predictors.                      |
+| **Logistic Regression**       | μ = exp(x′β) / [1 + exp(x′β)] | The predicted probability is a nonlinear function bounded between 0 and 1.      |
+| **Alternative Logistic Form** | μ = 1 / [1 + exp(−x′β)]       | Equivalent to the above, representing the standard logistic (sigmoid) function. |
+
+---
+
+### Standard Errors of Coefficients and Odds Ratios
+
+**Standard errors (SEs)** measure the variability or uncertainty associated with estimated coefficients. They help analysts determine how much an estimated coefficient might vary if the study were repeated with different samples.
+
+However, **the standard errors of odds ratios** cannot be directly extracted from the variance-covariance matrix of the estimated coefficients. Instead, they are computed using the **Delta Method** — a statistical approximation technique for estimating the variance of a nonlinear function of a random variable (see Hilbe, 2009; 2016).
+
+When applying the **Delta Method** to odds ratios (or to risk or rate ratios), the calculation is straightforward:
+
+[
+SE_{OR} = \exp(\beta) \times SE_{\text{coef}}
+]
+
+where:
+
+* ( \beta ) is the estimated coefficient,
+* ( SE_{\text{coef}} ) is the standard error of the coefficient.
+
+---
+
+### Hypothesis Testing: z-score and p-value
+
+The **z-score** for a coefficient is calculated as:
+
+[
+z = \frac{\text{coef}}{SE}
+]
+
+The **p-value** (for a two-tailed test) is computed as:
+
+[
+p = 2 \times P(Z > |z|) = 2 \times \text{pnorm}(|z|, \text{lower.tail} = FALSE)
+]
+
+In R, these calculations can be performed as:
+
+```r
+zscore <- coef / se
+pvalue <- 2 * pnorm(abs(zscore), lower.tail = FALSE)
+```
+
+---
+
+### Confidence Intervals (Wald Method)
+
+The **Wald Confidence Interval** provides an approximate range within which the true coefficient is expected to fall with a specified probability (typically 95%).
+
+Lower and upper confidence limits are calculated as:
+
+[
+\text{Lower CI} = \text{coef} - z_{0.975} \times SE
+]
+[
+\text{Upper CI} = \text{coef} + z_{0.975} \times SE
+]
+
+In R, this can be written as:
+
+```r
+loci <- coef - qnorm(.975) * se
+upci <- coef + qnorm(.975) * se
+```
+
+where `qnorm(0.975)` corresponds to the cutoff for the upper 2.5% tail of the standard normal distribution (approximately 1.96).
+
+The **interpretation** of the 95% confidence interval is that if the modeling process were repeated many times, the true parameter value would fall within the calculated interval **95 times out of 100**.
+
+---
+
+### Likelihood Ratio Test (LRT)
+
+The **Likelihood Ratio Test** compares two nested models — a **full model** (with all predictors) and a **reduced model** (with some predictors removed). It evaluates whether the additional predictors in the full model significantly improve model fit.
+
+The test statistic is:
+
+[
+\text{LRT} = -2 \left[ \ln(L_{\text{reduced}}) - \ln(L_{\text{full}}) \right]
+]
+
+This statistic approximately follows a **chi-square (χ²) distribution**, with degrees of freedom equal to the difference in the number of parameters between the two models. A large LRT value (and small p-value) indicates that the full model provides a significantly better fit.
 
