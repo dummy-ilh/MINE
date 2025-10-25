@@ -2,9 +2,7 @@
 
 ## 🔹 Introduction: Logistic Regression vs. Linear Regression
 
-Sure — here’s your passage rewritten neatly and clearly in **Markdown format**, preserving structure, emphasis, and readability for notes or documentation.
 
----
 
 # **Introduction to Logistic Regression**
 
@@ -95,9 +93,8 @@ and is read as “the expected value of ( Y ), given the value ( x ).”
 
 In **linear regression**, we assume that this **mean** can be expressed as an **equation** relating ( Y ) to ( x ):
 
-[
-E(Y | x) = \beta_0 + \beta_1 x
-]
+$E(Y | x) = \beta_0 + \beta_1 x$
+
 
 
 
