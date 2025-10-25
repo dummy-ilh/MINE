@@ -13,18 +13,17 @@ It is also important to note that not all probability distributions share the sa
 
 The **probability function** for a random sample can be expressed as:
 
-[
-f(y; p) = \prod_{i=1}^{n} p_i^{y_i} (1 - p_i)^{1 - y_i}
-]
+$f(y; p) = \prod_{i=1}^{n} p_i^{y_i} (1 - p_i)^{1 - y_i}$
+
 **(Equation 1.1)**
 
 Here, the **joint probability distribution function (PDF)** is the product (Π) of the probabilities of each independent observation in the dataset, denoted by subscript ( i ). Typically, the product symbol is omitted for simplicity, since joint PDFs are understood to represent the product of independent components.
 
 The **Bernoulli distribution** for a single observation can therefore be written as:
 
-[
+$
 f(y_i; p_i) = p_i^{y_i} (1 - p_i)^{1 - y_i}
-]
+$
 **(Equation 1.2)**
 
 In this expression, ( y_i ) represents the response variable being modeled, and ( p_i ) is the probability that ( y_i = 1 ). The value ( y_i = 1 ) generally indicates a **success** or the **occurrence of the event of interest**, while ( y_i = 0 ) indicates **failure** or **non-occurrence**.
@@ -40,9 +39,9 @@ L(p; y) = \prod_{i=1}^{n} p_i^{y_i} (1 - p_i)^{1 - y_i}
 
 This structure is often rewritten in **exponential family form**, which is mathematically equivalent to Equation 1.3:
 
-[
+$
 L(p; y) = \exp \left[ \sum_i y_i \ln(p_i) + (1 - y_i) \ln(1 - p_i) \right]
-]
+$
 
 One advantage of expressing the **log-likelihood function** in this exponential form is that it allows us to easily derive the **link function**, as well as the **mean** and **variance** functions of the underlying Bernoulli distribution.
 
@@ -54,42 +53,42 @@ The **link function** corresponds to the term following ( y ) in the first part 
 
 The **mean** of the distribution is obtained as the derivative of the negative of the second term with respect to the link function, while the **variance** is given by the second derivative. For the Bernoulli distribution:
 
-[
+$
 \text{Mean: } \mu = p
-]
-[
+$
+$
 \text{Variance: } V(p) = p(1 - p) = \mu(1 - \mu)
-]
+$
 
 The **linear predictor** of the logistic regression model is given by:
 
-[
+$
 x\beta = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \dots + \beta_p x_p
-]
+$
 **(Equation 1.7)**
 
 The **fitted (predicted) value** of the logistic regression model is determined through the **link function**, (\log\left(\frac{\mu}{1 - \mu}\right)), creating a linear relationship between the predicted probability ((\mu)) and the linear predictor ((x\beta)):
 
-[
+$
 \ln\left(\frac{\mu_i}{1 - \mu_i}\right) = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + \dots + \beta_p x_{pi}
-]
+$
 **(Equation 1.8)**
 
 Here, (\mu_i) (like (p_i)) represents the probability that the response (y_i = 1). It can be interpreted as the probability of **presence** or **occurrence** of a characteristic, while (1 - \mu_i) represents the probability of its **absence**.
 
 The **odds** of occurrence are defined as the ratio of success probability to failure probability:
 
-[
+$
 \text{Odds} = \frac{\mu}{1 - \mu} = \frac{p}{1 - p}
-]
+$
 
 If (\mu = 0.7), then (1 - \mu = 0.3), and (\mu + (1 - \mu) = 1). The logarithm of the odds, (\log\left(\frac{\mu}{1 - \mu}\right)), is called the **logit function**, which gives **logistic regression** its name.
 
 To determine (\mu) from the linear predictor ((x\beta)), we solve the logit function for (\mu):
 
-[
+$
 \mu = \frac{\exp(x\beta)}{1 + \exp(x\beta)} = \frac{1}{1 + \exp(-x\beta)}
-]
+$
 
 This expression defines the **logistic function**, which maps any real-valued input into the interval (0, 1), making it ideal for modeling probabilities.
 
