@@ -1,35 +1,9 @@
-A
-
-ablation
-
-A technique for evaluating the importance of a feature or component by temporarily removing it from a model. You then retrain the model without that feature or component, and if the retrained model performs significantly worse, then the removed feature or component was likely important.
-
-For example, suppose you train a classification model on 10 features and achieve 88% precision on the test set. To check the importance of the first feature, you can retrain the model using only the nine other features. If the retrained model performs significantly worse (for instance, 55% precision), then the removed feature was probably important. Conversely, if the retrained model performs equally well, then that feature was probably not that important.
-
-Ablation can also help determine the importance of:
-
-    Larger components, such as an entire subsystem of a larger ML system
-    Processes or techniques, such as a data preprocessing step
-
-In both cases, you would observe how the system's performance changes (or doesn't change) after you've removed the component.
 
 A/B testing
 
 A statistical way of comparing two (or more) techniques—the A and the B. Typically, the A is an existing technique, and the B is a new technique. A/B testing not only determines which technique performs better but also whether the difference is statistically significant.
 
 A/B testing usually compares a single metric on two techniques; for example, how does model accuracy compare for two techniques? However, A/B testing can also compare any finite number of metrics.
-
-accelerator chip
-#GoogleCloud
-
-A category of specialized hardware components designed to perform key computations needed for deep learning algorithms.
-
-Accelerator chips (or just accelerators, for short) can significantly increase the speed and efficiency of training and inference tasks compared to a general-purpose CPU. They are ideal for training neural networks and similar computationally intensive tasks.
-
-Examples of accelerator chips include:
-
-    Google's Tensor Processing Units (TPUs) with dedicated hardware for deep learning.
-    NVIDIA's GPUs which, though initially designed for graphics processing, are designed to enable parallel processing, which can significantly increase processing speed.
 
 accuracy
 #fundamentals
