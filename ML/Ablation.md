@@ -128,18 +128,6 @@ A concise template:
 
 ---
 
-## 🔟 Mathematical Framing
-
-Let ( M ) be the full model, and ( M_{-i} ) the model with component ( i ) ablated.
-Then:
-
-[
-\Delta_i = \text{Metric}(M) - \text{Metric}(M_{-i})
-]
-
-* ( \Delta_i > 0 ) → component ( i ) **improves** performance.
-* ( \Delta_i < 0 ) → component ( i ) **hurts** performance (e.g., overfitting or redundancy).
-
 ---
 
 ## 🌍 Real-World Analogy
@@ -151,3 +139,19 @@ Think of ablation like removing car parts to see what affects performance:
 * That’s ablation in ML terms.
 
 ---
+
+
+📚 Example: Transformer Ablation
+Model Variant	Description	Accuracy
+Full model	Baseline	93.1%
+– Attention	Removed self-attention block	78.4%
+– LayerNorm	Removed normalization	82.6%
+– Positional Embedding	Removed position info	85.3%
+Interpretation → Attention contributes most.
+
+
+⚔️ Ablation vs Sensitivity Analysis
+Aspect	Ablation	Sensitivity Analysis
+What it does	Removes components	Perturbs input/params slightly
+Goal	Structural understanding	Robustness/fragility measurement
+Example	Remove dropout	Add small noise to weights
