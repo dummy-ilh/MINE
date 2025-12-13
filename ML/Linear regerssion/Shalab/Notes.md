@@ -1,7 +1,3 @@
-Below is a **clean Markdown version enhanced with intuitive explanations, real-world examples, and simple text-based diagrams**.
-This is written so it works well as **study notes**, **teaching material**, or **book-quality markdown**.
-
----
 
 # 📊 Chapter 1: Introduction to Regression Analysis
 
@@ -18,9 +14,7 @@ Consider any process whose outcome can be measured.
 
 We assume that the outcome depends on these explanatory variables through some relationship:
 
-[
-y = f(X_1, X_2, \dots, X_k; \beta_1, \beta_2, \dots, \beta_k) + \epsilon
-]
+$[y = f(X_1, X_2, \dots, X_k; \beta_1, \beta_2, \dots, \beta_k) + \epsilon]$
 
 ### Meaning of Each Component
 
