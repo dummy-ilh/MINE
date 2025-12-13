@@ -49,7 +49,34 @@ $$y=\beta_{1}X_{1}+\beta_{2}X_{2}+\dots+\beta_{k}X_{k}+\epsilon$$
 The knowledge of the model depends on the knowledge of the unknown parameters $\beta_{1},\beta_{2},\dots,\beta_{k}$.
 
 **Linear statistical modeling** consists of developing approaches and tools to determine these parameters
+Linear Model Example
+y=β1∗X12+β2∗sqrt(X2)+β3∗log(X3)+ε
+y=β1∗X1
+2
++β2∗sqrt(X2)+β3∗log(X3)+ε
 
+Partial derivatives:
+
+∂y/∂βi=Xiterms
+∂y/∂βi=Xi
+t
+	​
+
+erms
+
+They do not depend on βi.
+Hence, the model is linear.
+
+Nonlinear Model Example
+y=β12∗X1+β2∗X2+ε
+y=β1
+2
+∗X1+β2∗X2+ε
+∂y/∂β1=2∗β1∗X1
+∂y/∂β1=2∗β1∗X1
+
+This depends on β1.
+Hence, the model is nonlinear.
 #### Estimation Procedures
 Different statistical estimation procedures can be employed to estimate the parameters of the model
 
@@ -69,7 +96,41 @@ The literal meaning of regression is **"to move in the backward direction"**
 
 1.  **Ideal (Forward) Process:** The model exists in nature but is unknown. The pre-existing model gives rise to the data
 2.  **Regression (Backward) Process:** We collect the data first, and then we move in the **backward direction**. The collected data is used to determine the parameters of the unknown model
+egression analysis is the statistical technique used to estimate the unknown parameters 
+β1,β2,…,βk
+β
+1
+	​
 
+,β
+2
+	​
+
+,…,β
+k
+	​
+
+.
+
+The word regression literally means:
+
+“To move backward”
+
+Forward (Nature’s Process)
+Model (unknown)  →  Generates Data
+
+
+True relationship exists in nature
+
+We only observe the output
+
+Observed Data  →  Estimate Model
+
+    We start with data
+
+    Infer the parameters and structure
+
+This reversal is why regression is called a backward process.
 ---
 
 ### 5. Steps in Regression Analysis
