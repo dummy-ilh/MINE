@@ -8,7 +8,7 @@ How many distinct permutations of the letters in the word **APPLE**?
 
 **Solution**
 Letters: A, P, P, L, E → total 5 letters, P repeats twice.
-Permutations = ( \dfrac{5!}{2!} ).
+Permutations = $( \dfrac{5!}{2!} )$
 Compute: (5! = 120). (2! = 2). So (120/2 = 60).
 
 **Answer:** **60**
@@ -25,7 +25,7 @@ Number of choices: first digit: 1–9 except 0 → 9 choices. But we require 3-d
 * First digit: 9 choices.
 * Second digit: remaining 8.
 * Third digit: remaining 7.
-  Total = (9 \times 8 \times 7 = 504).
+  Total = $(9 \times 8 \times 7 = 504)$.
 
 **Answer:** **504**
 
@@ -37,7 +37,7 @@ How many 4-letter strings can you form (order matters) from the 26 English lette
 
 **Solution**
 Each position: 26 choices. Total = (26^4).
-Compute: (26^2 = 676). (676 \times 26 = 17576). (17576 \times 26 = 456976).
+Compute: (26^2 = 676). $(676 \times 26 = 17576)$. $(17576 \times 26 = 456976)$.
 
 **Answer:** **456,976**
 
