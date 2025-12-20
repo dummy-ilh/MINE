@@ -296,7 +296,7 @@ print("OOB score:", rf.oob_score_)  # Internal validation accuracy
 # Compare with actual predictions
 y_pred = rf.predict(X)
 print("Training accuracy:", accuracy_score(y, y_pred))
-
+```
 
 ---
 
