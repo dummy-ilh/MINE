@@ -1,11 +1,4 @@
-Alright. Let’s treat this like a **no-nonsense, top-tier ML interview masterclass on Random Forests**.
-I’ll teach you **from first principles → math intuition → implementation → tuning → theory questions → traps interviewers set**.
-
-You can come back and drill any section deeper.
-
----
-
-# 🌲 RANDOM FOREST — COMPLETE INTERVIEW MASTER GUIDE
+# 🌲 RANDOM FOREST 
 
 ## 1️⃣ Why Random Forest Exists (Motivation)
 
@@ -114,15 +107,15 @@ For `B` trees:
 
 #### Classification
 
-[
+$[
 \hat{y} = \text{mode}{T_1(x), T_2(x), ..., T_B(x)}
-]
+]$
 
 #### Regression
 
-[
+$[
 \hat{y} = \frac{1}{B}\sum_{b=1}^B T_b(x)
-]
+]$
 
 ---
 
