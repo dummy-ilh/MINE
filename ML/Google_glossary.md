@@ -2225,14 +2225,7 @@ The subsystem within a generative adversarial network that creates new examples.
 
 Contrast with discriminative model.
 
-gini impurity
-#df
-#Metric
 
-A metric similar to entropy. Splitters use values derived from either gini impurity or entropy to compose conditions for classification decision trees. Information gain is derived from entropy. No universally accepted equivalent term for the metric derived from gini impurity exists; however, this unnamed metric is just as important as information gain.
-
-Gini impurity is also called gini index, or simply gini.
-Click the icon for mathematical details about gini impurity.
 
 golden dataset
 
@@ -2573,29 +2566,6 @@ A decision tree consisting of four conditions and five leaves. The root conditio
 The three thick arrows show the inference path.
 
 See Decision trees in the Decision Forests course for more information.
-
-information gain
-#df
-#Metric
-
-In decision forests, the difference between a node's entropy and the weighted (by number of examples) sum of the entropy of its children nodes. A node's entropy is the entropy of the examples in that node.
-
-For example, consider the following entropy values:
-
-    entropy of parent node = 0.6
-    entropy of one child node with 16 relevant examples = 0.2
-    entropy of another child node with 24 relevant examples = 0.1
-
-So 40% of the examples are in one child node and 60% are in the other child node. Therefore:
-
-    weighted entropy sum of child nodes = (0.4 * 0.2) + (0.6 * 0.1) = 0.14
-
-So, the information gain is:
-
-    information gain = entropy of parent node - weighted entropy sum of child nodes
-    information gain = 0.6 - 0.14 = 0.46
-
-Most splitters seek to create conditions that maximize information gain.
 
 in-group bias
 #responsible
