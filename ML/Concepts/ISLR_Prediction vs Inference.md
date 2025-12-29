@@ -3,9 +3,9 @@
 
 At the heart of statistical learning is the model:
 
-$\[
+$\
 Y = f(X) + \varepsilon
-\]$
+\$
 
 - **\(X = (X_1, X_2, \dots, X_p)\)** → observed inputs / predictors  
 - **\(f\)** → unknown true relationship between inputs and output  
@@ -42,11 +42,11 @@ $\[
 - We only care about **how close \(\hat{Y}\) is to \(Y\)**
 - \(\hat{f}\) is treated as a **black box**
 
-```
+
 
 X  ──▶  [ Black Box Model ]  ──▶  Ŷ
 
-```
+
 
 As long as predictions are accurate, we’re satisfied—even if we don’t understand *how* the model works.
 
@@ -95,12 +95,12 @@ We want to **interpret** \(\hat{f}\), not just use it.
 
 Now, \(\hat{f}\) **cannot** be a black box.
 
-```
+
 
 X ──▶ [ Interpretable Model ] ──▶ Y
 ↑ coefficients, form, structure matter
 
-```
+
 
 ---
 
@@ -243,7 +243,6 @@ Because:
 - Reducible error → model + data problem (can improve)
 - Irreducible error → nature of reality (cannot improve)
 
-```
 
 Total Error
 │
@@ -251,11 +250,11 @@ Total Error
 │
 └── Irreducible (you must accept this)
 
-```
+
 
 ---
 
-```md
+
 # 📘 ISLR Deep Dive — Equation (2.3), Bias–Variance Tradeoff, and Model Choice
 
 We build everything **from first principles**, exactly how ISLR intends you to think.
@@ -422,7 +421,7 @@ $\[
 
 ## 🔁 Bias–Variance Tradeoff (Visual Intuition)
 
-```
+
 
 Model Complexity  ─────────────────────────▶
 
@@ -430,7 +429,7 @@ Bias        ↓↓↓↓↓↓↓↓↓
 Variance    ↑↑↑↑↑↑↑↑↑
 Test Error       ∪
 
-```
+
 
 - Simple models → high bias, low variance
 - Complex models → low bias, high variance
@@ -520,7 +519,7 @@ $\[
 
 ## 🧠 Final Mental Model
 
-```
+
 
 Total Error
 │
@@ -530,7 +529,7 @@ Total Error
 │
 └── Irreducible (noise, reality)
 
-```
+
 
 - **Prediction** → minimize total reducible error
 - **Inference** → sacrifice some accuracy for clarity
