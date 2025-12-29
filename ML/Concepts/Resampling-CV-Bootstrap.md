@@ -1,4 +1,4 @@
-```md
+
 # 📘 ISLR — Resampling Methods (Concise but Exam-Ready Notes)
 
 Resampling methods repeatedly draw samples from the training data and refit the model on each sample.  
@@ -159,7 +159,7 @@ $$
 - **Small data** → 10-fold CV or LOOCV
 
 ---
-```md
+
 # 📘 ISLR — Comparison of Resampling Methods  
 *(Advantages, Disadvantages, When to Use / When Not to Use)*
 
@@ -397,7 +397,7 @@ Used methods:
 > In practice:  
 > **Use 5- or 10-fold CV unless you have a very good reason not to.**
 
-```md
+
 # 📘 5.1.4 Bias–Variance Trade-Off for k-Fold Cross-Validation
 
 In comparing **LOOCV** and **k-fold cross-validation**, computational cost is only part of the story.  
@@ -625,7 +625,7 @@ Procedure:
 - **Prediction error** → k-fold CV  
 - **Uncertainty estimation** → Bootstrap  
 
-```md
+
 # 📘 Connecting Cross-Validation to Bias–Variance (Mathematical View)
 
 Cross-validation is often presented as a *procedural* tool.  
