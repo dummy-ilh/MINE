@@ -3,9 +3,9 @@
 
 At the heart of statistical learning is the model:
 
-\[
+$\[
 Y = f(X) + \varepsilon
-\]
+\]$
 
 - **\(X = (X_1, X_2, \dots, X_p)\)** → observed inputs / predictors  
 - **\(f\)** → unknown true relationship between inputs and output  
@@ -32,9 +32,9 @@ Understanding this distinction is *crucial* — it determines **which models we 
 
 We construct an estimate \(\hat{f}\) of the true function \(f\), and use it to predict:
 
-\[
+$\[
 \hat{Y} = \hat{f}(X)
-\]
+\]$
 
 ### 🔹 Key Characteristics
 
@@ -148,19 +148,19 @@ This explains **why predictions are never perfect**, even with the best model.
 
 For a fixed \(X\) and model \(\hat{f}\):
 
-\[
+$\[
 \mathbb{E}(Y - \hat{Y})^2
-\]
+\]$
 
 ISLR shows this decomposes as:
 
-\[
+$\[
 \mathbb{E}(Y - \hat{Y})^2
 =
 \underbrace{[f(X) - \hat{f}(X)]^2}_{\text{Reducible Error}}
 +
 \underbrace{\text{Var}(\varepsilon)}_{\text{Irreducible Error}}
-\]
+\]$
 
 ---
 
@@ -169,9 +169,9 @@ ISLR shows this decomposes as:
 ### 🔹 What it is
 Error caused because **\(\hat{f}\) is only an approximation of the true \(f\)**.
 
-\[
+$\[
 \text{Reducible Error} = [f(X) - \hat{f}(X)]^2
-\]
+\]$
 
 ### 🔹 Why it exists
 - Limited data
@@ -196,14 +196,14 @@ Because we can:
 Error due to the **random noise term \(\varepsilon\)**.
 
 Even if:
-\[
+$\[
 \hat{f}(X) = f(X)
-\]
+\]$
 
 We still get:
-\[
+$\[
 Y = f(X) + \varepsilon
-\]
+\]$
 
 ### 🔹 Sources of irreducible error
 - Unmeasured variables
@@ -262,12 +262,12 @@ We build everything **from first principles**, exactly how ISLR intends you to t
 
 Recall the core model:
 
-\[
+$\[
 Y = f(X) + \varepsilon
 \quad\text{with}\quad
 \mathbb{E}[\varepsilon]=0,\;
 \text{Var}(\varepsilon)=\sigma^2
-\]
+\]$
 
 We estimate \(f\) using data and obtain \(\hat{f}\).
 
@@ -277,57 +277,57 @@ We estimate \(f\) using data and obtain \(\hat{f}\).
 
 We want to derive the **expected prediction error** at a fixed input \(X\):
 
-\[
+$\[
 \mathbb{E}\left[(Y - \hat{Y})^2\right]
 \quad\text{where}\quad
 \hat{Y} = \hat{f}(X)
-\]
+\]$
 
 ---
 
 ### 🔹 Step 1: Substitute the true model
 
-\[
+$\[
 Y - \hat{Y}
 =
 [f(X) + \varepsilon] - \hat{f}(X)
-\]
+\]$
 
-\[
+$\[
 =
 \big(f(X) - \hat{f}(X)\big) + \varepsilon
-\]
+\]$
 
 ---
 
 ### 🔹 Step 2: Square the expression
 
-\[
+$\[
 (Y - \hat{Y})^2
 =
 \big(f(X) - \hat{f}(X) + \varepsilon\big)^2
-\]
+\]$
 
 Expand:
 
-\[
+$\[
 =
 \big(f(X) - \hat{f}(X)\big)^2
 + 2\varepsilon\big(f(X) - \hat{f}(X)\big)
 + \varepsilon^2
-\]
+\]$
 
 ---
 
 ### 🔹 Step 3: Take expectation
 
-\[
+$\[
 \mathbb{E}[(Y - \hat{Y})^2]
 =
 \mathbb{E}\left[\big(f(X) - \hat{f}(X)\big)^2\right]
 + 2\mathbb{E}\left[\varepsilon(f(X) - \hat{f}(X))\right]
 + \mathbb{E}[\varepsilon^2]
-\]
+\]$
 
 ---
 
@@ -338,23 +338,23 @@ Expand:
 
 Therefore:
 
-\[
+$\[
 \mathbb{E}\left[\varepsilon(f(X) - \hat{f}(X))\right]
 =
 \mathbb{E}[\varepsilon]\cdot (f(X) - \hat{f}(X)) = 0
-\]
+\]$
 
 And:
 
-\[
+$\[
 \mathbb{E}[\varepsilon^2] = \text{Var}(\varepsilon)
-\]
+\]$
 
 ---
 
 ### 🔹 Final Result (Equation 2.3)
 
-\[
+$\[
 \boxed{
 \mathbb{E}(Y - \hat{Y})^2
 =
@@ -362,7 +362,7 @@ And:
 +
 \underbrace{\text{Var}(\varepsilon)}_{\text{Irreducible Error}}
 }
-\]
+\]$
 
 📌 **Key insight**:  
 Only the first term depends on our model choice.
@@ -373,13 +373,13 @@ Only the first term depends on our model choice.
 
 Reducible error is *not a single thing*. It further decomposes into:
 
-\[
+$\[
 \text{Reducible Error}
 =
 \text{Bias}^2
 +
 \text{Variance}
-\]
+\]$
 
 ---
 
@@ -387,11 +387,11 @@ Reducible error is *not a single thing*. It further decomposes into:
 
 **Bias** measures how far the *average* model prediction is from the true function:
 
-\[
+$\[
 \text{Bias}(X)
 =
 \mathbb{E}[\hat{f}(X)] - f(X)
-\]
+\]$
 
 - High bias → model too simple
 - Misses important structure
@@ -405,11 +405,11 @@ Reducible error is *not a single thing*. It further decomposes into:
 
 **Variance** measures how much \(\hat{f}(X)\) changes with different training samples:
 
-\[
+$\[
 \text{Var}(\hat{f}(X))
 =
 \mathbb{E}\left[(\hat{f}(X) - \mathbb{E}[\hat{f}(X)])^2\right]
-\]
+\]$
 
 - High variance → model too flexible
 - Sensitive to noise
@@ -451,9 +451,9 @@ This is where **theory meets practice**.
 ### 🔹 Objective
 Minimize:
 
-\[
+$\[
 \mathbb{E}(Y - \hat{Y})^2
-\]
+\]$
 
 ### 🔹 Priorities
 - Low test error
@@ -482,9 +482,9 @@ Predicting whether a user will click an ad.
 ### 🔹 Objective
 Understand:
 
-\[
+$\[
 \text{How does } X_j \text{ affect } Y?
-\]
+\]$
 
 ### 🔹 Priorities
 - Interpretability
