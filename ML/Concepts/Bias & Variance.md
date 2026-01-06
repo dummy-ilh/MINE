@@ -1,17 +1,4 @@
-Good. **Bias–Variance is foundational** — if this is weak, *everything else collapses*.
-We’ll do this at **Hastie–Tibshirani–Friedman + Bishop + interview-system-design level**, not blog-level.
 
-Below is a **canonical, source-complete Bias–Variance master note** suitable for long-term GitHub storage and FAANG interviews.
-
-Save as:
-
-```
-02-ml-fundamentals/bias-variance.md
-```
-
----
-
-````markdown
 # Bias–Variance Tradeoff (Exhaustive Master Note)
 
 ---
