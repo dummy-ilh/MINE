@@ -29,56 +29,50 @@ Geometric intuition:
 
 ## 3. Mathematical formulation
 
-### Distance metric
 
-For points $x, x_i \in \mathbb{R}^d$, common distances include:
+### Distance Metrics
 
-- **Euclidean**:
-$$
-d(x, x_i) = \sqrt{\sum_{j=1}^d (x_j - x_{ij})^2}
-$$
+For points $$x, x_i \in \mathbb{R}^d$$, common distance metrics include:
 
-- **Manhattan**:
 $$
-d(x, x_i) = \sum_{j=1}^d |x_j - x_{ij}|
+d(x, x_i) = \sqrt{\sum_{j=1}^d (x_j - x_{ij})^2} \quad \text{(Euclidean)}
 $$
 
-- **Minkowski**:
 $$
-d(x, x_i) = \left( \sum_{j=1}^d |x_j - x_{ij}|^p \right)^{1/p}
+d(x, x_i) = \sum_{j=1}^d |x_j - x_{ij}| \quad \text{(Manhattan)}
 $$
 
----
+$$
+d(x, x_i) = \left( \sum_{j=1}^d |x_j - x_{ij}|^p \right)^{1/p} \quad \text{(Minkowski)}
+$$
 
 ### Classification
 
-Let $\mathcal{N}_k(x)$ be the set of $k$ nearest neighbors.
+Let $$\mathcal{N}_k(x)$$ be the set of $$k$$ nearest neighbors.
 
-Predicted class:
+**Majority vote:**
 $$
 \hat{y}(x) = \arg\max_c \sum_{i \in \mathcal{N}_k(x)} \mathbf{1}(y_i = c)
 $$
 
-Weighted variant:
+**Weighted variant:**
 $$
 \hat{y}(x) = \arg\max_c \sum_{i \in \mathcal{N}_k(x)} w_i \mathbf{1}(y_i = c)
 $$
-
-where typically $w_i = \frac{1}{d(x, x_i)}$.
-
----
+where typically $$w_i = \frac{1}{d(x,x_i)}$$.
 
 ### Regression
 
-Prediction:
+**Simple average:**
 $$
 \hat{y}(x) = \frac{1}{k} \sum_{i \in \mathcal{N}_k(x)} y_i
 $$
 
-Weighted regression:
+**Weighted average:**
 $$
 \hat{y}(x) = \frac{\sum_{i \in \mathcal{N}_k(x)} w_i y_i}{\sum_{i \in \mathcal{N}_k(x)} w_i}
 $$
+
 
 ---
 
