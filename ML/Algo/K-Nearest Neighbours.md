@@ -45,10 +45,10 @@ $$
 $$
 d(x, x_i) = \left( \sum_{j=1}^d |x_j - x_{ij}|^p \right)^{1/p} \quad \text{(Minkowski)}
 $$
-
 ### Classification
 
-Let $$\mathcal{N}_k(x)$$ be the set of $$k$$ nearest neighbors.
+
+Let $\mathcal{N}_k(x)$ be the set of $k$ nearest neighbors.
 
 **Majority vote:**
 $$
@@ -59,9 +59,10 @@ $$
 $$
 \hat{y}(x) = \arg\max_c \sum_{i \in \mathcal{N}_k(x)} w_i \mathbf{1}(y_i = c)
 $$
-where typically $$w_i = \frac{1}{d(x,x_i)}$$.
+where typically $w_i = \frac{1}{d(x,x_i)}$.
 
 ### Regression
+[Regression](#regression)
 
 **Simple average:**
 $$
