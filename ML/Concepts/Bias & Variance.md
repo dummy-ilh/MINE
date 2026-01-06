@@ -47,22 +47,16 @@ Let $\hat{f}(x)$ denote a model trained on a random dataset.
 ---
 
 ### Expected squared prediction error
-
 $$
-E[(y - \hat{f}(x))^2]
-$$
-
-This decomposes as:
-
-$$
-E[(y - \hat{f}(x))^2]
-=
-\underbrace{(E[\hat{f}(x)] - f(x))^2}_{\text{Bias}^2}
-+
-\underbrace{E[(\hat{f}(x) - E[\hat{f}(x)])^2]}_{\text{Variance}}
-+
+E[(y - \hat{f}(x))^2] =
+\underbrace{(E[\hat{f}(x)] - f(x))^2}_{\text{Bias}^2} +
+\underbrace{E[(\hat{f}(x) - E[\hat{f}(x)])^2]}_{\text{Variance}} +
 \underbrace{\sigma^2}_{\text{Irreducible Noise}}
 $$
+$$
+E[(y - \hat{f}(x))^2]
+$$
+
 
 ### Interpretation of terms
 
