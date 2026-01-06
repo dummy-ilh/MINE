@@ -384,7 +384,7 @@ The optimal tradeoff minimizes **validation or cross-validation error**, not tra
 - **Offset from center**: High bias
 
 ---
-![Bias–Variance diagram 1](/Images/BV1.png)
+![Bias–Variance diagram 1](Images/BV1.png)
 
-![Bias–Variance diagram 2](/Images/BV2.png)
+![Bias–Variance diagram 2](Images/BV2.png)
 
