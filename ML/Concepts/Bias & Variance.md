@@ -388,3 +388,286 @@ The optimal tradeoff minimizes **validation or cross-validation error**, not tra
 
 ![Bias–Variance diagram 2](Images/BV2.png)
 
+
+
+md
+# Bias–Variance, Underfitting & Overfitting  
+## FAANG-Level Interview Questions (Medium → Hard) with Answers
+
+---
+
+## Medium-Level Questions
+
+---
+
+### Q1. Why does adding more data usually reduce variance but not bias?
+
+**Answer:**
+
+Bias is caused by **model assumptions**, not data scarcity. If the hypothesis class cannot represent the true function, more samples do not fix that mismatch.
+
+Variance, however, arises from **sampling noise**. As dataset size $n$ increases:
+
+$$
+\text{Var}(\hat{f}(x)) \downarrow \quad \text{as } n \uparrow
+$$
+
+because parameter estimates stabilize across samples.
+
+**Key insight:**  
+Data combats randomness, not incorrect inductive bias.
+
+---
+
+### Q2. Can a model have low training error and still be underfitting?
+
+**Answer:**
+
+Yes, if:
+- The training data itself is **easy or biased**
+- The evaluation distribution differs from training (covariate shift)
+
+Underfitting is defined relative to the **true data-generating process**, not just training error.
+
+---
+
+### Q3. How does regularization affect bias and variance mathematically?
+
+**Answer:**
+
+Consider ridge regression:
+
+$$
+\hat{\beta} = (X^TX + \lambda I)^{-1}X^Ty
+$$
+
+- $\lambda > 0$ shrinks coefficients
+- Shrinkage introduces **bias**
+- Shrinkage stabilizes estimates, reducing **variance**
+
+As $\lambda \uparrow$:
+- Bias $\uparrow$
+- Variance $\downarrow$
+
+---
+
+### Q4. Why does bagging reduce variance but not bias?
+
+**Answer:**
+
+Bagging computes:
+
+$$
+\hat{f}_{\text{bag}}(x) = \frac{1}{B}\sum_{b=1}^B \hat{f}^{(b)}(x)
+$$
+
+- Averaging cancels **sample-specific fluctuations**
+- Systematic errors (bias) are preserved
+
+Thus:
+- Variance $\downarrow$
+- Bias unchanged
+
+---
+
+## Medium–Hard Questions
+
+---
+
+### Q5. Is overfitting always associated with low bias?
+
+**Answer:**
+
+No.
+
+A model can simultaneously have:
+- **High bias** (wrong assumptions)
+- **High variance** (unstable estimation)
+
+Example:
+- High-degree polynomial with strong regularization
+- Deep model trained on small noisy data
+
+Bias and variance are **orthogonal properties**.
+
+---
+
+### Q6. How does early stopping act as a bias–variance control?
+
+**Answer:**
+
+In iterative learners (e.g., gradient descent):
+
+- Early iterations learn **low-frequency (simple) patterns**
+- Later iterations fit **high-frequency noise**
+
+Stopping early:
+- Increases bias (incomplete optimization)
+- Reduces variance (avoids fitting noise)
+
+Early stopping behaves like **implicit regularization**.
+
+---
+
+### Q7. Why does cross-validation help find the bias–variance tradeoff?
+
+**Answer:**
+
+Cross-validation estimates:
+
+$$
+E_{\text{data}}[\text{Generalization Error}]
+$$
+
+for different model complexities or regularization strengths.
+
+- Low complexity → high bias → high CV error
+- High complexity → high variance → high CV error
+
+Minimum CV error corresponds to the **optimal tradeoff point**.
+
+---
+
+## Hard Questions
+
+---
+
+### Q8. Does the bias–variance decomposition hold for classification?
+
+**Answer:**
+
+Not cleanly for 0–1 loss.
+
+The classical decomposition:
+
+$$
+E[(y - \hat{f}(x))^2] = \text{Bias}^2 + \text{Variance} + \sigma^2
+$$
+
+depends on squared loss.
+
+For classification:
+- Decomposition exists only for **surrogate losses** (log-loss, squared loss)
+- Bias and variance become **loss-dependent**
+
+---
+
+### Q9. How does the bias–variance tradeoff explain double descent?
+
+**Answer:**
+
+In modern overparameterized models:
+
+1. Classical regime:
+   - Complexity ↑ → Bias ↓, Variance ↑
+2. Interpolation threshold:
+   - Variance spikes
+3. Overparameterized regime:
+   - Implicit regularization
+   - Variance decreases again
+
+This produces a **double descent curve**, extending classical bias–variance theory rather than replacing it.
+
+---
+
+### Q10. From a Bayesian perspective, what are bias and variance?
+
+**Answer:**
+
+- **Bias** arises from the **prior**
+- **Variance** arises from **posterior uncertainty due to limited data**
+
+MAP estimation:
+
+$$
+\hat{\theta}_{\text{MAP}} = \arg\max_\theta \log p(y \mid \theta) + \log p(\theta)
+$$
+
+Strong priors:
+- Increase bias
+- Reduce variance
+
+Bayesian inference explicitly manages the tradeoff via the prior.
+
+---
+
+### Q11. Can increasing model capacity ever reduce variance?
+
+**Answer:**
+
+Yes, in overparameterized regimes with:
+- Strong implicit regularization
+- Smooth optimization dynamics
+- Redundant parameterization
+
+Example:
+- Wide neural networks
+- Kernel regression near interpolation
+
+Capacity increase can improve **stability**, lowering variance.
+
+---
+
+### Q12. How would you diagnose bias vs variance in a production system?
+
+**Answer:**
+
+- Offline:
+  - Training vs validation error
+  - Learning curves
+- Online:
+  - Metric instability across time windows
+  - Sensitivity to retraining data
+- Model changes:
+  - Performance gains from added features → bias issue
+  - Performance gains from regularization → variance issue
+
+---
+
+### Q13. Why is bias–variance tradeoff central to model selection but not optimization?
+
+**Answer:**
+
+- Optimization minimizes **training error**
+- Model selection minimizes **generalization error**
+
+Bias–variance tradeoff governs **generalization**, not convergence.
+
+Thus:
+- Optimization answers *how well can I fit this model?*
+- Bias–variance answers *should I use this model?*
+
+---
+
+### Q14. How does feature engineering interact with bias and variance?
+
+**Answer:**
+
+- Correct features:
+  - Reduce bias without increasing variance
+- Noisy or redundant features:
+  - Increase variance
+- Feature selection:
+  - Increases bias
+  - Reduces variance
+
+Feature engineering reshapes the **effective hypothesis space**.
+
+---
+
+### Q15. In a recommender system with sparse users, which dominates: bias or variance?
+
+**Answer:**
+
+Variance dominates.
+
+- Few interactions → unstable estimates
+- Strong regularization and priors are required
+
+Industry systems intentionally accept **bias** to control variance and ensure robustness.
+
+---
+
+
+
+
