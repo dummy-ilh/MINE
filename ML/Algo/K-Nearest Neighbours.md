@@ -45,10 +45,12 @@ $$
 $$
 d(x, x_i) = \left( \sum_{j=1}^d |x_j - x_{ij}|^p \right)^{1/p} \quad \text{(Minkowski)}
 $$
+
+
 ### Classification
 
 
-Let $\mathcal{N}_k(x)$ be the set of $k$ nearest neighbors.
+Let `$\mathcal{N}_k(x)$` be the set of `$k$` nearest neighbors.
 
 **Majority vote:**
 $$
@@ -59,10 +61,10 @@ $$
 $$
 \hat{y}(x) = \arg\max_c \sum_{i \in \mathcal{N}_k(x)} w_i \mathbf{1}(y_i = c)
 $$
-where typically $w_i = \frac{1}{d(x,x_i)}$.
+where typically `$w_i = 1/d(x,x_i)$`.
 
 ### Regression
-[Regression](#regression)
+
 
 **Simple average:**
 $$
@@ -221,10 +223,7 @@ $$
 - Core primitive in vector databases
 
 ---
-`md
-## k-Nearest Neighbors (KNN) — Continuation and Deepening
 
----
 
 ## 1. Advantages and Disadvantages of KNN
 
@@ -450,6 +449,144 @@ Common choices:
 ## Closing Insight
 
 KNN is best understood as a **local averaging method** whose power and limitations come directly from how similarity is defined and how neighborhoods are chosen. Its simplicity makes it a conceptual cornerstone for understanding more advanced ideas like kernels, metric learning, and vector search systems.
+
+
+
+# Improving KNN and Understanding KD-Tree & Ball Tree
+
+---
+
+## 1. How to Improve KNN
+
+KNN’s main limitations are **high variance**, **curse of dimensionality**, and **high prediction cost**. Improvements generally focus on **reducing variance**, **handling high-dimensional data**, and **speeding up neighbor search**.
+
+### a) Reduce Variance / Improve Accuracy
+
+| Method | How it Helps |
+|---|---|
+| **Increase $k$** | Smoother predictions, reduces sensitivity to noise (variance ↓) |
+| **Distance weighting** | Closer neighbors count more, reducing influence of outliers |
+| **Feature scaling / normalization** | Ensures distance metrics are meaningful |
+| **Feature selection / dimensionality reduction** | Remove irrelevant features to reduce variance and improve signal |
+| **Metric learning** | Learns an optimal distance metric for the task |
+
+---
+
+### b) Reduce Overfitting / Underfitting
+
+| Issue | Solution |
+|---|---|
+| Overfitting (small $k$) | Increase $k$, use distance weighting, remove noisy points |
+| Underfitting (large $k$) | Reduce $k$, select more informative features |
+
+---
+
+### c) Speeding Up Prediction
+
+- KNN naïvely computes distances to **all training points** → $O(n d)$ per query
+- **Tree-based methods** and **approximate nearest neighbor** search can drastically reduce computation
+
+---
+
+## 2. KD-Tree
+
+### What is a KD-Tree?
+
+- KD-Tree = **k-dimensional binary search tree**
+- Organizes points in $d$-dimensional space for fast nearest neighbor search
+- Each node splits data along **one dimension** (axis-aligned) at a median
+
+#### Structure
+
+
+
+
+     x1 < median
+    /         \
+
+
+left subtree      right subtree
+
+
+
+- Root: splits dataset along first axis (e.g., x-axis)
+- Children: split recursively along other axes cyclically (x, y, z, …)
+- Leaf nodes: contain a small number of points (leaf_size parameter)
+
+---
+
+### Advantages
+
+- Nearest neighbor query: **O(log n)** on average for low dimensions
+- Reduces brute-force distance computations
+- Works best for **low-dimensional spaces ($d < 20$)**
+
+### Limitations
+
+- In high dimensions, KD-Tree degenerates
+- Queries may require visiting many nodes → performance ≈ brute-force
+
+---
+
+## 3. Ball Tree
+
+### What is a Ball Tree?
+
+- Ball Tree = tree where nodes are **hyperspheres (balls)** enclosing subsets of points
+- Each node stores:
+  - **Center of ball**
+  - **Radius**
+- Children: partition points recursively into smaller balls
+- Better than KD-Tree when data is **moderate-dimensional or clusters unevenly distributed**
+
+#### Structure
+
+
+
+
+    Ball(center, radius)
+   /                   \
+
+
+child ball 1             child ball 2
+
+
+
+- During query, balls **outside search radius can be pruned**, reducing distance computations
+
+---
+
+### Comparison: KD-Tree vs Ball Tree
+
+| Feature | KD-Tree | Ball Tree |
+|---|---|---|
+| Partition | Axis-aligned planes | Hyperspheres |
+| Best for | Low dimensions (<20) | Moderate dimensions (20–100) |
+| Handles clusters | Poorly (axis-aligned splits may cut clusters) | Better (balls adapt to cluster shapes) |
+| Complexity | O(log n) average | O(log n) average |
+| Use in sklearn | `algorithm='kd_tree'` | `algorithm='ball_tree'` |
+
+---
+
+## 4. Other Improvements / Modern Techniques
+
+| Technique | Explanation |
+|---|---|
+| Approximate Nearest Neighbors | Trade exactness for speed in large datasets (e.g., FAISS, HNSW) |
+| Condensed / Edited KNN | Remove redundant or noisy points to reduce memory and variance |
+| Hybrid / ensemble KNN | Combine multiple KNNs or with other classifiers to reduce variance |
+| Feature embedding | Use learned embeddings (word2vec, CNN embeddings) and then apply KNN |
+| Parallelization (`n_jobs=-1`) | Speed up computations on large datasets |
+
+---
+
+## 5. Summary
+
+1. **Improving KNN**: Proper $k$, distance weighting, scaling, feature selection, metric learning.
+2. **Speeding up KNN**: KD-Tree (axis-aligned splits, low-dim), Ball Tree (spherical splits, moderate-dim), approximate NN.
+3. **Tradeoffs**: Trees are fast for low-to-moderate dimensions but degrade in high dimensions; approximate methods balance accuracy and speed.
+
+> KD-Tree and Ball Tree are essentially **data structures** for efficiently organizing the training points so that KNN queries do **not require brute-force distance computation**.
 
 
 
