@@ -86,8 +86,7 @@ $$
 
 Expanded form:
 $$
-\text{Adjusted } R^2
-= 1 - (1 - R^2)\frac{n - 1}{n - p - 1}
+\text{Adjusted } R^2 = 1 - (1 - R^2)\frac{n-1}{n-p-1}
 $$
 
 ---
