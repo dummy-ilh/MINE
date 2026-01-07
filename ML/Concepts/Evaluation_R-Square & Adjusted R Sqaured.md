@@ -7,7 +7,7 @@
 
 ### $R^2$ (Coefficient of Determination)
 $R^2$ measures the **proportion of variance in the response variable** that is explained by the regression model.
-
+Ranges from 0 and 1
 It answers:
 > *How much better is this model compared to predicting the mean of $Y$?*
 
@@ -73,7 +73,7 @@ $$
 
 Equivalent interpretation:
 $$
-R^2 = \frac{\text{Explained Variance}}{\text{Total Variance}}
+R^2 = \frac{\text{Explained Var}}{\text{Total Var}}
 $$
 
 ---
