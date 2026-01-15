@@ -665,8 +665,7 @@ Poor design cannot be rescued by sophisticated modeling.
 
 
 ### 15.3 An Overview of Standard Experimental Designs (Page 658)
-md
-# Chapter 15 — Experimental Designs Beyond the Basics  
+  
 *Models, Blocking, Nesting, Repeated Measures, and Advanced Factorial Designs*
 
 This section moves beyond **basic experimental structure** and explains how **statistical models reflect design choices**, and how more sophisticated designs improve efficiency, precision, and interpretability.
@@ -1231,22 +1230,10 @@ Each matched pair acts like a **block of size 2**
 
 ---
 
-If you want next:
 
-* 🔥 **One-page comparison cheat sheet**
-* 🔥 **Interview-level questions with answers**
-* 🔥 **Causal inference framing (DAGs, confounding, bias)**
-* 🔥 **Regression vs matching vs experiments**
-
-Just say the word.
 
 
 ### 15.5 Case Study: Paired-Comparison Experiment (Page 669)
-Below is a **clean, concept-first breakdown** of **Section 15.5: Case Study — Paired-Comparison (Matched-Pairs) Experiment**, written as **master-level notes** you can reuse for exams, interviews, and future chapters (ANOVA, blocking, repeated measures, observational matching).
-
----
-
-# 📘 Section 15.5 — Paired-Comparison (Matched-Pairs) Experiment
 
 ## 🔹 What Is a Paired-Comparison Design?
 
