@@ -1,9 +1,35 @@
+A
+
+ablation
+
+A technique for evaluating the importance of a feature or component by temporarily removing it from a model. You then retrain the model without that feature or component, and if the retrained model performs significantly worse, then the removed feature or component was likely important.
+
+For example, suppose you train a classification model on 10 features and achieve 88% precision on the test set. To check the importance of the first feature, you can retrain the model using only the nine other features. If the retrained model performs significantly worse (for instance, 55% precision), then the removed feature was probably important. Conversely, if the retrained model performs equally well, then that feature was probably not that important.
+
+Ablation can also help determine the importance of:
+
+    Larger components, such as an entire subsystem of a larger ML system
+    Processes or techniques, such as a data preprocessing step
+
+In both cases, you would observe how the system's performance changes (or doesn't change) after you've removed the component.
 
 A/B testing
 
 A statistical way of comparing two (or more) techniques—the A and the B. Typically, the A is an existing technique, and the B is a new technique. A/B testing not only determines which technique performs better but also whether the difference is statistically significant.
 
 A/B testing usually compares a single metric on two techniques; for example, how does model accuracy compare for two techniques? However, A/B testing can also compare any finite number of metrics.
+
+accelerator chip
+#GoogleCloud
+
+A category of specialized hardware components designed to perform key computations needed for deep learning algorithms.
+
+Accelerator chips (or just accelerators, for short) can significantly increase the speed and efficiency of training and inference tasks compared to a general-purpose CPU. They are ideal for training neural networks and similar computationally intensive tasks.
+
+Examples of accelerator chips include:
+
+    Google's Tensor Processing Units (TPUs) with dedicated hardware for deep learning.
+    NVIDIA's GPUs which, though initially designed for graphics processing, are designed to enable parallel processing, which can significantly increase processing speed.
 
 accuracy
 #fundamentals
@@ -523,6 +549,32 @@ BLEURT relies on a pre-trained large language model (BERT to be exact) that is t
 
 The original paper on this metric is BLEURT: Learning Robust Metrics for Text Generation.
 
+Boolean Questions (BoolQ)
+#Metric
+
+A dataset for evaluating an LLM's proficiency in answering yes-or-no questions. Each of the challenges in the dataset has three components:
+
+    A query
+    A passage implying the answer to the query.
+    The correct answer, which is either yes or no.
+
+For example:
+
+    Query: Are there any nuclear power plants in Michigan?
+    Passage: ...three nuclear power plants supply Michigan with about 30% of its electricity.
+    Correct answer: Yes
+
+Researchers gathered the questions from anonymized, aggregated Google Search queries and then used Wikipedia pages to ground the information.
+
+For more information, see BoolQ: Exploring the Surprising Difficulty of Natural Yes/No Questions.
+
+BoolQ is a component of the SuperGLUE ensemble.
+
+BoolQ
+#Metric
+
+Abbreviation for Boolean Questions.
+
 boosting
 
 A machine learning technique that iteratively combines a set of simple and not very accurate classification models (referred to as "weak classifiers") into a classification model with high accuracy (a "strong classifier") by upweighting the examples that the model is currently misclassifying.
@@ -605,6 +657,11 @@ Synonym for unidirectional language model.
 
 See bidirectional language model to contrast different directional approaches in language modeling.
 
+CB
+#Metric
+
+Abbreviation for CommitmentBank.
+
 centroid
 #clustering
 
@@ -635,6 +692,16 @@ The LLM's response would likely:
 
 Chain-of-thought prompting forces the LLM to perform all the calculations, which might lead to a more correct answer. In addition, chain-of-thought prompting enables the user to examine the LLM's steps to determine whether or not the answer makes sense.
 
+Character N-gram F-score (ChrF)
+#Metric
+
+A metric to evaluate machine translation models. Character N-gram F-score determines the degree to which N-grams in reference text overlap the N-grams in an ML model's generated text.
+
+Character N-gram F-score is similar to metrics in the ROUGE and BLEU families, except that:
+
+    Character N-gram F-score operates on character N-grams.
+    ROUGE and BLEU operate on word N-grams or tokens.
+
 chat
 #generativeAI
 
@@ -650,6 +717,25 @@ Data that captures the state of a model's parameters either during training or a
     Capture the checkpoint.
     Later, reload the checkpoint, possibly on different hardware.
     Restart training.
+
+Choice of Plausible Alternatives (COPA)
+#Metric
+
+A dataset for evaluating how well an LLM can identify the better of two alternative answers to a premise. Each of the challenges in the dataset consists of three components:
+
+    A premise, which is typically a statement followed by a question
+    Two possible answers to the question posed in the premise, one of which is correct and the other incorrect
+    The correct answer
+
+For example:
+
+    Premise: The man broke his toe. What was the CAUSE of this?
+    Possible answers:
+        He got a hole in his sock.
+        He dropped a hammer on his foot.
+    Correct answer: 2
+
+COPA is a component of the SuperGLUE ensemble.
 
 class
 #fundamentals
@@ -786,6 +872,23 @@ collaborative filtering
 Making predictions about the interests of one user based on the interests of many other users. Collaborative filtering is often used in recommendation systems.
 
 See Collaborative filtering in the Recommendation Systems course for more information.
+
+CommitmentBank (CB)
+#Metric
+
+A dataset for evaluating an LLM's proficiency in determining whether the author of a passage believes a target clause within that passage. Each entry in the dataset contains:
+
+    A passage
+    A target clause within that passage
+    A Boolean value indicating whether the passage's author believes the target clause
+
+For example:
+
+    Passage: What fun to hear Artemis laugh. She's such a serious child. I didn't know she had a sense of humor.
+    Target clause: she had a sense of humor
+    Boolean: True, which means the author believes the target clause
+
+CommitmentBank is a component of the SuperGLUE ensemble.
 
 compact model
 
@@ -998,15 +1101,11 @@ The term "convolution" in machine learning is often a shorthand way of referring
 
 Without convolutions, a machine learning algorithm would have to learn a separate weight for every cell in a large tensor. For example, a machine learning algorithm training on 2K x 2K images would be forced to find 4M separate weights. Thanks to convolutions, a machine learning algorithm only has to find weights for every cell in the convolutional filter, dramatically reducing the memory needed to train the model. When the convolutional filter is applied, it is simply replicated across cells such that each is multiplied by the filter.
 
-See Introducing Convolutional Neural Networks in the Image Classification course for more information.
-
 convolutional filter
 
 One of the two actors in a convolutional operation. (The other actor is a slice of an input matrix.) A convolutional filter is a matrix having the same rank as the input matrix, but a smaller shape. For example, given a 28x28 input matrix, the filter could be any 2D matrix smaller than 28x28.
 
 In photographic manipulation, all the cells in a convolutional filter are typically set to a constant pattern of ones and zeroes. In machine learning, convolutional filters are typically seeded with random numbers and then the network trains the ideal values.
-
-See Convolution in the Image Classification course for more information.
 
 convolutional layer
 
@@ -1017,8 +1116,6 @@ A 3x3 matrix with the following values: [[0,1,0], [1,0,1], [0,1,0]]
 The following animation shows a convolutional layer consisting of 9 convolutional operations involving the 5x5 input matrix. Notice that each convolutional operation works on a different 3x3 slice of the input matrix. The resulting 3x3 matrix (on the right) consists of the results of the 9 convolutional operations:
 
 An animation showing two matrixes. The first matrix is the 5x5 matrix: [[128,97,53,201,198], [35,22,25,200,195], [37,24,28,197,182], [33,28,92,195,179], [31,40,100,192,177]]. The second matrix is the 3x3 matrix: [[181,303,618], [115,338,605], [169,351,560]]. The second matrix is calculated by applying the convolutional filter [[0, 1, 0], [1, 0, 1], [0, 1, 0]] across different 3x3 subsets of the 5x5 matrix.
-
-See Fully Connected Layers in the Image Classification course for more information.
 
 convolutional neural network
 
@@ -1050,6 +1147,11 @@ Each convolutional operation involves a single 2x2 slice of the input matrix. Fo
 Applying the convolutional filter [[1, 0], [0, 1]] to the top-left 2x2 section of the input matrix, which is [[128,97], [35,22]]. The convolutional filter leaves the 128 and 22 intact, but zeroes out the 97 and 35. Consequently, the convolution operation yields the value 150 (128+22).
 
 A convolutional layer consists of a series of convolutional operations, each acting on a different slice of the input matrix.
+
+COPA
+#Metric
+
+Abbreviation for Choice of Plausible Alternatives.
 
 cost
 #Metric
@@ -1694,6 +1796,13 @@ The process of measuring a model's quality or comparing different models against
 
 To evaluate a supervised machine learning model, you typically judge it against a validation set and a test set. Evaluating a LLM typically involves broader quality and safety assessments.
 
+exact match
+#Metric
+
+An all-or-nothing metric in which the model's output either matches ground truth or the reference text exactly or it doesn't. For example, if ground truth is orange, the only model output that satisfies exact match is orange.
+
+Exact match can also evaluate models whose output is a sequence (a ranked list of items). In general, exact match requires the generated ranked list to exactly match ground truth; that is, each item in both lists must be in the same order. That said, if ground truth consists of multiple correct sequences, then exact match only requires model's output matches one of the correct sequences.
+
 example
 #fundamentals
 
@@ -1735,6 +1844,16 @@ The tendency for gradients in deep neural networks (especially recurrent neural 
 Models suffering from the exploding gradient problem become difficult or impossible to train. Gradient clipping can mitigate this problem.
 
 Compare to vanishing gradient problem.
+
+Extreme Summarization (xsum)
+#Metric
+
+A dataset for evaluating an LLM's ability to summarize a single document. Each entry in the dataset consists of:
+
+    A document authored by the British Broadcasting Corporation (BBC).
+    A one-sentence summary of that document.
+
+For details, see Don't Give Me the Details, Just the Summary! Topic-Aware Convolutional Neural Networks for Extreme Summarization.
 
 F
 
@@ -2225,7 +2344,14 @@ The subsystem within a generative adversarial network that creates new examples.
 
 Contrast with discriminative model.
 
+gini impurity
+#df
+#Metric
 
+A metric similar to entropy. Splitters use values derived from either gini impurity or entropy to compose conditions for classification decision trees. Information gain is derived from entropy. No universally accepted equivalent term for the metric derived from gini impurity exists; however, this unnamed metric is just as important as information gain.
+
+Gini impurity is also called gini index, or simply gini.
+Click the icon for mathematical details about gini impurity.
 
 golden dataset
 
@@ -2290,13 +2416,11 @@ In the simplest form of gradient boosting, at each iteration, a weak model is tr
 
 where:
 
-is the starting strong model.
-is the next strong model.
-is the current strong model.
-is a value between 0.0 and 1.0 called shrinkage, which is analogous to the learning rate in gradient descent.
-is the weak model trained to predict the loss gradient of
-
-    .
+    is the starting strong model.
+    is the next strong model.
+    is the current strong model.
+    is a value between 0.0 and 1.0 called shrinkage, which is analogous to the learning rate in gradient descent.
+    is the weak model trained to predict the loss gradient of .
 
 Modern variations of gradient boosting also include the second derivative (Hessian) of the loss in their computation.
 
@@ -2484,10 +2608,6 @@ image recognition
 
 A process that classifies object(s), pattern(s), or concept(s) in an image. Image recognition is also known as image classification.
 
-For more information, see ML Practicum: Image Classification.
-
-See the ML Practicum: Image Classification course for more information.
-
 imbalanced dataset
 
 Synonym for class-imbalanced dataset.
@@ -2567,6 +2687,29 @@ The three thick arrows show the inference path.
 
 See Decision trees in the Decision Forests course for more information.
 
+information gain
+#df
+#Metric
+
+In decision forests, the difference between a node's entropy and the weighted (by number of examples) sum of the entropy of its children nodes. A node's entropy is the entropy of the examples in that node.
+
+For example, consider the following entropy values:
+
+    entropy of parent node = 0.6
+    entropy of one child node with 16 relevant examples = 0.2
+    entropy of another child node with 24 relevant examples = 0.1
+
+So 40% of the examples are in one child node and 60% are in the other child node. Therefore:
+
+    weighted entropy sum of child nodes = (0.4 * 0.2) + (0.6 * 0.1) = 0.14
+
+So, the information gain is:
+
+    information gain = entropy of parent node - weighted entropy sum of child nodes
+    information gain = 0.6 - 0.14 = 0.46
+
+Most splitters seek to create conditions that maximize information gain.
+
 in-group bias
 #responsible
 
@@ -2641,9 +2784,7 @@ For example, in the image below:
 
 The Van Gogh painting Vincent's Bedroom in Arles, with two different bounding boxes around the night table beside the bed. The ground-truth bounding box (in green) perfectly circumscribes the night table. The predicted bounding box (in purple) is offset 50% down and to the right of the ground-truth bounding box; it encloses the bottom-right quarter of the night table, but misses the rest of the table.
 
-Here, the intersection of the bounding boxes for prediction and ground truth (below left) is 1, and the union of the bounding boxes for prediction and ground truth (below right) is 7, so the IoU is
-
-.
+Here, the intersection of the bounding boxes for prediction and ground truth (below left) is 1, and the union of the bounding boxes for prediction and ground truth (below right) is 7, so the IoU is .
 Same image as above, but with each bounding box divided into four quadrants. There are seven quadrants total, as the bottom-right quadrant of the ground-truth bounding box and the top-left quadrant of the predicted bounding box overlap each other. This overlapping section (highlighted in green) represents the intersection, and has an area of 1. Same image as above, but with each bounding box divided into four quadrants. There are seven quadrants total, as the bottom-right quadrant of the ground-truth bounding box and the top-left quadrant of the predicted bounding box overlap each other. The entire interior enclosed by both bounding boxes (highlighted in green) represents the union, and has an area of 7.
 
 IoU
@@ -2889,7 +3030,7 @@ The time it takes for a model to process input and generate a response. A high l
 
 Factors that influence latency of large language models include:
 
-    Input and output [token] lengths
+    Input and output token lengths
     Model complexity
     The infrastructure the model runs on
 
@@ -3192,6 +3333,12 @@ The literature typically uses the string "MASK" instead of an underline. For exa
 
 Most modern masked language models are bidirectional.
 
+math-pass@k
+
+A metric to determine an LLM's accuracy in solving a math problem within K attempts. For example, math-pass@2 measures an LLM's ability to solve math problems within two attempts. An accuracy of 0.85 on math-pass@2 indicates that an LLM was able to solve math problems 85% of the time within two attempts.
+
+math-pass@k is identical to the pass@k metric, except that the term math-pass@k is specifically used for math evaluation.
+
 matplotlib
 
 An open-source Python 2D plotting library. matplotlib helps you visualize different aspects of machine learning.
@@ -3230,6 +3377,11 @@ More importantly, will User 1 like Black Panther? Taking the dot product corresp
 (1.1 * 1.4) + (2.3 * 1.2) = 4.3
 
 Matrix factorization typically yields a user matrix and item matrix that, together, are significantly more compact than the target matrix.
+
+MBPP
+#Metric
+
+Abbreviation for Mostly Basic Python Problems.
 
 Mean Absolute Error (MAE)
 #Metric
@@ -3462,6 +3614,15 @@ Momentum
 
 A sophisticated gradient descent algorithm in which a learning step depends not only on the derivative in the current step, but also on the derivatives of the step(s) that immediately preceded it. Momentum involves computing an exponentially weighted moving average of the gradients over time, analogous to momentum in physics. Momentum sometimes prevents learning from getting stuck in local minima.
 
+Mostly Basic Python Problems (MBPP)
+#Metric
+
+A dataset for evaluating an LLM's proficiency in generating Python code. Mostly Basic Python Problems provides about 1,000 crowd-sourced programming problems. Each problem in the dataset contains:
+
+    A task description
+    Solution code
+    Three automated test cases
+
 MT
 #generativeAI
 
@@ -3509,6 +3670,33 @@ Synonym for multi-class classification.
 multinomial regression
 
 Synonym for multi-class logistic regression.
+
+Multi-sentence Reading Comprehension (MultiRC)
+
+A dataset to evaluate an LLM's ability to answer multiple choice exercises. Each example in the dataset contains:
+
+    A context paragraph
+    A question about that paragraph
+    Multiple answers to the question. Each answer is labeled True or False. Multiple answers may be True.
+
+For example:
+
+    Context paragraph:
+
+        Susan wanted to have a birthday party. She called all of her friends. She has five friends. Her mom said that Susan can invite them all to the party. Her first friend could not go to the party because she was sick. Her second friend was going out of town. Her third friend was not so sure if her parents would let her. The fourth friend said maybe. The fifth friend could go to the party for sure. Susan was a little sad. On the day of the party, all five friends showed up. Each friend had a present for Susan. Susan was happy and sent each friend a thank you card the next week.
+
+    Question: Did Susan's sick friend recover?
+
+    Multiple answers:
+        Yes, she recovered. (True)
+        No. (False)
+        Yes. (True)
+        No, she didn't recover. (False)
+        Yes, she was at Susan's party. (True)
+
+MultiRC is a component of the SuperGLUE ensemble.
+
+For details, see Looking Beyond the Surface: A Challenge Set for Reading Comprehension over Multiple Sentences.
 
 multitask
 
@@ -4141,8 +4329,6 @@ Pooling helps enforce translational invariance in the input matrix.
 
 Pooling for vision applications is known more formally as spatial pooling. Time-series applications usually refer to pooling as temporal pooling. Less formally, pooling is often called subsampling or downsampling.
 
-See Introducing Convolutional Neural Networks in the ML Practicum: Image Classification course.
-
 positional encoding
 
 A technique to add information about the position of a token in a sequence to the token's embedding. Transformer models use positional encoding to better understand the relationship between different parts of the sequence.
@@ -4493,6 +4679,26 @@ A human who provides labels for examples. "Annotator" is another name for rater.
 
 See Categorical data: Common issues in Machine Learning Crash Course for more information.
 
+Reading Comprehension with Commonsense Reasoning Dataset (ReCoRD)
+#Metric
+
+A dataset to evaluate an LLM's ability to perform commonsense reasoning. Each example in the dataset contains three components:
+
+    A paragraph or two from a news article
+    A query in which one of the entities explicitly or implicitly identified in the passage is masked.
+    The answer (the name of the entity that belongs in the mask)
+
+See ReCoRD for an extensive list of examples.
+
+ReCoRD is a component of the SuperGLUE ensemble.
+
+RealToxicityPrompts
+#Metric
+
+A dataset that contains a set of sentence beginnings that might contain toxic content. Use this dataset to evaluate an LLM's ability to generate non-toxic text to complete the sentence. Typically, you use the Perspective API to determine how well the LLM performed at this task.
+
+See RealToxicityPrompts: Evaluating Neural Toxic Degeneration in Language Models for details.
+
 recall
 #fundamentals
 #Metric
@@ -4527,6 +4733,25 @@ A metric for evaluating systems that output a ranked (ordered) list of items. Re
 Contrast with precision at k.
 Click the icon to see an example.
 
+Recognizing Textual Entailment (RTE)
+#Metric
+
+A dataset for evaluating an LLM's ability to determine whether a hypothesis can be entailed (logically drawn) from a text passage. Each example in an RTE evaluation consists of three parts:
+
+    A passage, typically from news or Wikipedia articles
+    A hypothesis
+    The correct answer, which is either:
+        True, meaning the hypothesis can be entailed from the passage
+        False, meaning the hypothesis can't be entailed from the passage
+
+For example:
+
+    Passage: The Euro is the currency of the European Union.
+    Hypothesis: France uses the Euro as currency.
+    Entailment: True, because France is part of the European Union.
+
+RTE is a component of the SuperGLUE ensemble.
+
 recommendation system
 
 A system that selects for each user a relatively small set of desirable items from a large corpus. For example, a video recommendation system might recommend two videos from a corpus of 100,000 videos, selecting Casablanca and The Philadelphia Story for one user, and Wonder Woman and Black Panther for another. A video recommendation system might base its recommendations on factors such as:
@@ -4535,6 +4760,11 @@ A system that selects for each user a relatively small set of desirable items fr
     Genre, directors, actors, target demographic...
 
 See the Recommendation Systems course for more information.
+
+ReCoRD
+#Metric
+
+Abbreviation for Reading Comprehension with Commonsense Reasoning Dataset.
 
 Rectified Linear Unit (ReLU)
 #fundamentals
@@ -4715,10 +4945,7 @@ return
 
 In reinforcement learning, given a certain policy and a certain state, the return is the sum of all rewards that the agent expects to receive when following the policy from the state to the end of the episode. The agent accounts for the delayed nature of expected rewards by discounting rewards according to the state transitions required to obtain the reward.
 
-Therefore, if the discount factor is
-, and
-
-denote the rewards until the end of the episode, then the return calculation is as follows:
+Therefore, if the discount factor is , and denote the rewards until the end of the episode, then the return calculation is as follows:
 
 reward
 
@@ -4863,6 +5090,11 @@ A regression metric indicating how much variation in a label is due to an indivi
     An R-squared between 0 and 1 indicates the extent to which the label's variation can be predicted from a particular feature or the feature set. For example, an R-squared of 0.10 means that 10 percent of the variance in the label is due to the feature set, an R-squared of 0.20 means that 20 percent is due to the feature set, and so on.
 
 R-squared is the square of the Pearson correlation coefficient between the values that a model predicted and ground truth.
+
+RTE
+#Metric
+
+Abbreviation for Recognizing Textual Entailment.
 
 S
 
@@ -5213,6 +5445,16 @@ SPMD
 
 Abbreviation for single program / multiple data.
 
+SQuAD
+#Metric
+
+Acronym for Stanford Question Answering Dataset, introduced in the paper SQuAD: 100,000+ Questions for Machine Comprehension of Text. The questions in this dataset come from people posing questions about Wikipedia articles. Some of the questions in SQuAD have answers, but other questions intentionally don't have answers. Therefore, you can use SQuAD to evaluate an LLM's ability to do both of the following:
+
+    Answer questions that can be answered.
+    Identify questions that cannot be answered.
+
+Exact match in combination with F1 are the most common metrics for evaluating LLMs against SQuAD.
+
 squared hinge loss
 #Metric
 
@@ -5322,6 +5564,22 @@ summary
 #TensorFlow
 
 In TensorFlow, a value or set of values calculated at a particular step, usually used for tracking model metrics during training.
+
+SuperGLUE
+#Metric
+
+An ensemble of datasets for rating an LLM's overall ability to understand and generate text. The ensemble consists of the following datasets:
+
+    Boolean Questions (BoolQ)
+    CommitmentBank (CB)
+    Choice of Plausible Alternatives (COPA)
+    Multi-sentence Reading Comprehension (MultiRC)
+    Reading Comprehension with Commonsense Reasoning Dataset (ReCoRD)
+    Recognizing Textual Entailment (RTE)
+    Words in Context (WiC)
+    Winograd Schema Challenge (WSC)
+
+For details, see SuperGLUE: A Stickier Benchmark for General-Purpose Language Understanding Systems.
 
 supervised machine learning
 #fundamentals
@@ -5547,7 +5805,7 @@ A component of a deep neural network that is itself a deep neural network. In so
 toxicity
 #Metric
 
-The degree to which content is abusive, threatening, or offensive. Many machine learning models can identify and measure toxicity. Most of these models identify toxicity along multiple parameters, such as the level of abusive language and the level of threatening language.
+The degree to which content is abusive, threatening, or offensive. Many machine learning models can identify, measure, and classify toxicity. Most of these models identify toxicity along multiple parameters, such as the level of abusive language and the level of threatening language.
 
 TPU
 #TensorFlow
@@ -5690,6 +5948,16 @@ trigram
 
 An N-gram in which N=3.
 
+Trivia Question Answering
+#Metric
+
+Datasets to evaluate an LLM's ability to answer trivia questions. Each dataset contains question-answer pairs authored by trivia enthusiasts. Different datasets are grounded by different sources, including:
+
+    Web search (TriviaQA)
+    Wikipedia (TriviaQA_wiki)
+
+For more information see TriviaQA: A Large Scale Distantly Supervised Challenge Dataset for Reading Comprehension.
+
 true negative (TN)
 #fundamentals
 #Metric
@@ -5713,6 +5981,13 @@ True positive rate is the y-axis in an ROC curve.
 TTL
 
 Abbreviation for time to live.
+
+Typologically Diverse Question Answering (TyDi QA)
+#Metric
+
+A large dataset for evaluating an LLM's proficiency in answering questions. The dataset contains question and answer pairs in many languages.
+
+For details, see TyDi QA: A Benchmark for Information-Seeking Question Answering in Typologically Diverse Languages.
 
 U
 
@@ -5948,6 +6223,11 @@ weighted sum = (2)(-1.3) + (-1)(0.6) + (3)(0.4) = -2.0
 
 A weighted sum is the input argument to an activation function.
 
+WiC
+#Metric
+
+Abbreviation for Words in Context.
+
 wide model
 
 A linear model that typically has many sparse input features. We refer to it as "wide" since such a model is a special type of neural network with a large number of inputs that connect directly to the output node. Wide models are often easier to debug and inspect than deep models. Although wide models cannot express nonlinearities through hidden layers, wide models can use transformations such as feature crossing and bucketization to model nonlinearities in different ways.
@@ -5958,6 +6238,37 @@ width
 
 The number of neurons in a particular layer of a neural network.
 
+WikiLingua (wiki_lingua)
+#Metric
+
+A dataset for evaluating an LLM's ability to summarize short articles. WikiHow, an encyclopedia of articles explaining how to do various tasks, is the human-authored source for both the articles and the summaries. Each entry in the dataset consists of:
+
+    An article, which is created by appending each step of the prose (paragraph) version of the numbered list, minus the opening sentence of each step.
+    A summary of that article, consisting of the opening sentence of each step in the numbered list.
+
+For details, see WikiLingua: A New Benchmark Dataset for Cross-Lingual Abstractive Summarization.
+
+Winograd Schema Challenge (WSC)
+#Metric
+
+A format (or dataset conforming to that format) for evaluating an LLM's ability to determine the noun phrase that a pronoun refers to.
+
+Each entry in a Winograd Schema Challenge consists of:
+
+    A short passage, which contains a target pronoun
+    A target pronoun
+    Candidate noun phrases, followed by the correct answer (a Boolean). If the target pronoun refers to this candidate, the answer is True. If the target pronoun does not refer to this candidate, the answer is False.
+
+For example:
+
+    Passage: Mark told Pete many lies about himself, which Pete included in his book. He should have been more truthful.
+    Target pronoun: He
+    Candidate noun phrases:
+        Mark: True, because the target pronoun refers to Mark
+        Pete: False, because the target pronoun doesn't refer to Peter
+
+The Winograd Schema Challenge is a component of the SuperGLUE ensemble.
+
 wisdom of the crowd
 #df
 
@@ -5965,9 +6276,41 @@ The idea that averaging the opinions or estimates of a large group of people ("t
 
 Ensembles are a software analog of wisdom of the crowd. Even if individual models make wildly inaccurate predictions, averaging the predictions of many models often generates surprisingly good predictions. For example, although an individual decision tree might make poor predictions, a decision forest often makes very good predictions.
 
+WMT
+
+Strangely, an abbreviation for Conference on Machine Translation. (The abbreviation is WMT because the original name was Workshop on Machine Translation.) The conference focuses on developments in machine translation systems.
+
 word embedding
 
 Representing each word in a word set within an embedding vector; that is, representing each word as a vector of floating-point values between 0.0 and 1.0. Words with similar meanings have more-similar representations than words with different meanings. For example, carrots, celery, and cucumbers would all have relatively similar representations, which would be very different from the representations of airplane, sunglasses, and toothpaste.
+
+Words in Context (WiC)
+#Metric
+
+A dataset for evaluating how well an LLM uses context to understand words that have multiple meanings. Each entry in the dataset contains:
+
+    Two sentences, each containing the target word
+    The target word
+    The correct answer (a Boolean), where:
+        True means the target word has the same meaning in the two sentences
+        False means the target word has a different meaning in the two sentences
+
+For example:
+
+    Two sentences:
+        There's a lot of trash on the bed of the river.
+        I keep a glass of water next to my bed when I sleep.
+    The target word: bed
+    Correct answer: False, because the target word has a different meaning in the two sentences.
+
+For details, see WiC: the Word-in-Context Dataset for Evaluating Context-Sensitive Meaning Representations.
+
+Words in Context is a component of the SuperGLUE ensemble.
+
+WSC
+#Metric
+
+Abbreviation for Winograd Schema Challenge.
 
 X
 
@@ -5976,6 +6319,20 @@ XLA (Accelerated Linear Algebra)
 An open-source machine learning compiler for GPUs, CPUs, and ML accelerators.
 
 The XLA compiler takes models from popular ML frameworks such as PyTorch, TensorFlow, and JAX, and optimizes them for high-performance execution across different hardware platforms including GPUs, CPUs, and ML accelerators.
+
+XL-Sum (xlsum)
+#Metric
+
+A dataset for evaluating an LLM's proficiency in summarizing text. XL-Sum provides entries in many languages. Each entry in the dataset contains:
+
+    An article, taken from the British Broadcasting Company (BBC).
+    A summary of the article, written by the article's author. Note that that summary can contain words or phrases not present in the article.
+
+For details, see XL-Sum: Large-Scale Multilingual Abstractive Summarization for 44 Languages.
+
+xsum
+
+Abbreviation for Extreme Summarization.
 
 Z
 
@@ -6019,5 +6376,3 @@ Raw value 	Z-score
 The machine learning model then trains on the Z-scores for that feature instead of on the raw values.
 
 See Numerical data: Normalization in Machine Learning Crash Course for more information.
-
-This glossary defines machine learning terms.
