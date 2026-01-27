@@ -1,7 +1,4 @@
 
-
-# 📘 RAG Daily Tutorial
-
 ## **Day 1 — What RAG *Really* Is (and Why Vanilla LLMs Fail)**
 
 ---
