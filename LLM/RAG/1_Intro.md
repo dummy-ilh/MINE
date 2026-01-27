@@ -1,7 +1,4 @@
-Alright. Let’s lock in **RAG (Retrieval-Augmented Generation)** properly — *daily, systematic, no fluff*.
-Today is **Day 1**. Think of this as a PhD-level walk-through, not a blog skim.
 
----
 
 # 📘 RAG Daily Tutorial
 
@@ -15,9 +12,9 @@ Today is **Day 1**. Think of this as a PhD-level walk-through, not a blog skim.
 
 A language model learns:
 
-[
+$[
 P(\text{next token} \mid \text{previous tokens})
-]
+]$
 
 That’s it.
 
@@ -64,9 +61,9 @@ People try:
 
 Formally:
 
-[
+$[
 \text{Answer} = \text{LLM}(\text{Query} + \text{Retrieved Context})
-]
+]$
 
 ---
 
@@ -171,7 +168,7 @@ You should say:
 
 > “RAG decouples knowledge storage from generation by retrieving relevant documents at inference time using embeddings and vector search, then conditioning the LLM on that retrieved context to produce grounded, up-to-date, and auditable responses.”
 
-That answer alone clears **senior ML interviews**.
+
 
 ---
 
