@@ -182,4 +182,250 @@ You should say:
 
 ---
 
+Perfect — this is *exactly* the right mental checkpoint in RAG mastery.
+If you truly understand **when to use RAG vs when to avoid it**, you’re already ahead of most people.
+
+Below are **high-quality interview / deep-understanding Q&A**.
+These are not fluffy — they probe *judgment*, *architecture*, and *failure modes*.
+
+---
+
+# 🔹 RAG: When to Use vs When to Avoid — Potential Q&A
+
+## 1️⃣ What problem does RAG fundamentally solve?
+
+**Answer:**
+RAG solves the problem of **knowledge freshness, domain specificity, and factual grounding** in LLMs.
+
+LLMs:
+
+* Are trained on **static data**
+* Have **no awareness of private or proprietary information**
+* Can **hallucinate confidently**
+
+RAG augments generation by:
+
+* Retrieving **external, authoritative documents**
+* Grounding responses in **real data**
+* Reducing hallucination **without retraining**
+
+📌 Use RAG when the *source of truth exists outside the model*.
+
+---
+
+## 2️⃣ When is RAG the *right* choice?
+
+**Answer:**
+Use RAG when **at least one** of the following is true:
+
+1. **Information changes frequently**
+
+   * Policies, pricing, legal docs, internal wikis
+2. **Knowledge is private or proprietary**
+
+   * Company docs, customer data, research papers
+3. **Traceability matters**
+
+   * “Show me where this answer came from”
+4. **Accuracy > creativity**
+
+   * QA systems, support bots, compliance tools
+5. **Large corpus, selective access**
+
+   * You don’t want to dump everything into the prompt
+
+📌 RAG shines when **retrieval precision** improves generation quality.
+
+---
+
+## 3️⃣ When should you *avoid* RAG?
+
+**Answer:**
+Avoid RAG when retrieval **does not add signal**, or adds **latency and noise**.
+
+### ❌ Do NOT use RAG if:
+
+1. The task is **pure reasoning**
+
+   * Math proofs, algorithm design, puzzles
+2. The task is **creative**
+
+   * Story writing, brainstorming, poetry
+3. The knowledge is **small and static**
+
+   * You can just put it in the prompt
+4. Retrieval quality is **poor**
+
+   * Garbage in → hallucinated garbage out
+5. You need **ultra-low latency**
+
+   * RAG adds vector search + reranking cost
+
+📌 RAG is not a free upgrade — it’s a **tradeoff**.
+
+---
+
+## 4️⃣ Can RAG make hallucinations worse?
+
+**Answer:**
+Yes — **bad RAG is worse than no RAG**.
+
+Reasons:
+
+* Irrelevant chunks confuse the model
+* Conflicting documents introduce ambiguity
+* Model may hallucinate to “connect” retrieved text
+
+This is called **retrieval-induced hallucination**.
+
+📌 RAG reduces hallucination *only if retrieval precision is high*.
+
+---
+
+## 5️⃣ How do you decide between RAG and fine-tuning?
+
+**Answer:**
+
+| Use Case                 | RAG | Fine-Tuning |
+| ------------------------ | --- | ----------- |
+| Knowledge changes        | ✅   | ❌           |
+| Private documents        | ✅   | ❌           |
+| Behavioral change        | ❌   | ✅           |
+| Formatting/style control | ❌   | ✅           |
+| Factual grounding        | ✅   | ❌           |
+| Cost over time           | ✅   | ❌           |
+
+**Rule of thumb:**
+
+* **RAG = “What the model should know”**
+* **Fine-tuning = “How the model should behave”**
+
+📌 Often, the best systems use **both**.
+
+---
+
+## 6️⃣ Why not just put all documents into the prompt?
+
+**Answer:**
+Because of:
+
+1. **Context window limits**
+2. **Cost explosion**
+3. **Attention dilution**
+4. **Lower relevance**
+
+LLMs do not treat all tokens equally — important info can get buried.
+
+📌 RAG performs **selective attention via retrieval**.
+
+---
+
+## 7️⃣ What signals tell you RAG is failing?
+
+**Answer:**
+
+* Answers reference **wrong sections**
+* High variance across identical queries
+* Over-verbose but incorrect responses
+* Model ignores retrieved content
+* Users complain: “This isn’t in our docs”
+
+📌 These are **retrieval failures**, not model failures.
+
+---
+
+## 8️⃣ What are common RAG anti-patterns?
+
+**Answer:**
+
+1. Chunking by fixed size instead of semantics
+2. No metadata filtering (date, source, type)
+3. Using only cosine similarity, no reranking
+4. Stuffing too many chunks into context
+5. No evaluation of retrieval quality
+
+📌 Most RAG failures are **engineering failures**, not LLM failures.
+
+---
+
+## 9️⃣ Is RAG useful for reasoning-heavy tasks?
+
+**Answer:**
+Only **partially**.
+
+RAG helps by:
+
+* Supplying formulas
+* Providing definitions
+* Giving examples
+
+But reasoning itself is done by the LLM.
+
+📌 RAG **feeds the brain**, it doesn’t *replace thinking*.
+
+---
+
+## 🔟 How does RAG impact latency and cost?
+
+**Answer:**
+RAG adds:
+
+1. Embedding lookup
+2. Vector DB search
+3. Optional reranking
+4. Larger prompt
+
+Tradeoff:
+
+* **Higher latency**
+* **Lower hallucination risk**
+* **Lower retraining cost**
+
+📌 Production RAG systems optimize retrieval aggressively.
+
+---
+
+## 1️⃣1️⃣ What’s the minimal scenario where RAG is overkill?
+
+**Answer:**
+If:
+
+* Data < 3–5 pages
+* Rarely changes
+* No need for citations
+
+Then:
+👉 Just prompt engineering is better.
+
+📌 RAG is infrastructure — don’t build it unless needed.
+
+---
+
+## 1️⃣2️⃣ What’s the mental model to decide RAG vs no-RAG?
+
+**Answer (Golden Rule):**
+
+> **If the correct answer depends on external documents → use RAG.
+> If it depends on reasoning or creativity → avoid RAG.**
+
+---
+
+## 1️⃣3️⃣ Real-world examples
+
+### ✅ Use RAG
+
+* Internal HR policy chatbot
+* Legal document QA
+* Research paper assistant
+* Customer support bot
+
+### ❌ Avoid RAG
+
+* DSA problem solving
+* Interview prep explanations
+* System design brainstorming
+* Creative writing
+
+---
+
 
