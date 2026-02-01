@@ -466,5 +466,5 @@ Every probability rule is a statement about set operations.
 
 ---
 
-![Set Operations](Probability%20&%20Statistics/images/set.png)
+![Set Operations](/images/set.png)
 
