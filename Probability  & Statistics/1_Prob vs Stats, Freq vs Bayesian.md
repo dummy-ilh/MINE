@@ -100,7 +100,7 @@ X_1, X_2, ..., X_n \sim P_\theta
 
 You:
 
-* Estimate ( \theta )
+* Estimate ( $\theta$ )
 * Test hypotheses about ( \theta )
 * Build confidence intervals for ( \theta )
 
@@ -254,7 +254,7 @@ Probability = **long-run relative frequency** of an event.
 If you repeat an experiment infinitely many times under identical conditions, the probability of an event is the limiting frequency with which it occurs.
 
 $[
-P(A) = \lim_{n \to \infty} \frac{\text{# times A occurs}}{n}
+P(A) = \lim_{n \to \infty} \frac{\text{no times A occurs}}{n}
 ]$
 
 ---
