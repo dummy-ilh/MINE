@@ -10,15 +10,15 @@ Let’s build **master-level notes** on Conditional Probability — structured, 
 
 Instead of asking:
 
-[
+$[
 P(A)
-]
+]$
 
 we now ask:
 
-[
+$[
 P(A \mid B)
-]
+]$
 
 Read as:
 
@@ -37,15 +37,15 @@ When we condition on B:
 
 So,
 
-[
+$[
 P(A \mid B) = \frac{\text{portion of B that is also A}}{\text{entire B}}
-]
+]$
 
 That becomes the formal definition:
 
-[
+$[
 \boxed{P(A \mid B) = \frac{P(A \cap B)}{P(B)}}, \quad P(B) \neq 0
-]
+]$
 
 ---
 
@@ -59,9 +59,9 @@ Think in terms of area:
 
 Then:
 
-[
+$[
 P(A|B) = \frac{\text{Area}(A \cap B)}{\text{Area}(B)}
-]
+]$
 
 This mental image prevents 80% of mistakes.
 
@@ -79,9 +79,9 @@ Sample space size = (2^3 = 8)
 
 Only 1 favorable outcome:
 
-[
+$[
 P(3H) = \frac{1}{8}
-]
+]$
 
 ---
 
@@ -89,17 +89,17 @@ P(3H) = \frac{1}{8}
 
 Now sample space reduces to:
 
-[
+$[
 { HHH, HHT, HTH, HTT }
-]
+]$
 
 Size = 4
 
 Only one gives 3 heads.
 
-[
+$[
 P(3H \mid \text{first is H}) = \frac{1}{4}
-]
+]$
 
 ---
 
@@ -122,29 +122,29 @@ Let:
 * (B =) “first toss is head”
 
 We know:
-[
+$[
 P(A) = 1/8
-]
-[
+]$
+$[
 P(B) = 1/2
-]
-[
+]$
+$[
 A \cap B = A
-]
+]$
 
 Using formula:
 
-[
+$[
 P(A|B) = \frac{1/8}{1/2} = 1/4
-]
+]$
 
 Notice something powerful:
 
 If (A \subseteq B),
 
-[
+$[
 P(A|B) = \frac{P(A)}{P(B)}
-]
+]$
 
 ---
 
@@ -161,15 +161,15 @@ Define:
 
 ## Step 1: Individual Probabilities
 
-[
+$[
 P(S_1) = 13/52 = 1/4
-]
+]$
 
 Surprising result:
 
-[
+$[
 P(S_2) = 1/4
-]
+]$
 
 Even though cards aren't replaced!
 
@@ -185,31 +185,31 @@ Ways to draw:
 * Spade then spade: (13 \times 12)
 * Any two cards: (52 \times 51)
 
-[
+$[
 P(S_1 \cap S_2) = \frac{13 \cdot 12}{52 \cdot 51}
-]
+]$
 
 Simplify:
 
-[
+$[
 = \frac{3}{51}
-]
+]$
 
 ---
 
 ## Step 3: Conditional Probability
 
-[
+$[
 P(S_2 | S_1) = \frac{P(S_1 \cap S_2)}{P(S_1)}
-]
+]$
 
-[
+$[
 = \frac{3/51}{1/4}
-]
+]$
 
-[
+$[
 = \frac{12}{51}
-]
+]$
 
 ---
 
@@ -222,9 +222,9 @@ If first card is spade:
 
 So:
 
-[
+$[
 P(S_2 | S_1) = 12/51
-]
+]$
 
 ---
 
@@ -232,15 +232,15 @@ P(S_2 | S_1) = 12/51
 
 Without conditioning:
 
-[
+$[
 P(S_2) = 1/4
-]
+]$
 
 With conditioning:
 
-[
+$[
 P(S_2 | S_1) = 12/51
-]
+]$
 
 These are different.
 
@@ -254,9 +254,9 @@ Because conditioning removes one spade from deck.
 
 What is:
 
-[
+$[
 P(S_2 | S_1^c)
-]
+]$
 
 Meaning:
 Second card is spade given first card is NOT spade.
@@ -268,15 +268,15 @@ If first card is not spade:
 
 So:
 
-[
+$[
 \boxed{P(S_2 | S_1^c) = \frac{13}{51}}
-]
+]$
 
 Notice:
 
-[
+$[
 \frac{13}{51} > \frac{12}{51}
-]
+]$
 
 This shows:
 
@@ -291,9 +291,9 @@ This is dependence.
 
 ### (1) Definition
 
-[
+$[
 P(A|B) = \frac{P(A \cap B)}{P(B)}
-]
+]$
 
 ---
 
@@ -301,15 +301,15 @@ P(A|B) = \frac{P(A \cap B)}{P(B)}
 
 Rearranging:
 
-[
+$[
 P(A \cap B) = P(A|B) P(B)
-]
+]$
 
 Also:
 
-[
+$[
 P(A \cap B) = P(B|A) P(A)
-]
+]$
 
 This identity powers Bayes’ Theorem.
 
@@ -317,9 +317,9 @@ This identity powers Bayes’ Theorem.
 
 ### (3) Conditional Probability Is Not Symmetric
 
-[
+$[
 P(A|B) \neq P(B|A)
-]
+]$
 
 Very common mistake.
 
@@ -374,15 +374,15 @@ It is the mathematical foundation of:
 
 # 1️⃣3️⃣ Master Summary Sheet
 
-[
+$[
 \boxed{P(A|B) = \frac{P(A \cap B)}{P(B)}}
-]
+]$
 
 * Restrict universe to B
 * Recompute proportion inside B
 * Always check (P(B) \neq 0)
 
-[!Conitional Probability](images/Conditional.PNG)
+$[!Conitional Probability]$(images/Conditional.PNG)
 ---
 
 Excellent. Let’s treat this as a full conceptual build-up — from definition → structure → deep applications.
@@ -393,15 +393,15 @@ Excellent. Let’s treat this as a full conceptual build-up — from definition 
 
 We start from the **definition of conditional probability**:
 
-[
+$[
 P(A|B) = \frac{P(A \cap B)}{P(B)}
-]
+]$
 
 Similarly:
 
-[
+$[
 P(B|A) = \frac{P(A \cap B)}{P(A)}
-]
+]$
 
 ---
 
@@ -409,31 +409,31 @@ P(B|A) = \frac{P(A \cap B)}{P(A)}
 
 From first equation:
 
-[
+$[
 P(A \cap B) = P(A|B)P(B)
-]
+]$
 
 From second equation:
 
-[
+$[
 P(A \cap B) = P(B|A)P(A)
-]
+]$
 
 Since both equal the same joint probability:
 
-[
+$[
 P(A|B)P(B) = P(B|A)P(A)
-]
+]$
 
 ---
 
 ## Step 2: Solve for ( P(A|B) )
 
-[
+$[
 \boxed{
 P(A|B) = \frac{P(B|A)P(A)}{P(B)}
 }
-]
+]$
 
 This is **Bayes’ Theorem**.
 
@@ -443,19 +443,19 @@ This is **Bayes’ Theorem**.
 
 If (A) and (A^c) partition the space:
 
-[
+$[
 P(B) = P(B|A)P(A) + P(B|A^c)P(A^c)
-]
+]$
 
 Plug into Bayes:
 
-[
+$[
 \boxed{
 P(A|B) =
 \frac{P(B|A)P(A)}
 {P(B|A)P(A) + P(B|A^c)P(A^c)}
 }
-]
+]$
 
 This is the version used in:
 
@@ -483,9 +483,9 @@ Bayes = **belief update mechanism**
 
 Events (A) and (B) are independent if:
 
-[
+$[
 \boxed{P(A \cap B) = P(A)P(B)}
-]
+]$
 
 ---
 
@@ -493,27 +493,27 @@ Events (A) and (B) are independent if:
 
 Recall:
 
-[
+$[
 P(A|B) = \frac{P(A \cap B)}{P(B)}
-]
+]$
 
 If independent:
 
-[
+$[
 P(A \cap B) = P(A)P(B)
-]
+]$
 
 Plug in:
 
-[
+$[
 P(A|B) = \frac{P(A)P(B)}{P(B)} = P(A)
-]
+]$
 
 So independence means:
 
-[
+$[
 \boxed{P(A|B) = P(A)}
-]
+]$
 
 Meaning:
 Knowing B does not change probability of A.
@@ -539,12 +539,12 @@ Let:
 * A = first toss is head
 * B = second toss is head
 
-[
+$[
 P(A \cap B) = 1/4
-]
-[
+]$
+$[
 P(A)P(B) = (1/2)(1/2) = 1/4
-]
+]$
 
 Thus independent.
 
@@ -554,15 +554,15 @@ Thus independent.
 
 Without replacement:
 
-[
+$[
 P(S_2|S_1) = 12/51
-]
+]$
 
 But:
 
-[
+$[
 P(S_2) = 1/4
-]
+]$
 
 Not equal → dependent.
 
@@ -585,9 +585,9 @@ What is probability both are boys?
 
 ### Step 1: Sample space
 
-[
+$[
 {BB, BG, GB, GG}
-]
+]$
 
 Given at least one boy:
 
@@ -595,15 +595,15 @@ Remove GG.
 
 Reduced space:
 
-[
+$[
 {BB, BG, GB}
-]
+]$
 
 Thus:
 
-[
+$[
 P(BB | \text{at least one boy}) = 1/3
-]
+]$
 
 Common mistake: Answering 1/2.
 
@@ -625,33 +625,33 @@ Probability person has disease given positive test.
 
 ### Step 1: Define
 
-[
+$[
 P(D) = 0.01
-]
-[
+]$
+$[
 P(+|D) = 0.99
-]
-[
+]$
+$[
 P(+|D^c) = 0.05
-]
+]$
 
 ---
 
 ### Step 2: Apply Bayes
 
-[
+$[
 P(D|+) =
 \frac{0.99 \cdot 0.01}
 {0.99 \cdot 0.01 + 0.05 \cdot 0.99}
-]
+]$
 
-[
+$[
 = \frac{0.0099}{0.0099 + 0.0495}
-]
+]$
 
-[
+$[
 = 0.1667
-]
+]$
 
 Only ~16.7%.
 
@@ -672,9 +672,9 @@ Switch?
 
 Correct probability if switch:
 
-[
+$[
 2/3
-]
+]$
 
 Why?
 
@@ -695,9 +695,9 @@ Now we go deeper.
 
 If X is random variable:
 
-[
-E[X|B] = \sum x \cdot P(X=x | B)
-]
+$[
+E$[X|B]$ = \sum x \cdot P(X=x | B)
+]$
 
 This is:
 Expected value under reduced universe B.
@@ -706,11 +706,11 @@ Expected value under reduced universe B.
 
 ## Law of Total Expectation
 
-[
+$[
 \boxed{
-E[X] = E[E[X|Y]]
+E$[X]$ = E$[E$[X|Y]$]$
 }
-]
+]$
 
 Meaning:
 Take expectation inside each condition, then average.
@@ -733,9 +733,9 @@ Suppose:
 
 Then:
 
-[
-E[Sales] = 0.5(100) + 0.5(200) = 150
-]
+$[
+E$[Sales]$ = 0.5(100) + 0.5(200) = 150
+]$
 
 This is conditioning on weather.
 
@@ -743,10 +743,10 @@ This is conditioning on weather.
 
 # 5️⃣ Conditional Variance (Advanced Insight)
 
-[
+$[
 Var(X) =
-E[Var(X|Y)] + Var(E[X|Y])
-]
+E$[Var(X|Y)]$ + Var(E$[X|Y]$)
+]$
 
 Interpretation:
 
@@ -817,9 +817,9 @@ We’ll treat this as a deep conceptual build:
 
 The rule:
 
-[
+$[
 \boxed{P(A \cap B) = P(A|B)P(B)}
-]
+]$
 
 This is NOT a new theorem.
 
@@ -827,15 +827,15 @@ It is just the definition of conditional probability rewritten.
 
 From:
 
-[
+$[
 P(A|B) = \frac{P(A \cap B)}{P(B)}
-]
+]$
 
 Multiply both sides by (P(B)):
 
-[
+$[
 P(A \cap B) = P(A|B)P(B)
-]
+]$
 
 ---
 
@@ -848,11 +848,11 @@ Think sequentially:
 
 So:
 
-[
+$[
 \text{Joint probability} =
 \text{(Probability B happens)} \times
 \text{(Probability A happens after B)}
-]
+]$
 
 This is exactly the **rule of product in counting**, but upgraded to probability.
 
@@ -872,17 +872,17 @@ Same structure.
 
 We previously computed:
 
-[
+$[
 P(S_2 | S_1) = 12/51
-]
+]$
 
-[
+$[
 P(S_1) = 1/4
-]
+]$
 
 Multiplication rule predicts:
 
-[
+$[
 P(S_1 \cap S_2)
 ===============
 
@@ -891,7 +891,7 @@ P(S_1 \cap S_2)
 # \frac{12}{51} \cdot \frac{1}{4}
 
 \frac{3}{51}
-]
+]$
 
 Which matches direct counting.
 
@@ -905,9 +905,9 @@ Now we go deeper.
 
 Suppose the sample space is partitioned into:
 
-[
+$[
 B_1, B_2, B_3
-]
+]$
 
 They must:
 
@@ -922,20 +922,20 @@ This is called a **partition**.
 
 Every outcome in A must lie in one of:
 
-[
+$[
 A \cap B_1, \quad
 A \cap B_2, \quad
 A \cap B_3
-]
+]$
 
 So:
 
-[
+$[
 P(A) =
 P(A \cap B_1) +
 P(A \cap B_2) +
 P(A \cap B_3)
-]
+]$
 
 This is just additivity.
 
@@ -943,16 +943,16 @@ This is just additivity.
 
 ## Step 2: Apply Multiplication Rule
 
-[
+$[
 P(A \cap B_i)
 =============
 
 P(A|B_i)P(B_i)
-]
+]$
 
 Substitute:
 
-[
+$[
 \boxed{
 P(A)
 ====
@@ -963,7 +963,7 @@ P(A|B_2)P(B_2)
 +
 P(A|B_3)P(B_3)
 }
-]
+]$
 
 This is the Law of Total Probability.
 
@@ -992,54 +992,54 @@ Draw two balls (no replacement).
 
 We want:
 
-[
+$[
 P(R_2)
-]
+]$
 
 Partition by first draw:
 
-[
+$[
 R_1, \quad G_1
-]
+]$
 
 Apply LTP:
 
-[
+$[
 P(R_2)
 ======
 
 P(R_2|R_1)P(R_1)
 +
 P(R_2|G_1)P(G_1)
-]
+]$
 
 Compute:
 
-[
+$[
 P(R_2|R_1) = 4/6
-]
-[
+]$
+$[
 P(R_2|G_1) = 5/6
-]
-[
+]$
+$[
 P(R_1) = 5/7
-]
-[
+]$
+$[
 P(G_1) = 2/7
-]
+]$
 
 So:
 
-[
+$[
 P(R_2)
 ======
 
 \frac{4}{6}\cdot\frac{5}{7}
 +
 \frac{5}{6}\cdot\frac{2}{7}
-]
+]$
 
-# [
+# $[
 
 \frac{20}{42}
 +
@@ -1049,13 +1049,13 @@ P(R_2)
 # \frac{30}{42}
 
 \frac{5}{7}
-]
+]$
 
 Beautiful symmetry result:
 
-[
+$[
 P(R_2) = 5/7
-]
+]$
 
 Same as original red proportion.
 
@@ -1084,40 +1084,40 @@ If first was red:
 Remaining: 4 red, 2 green
 Then add 1 green → 4 red, 3 green
 
-[
+$[
 P(R_2|R_1) = 4/7
-]
+]$
 
 If first was green:
 
 Remaining: 5 red, 1 green
 Then add 1 red → 6 red, 1 green
 
-[
+$[
 P(R_2|G_1) = 6/7
-]
+]$
 
 ---
 
 ## Step 2: Apply LTP
 
-[
+$[
 P(R_2)
 ======
 
 P(R_2|R_1)P(R_1)
 +
 P(R_2|G_1)P(G_1)
-]
+]$
 
-# [
+# $[
 
 \frac{4}{7}\cdot\frac{5}{7}
 +
 \frac{6}{7}\cdot\frac{2}{7}
-]
+]$
 
-# [
+# $[
 
 \frac{20}{49}
 +
@@ -1125,7 +1125,7 @@ P(R_2|G_1)P(G_1)
 =============
 
 \frac{32}{49}
-]
+]$
 
 This cannot be solved cleanly without conditioning.
 
@@ -1147,9 +1147,9 @@ LTP is essential when:
 
 Law of Total Probability is just:
 
-[
-P(A) = E[ P(A|B) ]
-]
+$[
+P(A) = E$[ P(A|B) ]$
+]$
 
 It is expectation over partition.
 
@@ -1224,14 +1224,14 @@ Each path = joint probability.
 ### Rule 1: Probabilities on branches are conditional
 
 At level 1:
-[
+$[
 P(R_1) = 5/7
-]
+]$
 
 At level 2:
-[
+$[
 P(R_2 | R_1) = 4/7
-]
+]$
 
 These are not unconditional probabilities.
 
@@ -1241,13 +1241,13 @@ These are not unconditional probabilities.
 
 To get probability of reaching a node:
 
-[
+$[
 \text{Multiply all branch probabilities along path}
-]
+]$
 
 Example:
 
-[
+$[
 P(R_1 \cap R_2)
 ===============
 
@@ -1256,7 +1256,7 @@ P(R_1 \cap R_2)
 # \frac{5}{7}\cdot\frac{4}{7}
 
 \frac{20}{49}
-]
+]$
 
 This is exactly the multiplication rule.
 
@@ -1268,14 +1268,14 @@ To find (P(R_2)):
 
 Add all paths that end in (R_2).
 
-[
+$[
 P(R_2)
 ======
 
 P(R_1 \cap R_2)
 +
 P(G_1 \cap R_2)
-]
+]$
 
 This is exactly the Law of Total Probability.
 
@@ -1295,12 +1295,12 @@ After first draw:
 
 ## Step 1: Level 1
 
-[
+$[
 P(R_1)=5/7
-]
-[
+]$
+$[
 P(G_1)=2/7
-]
+]$
 
 ---
 
@@ -1310,43 +1310,43 @@ If (R_1):
 Remaining 4 red, 2 green → add 1 green
 → 4 red, 3 green
 
-[
+$[
 P(R_2|R_1)=4/7
-]
-[
+]$
+$[
 P(G_2|R_1)=3/7
-]
+]$
 
 If (G_1):
 Remaining 5 red, 1 green → add 1 red
 → 6 red, 1 green
 
-[
+$[
 P(R_2|G_1)=6/7
-]
-[
+]$
+$[
 P(G_2|G_1)=1/7
-]
+]$
 
 ---
 
 ## Step 3: Multiply Paths
 
-[
+$[
 P(R_1 \cap R_2)=\frac{5}{7}\cdot\frac{4}{7}=\frac{20}{49}
-]
+]$
 
-[
+$[
 P(G_1 \cap R_2)=\frac{2}{7}\cdot\frac{6}{7}=\frac{12}{49}
-]
+]$
 
 ---
 
 ## Step 4: Add Relevant Leaves
 
-[
+$[
 P(R_2)=\frac{20}{49}+\frac{12}{49}=\frac{32}{49}
-]
+]$
 
 Tree → multiplication + addition.
 
@@ -1384,9 +1384,9 @@ We label a node as (R_2).
 
 But what it *really* means is:
 
-[
+$[
 R_1 \cap R_2
-]
+]$
 
 Each leaf is always a **joint event**.
 
@@ -1394,9 +1394,9 @@ So whenever you see a leaf:
 
 Mentally translate:
 
-[
+$[
 \text{Leaf} = \text{Intersection of all events on that path}
-]
+]$
 
 This prevents logical errors.
 
@@ -1406,16 +1406,16 @@ This prevents logical errors.
 
 Every tree represents repeated use of:
 
-[
+$[
 P(A \cap B \cap C)
 ==================
 
 P(A)P(B|A)P(C|A \cap B)
-]
+]$
 
 This generalizes to n steps:
 
-[
+$[
 P(A_1 \cap A_2 \cap ... \cap A_n)
 =================================
 
@@ -1423,7 +1423,7 @@ P(A_1)
 P(A_2|A_1)
 P(A_3|A_1 \cap A_2)
 ...
-]
+]$
 
 Trees are just visual implementations of this chain rule.
 
@@ -1451,23 +1451,23 @@ Trees also allow backward reasoning.
 
 If you observe (R_2), you can compute:
 
-[
+$[
 P(R_1|R_2)
 ==========
 
 \frac{P(R_1 \cap R_2)}{P(R_2)}
-]
+]$
 
 Using the tree values:
 
-# [
+# $[
 
 # \frac{20/49}{32/49}
 
 # 20/32
 
 5/8
-]
+]$
 
 Tree gives joint probabilities instantly, so Bayes becomes trivial.
 
@@ -1644,9 +1644,9 @@ We’ll do three things:
 
 Two events ( A ) and ( B ) are independent iff
 
-[
+$[
 P(A \cap B) = P(A)P(B)
-]
+]$
 
 This is the *most fundamental* definition.
 
@@ -1660,23 +1660,23 @@ Assume ( P(B) > 0 ).
 
 From conditional probability:
 
-[
+$[
 P(A|B) = \frac{P(A \cap B)}{P(B)}
-]
+]$
 
 Now plug in independence definition:
 
 If ( P(A \cap B) = P(A)P(B) ),
 
-[
+$[
 P(A|B) = \frac{P(A)P(B)}{P(B)} = P(A)
-]
+]$
 
 So:
 
-[
+$[
 P(A|B) = P(A)
-]
+]$
 
 This proves:
 
@@ -1688,9 +1688,9 @@ Symmetry gives the reverse:
 
 If ( P(A) \neq 0 ),
 
-[
+$[
 P(B|A) = P(B)
-]
+]$
 
 ---
 
@@ -1698,29 +1698,29 @@ P(B|A) = P(B)
 
 From definition:
 
-[
+$[
 P(A \cap B) = P(A)P(B)
-]
+]$
 
 But multiplication is commutative:
 
-[
+$[
 P(A)P(B) = P(B)P(A)
-]
+]$
 
 So:
 
-[
+$[
 P(B \cap A) = P(B)P(A)
-]
+]$
 
 Therefore:
 
-[
+$[
 A \text{ independent of } B
 \iff
 B \text{ independent of } A
-]
+]$
 
 ---
 
@@ -1747,21 +1747,21 @@ Let:
 
 We compute:
 
-[
+$[
 P(H_1) = 1/2
-]
-[
+]$
+$[
 P(H_2) = 1/2
-]
-[
+]$
+$[
 P(H_1 \cap H_2) = 1/4
-]
+]$
 
 Check independence:
 
-[
+$[
 P(H_1)P(H_2) = (1/2)(1/2) = 1/4
-]
+]$
 
 Matches.
 
@@ -1791,9 +1791,9 @@ Let:
 
 First compute:
 
-[
+$[
 P(A) = 3/8
-]
+]$
 
 Now restrict to ( H_1 ):
 
@@ -1815,21 +1815,21 @@ HTH
 
 So:
 
-[
+$[
 P(A|H_1) = 2/4 = 1/2
-]
+]$
 
 But:
 
-[
+$[
 P(A) = 3/8
-]
+]$
 
 Since:
 
-[
+$[
 1/2 \neq 3/8
-]
+]$
 
 ❌ Not independent.
 
@@ -1863,15 +1863,15 @@ Deck facts:
 
 ### (a) A and H
 
-[
+$[
 P(A) = 4/52 = 1/13
-]
+]$
 
 Among 13 hearts, 1 is ace.
 
-[
+$[
 P(A|H) = 1/13
-]
+]$
 
 Matches.
 
@@ -1886,9 +1886,9 @@ Why? Because aces are evenly distributed across suits.
 Red cards = 26.
 Red aces = 2.
 
-[
+$[
 P(A|R) = 2/26 = 1/13
-]
+]$
 
 Again equals ( P(A) ).
 
@@ -1902,15 +1902,15 @@ Hearts are red.
 
 So:
 
-[
+$[
 P(R|H) = 1
-]
+]$
 
 But:
 
-[
+$[
 P(R) = 1/2
-]
+]$
 
 Not equal.
 
@@ -1926,45 +1926,45 @@ Suit determines color.
 
 We apply definition:
 
-[
+$[
 A \text{ independent of } A
-]
+]$
 
 Means:
 
-[
+$[
 P(A \cap A) = P(A)P(A)
-]
+]$
 
 But:
 
-[
+$[
 A \cap A = A
-]
+]$
 
 So:
 
-[
+$[
 P(A) = P(A)^2
-]
+]$
 
 Solve:
 
-[
+$[
 P(A)^2 - P(A) = 0
-]
+]$
 
-[
+$[
 P(A)(P(A) - 1) = 0
-]
+]$
 
 So:
 
-[
+$[
 P(A) = 0
 \quad \text{or} \quad
 P(A) = 1
-]
+]$
 
 ---
 
@@ -1972,9 +1972,9 @@ P(A) = 1
 
 An event is independent of itself **if and only if**
 
-[
+$[
 P(A) = 0 \quad \text{or} \quad P(A) = 1
-]
+]$
 
 ---
 
@@ -1992,9 +1992,9 @@ The statement "it happened" is vacuous.
 
 For any probability strictly between 0 and 1:
 
-[
+$[
 P(A|A) = 1 \neq P(A)
-]
+]$
 
 So it is dependent on itself.
 
@@ -2009,15 +2009,15 @@ Independence is NOT about:
 
 It is strictly about:
 
-[
+$[
 P(A \cap B) = P(A)P(B)
-]
+]$
 
 Or equivalently:
 
-[
+$[
 P(A|B) = P(A)
-]
+]$
 
 Meaning:
 
@@ -2043,37 +2043,37 @@ We’ll structure this as:
 
 Start from the definition of conditional probability.
 
-[
+$[
 P(A|B) = \frac{P(A \cap B)}{P(B)}, \quad P(B) > 0
-]
+]$
 
-[
+$[
 P(B|A) = \frac{P(A \cap B)}{P(A)}, \quad P(A) > 0
-]
+]$
 
 Both contain the same intersection term.
 
 So:
 
-[
+$[
 P(A \cap B) = P(A|B)P(B)
-]
+]$
 
-[
+$[
 P(A \cap B) = P(B|A)P(A)
-]
+]$
 
 Since both equal the same quantity:
 
-[
+$[
 P(B|A)P(A) = P(A|B)P(B)
-]
+]$
 
 Divide by ( P(A) ):
 
-[
+$[
 P(B|A) = \frac{P(A|B)P(B)}{P(A)}
-]
+]$
 
 That’s Bayes’ Theorem.
 
@@ -2103,23 +2103,23 @@ Let:
 
 We compute:
 
-[
+$[
 P(H_A|H_1) = \frac{1}{16}
-]
+]$
 
 Why?
 
 If first toss is heads, remaining 4 tosses must all be heads:
 
-[
+$[
 (1/2)^4 = 1/16
-]
+]$
 
 But:
 
-[
+$[
 P(H_1|H_A) = 1
-]
+]$
 
 Why?
 
@@ -2131,35 +2131,35 @@ This shows conditioning direction matters.
 
 Now verify using Bayes:
 
-[
+$[
 P(H_1|H_A) =
 \frac{P(H_A|H_1)P(H_1)}{P(H_A)}
-]
+]$
 
 Plug in:
 
-[
+$[
 P(H_A|H_1) = 1/16
-]
+]$
 
-[
+$[
 P(H_1) = 1/2
-]
+]$
 
-[
+$[
 P(H_A) = (1/2)^5 = 1/32
-]
+]$
 
 So:
 
-[
+$[
 \frac{(1/16)(1/2)}{1/32}
 ========================
 
 # \frac{1/32}{1/32}
 
 1
-]
+]$
 
 Perfect.
 
@@ -2169,65 +2169,65 @@ Perfect.
 
 Given:
 
-[
+$[
 P(D+) = 0.005
-]
+]$
 
-[
+$[
 P(T+|D+) = 0.9
-]
+]$
 
-[
+$[
 P(T+|D-) = 0.05
-]
+]$
 
 We want:
 
-[
+$[
 P(D+|T+)
-]
+]$
 
 Bayes:
 
-[
+$[
 P(D+|T+) =
 \frac{P(T+|D+)P(D+)}
 {P(T+)}
-]
+]$
 
 Denominator via total probability:
 
-[
+$[
 P(T+) =
 P(T+|D+)P(D+)
 +
 P(T+|D-)P(D-)
-]
+]$
 
 Plug in:
 
-[
+$[
 = 0.9(0.005) + 0.05(0.995)
-]
+]$
 
-[
+$[
 = 0.0045 + 0.04975
-]
+]$
 
-[
+$[
 = 0.05425
-]
+]$
 
 Now:
 
-[
+$[
 P(D+|T+)
 ========
 
 # \frac{0.0045}{0.05425}
 
 0.08295
-]
+]$
 
 ≈ 8.3%
 
@@ -2257,13 +2257,13 @@ False positives applied to a huge healthy population overwhelm true positives fr
 
 If events ( A_1, A_2, \dots, A_n ) partition the sample space:
 
-[
+$[
 P(A_i|B)
 ========
 
 \frac{P(B|A_i)P(A_i)}
 {\sum_{j=1}^{n} P(B|A_j)P(A_j)}
-]
+]$
 
 This is the full version used in:
 
@@ -2288,23 +2288,23 @@ Suppose:
 
 Then Bayes becomes:
 
-[
+$[
 P(D=1|T=1)
 ==========
 
 \frac{P(T=1|D=1)P(D=1)}
 {P(T=1)}
-]
+]$
 
 In continuous case:
 
-[
+$[
 f_{X|Y}(x|y)
 ============
 
 \frac{f_{Y|X}(y|x)f_X(x)}
 {f_Y(y)}
-]
+]$
 
 This is the foundation of Bayesian statistics.
 
@@ -2314,12 +2314,12 @@ This is the foundation of Bayesian statistics.
 
 Key identity:
 
-[
-E[X]
+$[
+E$[X]$
 ====
 
-E[E[X|Y]]
-]
+E$[E$[X|Y]$]$
+]$
 
 (Law of Iterated Expectation)
 
@@ -2329,12 +2329,12 @@ Example:
 
 Expected probability of disease after test:
 
-[
-E[D|T+]
+$[
+E$[D|T+]$
 =======
 
 P(D=1|T+)
-]
+]$
 
 So posterior probability is literally a conditional expectation.
 
@@ -2344,13 +2344,13 @@ So posterior probability is literally a conditional expectation.
 
 Bayes always has this form:
 
-[
+$[
 \text{Posterior}
 ================
 
 \frac{\text{Likelihood} \times \text{Prior}}
 {\text{Evidence}}
-]
+]$
 
 Where:
 
