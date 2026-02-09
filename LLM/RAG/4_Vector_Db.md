@@ -1,9 +1,4 @@
-Good. Today we go under the hood.
 
-Most people treat vector databases like magic boxes.
-If you understand this day properly, you’ll debug RAG like a systems engineer — not a tutorial follower.
-
----
 
 # 📘 RAG Daily Tutorial
 
