@@ -177,13 +177,7 @@ You should say:
 * Retriever quality matters more than model size
 * RAG is the backbone of real-world LLM systems
 
----
 
-Perfect — this is *exactly* the right mental checkpoint in RAG mastery.
-If you truly understand **when to use RAG vs when to avoid it**, you’re already ahead of most people.
-
-Below are **high-quality interview / deep-understanding Q&A**.
-These are not fluffy — they probe *judgment*, *architecture*, and *failure modes*.
 
 ---
 
