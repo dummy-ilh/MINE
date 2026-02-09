@@ -226,7 +226,6 @@ That’s a **strong senior-level answer**.
 
 ---
 
-In a RAG (Retrieval-Augmented Generation) pipeline, the choice of embedding dictates how well the system "understands" the relationship between a user's query and the source data. As of 2026, we generally categorize embeddings into four main types based on their architecture and use case:
 
 ### 1. Dense Embeddings (Semantic)
 
