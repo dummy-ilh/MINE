@@ -674,15 +674,5 @@ Faithfulness
 
 If you optimize only one, you degrade others.
 
----
-
-If you want next:
-
-* ⚔️ Hybrid Search Deep Dive
-* 🧠 Query Routing Architectures
-* 🏗️ Billion-scale Retrieval System Design
-* 📉 Retrieval-Induced Hallucination Analysis
-* 🔬 End-to-End RAG Evaluation Framework
-
-Choose the next depth.
+-
 
