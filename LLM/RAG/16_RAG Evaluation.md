@@ -1,365 +1,358 @@
-# 🚀 RAG Mastery — Day 16
+# 📘 Day 16 — Re-Ranking & Compression
 
-# 📏 RAG Evaluation: Measuring What Actually Matters
+**Theme:** Precision > Quantity
 
-Until now, we’ve engineered retrieval pipelines.
+By Day 15, your system retrieves *more intelligently*.
+Today, we make it retrieve *more precisely*.
 
-Today we answer the hardest question:
+Most RAG systems fail not because they retrieve too little —
+but because they pass too much noisy context to the LLM.
 
-> **How do you know your RAG system is actually good?**
+We fix that with:
 
-If you cannot measure it, you cannot improve it.
+1. Cross-encoder re-ranking
+2. Contextual compression
+3. Passage selection
 
-Modern RAG evaluation has **three layers**:
+---
+
+# 🧠 The Core Problem
+
+Dense retrieval (bi-encoder embeddings):
 
 ```
-1️⃣ Retrieval Quality
-2️⃣ Generation Quality
-3️⃣ End-to-End Faithfulness
+embed(query)
+embed(document_chunk)
+cosine_similarity
 ```
 
-Let’s go deep.
+This is fast but approximate.
+
+It cannot deeply evaluate semantic alignment between full query and full passage.
+
+So we introduce a second stage.
 
 ---
 
-# 🧱 Layer 1: Retrieval Evaluation
+# 1️⃣ Cross-Encoder Re-Ranking
 
-Before judging answers, judge retrieval.
+## 🧩 Bi-Encoder vs Cross-Encoder
 
-Because:
+### Bi-Encoder (Embedding Model)
 
-> If the right document is not retrieved, the LLM never had a chance.
+* Encode query and doc separately
+* Compare vectors
+* Fast
+* Approximate
+
+### Cross-Encoder
+
+* Concatenate query + passage
+* Feed into transformer
+* Directly score relevance
+
+Much slower.
+Much more accurate.
 
 ---
 
-## Core Retrieval Metrics
+## 🧠 Why It Works
 
-### 1️⃣ Recall@K
-
-**Definition:**
-Did we retrieve at least one relevant document in top-K?
+Instead of:
 
 ```
-Recall@5 = % of queries where at least one correct doc is in top 5
+sim(E(q), E(d))
 ```
 
-This is the most important retrieval metric.
-
----
-
-### 2️⃣ Precision@K
-
-How many of top-K are relevant?
-
-More useful in reranking evaluation.
-
----
-
-### 3️⃣ MRR (Mean Reciprocal Rank)
-
-Measures how high the first relevant doc appears.
+We compute:
 
 ```
-MRR = average(1 / rank_of_first_relevant_doc)
+Score(q, d) using full attention
 ```
 
-Higher = better ranking quality.
+The model can attend:
+
+* Query term → exact phrase in passage
+* Negations
+* Subtle relationships
+* Context alignment
 
 ---
 
-## ⚠️ Important Insight
-
-For RAG systems:
-
-> High Recall@K matters more than high Precision@K
-> because rerankers + LLM can fix precision later.
-
----
-
-# 🧠 Layer 2: Generation Evaluation
-
-Now assume correct docs were retrieved.
-
-We evaluate:
-
-* Is the answer correct?
-* Is it grounded in context?
-* Is it hallucinated?
-
----
-
-## 1️⃣ Exact Match (EM)
-
-Used in QA datasets.
-
-Very strict — not ideal for generative systems.
-
----
-
-## 2️⃣ F1 Score
-
-Measures token overlap between generated answer and reference.
-
-Still brittle for long-form answers.
-
----
-
-## 3️⃣ LLM-as-Judge (Modern Approach)
-
-Use an LLM to evaluate:
-
-* Correctness
-* Completeness
-* Faithfulness
-* Relevance
-
-This is what:
-
-* OpenAI eval pipelines use
-* Anthropic research teams use
-* Google Gemini eval pipelines use
-
----
-
-# 🧬 Layer 3: Faithfulness / Groundedness
-
-This is RAG-specific.
-
-We care about:
-
-> Did the model use only retrieved context?
-
-This is where hallucination detection comes in.
-
----
-
-## 1️⃣ Context Precision
-
-Does the answer contain unsupported claims?
-
-Approach:
-
-* Break answer into atomic statements
-* Check if each statement is supported in retrieved text
-
----
-
-## 2️⃣ Attribution Score
-
-How well does answer cite evidence?
-
-Used heavily in:
-
-* Perplexity AI
-
----
-
-## 3️⃣ RAGAS Framework
-
-Ragas provides:
-
-* Faithfulness
-* Answer relevance
-* Context precision
-* Context recall
-
-It uses LLM-based scoring.
-
----
-
-# 🏗 Full Evaluation Architecture
-
-```
-Dataset (Query, Gold Answer, Gold Docs)
-        ↓
-Run RAG Pipeline
-        ↓
-Compute:
-
-Retrieval:
-- Recall@K
-- MRR
-
-Generation:
-- LLM correctness score
-
-Faithfulness:
-- Statement grounding check
-```
-
----
-
-# 🔬 Building a Proper Eval Dataset
-
-You need:
-
-For each query:
-
-* Ground truth answer
-* Ground truth supporting documents
-
-Without this, you are guessing.
-
-In enterprise systems, teams manually annotate:
-
-* 100–500 queries
-* High-quality ground truth labels
-
-This is your benchmark suite.
-
----
-
-# ⚖️ Offline vs Online Evaluation
-
-### Offline
-
-* Controlled dataset
-* Reproducible
-* Used for model comparison
-
-### Online (A/B testing)
-
-* Real users
-* Measure:
-
-  * Click-through rate
-  * User satisfaction
-  * Resolution rate
-
-Large companies rely heavily on online eval.
-
----
-
-# 🧠 Failure Taxonomy (Extremely Important)
-
-When RAG fails, classify:
-
-### 1️⃣ Retrieval Failure
-
-Correct doc not retrieved.
-
-Fix:
-
-* Hybrid retrieval
-* Better chunking
-* Query rewriting
-
----
-
-### 2️⃣ Ranking Failure
-
-Correct doc retrieved but ranked low.
-
-Fix:
-
-* Reranker
-* Better scoring
-
----
-
-### 3️⃣ Generation Failure
-
-Correct doc retrieved but LLM ignored it.
-
-Fix:
-
-* Better prompting
-* Stronger grounding instructions
-
----
-
-### 4️⃣ Hallucination
-
-Answer not supported by context.
-
-Fix:
-
-* Smaller context
-* Faithfulness constraints
-* Citation enforcement
-
----
-
-# 🧪 Example Eval Loop (Pseudo-Code)
+## 🔧 Minimal Example (HuggingFace Style)
 
 ```python
-for query in eval_dataset:
-    retrieved_docs = retrieve(query)
-    answer = generate(query, retrieved_docs)
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
 
-    retrieval_score = compute_recall(query, retrieved_docs)
-    faithfulness_score = llm_judge(answer, retrieved_docs)
-    correctness_score = llm_compare(answer, ground_truth)
+tokenizer = AutoTokenizer.from_pretrained("cross-encoder/ms-marco-MiniLM-L-6-v2")
+model = AutoModelForSequenceClassification.from_pretrained("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+def rerank(query, passages):
+    scores = []
+
+    for passage in passages:
+        inputs = tokenizer(query, passage, return_tensors="pt", truncation=True)
+        with torch.no_grad():
+            output = model(**inputs)
+        score = output.logits.item()
+        scores.append((passage, score))
+
+    return sorted(scores, key=lambda x: x[1], reverse=True)
 ```
 
-Aggregate metrics at end.
+---
+
+## ⚠️ Tradeoff
+
+| Property    | Bi-Encoder | Cross-Encoder |
+| ----------- | ---------- | ------------- |
+| Speed       | Fast       | Slow          |
+| Cost        | Low        | Higher        |
+| Accuracy    | Medium     | High          |
+| Scalability | Massive    | Limited       |
+
+So production pattern:
+
+```
+Retrieve top 20 (bi-encoder)
+Re-rank top 20
+Select top 5
+```
+
+Two-stage retrieval.
+
+This is industry standard.
 
 ---
 
-# 📊 What Production Teams Track
+# 2️⃣ Contextual Compression
 
-Serious RAG systems track:
+Even after reranking, chunks may contain irrelevant sections.
 
-* Recall@5
-* Recall@20
-* MRR
-* Faithfulness score
-* Hallucination rate
-* Latency
-* Cost per query
-
-Evaluation is multi-dimensional.
+Instead of passing full chunk → compress it relative to query.
 
 ---
 
-# 🧠 Deep Insight
+## 🧠 Concept
 
-In RAG:
+Given:
 
-> Retrieval quality sets the ceiling.
-> Generation quality determines how close you get to that ceiling.
+Query:
 
-You cannot prompt-engineer your way out of bad retrieval.
+> “How does RAG handle token budget overflow?”
 
----
+Chunk:
 
-# 🔥 Research Direction
+```
+RAG systems often face latency issues...
+...
+Token budgets must be managed carefully...
+...
+Vector databases scale horizontally...
+```
 
-Recent work explores:
-
-* LLM-based retrieval evaluation
-* Synthetic test set generation
-* Adversarial queries
-* Robustness to query reformulation
-
-This is active research.
+We only need the middle section.
 
 ---
 
-# 🧪 Today’s Exercise
+## 🔧 LLM-Based Compression
 
-1. Build small evaluation dataset (20–50 queries).
-2. Implement:
+```python
+def compress_chunk(client, query, chunk):
+    prompt = f"""
+Given the query and passage, extract ONLY the relevant portion.
 
-   * Recall@5
-   * MRR
-3. Add LLM-as-judge scoring.
-4. Classify failures into:
+Query:
+{query}
 
-   * Retrieval
-   * Ranking
-   * Generation
+Passage:
+{chunk}
 
-You now move from engineer → researcher.
+Relevant Extract:
+"""
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content.strip()
+```
+
+Now you reduce:
+
+* Token usage
+* Noise
+* Hallucination risk
 
 ---
 
-# 🎯 Tomorrow (Day 17)
+## ⚠️ Risk
 
-We enter:
+Compression must preserve factual accuracy.
 
-> 🧩 Context Optimization — Chunking, Windowing, and Compression
+You must measure:
 
-This dramatically impacts retrieval performance.
+* Answer correctness
+* Context faithfulness
 
-Your RAG stack is becoming production-grade.
+---
+
+# 3️⃣ Passage Selection (Fine-Grained Retrieval)
+
+Instead of chunk-level retrieval:
+
+* Retrieve large chunk
+* Split into sentences
+* Score sentences
+* Keep best ones
+
+---
+
+## Minimal Sentence-Level Selection
+
+```python
+import nltk
+
+def select_passages(query, chunk, reranker):
+    sentences = nltk.sent_tokenize(chunk)
+    ranked = rerank(query, sentences)
+    return [s for s, _ in ranked[:3]]
+```
+
+Now context is:
+
+* Dense
+* Precise
+* Minimal
+
+This dramatically improves grounding.
+
+---
+
+# 🔄 Updated Week 3 Pipeline
+
+```
+User Query
+   ↓
+Intent Detection
+   ↓
+Query Rewrite
+   ↓
+Multi-Query Retrieval
+   ↓
+Dense Retrieval (top 20)
+   ↓
+Cross-Encoder Re-rank
+   ↓
+Passage Selection
+   ↓
+Contextual Compression
+   ↓
+Token-Aware Context Builder
+   ↓
+LLM Answer
+```
+
+This is no longer beginner RAG.
+
+This is robust RAG.
+
+---
+
+# ⚡ Where Systems Break Here
+
+1. Latency explodes (cross-encoder too slow)
+2. Cost increases (extra LLM calls)
+3. Token budget miscalculated
+4. Over-compression loses key facts
+5. No observability for ranking stage
+
+This is why Day 14 logging was critical.
+
+---
+
+# 🧠 Performance Engineering Insight
+
+Latency profile often becomes:
+
+* 40% embedding
+* 30% reranking
+* 25% LLM answer
+* 5% glue logic
+
+Most people assume LLM is slowest.
+
+Not always true.
+
+---
+
+# 🎯 Interview-Level Answers
+
+## Why use cross-encoder if embeddings exist?
+
+Because embeddings approximate similarity in vector space.
+Cross-encoders evaluate full semantic interaction.
+
+They reduce false positives in top-k.
+
+---
+
+## When would you skip reranking?
+
+* Small corpus
+* Latency-critical systems
+* Low-stakes retrieval
+* When embedding model is already very strong
+
+---
+
+## How do you evaluate reranking impact?
+
+* Measure Recall@k
+* Measure MRR (Mean Reciprocal Rank)
+* Compare answer correctness
+* Measure token reduction %
+
+---
+
+## What is contextual compression’s main benefit?
+
+It reduces irrelevant tokens while preserving relevance, improving grounding and reducing hallucination risk.
+
+---
+
+# 🧠 Architect-Level Takeaway
+
+There are 3 precision levers in RAG:
+
+1. Query quality
+2. Retrieval ranking
+3. Context density
+
+Week 1 systems optimize none.
+Week 2 systems optimize 1.
+Week 3 systems optimize all 3.
+
+---
+
+You now understand:
+
+* Two-stage retrieval
+* Precision optimization
+* Context minimization
+* Latency tradeoffs
+* Ranking evaluation
+
+This is where most engineers stop.
+
+From here, we enter:
+
+* Hybrid search (BM25 + dense)
+* Adaptive top-k
+* Dynamic routing
+* Hierarchical retrieval
+* Agentic retrieval
+
+
+
+
