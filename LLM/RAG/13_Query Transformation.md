@@ -1409,4 +1409,356 @@ And eventually merged into:
 
 ---
 
+# 📘 Day 15 — Query Understanding
+
+**Theme:** Make retrieval smarter than the user.
+
+Most RAG systems fail because they treat the user query as perfect.
+
+It’s not.
+
+Users are vague, underspecified, ambiguous, multi-intent, or incorrectly phrased.
+
+If retrieval depends on the raw query, recall suffers.
+
+Today we fix that.
+
+---
+
+# 🧠 Why Query Understanding Matters
+
+Retrieval systems depend on **semantic similarity**.
+
+But embeddings only capture what is *expressed*, not what is *implied*.
+
+Example:
+
+> “How does it scale?”
+
+Scale what? Database? Model? Architecture?
+
+If your retriever uses this directly, it fails.
+
+So we introduce:
+
+1. Query rewriting
+2. Multi-query retrieval
+3. Intent detection
+
+These are pre-retrieval intelligence layers.
+
+---
+
+# 🧩 1️⃣ Query Rewriting
+
+## Problem
+
+User query is:
+
+* Too short
+* Too vague
+* Missing keywords
+* Ambiguous
+
+Example:
+
+> “What are the issues?”
+
+Rewrite into:
+
+> “What are the common failure modes in production retrieval augmented generation systems?”
+
+Now retrieval works better.
+
+---
+
+## How to Implement (Minimal Version)
+
+```python
+def rewrite_query(client, query):
+    prompt = f"""
+Rewrite the query to make it more specific and retrieval-friendly.
+
+Original Query:
+{query}
+
+Rewritten Query:
+"""
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return response.choices[0].message.content.strip()
+```
+
+---
+
+## When It Helps
+
+* Enterprise document search
+* Technical corpora
+* Multi-domain knowledge bases
+* Sparse user queries
+
+---
+
+## Hidden Cost
+
+⚠️ Adds 1 LLM call → latency + cost.
+
+This is why observability from Day 14 matters.
+
+---
+
+# 🧠 2️⃣ Multi-Query Retrieval
+
+Single query → single embedding → single semantic projection.
+
+But meaning is multi-dimensional.
+
+So we generate multiple query variants.
+
+---
+
+## Example
+
+Original:
+
+> “How does RAG handle scaling?”
+
+Variants:
+
+* “Scaling vector databases in RAG systems”
+* “Performance bottlenecks in large-scale retrieval”
+* “Latency issues in production RAG pipelines”
+
+Each hits different embedding neighborhoods.
+
+---
+
+## Minimal Implementation
+
+```python
+def generate_query_variants(client, query, n=3):
+    prompt = f"""
+Generate {n} alternative versions of this query for better document retrieval.
+
+Query:
+{query}
+
+Return them as separate lines.
+"""
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    variants = response.choices[0].message.content.split("\n")
+    return [v.strip() for v in variants if v.strip()]
+```
+
+Then:
+
+```python
+all_results = []
+for q in variants:
+    results, _ = retriever.retrieve(q)
+    all_results.extend(results)
+```
+
+Then deduplicate + rerank.
+
+---
+
+## Why This Works
+
+Embedding space is nonlinear.
+
+Different phrasing → different vector direction.
+
+You increase recall without increasing k blindly.
+
+---
+
+## When To Use
+
+* Complex domains
+* Legal / medical corpora
+* When recall matters more than latency
+
+---
+
+# 🧠 3️⃣ Intent Detection
+
+Not all queries are retrieval queries.
+
+Some are:
+
+* Conversational
+* Meta questions
+* Follow-ups
+* Clarifications
+* Summaries
+
+If you retrieve for everything, you waste latency.
+
+---
+
+## Simple Intent Classifier
+
+```python
+def detect_intent(client, query):
+    prompt = f"""
+Classify the intent of this query into one of:
+- retrieval
+- clarification
+- conversational
+- summarization
+
+Query:
+{query}
+
+Return only the label.
+"""
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    return response.choices[0].message.content.strip().lower()
+```
+
+---
+
+## Example Behavior
+
+If intent = conversational → skip retrieval.
+
+If intent = summarization → retrieve larger context.
+
+If intent = clarification → maybe ask user question.
+
+Now your pipeline is conditional.
+
+That’s architectural thinking.
+
+---
+
+# 🔄 Updated Pipeline (Day 15 Version)
+
+```
+User Query
+   ↓
+Intent Detection
+   ↓
+Query Rewriting (if needed)
+   ↓
+Multi-Query Generation
+   ↓
+Retrieve for each variant
+   ↓
+Merge + Deduplicate
+   ↓
+Rerank (Day 16)
+   ↓
+Context Build
+   ↓
+LLM Answer
+```
+
+Retrieval is no longer passive.
+
+It is strategic.
+
+---
+
+# ⚠️ Tradeoffs
+
+| Technique        | Recall ↑ | Latency ↑    | Cost ↑ | Complexity ↑ |
+| ---------------- | -------- | ------------ | ------ | ------------ |
+| Rewrite          | Medium   | +1 call      | +      | Low          |
+| Multi-query      | High     | +n retrieval | ++     | Medium       |
+| Intent detection | Medium   | +1 call      | +      | Low          |
+
+Architects measure tradeoffs.
+
+---
+
+# 🎯 Failure Modes
+
+1. Rewriting drifts meaning.
+2. Multi-query returns too many duplicates.
+3. Intent classifier misclassifies.
+4. Latency explodes.
+5. Token budget exceeded.
+
+Every intelligence layer must be measured.
+
+---
+
+# 🧠 Deep Insight
+
+Retrieval quality =
+
+```
+f(query_quality, embedding_model, index_quality)
+```
+
+Most people only tune embeddings.
+
+Elite engineers tune query quality.
+
+---
+
+# 📊 Interview-Level Answers
+
+## Why does query rewriting improve recall?
+
+Because embeddings represent semantic direction.
+If a query lacks domain-specific keywords, its vector won’t align with relevant documents.
+
+Rewriting increases semantic alignment.
+
+---
+
+## Why not always use multi-query?
+
+Because it multiplies:
+
+* vector searches
+* deduplication complexity
+* reranking cost
+
+Use when recall is critical.
+
+---
+
+## How would you evaluate rewrite quality?
+
+* Compare recall@k before/after.
+* Track if relevant document appears in top_k.
+* Manual inspection of semantic drift.
+
+---
+
+# 🧠 Architect-Level Takeaway
+
+Week 1 RAG:
+
+```
+embed(query) → retrieve
+```
+
+Week 3 RAG:
+
+```
+understand(query) → reformulate(query) → strategically retrieve
+```
+
+This is the beginning of intelligent retrieval.
+
+---
+
+
 
