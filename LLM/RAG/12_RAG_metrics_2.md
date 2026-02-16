@@ -2115,6 +2115,695 @@ Because RAG is not a model —
 It is a **pipeline**.
 
 ---
+Excellent. Let’s simulate a **FAANG-level interview round on RAG evaluation & query transformation**.
+
+I’ll structure this like a real interview:
+
+* 🔥 Question
+* 🧠 What interviewer is testing
+* ✅ Strong answer
+* 🚫 Weak answer
+* 🎯 Follow-up trap
+* 💡 Deep insight
+
+---
+
+# 🔥 1️⃣ “How would you evaluate a RAG system?”
+
+### 🧠 What They’re Testing
+
+Do you understand that RAG is a **pipeline**, not just an LLM?
+
+---
+
+### ✅ Strong Answer
+
+“I evaluate RAG at four layers:
+
+1. **Retrieval Quality**
+
+   * Recall@k
+   * MRR
+   * nDCG
+   * Context Precision
+
+2. **Generation Quality**
+
+   * Faithfulness
+   * Hallucination rate
+   * ROUGE/BERTScore (if reference exists)
+
+3. **End-to-End Performance**
+
+   * Exact Match / F1
+   * Human helpfulness rating
+
+4. **System Metrics**
+
+   * Latency
+   * Cost per query
+   * Stability across runs
+   * Robustness under paraphrasing”
+
+Then conclude:
+
+> “Optimizing only final accuracy hides whether the failure is retrieval or generation.”
+
+🎯 That line wins interviews.
+
+---
+
+### 🚫 Weak Answer
+
+“I’d just measure accuracy.”
+
+Immediate red flag.
+
+---
+
+# 🔥 2️⃣ “If accuracy is low, how do you debug RAG?”
+
+### 🧠 What They’re Testing
+
+System thinking.
+
+---
+
+### ✅ Strong Structured Debugging
+
+Step 1: Check retrieval recall@k
+→ If relevant doc missing → retrieval problem
+
+Step 2: If doc retrieved but answer wrong → faithfulness issue
+
+Step 3: If answer hallucinated → grounding failure
+
+Step 4: If answer unstable across runs → generation instability
+
+You’re isolating failure sources.
+
+---
+
+### 🎯 Advanced Addition
+
+Mention:
+
+* Compare answer with retrieved context using semantic similarity
+* Log entropy for uncertainty
+
+That signals research maturity.
+
+---
+
+# 🔥 3️⃣ “What is Faithfulness in RAG?”
+
+### 🧠 What They’re Testing
+
+Understanding hallucination vs grounding.
+
+---
+
+### ✅ Strong Answer
+
+“Faithfulness measures whether the generated answer is supported by retrieved documents.
+
+Even if the answer is correct, if it’s not supported by retrieved context, the system is unsafe.”
+
+Bonus:
+
+> “In regulated industries, faithfulness matters more than raw accuracy.”
+
+---
+
+### 🚫 Trap
+
+If you confuse:
+
+* Faithfulness
+* Helpfulness
+* Relevance
+
+You lose depth points.
+
+---
+
+# 🔥 4️⃣ “How do you evaluate multi-hop RAG?”
+
+### 🧠 What They’re Testing
+
+Advanced reasoning systems.
+
+---
+
+### ✅ Strong Answer
+
+“Single-hop recall@k is insufficient.
+
+For multi-hop:
+
+1. Measure recall at each hop.
+2. Evaluate whether intermediate facts are retrieved.
+3. Check reasoning chain validity.
+4. Use supporting-fact F1 (like in HotpotQA).”
+
+Then add:
+
+“Query decomposition accuracy is also critical.”
+
+That shows system-level awareness.
+
+---
+
+# 🔥 5️⃣ “How would you design adaptive retrieval?”
+
+### 🧠 What They’re Testing
+
+Research thinking.
+
+---
+
+### ✅ Strong Answer
+
+“Use uncertainty signals:
+
+* If entropy high → increase k
+* If answer confidence low → retrieve more docs
+* If query classified multi-hop → perform query rewriting
+* If initial retrieval poor → re-rank or reformulate
+
+This becomes a feedback loop.”
+
+That’s research-level adaptive RAG.
+
+---
+
+# 🔥 6️⃣ “How do you test robustness?”
+
+### 🧠 What They’re Testing
+
+Security + production maturity.
+
+---
+
+### ✅ Strong Answer
+
+Test with:
+
+* Paraphrased queries
+* Typos
+* Distractor context
+* Prompt injection attempts
+* Long irrelevant prefixes
+
+Measure:
+
+* Accuracy drop
+* Hallucination increase
+* Retrieval recall shift
+
+Then say:
+
+“Robustness matters more than peak performance.”
+
+That’s senior-level thinking.
+
+---
+
+# 🔥 7️⃣ “What’s the biggest mistake teams make in RAG?”
+
+### ✅ Strong Answer
+
+“Optimizing only generation.
+
+Most failures originate from retrieval quality or bad chunking.”
+
+Extra depth:
+
+“Poor chunking often reduces recall more than embedding quality.”
+
+That’s practical wisdom.
+
+---
+
+# 🔥 8️⃣ “How would you measure chunking quality?”
+
+### 🧠 What They’re Testing
+
+Real-world deployment experience.
+
+---
+
+### ✅ Strong Answer
+
+* Retrieval Recall@k across chunk sizes
+* Context Precision
+* Overlap analysis
+* Redundancy score
+* Multi-hop coverage
+
+Then:
+
+“Too small → context fragmentation
+Too large → irrelevant noise”
+
+Perfect.
+
+---
+
+# 🔥 9️⃣ “Difference between Recall@k and Context Precision?”
+
+### ✅ Strong Answer
+
+Recall@k:
+
+> Did we retrieve at least one relevant document?
+
+Context Precision:
+
+> Of the retrieved documents, how many are relevant?
+
+You’re separating completeness vs purity.
+
+---
+
+# 🔥 🔟 “If retrieval recall is 95% but final accuracy is 60%, what’s wrong?”
+
+### 🧠 What They’re Testing
+
+Pipeline diagnosis.
+
+---
+
+### ✅ Strong Answer
+
+Possibilities:
+
+* Generator ignoring context
+* Prompt misaligned
+* Hallucination
+* Context window truncation
+* Multi-hop reasoning failure
+
+This shows structured thinking.
+
+---
+
+# 🔥 BONUS: Research-Level Question
+
+“How would you detect hallucinations without reference answers?”
+
+### ✅ Strong Answer
+
+* Measure semantic similarity between answer and context
+* Use entailment models
+* Check citation alignment
+* Measure unsupported claim ratio
+
+This is frontier-level evaluation.
+
+---
+
+# 🎯 Final Meta Insight
+
+If you answer like this:
+
+* Structured
+* Layered
+* Pipeline-aware
+* Metrics-backed
+* Failure-diagnostic
+
+You sound like:
+
+* Senior ML Engineer
+* Applied Research Scientist
+* Production AI Lead
+
+---
+
+Perfect. We’re doing a **full FAANG onsite simulation**.
+
+You’ll get:
+
+1. 🔥 Hard Whiteboard System Design
+2. 🔥 Coding Problem (Evaluation Engine)
+3. 🔥 Research-Level Discussion (Adaptive Query Rewriting)
+4. 🔥 Live Mock Interview Simulation
+
+No fluff. Deep systems thinking.
+
+---
+
+# 🔥 PART 1 — HARD WHITEBOARD SYSTEM DESIGN
+
+## Problem
+
+> Design a production-grade RAG system for a financial compliance assistant that:
+
+* Must be faithful (no hallucinations)
+* Must handle multi-hop queries
+* Must be robust to prompt injection
+* Must scale to 50M documents
+* Must have monitoring & evaluation built in
+
+---
+
+## 🧠 Step 1 — Clarify Requirements
+
+Functional:
+
+* Answer compliance questions
+* Cite sources
+* Multi-hop reasoning
+* Support paraphrases
+
+Non-functional:
+
+* Low hallucination rate
+* < 1.5s latency
+* Secure
+* Auditable
+
+---
+
+## 🏗️ High-Level Architecture
+
+```
+User Query
+   ↓
+Query Transformation Layer
+   ↓
+Retriever (Hybrid BM25 + Dense)
+   ↓
+Re-ranker
+   ↓
+Multi-Hop Planner
+   ↓
+Generator (Grounded LLM)
+   ↓
+Faithfulness Validator
+   ↓
+Response + Citations
+```
+
+---
+
+## 🧩 Components Deep Dive
+
+### 1️⃣ Query Transformation Layer
+
+* Query rewriting
+* Multi-hop decomposition
+* Clarification detection
+* Injection filtering
+
+Tech:
+
+* Small LLM classifier
+* Paraphrase expansion
+* Entity normalization
+
+---
+
+### 2️⃣ Hybrid Retrieval
+
+Because financial docs require precision.
+
+Combine:
+
+* BM25 (exact matches)
+* Dense embeddings (semantic)
+
+Store in:
+
+* Distributed vector DB (e.g., sharded FAISS)
+* Inverted index (Elasticsearch-style)
+
+---
+
+### 3️⃣ Re-Ranker
+
+Cross-encoder re-ranking improves precision.
+
+Instead of:
+Recall@100 → Top 5 re-ranked
+
+---
+
+### 4️⃣ Multi-Hop Planner
+
+If query requires:
+“Regulation A updated after 2019 affecting tax rules”
+
+We:
+
+* Retrieve regulation A
+* Retrieve amendments post-2019
+* Combine evidence
+
+This requires:
+
+* Query decomposition
+* Iterative retrieval
+
+---
+
+### 5️⃣ Grounded Generator
+
+Prompt format:
+
+```
+Answer ONLY using provided context.
+If insufficient info, say "Not enough data."
+Cite paragraph numbers.
+```
+
+---
+
+### 6️⃣ Faithfulness Validator
+
+Use:
+
+* Entailment model
+* Answer-context similarity
+* Unsupported claim detection
+
+If fails → regenerate OR abstain
+
+---
+
+### 7️⃣ Monitoring & Evaluation Layer
+
+Track:
+
+* Recall@k
+* Faithfulness
+* Hallucination rate
+* Stability
+* Latency
+* Cost
+
+Store in evaluation DB.
+
+---
+
+## 🔥 Scaling to 50M Documents
+
+* Sharded vector index
+* HNSW or IVF indexing
+* Metadata filtering before embedding search
+* Caching frequent queries
+
+---
+
+## 🔐 Security
+
+* Prompt injection filter
+* Context boundary enforcement
+* Ignore external instructions inside docs
+* Content hashing to detect poisoning
+
+---
+
+## 🔥 What Makes This “Hard”?
+
+Because:
+
+* It’s not just retrieval
+* It includes validation
+* It includes monitoring
+* It handles adversarial input
+* It handles multi-hop
+
+That’s senior-level system design.
+
+---
+
+# 🔥 PART 2 — CODING PROBLEM
+
+## Problem
+
+Implement a RAG Evaluation Engine that computes:
+
+* Recall@k
+* Context Precision
+* Faithfulness Score
+* Exact Match
+
+Given:
+
+```
+queries
+retrieved_docs
+gold_docs
+generated_answer
+gold_answer
+```
+
+---
+
+## Expected Structure (Python-like)
+
+```python
+import numpy as np
+
+def recall_at_k(retrieved, gold, k):
+    retrieved_k = retrieved[:k]
+    return int(any(doc in gold for doc in retrieved_k))
+
+def context_precision(retrieved, gold, k):
+    retrieved_k = retrieved[:k]
+    relevant = sum(doc in gold for doc in retrieved_k)
+    return relevant / k
+
+def exact_match(pred, gold):
+    return int(pred.strip().lower() == gold.strip().lower())
+
+def faithfulness_score(answer, context):
+    # simplistic proxy: answer sentences must appear in context
+    supported = sum(sent in context for sent in answer.split('.'))
+    total = len(answer.split('.'))
+    return supported / max(total, 1)
+```
+
+---
+
+### 🔥 Interview Follow-Up
+
+How would you improve faithfulness scoring?
+
+Strong answer:
+
+* Use NLI model
+* Claim extraction
+* Entailment scoring
+* Token-level grounding
+
+---
+
+# 🔥 PART 3 — RESEARCH DISCUSSION
+
+## Topic: Adaptive Query Rewriting
+
+---
+
+### Problem
+
+Some queries need:
+
+* Expansion
+* Decomposition
+* Clarification
+* Re-ranking
+
+How do we automatically decide?
+
+---
+
+## Current Research Directions
+
+### 1️⃣ Uncertainty-Based Rewriting
+
+If entropy high:
+→ Rewrite query
+→ Retrieve again
+
+---
+
+### 2️⃣ Reinforcement Learning for Retrieval Depth
+
+Reward:
+
+* Faithfulness
+* Accuracy
+* Cost penalty
+
+Agent learns:
+
+* When to expand query
+* When to stop retrieving
+
+---
+
+### 3️⃣ Self-Reflective Retrieval
+
+System asks:
+“Do I have enough information?”
+
+If no:
+→ Reformulate query
+→ Retrieve again
+
+---
+
+### 4️⃣ Graph-Based Multi-Hop Planning
+
+Build dynamic entity graph:
+Nodes = Entities
+Edges = Relations
+
+Query walks graph.
+
+---
+
+### 🔥 Open Research Question
+
+How do we:
+
+* Minimize latency
+* Maximize recall
+* Avoid retrieval explosion
+* Maintain grounding
+
+Under distribution shift?
+
+Still unsolved.
+
+---
+
+# 🔥 PART 4 — LIVE MOCK INTERVIEW
+
+I will now simulate a real interviewer.
+
+---
+
+### 🎤 Interviewer:
+
+You claim your RAG system is robust. Prove it.
+
+---
+
+Pause here.
+
+How would YOU answer?
+
+(Write your answer in 4–6 sentences.)
+
+I will critique it like a real FAANG interviewer.
+
+---
+
+
 
 
 
