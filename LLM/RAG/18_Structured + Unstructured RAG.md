@@ -1,6 +1,4 @@
-Excellent. Today we move into **enterprise-grade RAG design** — where data is not just PDFs, but databases, graphs, and structured systems.
 
----
 
 # 📘 Day 18 – Structured + Unstructured RAG
 
@@ -334,9 +332,7 @@ For structured + unstructured RAG:
 * End-to-end factual consistency
 
 ---
-Perfect. Let’s answer **all Day 18 interview questions** at a level suitable for strong ML / LLM systems interviews.
 
-We’ll go tier by tier.
 
 ---
 
