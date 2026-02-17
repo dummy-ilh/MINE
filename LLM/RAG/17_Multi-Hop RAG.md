@@ -1,6 +1,5 @@
 ## Day 17 – Multi-Hop RAG
 
-(*Master-level deep dive: architecture, reasoning patterns, and failure modes*)
 
 Multi-hop RAG is required when a question **cannot be answered from a single document chunk**. The model must retrieve → reason → retrieve again → aggregate → answer.
 
