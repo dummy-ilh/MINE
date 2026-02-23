@@ -2,14 +2,14 @@
 
 # 1.1 Relations Between Variables
 
-Before regression models, we must understand what it means for two variables to be “related.”
+What it means for two variables to be “related.”?
 
 There are two fundamentally different kinds of relationships:
 
 1. Deterministic (Functional) relationship
 2. Stochastic (Statistical) relationship
 
-Understanding this distinction is absolutely foundational.
+
 
 ---
 
@@ -21,9 +21,9 @@ If ( X ) is given, ( Y ) is fully determined.
 
 Mathematically:
 
-$[
+$
 Y = f(X)
-]$
+$
 
 There is **no randomness**.
 
@@ -57,13 +57,13 @@ All observed data points lie exactly on the line.
 
 ### Graphical Representation
 
-!$[Image]$(https://homework.study.com/cimages/multimages/16/graph5211157392957939248.jpg)
+!$[Image](https://homework.study.com/cimages/multimages/16/graph5211157392957939248.jpg)
 
-!$[Image]$(https://www.jpstats.org/Regression/images/sec01_02/01_02_deterministic.png)
+!$[Image](https://www.jpstats.org/Regression/images/sec01_02/01_02_deterministic.png)
 
-!$[Image]$(https://www.itl.nist.gov/div898/handbook/eda/section3/gif/scatplo4.gif)
+!$[Image](https://www.itl.nist.gov/div898/handbook/eda/section3/gif/scatplo4.gif)
 
-!$[Image]$(https://www.researchgate.net/publication/360992572/figure/fig1/AS%3A11431281171723286%401688369943691/SCATTERPLOT-GRAPH-CORRELATION.ppm)
+!$[Image](https://www.researchgate.net/publication/360992572/figure/fig1/AS%3A11431281171723286%401688369943691/SCATTERPLOT-GRAPH-CORRELATION.ppm)
 
 Every point lies perfectly on the line.
 
@@ -130,13 +130,13 @@ Y = f(X) + \text{random variation}
 
 ### Scatter Plot Representation
 
-!$[Image]$(https://miro.medium.com/v2/resize%3Afit%3A1400/1%2AFoyj8GRC5AGjUuhyPRKHSw.png)
+!$[Image](https://miro.medium.com/v2/resize%3Afit%3A1400/1%2AFoyj8GRC5AGjUuhyPRKHSw.png)
 
-!$[Image]$(https://mathbitsnotebook.com/Algebra1/StatisticsReg/residualgraph1aa.jpg)
+!$[Image](https://mathbitsnotebook.com/Algebra1/StatisticsReg/residualgraph1aa.jpg)
 
-!$[Image]$(https://files.planyway.com/strapi-uploads/assets/Scatter_plot_422d3c3f82.png)
+!$[Image](https://files.planyway.com/strapi-uploads/assets/Scatter_plot_422d3c3f82.png)
 
-!$[Image]$(https://miro.medium.com/v2/resize%3Afit%3A1400/1%2AnElSDIp1jloJiqWX7hniaQ.png)
+!$[Image](https://miro.medium.com/v2/resize%3Afit%3A1400/1%2AnElSDIp1jloJiqWX7hniaQ.png)
 
 Points cluster around a line — but do not lie exactly on it.
 
@@ -148,7 +148,6 @@ That “scatter” is the essence of statistics.
 
 Kutner describes regression using geometric language.
 
-Let’s rewrite it rigorously.
 
 A regression model assumes:
 
@@ -157,9 +156,9 @@ A regression model assumes:
 
 Define:
 
-$[
+$
 m(x) = \mathbb{E}$[Y \mid X = x]$
-]$
+$
 
 This function ( m(x) ) is called the **regression function**.
 
@@ -194,9 +193,9 @@ Let’s express this precisely:
 
 ### (1) Systematic Component
 
-$[
+$
 m(x) = \mathbb{E}$[Y \mid X = x]$
-]$
+$
 
 This captures the structured relationship.
 
@@ -206,21 +205,21 @@ This captures the structured relationship.
 
 Define the error:
 
-$[
+$
 \varepsilon = Y - m(X)
-]$
+$
 
 Then:
 
-$[
+$
 Y = m(X) + \varepsilon
-]$
+$
 
 with:
 
-$[
+$
 \mathbb{E}$[\varepsilon \mid X]$ = 0
-]$
+$
 
 This decomposition is the foundation of all regression theory.
 
@@ -252,17 +251,8 @@ The regression function ( m(x) ) can take many forms:
 * Logistic
 * Arbitrary smooth function
 
-Example of curvilinear relationship:
 
-!$[Image]$(https://i.sstatic.net/bcaCP.png)
-
-!$[Image]$(https://www.researchgate.net/publication/262142708/figure/fig3/AS%3A669137273634820%401536546166043/Exemplar-scatter-plots-with-a-non-linear-regression-line-constrained-to-pass-through-the.png)
-
-!$[Image]$(https://online.stat.psu.edu/onlinecourses/sites/stat501/files/08multiple/scatterplot_age_length_02.png)
-
-!$[Image]$(https://images.prismic.io/we-do-data-science-v2/db280db2-0582-4293-a93e-08879f579be2_second-order-fit.png?auto=compress%2Cformat)
-
-Regression analysis is about estimating ( m(x) ).
+Regression analysis is about estimating  m(x) .
 
 ---
 
