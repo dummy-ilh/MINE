@@ -55,16 +55,6 @@ Y = 150
 
 All observed data points lie exactly on the line.
 
-### Graphical Representation
-
-!$[Image](https://homework.study.com/cimages/multimages/16/graph5211157392957939248.jpg)
-
-!$[Image](https://www.jpstats.org/Regression/images/sec01_02/01_02_deterministic.png)
-
-!$[Image](https://www.itl.nist.gov/div898/handbook/eda/section3/gif/scatplo4.gif)
-
-!$[Image](https://www.researchgate.net/publication/360992572/figure/fig1/AS%3A11431281171723286%401688369943691/SCATTERPLOT-GRAPH-CORRELATION.ppm)
-
 Every point lies perfectly on the line.
 
 There is no variability.
@@ -128,16 +118,6 @@ Y = f(X) + \text{random variation}
 
 ---
 
-### Scatter Plot Representation
-
-!$[Image](https://miro.medium.com/v2/resize%3Afit%3A1400/1%2AFoyj8GRC5AGjUuhyPRKHSw.png)
-
-!$[Image](https://mathbitsnotebook.com/Algebra1/StatisticsReg/residualgraph1aa.jpg)
-
-!$[Image](https://files.planyway.com/strapi-uploads/assets/Scatter_plot_422d3c3f82.png)
-
-!$[Image](https://miro.medium.com/v2/resize%3Afit%3A1400/1%2AnElSDIp1jloJiqWX7hniaQ.png)
-
 Points cluster around a line — but do not lie exactly on it.
 
 That “scatter” is the essence of statistics.
@@ -172,14 +152,6 @@ For each value of ( x ):
 
 * There is a vertical distribution of possible ( Y ) values.
 * The mean of that distribution lies on the regression curve.
-
-!$[Image]$(https://www.alexejgossmann.com/assets/img/2018-08-12-conditional_distributions/conditional_densities.png)
-
-!$[Image]$(https://blogs.sas.com/content/iml/files/2015/09/GLM_normal_identity.png)
-
-!$[Image]$(https://bpostance.github.io/assets/images/2020-05-17-glm-fig1.png)
-
-!$[Image]$(https://www.researchgate.net/publication/364261195/figure/fig2/AS%3A11431281375498991%401744647955135/Scatter-plots-including-a-regression-line-illustrating-the-vertical-distribution-of-the.tif)
 
 This is the conceptual core of regression.
 
