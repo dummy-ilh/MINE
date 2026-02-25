@@ -6,13 +6,9 @@
 
 **Regression analysis** is a statistical methodology that helps us understand and predict relationships between variables. Think of it as a mathematical way to answer questions like:
 - "If I increase my advertising budget, how much will sales increase?"
-- "Can I predict employee performance based on aptitude test scores?"
 - "How does a child's vocabulary relate to their age and parents' education?"
 
 This chapter introduces **simple linear regression** - the foundation of all regression methods. "Simple" means we're using just one predictor variable to predict an outcome.
-
-> 💡 **Key Insight**: Regression isn't just about drawing a line through points - it's about understanding systematic relationships while accounting for natural variability.
-
 ---
 
 ## 1.1 Relations Between Variables
@@ -43,7 +39,6 @@ $$Y = 2X$$
 
 Notice that all points fall *exactly* on the line $Y = 2X$. There's no variation - this is characteristic of functional relations.
 
-![Functional Relation Example](placeholder-functional-relation.png)
 
 **Key characteristics of functional relations:**
 - Perfect predictability
@@ -58,7 +53,6 @@ A statistical relation is *not* perfect. The observations scatter around a gener
 
 Data on 10 employees showing midyear performance evaluation ($X$) and year-end evaluation ($Y$):
 
-![Statistical Relation Scatter Plot](placeholder-statistical-relation.png)
 
 **Key observations:**
 - Higher midyear scores tend to associate with higher year-end scores (positive trend)
