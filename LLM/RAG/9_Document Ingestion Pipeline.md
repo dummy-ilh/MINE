@@ -321,15 +321,3 @@ Most RAG systems fail before retrieval even starts.
 
 ---
 
-## 📅 Day 10 Preview — Embedding Model Comparison
-
-Tomorrow we go deeper:
-
-* OpenAI vs open-source embeddings
-* Domain-specific models
-* Fine-tuned embeddings
-* Benchmarking methods
-
-This is where cost vs quality tradeoffs become real.
-
-Say **“Day 10”** when ready.
