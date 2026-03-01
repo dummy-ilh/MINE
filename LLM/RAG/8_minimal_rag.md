@@ -1,9 +1,4 @@
-Good. We’re entering **Week 2** now.
 
-Week 1 = mental models.
-Week 2 = you build the machine.
-
-Today:
 
 > **Day 8 — Build a Minimal RAG From Scratch (No Framework Magic)**
 
@@ -258,17 +253,4 @@ You should confidently say:
 That shows true understanding.
 
 ---
-
-# 📅 Day 9 Preview — Real Document Ingestion
-
-Tomorrow we upgrade:
-
-* Load PDFs
-* Clean text
-* Proper chunking
-* Deduplication
-* Metadata storage
-
-We move from toy → realistic.
-
-Say **“Day 9”** when ready.
+\
