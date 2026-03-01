@@ -1,5 +1,4 @@
-Excellent.
-Today we stop pretending documents are clean strings in a list.
+
 
 > **Day 9 = Real Document Ingestion Pipeline**
 
