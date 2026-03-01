@@ -295,16 +295,4 @@ Right geometry → even simple retrieval performs well.
 
 ---
 
-# 📅 Day 11 Preview — Vector Stores in Practice
 
-Tomorrow we compare:
-
-* FAISS vs Pinecone vs Weaviate vs Milvus vs Chroma
-* Persistence
-* Scaling strategies
-* Sharding
-* Real-world deployment choices
-
-This is where system design enters.
-
-Say **“Day 11”** when ready.
