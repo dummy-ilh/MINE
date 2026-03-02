@@ -2204,6 +2204,90 @@ When both $X$ and $Y$ are **random** (e.g., height and weight of persons):
 - **Conditional inferences** about one variable given the other use the same methods as regression
 - The difference is conceptual: both variables are random, not one fixed
 
+Here's a cleaned-up rewrite optimized for GitHub Markdown rendering, with fixed LaTeX, simplified structure, and consistent formatting to avoid parsing issues.
+
+***
+
+### Conditional Probability Distributions of \( Y_2 \)
+
+The random variables \( Y_1 \) and \( Y_2 \) play symmetrical roles in the bivariate normal probability distribution. Thus, the **conditional probability distribution of \( Y_2 \) given \( Y_1 \)** is normal with:
+
+- **Mean**: \( \alpha_{2|1} + \beta_{21} Y_1 \)
+- **Standard deviation**: \( \sigma_{2|1} \)
+
+Its density function is:
+$$
+f(Y_2|Y_1) = \frac{1}{\sqrt{2\pi} \sigma_{2|1}} \exp\left[-\frac{1}{2}\left(\frac{Y_2 - \alpha_{2|1} - \beta_{21}Y_1}{\sigma_{2|1}}\right)^2\right]
+$$
+
+The parameters are:
+$$
+\alpha_{2|1} = \mu_2 - \mu_1 \rho_{12} \frac{\sigma_2}{\sigma_1}
+$$
+$$
+\beta_{21} = \rho_{12} \frac{\sigma_2}{\sigma_1}
+$$
+$$
+\sigma_{2|1}^2 = \sigma_2^2 (1 - \rho_{12}^2)
+$$
+
+***
+
+### Three Key Characteristics of Conditional Distributions
+
+The conditional distributions of \( Y_1 \) given \( Y_2 \) exhibit three important properties: **normality**, **linear regression**, and **constant variance**.
+
+#### 1. Normality
+
+**The conditional distribution of \( Y_1 \) given any \( Y_2 \) is normal.**
+
+Slicing the bivariate normal surface vertically at \( Y_2 = Y_{h2} \) (parallel to the \( Y_1 \)-axis) yields a normal curve. After scaling to integrate to 1, this represents \( f(Y_1 | Y_2 = Y_{h2}) \).
+
+This holds for **any value** of \( Y_{h2} \).
+
+#### 2. Linear Regression
+
+**The conditional means follow a straight line**:
+$$
+E[Y_1 | Y_2] = \alpha_{1|2} + \beta_{12} Y_2
+$$
+
+The slope \( \beta_{12} \) and intercept \( \alpha_{1|2} \) define the **population regression line**.
+
+#### 3. Constant Variance
+
+**Conditional variances are constant** across all levels of \( Y_2 \):
+$$
+\sigma_{1|2}^2 = \sigma_1^2 (1 - \rho_{12}^2)
+$$
+
+This doesn't depend on \( Y_2 \)'s value.
+
+> These properties match the **normal error regression model**, where \( Y_1 \) plays the role of \( Y \) and \( Y_2 \) plays the role of \( X \).
+
+***
+
+### Summary
+
+- Conditional distributions of \( Y_1 | Y_2 \) and \( Y_2 | Y_1 \) both follow the **normal error regression model**.
+- All regression inferences apply directly to these conditional distributions.
+
+***
+
+### Normal Correlation vs. Regression: Key Distinction
+
+| Model | \( X \) Status | Inference Context |
+|-------|---------------|------------------|
+| **Regression (1.24)** | Fixed constants | Repeated sampling at same \( X \) values |
+| **Bivariate Normal** | Random variables | Conditional inference: \( Y_1 | Y_2 \) uses regression methods |
+
+When both variables are random (height/weight example), use bivariate normal and condition on the known value.
+
+***
+
+Would you like me to add the figure description as an ASCII diagram or adjust the table for your specific GitHub repo structure?
+
+
 ---
 
 
