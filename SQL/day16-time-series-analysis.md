@@ -260,7 +260,22 @@ FROM demand_forecasts GROUP BY product_id ORDER BY mape_pct;
 ---
 
 ## Practice Questions
+🟢 Q1 — Easy
 
+Table: daily_sales(sale_date, product_id, revenue)
+For each product show daily revenue, 7-day moving average, and a flag above_ma (1 if revenue > 7d MA, else 0). Only include 2025 data.
+
+
+🟡 Q2 — Medium
+
+Same table.
+Detect anomaly days per product using rolling 30-day z-score (using only prior 30 days for mean/std). Flag days where local z-score > 2. Return date, product, revenue, rolling mean, z-score, flag.
+
+
+🔴 Q3 — Hard
+
+Tables: orders(order_id, order_date, amount, category), marketing_events(event_id, event_date, event_name, category)
+For each marketing event, measure revenue impact: compare avg daily revenue in the 14 days before vs 14 days after the event for the relevant category. Show absolute and % lift, and flag events where lift > 10
 ### Q1 — Easy ✅
 ```sql
 WITH daily AS (
