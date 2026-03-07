@@ -295,7 +295,28 @@ ORDER BY wa.cohort_week, week_number;
 ---
 
 ## Practice Questions
+🟢 Q1 — Easy
 
+Table: user_logins(user_id, login_date)
+Assign each user to their signup cohort month (month of first login). Return cohort_month and cohort_size, sorted chronologically.
+
+
+🟡 Q2 — Medium
+
+Same table.
+Build a monthly retention table: for each cohort month, show retention rate at months 0, 1, 2, and 3. Output one row per cohort with columns cohort_month, cohort_size, m0, m1, m2, m3.
+
+
+🔴 Q3 — Hard
+
+Tables: users(user_id, signup_date), orders(order_id, user_id, amount, order_date)
+For each monthly signup cohort, compute:
+
+Cohort size
+Month 1, 2, 3 purchase retention (% who made any purchase that month)
+Cumulative LTV per user at months 1, 2, 3
+
+Return one row per cohort.
 ### Q1 — Easy ✅
 Signup cohort month + cohort size.
 
