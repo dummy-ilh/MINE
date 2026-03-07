@@ -38,13 +38,39 @@ FROM orders;
 
 > ⚠️ `COUNT(*)` counts all rows. `COUNT(col)` skips NULLs. Extremely common FAANG trap.
 
+```sql
+SELECT
+  COUNT(*)          AS total_rows,       -- counts everything incl. NULLs
+  COUNT(manager_id) AS non_null_managers,-- counts only non-NULL values
+  SUM(salary)       AS total_salary,
+  AVG(salary)       AS avg_salary,
+  MIN(salary)       AS lowest,
+  MAX(salary)       AS highest
+FROM employees;
+
+-- employees table has 100 rows, 20 have NULL manager_id
+SELECT COUNT(*)          -- returns 100
+SELECT COUNT(manager_id) -- returns 80
+```sql
 ---
 
 ## 2. GROUP BY
 
-Every column in SELECT that is **not inside an aggregate** must appear in GROUP BY.
+Every column in SELECT that is **not inside an aggregate** must appear in GROUP BY. Splits rows into groups, then aggregates each group.
 
 ```sql
+
+sql-- How many employees per department?
+SELECT department, COUNT(*) AS headcount
+FROM employees
+GROUP BY department;
+sql-- Avg salary per department per job title
+SELECT department, job_title, AVG(salary) AS avg_sal
+FROM employees
+GROUP BY department, job_title
+ORDER BY avg_sal DESC;
+
+
 -- Revenue by region
 SELECT region, SUM(amount) AS revenue
 FROM sales
@@ -67,6 +93,17 @@ ORDER BY yr, mo;
 ```
 
 ```sql
+
+-- ❌ FAILS — name is not aggregated or grouped
+SELECT department, name, COUNT(*)
+FROM employees
+GROUP BY department;
+
+-- ✅ WORKS
+SELECT department, COUNT(*)
+FROM employees
+GROUP BY department;
+
 -- ❌ FAILS — can't GROUP BY alias in most DBs
 SELECT YEAR(sale_date) AS yr, SUM(amount)
 FROM sales
@@ -134,6 +171,15 @@ WHERE is_active = 1           -- raw column filter
 GROUP BY department
 HAVING AVG(salary) > 90000    -- aggregate filter
 ORDER BY avg_sal DESC;
+
+-- Combining WHERE and HAVING (very common in interviews)
+SELECT department, AVG(salary) AS avg_sal
+FROM employees
+WHERE is_active = 1              -- filter rows FIRST
+GROUP BY department
+HAVING AVG(salary) > 100000      -- then filter groups
+ORDER BY avg_sal DESC;
+
 ```
 
 > 💡 **Rule:** Filtering raw column? → WHERE. Filtering COUNT/SUM/AVG/MIN/MAX? → HAVING.
@@ -142,6 +188,24 @@ ORDER BY avg_sal DESC;
 
 ## 4. GROUP BY with CASE WHEN
 
+```sql
+
+-- Count employees per salary band
+SELECT
+  CASE
+    WHEN salary >= 150000 THEN 'High'
+    WHEN salary >= 100000 THEN 'Medium'
+    ELSE 'Low'
+  END AS salary_band,
+  COUNT(*) AS headcount
+FROM employees
+GROUP BY
+  CASE
+    WHEN salary >= 150000 THEN 'High'
+    WHEN salary >= 100000 THEN 'Medium'
+    ELSE 'Low'
+  END;
+```
 ```sql
 -- Bucket users by activity level
 SELECT
@@ -188,6 +252,13 @@ GROUP BY
 ---
 
 ## 5. DISTINCT in Aggregates
+```sql
+-- How many unique departments?
+SELECT COUNT(DISTINCT department) FROM employees;
+
+-- Total salary paid to unique job titles only (rare but asked)
+SELECT SUM(DISTINCT salary) FROM employees;
+```
 
 ```sql
 -- Total events vs unique users
@@ -261,9 +332,14 @@ GROUP BY ROLLUP(
   MONTH(sale_date)
 );
 ```
-
+```sql
+-- Subtotals + grand total automatically
+SELECT department, job_title, SUM(salary)
+FROM employees
+GROUP BY ROLLUP(department, job_title);
+-- Adds a subtotal row per department + a grand total row at end
 > 💡 In FAANG interviews — if you see subtotal NULLs in a result set, think ROLLUP.
-
+```
 ---
 
 ## Practice Questions
