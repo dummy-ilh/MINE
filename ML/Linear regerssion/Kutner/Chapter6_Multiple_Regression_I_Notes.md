@@ -72,7 +72,7 @@ $$E\{Y\} = 10 + 2X_1 + 5X_2 \tag{6.3}$$
 
 where $Y$ = test market sales (in \$10K), $X_1$ = point-of-sale expenditures (\$K), $X_2$ = TV expenditures (\$K).
 
-![Response plane for sales promotion example](/images/61.png)
+![Response plane for sales promotion example]([/images/61.PNG](https://github.com/dummy-ilh/MINE/blob/main/ML/Linear%20regerssion/Kutner/images/61.PNG))
 
 *Each point on this plane is the mean response $E\{Y\}$ at that combination of $X_1, X_2$. The vertical distance from a data point $Y_i$ to the plane is the error term $\varepsilon_i$.*
 
