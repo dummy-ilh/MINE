@@ -1,7 +1,5 @@
 # Chapter 6: Multiple Regression I
-### *Kutner et al. — Applied Linear Statistical Models*
 
-> **Chapter Goal:** Extend simple linear regression to handle multiple predictor variables simultaneously. By the end, you should be able to build, estimate, interpret, test, and diagnose a multiple regression model from scratch.
 
 ---
 
@@ -48,13 +46,20 @@ Imagine trying to predict **how much a portrait studio will sell** using only th
 ---
 
 ## 2. Multiple Regression Models {#multiple-regression-models}
-
+This is the simplest form of multiple linear regression. A first-order model implies that the relationship between the response variable and each predictor variable is linear
 ### First-Order Model with Two Predictor Variables
 
 When we have two predictors $X_1$ and $X_2$:
 
 $$Y_i = \beta_0 + \beta_1 X_{i1} + \beta_2 X_{i2} + \varepsilon_i \tag{6.1}$$
-
+Where:
+* $Y_i$: The dependent variable for the $i$-th observation.
+* $X_{i1}$, $X_{i2}$: The two predictor (independent) variables for the $i$-th observation.
+* $\beta_0$: The intercept (mean of $Y$ when $X_1=0$ and $X_2=0$).
+* $\beta_1$: The partial regression coefficient for $X_1$. It represents the change in the mean of $Y$ for a one-unit increase in $X_1$, *holding $X_2$ constant*.
+* $\beta_2$: The partial regression coefficient for $X_2$. It represents the change in the mean of $Y$ for a one-unit increase in $X_2$, *holding $X_1$ constant*.
+* $\epsilon_i$: The random error term for the $i$-th observation.
+* 
 The **response function** (assuming $E\{\varepsilon_i\} = 0$) is:
 
 $$E\{Y\} = \beta_0 + \beta_1 X_1 + \beta_2 X_2 \tag{6.2}$$
@@ -67,7 +72,7 @@ $$E\{Y\} = 10 + 2X_1 + 5X_2 \tag{6.3}$$
 
 where $Y$ = test market sales (in \$10K), $X_1$ = point-of-sale expenditures (\$K), $X_2$ = TV expenditures (\$K).
 
-![Response plane for sales promotion example](placeholder-response-plane.png)
+![Response plane for sales promotion example](/images/61.png)
 
 *Each point on this plane is the mean response $E\{Y\}$ at that combination of $X_1, X_2$. The vertical distance from a data point $Y_i$ to the plane is the error term $\varepsilon_i$.*
 
