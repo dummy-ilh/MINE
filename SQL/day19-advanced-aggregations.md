@@ -240,20 +240,20 @@ ORDER BY GROUPING(region), GROUPING(category), GROUPING(channel),
 ## Practice Questions
 🟢 Q1 — Easy
 
-Table: orders(order_id, user_id, amount, status, order_date)
-Write a data quality report that checks: NULL counts for all columns, negative amounts, invalid status values (only pending/completed/cancelled are valid), and future order dates. Return one row per check with a pass/fail flag.
+Table: orders(order_id, user_id, amount, category, country, order_date)
+Using ROLLUP, show total revenue broken down by year → month, with year subtotals and a grand total. Include an is_subtotal flag using GROUPING().
 
 
 🟡 Q2 — Medium
 
-Tables: orders(order_id, user_id, amount, order_date), users(user_id, signup_date)
-Find all referential integrity violations: orders with no matching user, orders placed before the user's signup date, and users with more than one order on the same date with the same amount (suspected duplicates). Return a summary count per violation type.
+Same table.
+Using GROUPING SETS, produce a single result set with revenue broken down by: (1) country + category, (2) country only, (3) category only, (4) grand total. Label subtotal rows cleanly using CASE WHEN GROUPING().
 
 
 🔴 Q3 — Hard
 
-Table: events(event_id, user_id, event_type, event_date, amount)
-Build a daily pipeline health monitor: for each day show total events, NULL rate for amount, duplicate event_id count, % of invalid event_types (valid = click/view/purchase/signup), row count vs 7-day average, and flag days where any metric is out of threshold.
+Same table.
+Build a Pareto analysis by category: show each category's revenue, % of total, cumulative %, and flag categories that together make up the top 80% of revenue. Then append a ROLLUP grand total row at the bottom. Sort by revenue descending.
 ### Q1 — Easy ✅
 ROLLUP by year → month with row_type label.
 
