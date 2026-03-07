@@ -1,7 +1,5 @@
 # Chapter 7: Multiple Regression II
-### *Kutner et al. — Applied Linear Statistical Models*
 
-> **Chapter Goal:** Master the specialized tools unique to multiple regression: extra sums of squares (the Swiss Army knife of regression testing), partial determination coefficients, standardized regression models, and the notorious problem of multicollinearity. These topics are essential for anyone doing real-world regression analysis.
 
 ---
 
@@ -782,42 +780,22 @@ $$VIF = \frac{1}{1-r_{12}^2}$$
    → When multicollinearity is present, a coefficient can even change sign depending on which other predictors are in the model (as seen with $b_2$ in the body fat example). Always consider the full model context.
 
 ---
+## 7.6 Multicollinearity and Its Effects (Page 278)
 
-## 10. Practice Problems {#practice-problems}
+**Multicollinearity** refers to the situation in multiple regression where two or more predictor variables are highly correlated with each other. It poses a significant challenge to the interpretation and stability of the regression model.
 
-**Problem 1:** Using the body fat data (Tables 7.2, 7.4):
-- (a) Compute $SSR(X_1|X_2, X_3)$.
-- (b) Interpret what this number means in plain English.
-- (c) Compute $R_{Y1|23}^2$. What does it tell you?
+### Uncorrelated Predictor Variables (Page 279)
+This is an ideal (but rare in observational studies) scenario. If predictor variables are perfectly uncorrelated (orthogonal), then:
+* The regression coefficients $b_k$ are independent of which other predictors are in the model.
+* The extra sum of squares $SSR(X_k | \text{other } X\text{s})$ would simply be $SSR(X_k)$.
+* Coefficient estimates are highly stable and precise.
+* Interpretation of individual coefficients is straightforward.
+* This is often achieved in designed experiments (e.g., using orthogonal designs).
 
-**Problem 2:** For a regression of $Y$ on $X_1$, $X_2$, $X_3$ with $n = 30$ and:
-- $SSR(X_1) = 200$, $SSR(X_2|X_1) = 80$, $SSR(X_3|X_1, X_2) = 30$, $SSE = 190$
-
-   Construct the full ANOVA table with SSR decomposition, and test $H_0: \beta_2 = \beta_3 = 0$ at $\alpha = .05$.
-
-**Problem 3:** Two predictors $X_1$ and $X_2$ have $r_{12} = .90$ and $r_{Y1} = .85$, $r_{Y2} = .82$.
-- (a) Compute $b_1^*$ and $b_2^*$ using equations (7.55a,b).
-- (b) Compare $b_1^*$ and $b_2^*$ to $r_{Y1}$ and $r_{Y2}$. What's different, and why?
-
-**Problem 4:** A model has $SSR(X_1) = 500$ and $SSR(X_1|X_2) = 10$. What does this imply about the relationship between $X_1$ and $X_2$? How should this affect your interpretation of $b_1$ in the model containing both variables?
-
-**Problem 5:** A researcher reports that individually neither $b_1$ nor $b_2$ is significantly different from zero (both $|t^*| < 2$), but the overall F test rejects $H_0: \beta_1 = \beta_2 = 0$ at $\alpha = .05$.
-- (a) Is this possible? Explain.
-- (b) What is the likely cause?
-- (c) What should the researcher do next?
-
----
-
-## Connections to Other Chapters
-
-| Topic | Chapter |
-|-------|---------|
-| Partial F tests and model selection | Ch. 9 (variable selection procedures) |
-| Added variable plots (partial regression plots) | Ch. 10.1 |
-| VIF and formal multicollinearity diagnostics | Ch. 10 |
-| Influential observations and leverage | Ch. 11 |
-| Ridge regression (remedy for multicollinearity) | Ch. 11 |
-| Interaction models and polynomial regression | Ch. 8 |
+### Nature of Problem when Predictor Variables Are Perfectly Correlated (Page 281)
+**Perfect Multicollinearity** occurs when one predictor variable is an exact linear combination of one or more other predictor variables.
+* **Cause:** This happens if, for example, you include dummy variables for *all* categories of a categorical variable *and* an intercept in the model (the sum of dummies equals the intercept's column of ones). Or, if you include a variable and its exact duplicate.
+* **Consequence:** The $\mathbf{X}^T \mathbf{X}$ matrix becomes **singular** (its determinant is zero), meaning its inverse $(\mathbf{X}^T \mathbf{X})^{-1}$ does **not exist**. Consequently, the least squares estimates $\mathbf{b} = (\mathbf{X}^T \mathbf{X})^{-1} \mathbf{X}^T \mathbf{Y}$ cannot be uniquely determined. Statistical software will usually issue an error and drop one of the perfectly correlated variables.
 
 ---
 
