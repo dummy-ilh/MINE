@@ -267,7 +267,22 @@ FROM events GROUP BY DATE(event_time) ORDER BY event_date;
 ---
 
 ## Practice Questions
+🟢 Q1 — Easy
 
+Table: orders(order_id, user_id, amount, status, order_date)
+Write a data quality report that checks: NULL counts for all columns, negative amounts, invalid status values (only pending/completed/cancelled are valid), and future order dates. Return one row per check with a pass/fail flag.
+
+
+🟡 Q2 — Medium
+
+Tables: orders(order_id, user_id, amount, order_date), users(user_id, signup_date)
+Find all referential integrity violations: orders with no matching user, orders placed before the user's signup date, and users with more than one order on the same date with the same amount (suspected duplicates). Return a summary count per violation type.
+
+
+🔴 Q3 — Hard
+
+Table: events(event_id, user_id, event_type, event_date, amount)
+Build a daily pipeline health monitor: for each day show total events, NULL rate for amount, duplicate event_id count, % of invalid event_types (valid = click/view/purchase/signup), row count vs 7-day average, and flag days where any metric is out of threshold.
 ### Q1 — Easy ✅
 DQ report: NULLs, negative amounts, invalid status, future dates.
 
