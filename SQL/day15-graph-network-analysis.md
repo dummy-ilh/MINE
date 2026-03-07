@@ -292,7 +292,22 @@ SELECT
 ---
 
 ## Practice Questions
+🟢 Q1 — Easy
 
+Table: friendships(user_id_1, user_id_2) (undirected, user_id_1 < user_id_2)
+Find the top 10 most connected users by total friend count. Return user_id and friend_count.
+
+
+🟡 Q2 — Medium
+
+Same table.
+For user_id = 500, find all friend-of-friend recommendations — users who are exactly 2 hops away and not already friends. Return recommended_user_id and mutual_friend_count, sorted by mutual friends descending.
+
+
+🔴 Q3 — Hard
+
+Tables: users(user_id, name), follows(follower_id, followee_id)
+Find users who are in a mutual follow relationship (both follow each other). For each mutual pair, show both user names and the number of mutual followers they share (users who follow both of them).
 ### Q1 — Easy ✅
 Top 10 most connected users.
 
