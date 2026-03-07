@@ -43,13 +43,17 @@ FROM users;
 
 ```sql
 SELECT
-  SUBSTRING('hello world', 1, 5) AS sub1,  -- 'hello'
-  SUBSTRING('hello world', 7)    AS sub2,  -- 'world'
-  LEFT('hello world', 5)         AS left5, -- 'hello'
-  RIGHT('hello world', 5)        AS right5;-- 'world'
+  SUBSTRING('hello world', 1, 5)  AS sub1,  -- 'hello' (start, length)
+  SUBSTRING('hello world', 7)     AS sub2,  -- 'world' (from pos 7 to end)
+  LEFT('hello world', 5)          AS left5, -- 'hello'
+  RIGHT('hello world', 5)         AS right5;-- 'world'
+
+-- Extract year from a string date column (when stored as VARCHAR)
+SELECT LEFT(order_date_str, 4) AS year_str FROM orders;  -- '2026'
 
 -- Extract domain from email
-SELECT email,
+SELECT
+  email,
   SUBSTRING(email, LOCATE('@', email) + 1) AS domain
 FROM users;
 -- 'john@gmail.com' → 'gmail.com'
@@ -61,13 +65,16 @@ FROM users;
 
 ```sql
 SELECT
-  LOCATE('world', 'hello world'),  -- 7
-  LOCATE('@', 'john@gmail.com'),   -- 5
-  INSTR('hello world', 'world');   -- 7
+  LOCATE('world', 'hello world'),   -- 7 (position of substring)
+  LOCATE('@', 'john@gmail.com'),    -- 5
+  INSTR('hello world', 'world');    -- 7 (same as LOCATE, different arg order)
 
--- Find gmail users
+sql-- Find users with gmail
 SELECT email FROM users
 WHERE LOCATE('@gmail.com', email) > 0;
+
+-- Or simpler with LIKE
+SELECT email FROM users WHERE email LIKE '%@gmail.com';
 ```
 
 ---
@@ -99,11 +106,13 @@ FROM users;
 ## 5. LIKE vs REGEXP
 
 ```sql
--- LIKE: % = any chars, _ = one char
-SELECT * FROM users WHERE name LIKE 'A%';    -- starts with A
-SELECT * FROM users WHERE name LIKE '%son';  -- ends with son
-SELECT * FROM users WHERE name LIKE '_ohn';  -- John, Rohn etc.
-SELECT * FROM users WHERE name LIKE '%an%';  -- contains 'an'
+-- LIKE — simple pattern matching
+-- % = any number of chars, _ = exactly one char
+SELECT * FROM users WHERE name LIKE 'A%';       -- starts with A
+SELECT * FROM users WHERE name LIKE '%son';     -- ends with son
+SELECT * FROM users WHERE name LIKE '_ohn';     -- John, Rohn etc.
+SELECT * FROM users WHERE name LIKE '%an%';     -- contains 'an'
+SELECT * FROM users WHERE name LIKE 'J_h_';    -- exactly 4 chars, J_h_
 ```
 
 ```sql
@@ -154,6 +163,17 @@ SELECT product_id,
   SUBSTRING_INDEX(SUBSTRING_INDEX(tags, 'size:',  -1), ',', 1) AS size,
   SUBSTRING_INDEX(SUBSTRING_INDEX(tags, 'brand:', -1), ',', 1) AS brand
 FROM products;
+
+
+-- Parse structured strings (e.g. 'category:electronics|brand:apple')
+SELECT
+  product_id,
+  SUBSTRING_INDEX(
+    SUBSTRING_INDEX(tags, 'category:', -1), '|', 1
+  ) AS category
+FROM products;
+-- SUBSTRING_INDEX(str, delimiter, count)
+-- count > 0 → left side, count < 0 → right side
 ```
 
 ---
@@ -287,4 +307,9 @@ ORDER BY month, total_views DESC;
 
 ---
 
-*Day 7 complete — Week 1 done! 23 days to go 🚀*
+Summary Cheatsheet
+FunctionPurposeUPPER / LOWERChange caseTRIM / LTRIM / RTRIMRemove whitespaceLENGTH / CHAR_LENGTHString lengthSUBSTRING(str, pos, len)Extract substringLEFT / RIGHTExtract from endsLOCATE(sub, str)Find position of substringREPLACE(str, from, to)Replace occurrencesCONCAT / CONCAT_WSJoin strings (WS skips NULLs)LIKESimple pattern matchingREGEXPFull regex matchingGROUP_CONCATAggregate rows into stringSUBSTRING_INDEXSplit on delimiter
+
+
+
+
