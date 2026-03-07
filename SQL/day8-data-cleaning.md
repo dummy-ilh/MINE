@@ -239,7 +239,22 @@ SELECT user_id FROM table_b;
 ---
 
 ## Practice Questions
+🟢 Q1 — Easy
 
+Table: orders(order_id, customer_id, amount, status, order_date)
+Write a data quality report showing: total rows, NULL count for amount and status, count of negative amounts, count of orders with unknown status (status NOT IN ('completed','pending','cancelled')).
+
+
+🟡 Q2 — Medium
+
+Table: users(user_id, email, created_at, country)
+Users table has duplicates on email. Keep only the earliest created account per email. Return user_id, email, created_at, country.
+
+
+🔴 Q3 — Hard
+
+Tables: events(user_id, event_type, event_date), users(user_id, signup_date, plan_type)
+Find users who: signed up in 2024, are on the 'premium' plan, triggered a 'purchase' event within 7 days of signup, but have NOT triggered any event in the last 30 days (potentially churned premium users). Return user_id, signup_date, days_since_last_event.
 ### Q1 — Easy ✅
 Data quality report on orders table.
 
