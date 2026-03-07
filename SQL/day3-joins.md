@@ -377,4 +377,141 @@ WHERE e.salary > m.salary;
 
 ---
 
-*Day 3 complete — 27 days to go 🚀*
+Tricky JOINs — FAANG Special
+
+Trick 1: JOIN on Non-Equality Conditions
+Most people only know ON a.id = b.id. FAANG tests range and inequality joins.
+sql-- Find all employees who earn more than ANY engineer
+-- (not just their own department)
+SELECT e.name, e.salary, e2.name AS engineer, e2.salary AS eng_salary
+FROM employees e
+JOIN employees e2
+  ON  e2.department = 'Engineering'
+  AND e.salary > e2.salary
+  AND e.department != 'Engineering';
+sql-- Assign discount tiers based on order amount ranges
+-- discount_tiers(tier_name, min_amount, max_amount, discount_pct)
+SELECT o.order_id, o.amount, t.tier_name, t.discount_pct
+FROM orders o
+JOIN discount_tiers t
+  ON o.amount BETWEEN t.min_amount AND t.max_amount;
+-- No equality — pure range join. Very common in pricing/ML feature tables.
+
+Trick 2: Multiple JOIN Conditions
+sql-- Match on TWO columns — both must match
+-- Prevents wrong matches when IDs repeat across regions
+SELECT *
+FROM orders_us o
+JOIN returns_us r
+  ON  o.order_id   = r.order_id
+  AND o.customer_id = r.customer_id;  -- extra safety condition
+sql-- Time-based JOIN — match events within a time window
+-- "Find clicks that happened within 1 hour after an ad impression"
+-- impressions(user_id, imp_time), clicks(user_id, click_time)
+SELECT i.user_id, i.imp_time, c.click_time
+FROM impressions i
+JOIN clicks c
+  ON  i.user_id   = c.user_id
+  AND c.click_time BETWEEN i.imp_time AND i.imp_time + INTERVAL 1 HOUR;
+
+💡 Time-window JOINs are extremely common in Meta/Google ads & ML feature engineering interviews.
+
+
+Trick 3: Joining on Aggregates (Derived Tables)
+sql-- Find employees who earn the MAX salary in their department
+SELECT e.name, e.department, e.salary
+FROM employees e
+JOIN (
+  SELECT department, MAX(salary) AS max_sal
+  FROM employees
+  GROUP BY department
+) dept_max
+  ON  e.department = dept_max.department
+  AND e.salary     = dept_max.max_sal;
+sql-- Find the most recent order per customer
+SELECT o.customer_id, o.order_id, o.amount, o.order_date
+FROM orders o
+JOIN (
+  SELECT customer_id, MAX(order_date) AS latest
+  FROM orders
+  GROUP BY customer_id
+) last_order
+  ON  o.customer_id = last_order.customer_id
+  AND o.order_date  = last_order.latest;
+
+💡 This pattern (JOIN on subquery aggregate) is one of the top 5 FAANG SQL patterns. Comes up in almost every DS phone screen.
+
+
+Trick 4: CROSS JOIN for Gap Detection
+sql-- "Which user-product combinations have NEVER been purchased?"
+-- Generate all possible pairs, then anti-join against actual purchases
+
+SELECT u.user_id, p.product_id
+FROM users u
+CROSS JOIN products p
+
+EXCEPT  -- or use LEFT JOIN + IS NULL
+
+SELECT user_id, product_id
+FROM purchases;
+sql-- Same with LEFT JOIN (works in MySQL too)
+SELECT u.user_id, p.product_id
+FROM users u
+CROSS JOIN products p
+LEFT JOIN purchases pur
+  ON  u.user_id   = pur.user_id
+  AND p.product_id = pur.product_id
+WHERE pur.purchase_id IS NULL;
+
+💡 This is the foundation of recommendation system queries at Netflix/Amazon — find what users haven't seen/bought yet.
+
+
+Trick 5: Chained LEFT JOINs — NULL Propagation Trap
+sql-- ❌ Trap: filtering middle table in WHERE breaks outer joins
+SELECT e.name, d.dept_name, p.project_name
+FROM employees e
+LEFT JOIN departments d ON e.dept_id = d.dept_id
+LEFT JOIN projects p    ON d.dept_id = p.dept_id
+WHERE d.location = 'NYC';  -- ❌ kills LEFT JOIN, excludes employees with no dept
+sql-- ✅ Filter in ON clause to preserve LEFT JOIN behavior
+SELECT e.name, d.dept_name, p.project_name
+FROM employees e
+LEFT JOIN departments d
+  ON  e.dept_id    = d.dept_id
+  AND d.location   = 'NYC'       -- ✅ filter stays in ON
+LEFT JOIN projects p ON d.dept_id = p.dept_id;
+
+Trick 6: SELF JOIN for Consecutive Events
+sql-- "Find users who logged in on two consecutive days"
+-- logins(user_id, login_date)
+
+SELECT DISTINCT a.user_id
+FROM logins a
+JOIN logins b
+  ON  a.user_id   = b.user_id
+  AND b.login_date = a.login_date + INTERVAL 1 DAY;
+sql-- "Find sessions where a user had two events within 5 minutes"
+-- events(user_id, event_type, event_time)
+
+SELECT a.user_id, a.event_type AS event1, b.event_type AS event2
+FROM events a
+JOIN events b
+  ON  a.user_id   = b.user_id
+  AND b.event_time BETWEEN a.event_time AND a.event_time + INTERVAL 5 MINUTE
+  AND a.event_time < b.event_time;  -- avoid self-matching same row
+
+💡 Consecutive event patterns come up in retention, funnel analysis, and fraud detection — all massive DS/MLE interview topics.
+
+
+Trick 7: USING vs ON
+sql-- When both tables have identically named join column
+-- ON version
+SELECT e.name, d.dept_name
+FROM employees e
+JOIN departments d ON e.dept_id = d.dept_id;
+
+-- USING version (cleaner, but only when column names match exactly)
+SELECT e.name, d.dept_name
+FROM employees e
+JOIN departments d USING (dept_id);
+-- dept_id appears only once in result (not duplicated like with ON)
