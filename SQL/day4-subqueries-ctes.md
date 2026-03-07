@@ -450,6 +450,22 @@ WHERE order_id NOT IN (
 
 ## Practice Questions
 
+🟢 Q1 — Easy
+
+Table: employees(emp_id, name, department, salary)
+Find all employees who earn above the company average salary. Return name, salary.
+
+
+🟡 Q2 — Medium
+
+Same table.
+Using a CTE, find the average salary per department, then return employees who earn above their own department's average.
+
+
+🔴 Q3 — Hard
+
+Tables: customers(customer_id, name), orders(order_id, customer_id, product_id)  products(product_id, product_name)
+Find customers who have ordered every single product in the products table. Return customer_id, name.
 ### Q1 — Easy ✅
 Find all employees earning above company average salary.
 
