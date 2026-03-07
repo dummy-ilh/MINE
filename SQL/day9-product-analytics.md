@@ -17,34 +17,43 @@
 ---
 
 ## 1. Conversion Funnel Basics
-
+A funnel tracks users moving through sequential steps. The key metric is drop-off rate at each step.
 ```sql
+-- Table: events(user_id, event_type, event_date)
+-- Funnel: signup → onboarding → first_purchase → repeat_purchase
+
 WITH funnel AS (
   SELECT
     COUNT(DISTINCT CASE WHEN event_type = 'signup'
-          THEN user_id END)          AS step1_signup,
+          THEN user_id END)           AS step1_signup,
     COUNT(DISTINCT CASE WHEN event_type = 'onboarding'
-          THEN user_id END)          AS step2_onboarding,
+          THEN user_id END)           AS step2_onboarding,
     COUNT(DISTINCT CASE WHEN event_type = 'first_purchase'
-          THEN user_id END)          AS step3_purchase,
+          THEN user_id END)           AS step3_purchase,
     COUNT(DISTINCT CASE WHEN event_type = 'repeat_purchase'
-          THEN user_id END)          AS step4_repeat
+          THEN user_id END)           AS step4_repeat
   FROM events
 )
 SELECT
-  step1_signup, step2_onboarding, step3_purchase, step4_repeat,
-  ROUND(step2_onboarding * 100.0 / step1_signup,    2) AS signup_to_onboard_pct,
-  ROUND(step3_purchase   * 100.0 / step2_onboarding, 2) AS onboard_to_purchase_pct,
-  ROUND(step4_repeat     * 100.0 / step3_purchase,   2) AS purchase_to_repeat_pct,
-  ROUND(step4_repeat     * 100.0 / step1_signup,     2) AS overall_conversion_pct
+  step1_signup,
+  step2_onboarding,
+  step3_purchase,
+  step4_repeat,
+  ROUND(step2_onboarding  * 100.0 / step1_signup,    2) AS signup_to_onboard_pct,
+  ROUND(step3_purchase    * 100.0 / step2_onboarding, 2) AS onboard_to_purchase_pct,
+  ROUND(step4_repeat      * 100.0 / step3_purchase,   2) AS purchase_to_repeat_pct,
+  ROUND(step4_repeat      * 100.0 / step1_signup,     2) AS overall_conversion_pct
 FROM funnel;
 ```
 
 ---
 
 ## 2. Ordered Funnel (Steps Must Be Sequential)
-
+Real funnels require steps to happen in order. This is harder.
 ```sql
+-- User must: view_product → add_to_cart → checkout → purchase
+-- Each step must come AFTER the previous one
+
 WITH step1 AS (
   SELECT DISTINCT user_id, MIN(event_date) AS s1_date
   FROM events WHERE event_type = 'view_product'
@@ -52,30 +61,33 @@ WITH step1 AS (
 ),
 step2 AS (
   SELECT DISTINCT e.user_id, MIN(e.event_date) AS s2_date
-  FROM events e JOIN step1 s ON e.user_id = s.user_id
+  FROM events e
+  JOIN step1 s ON e.user_id = s.user_id
   WHERE e.event_type = 'add_to_cart'
-    AND e.event_date > s.s1_date
+    AND e.event_date > s.s1_date   -- must happen AFTER step 1
   GROUP BY e.user_id
 ),
 step3 AS (
   SELECT DISTINCT e.user_id, MIN(e.event_date) AS s3_date
-  FROM events e JOIN step2 s ON e.user_id = s.user_id
+  FROM events e
+  JOIN step2 s ON e.user_id = s.user_id
   WHERE e.event_type = 'checkout'
     AND e.event_date > s.s2_date
   GROUP BY e.user_id
 ),
 step4 AS (
   SELECT DISTINCT e.user_id, MIN(e.event_date) AS s4_date
-  FROM events e JOIN step3 s ON e.user_id = s.user_id
+  FROM events e
+  JOIN step3 s ON e.user_id = s.user_id
   WHERE e.event_type = 'purchase'
     AND e.event_date > s.s3_date
   GROUP BY e.user_id
 )
 SELECT
-  COUNT(DISTINCT step1.user_id)  AS viewed,
-  COUNT(DISTINCT step2.user_id)  AS added_to_cart,
-  COUNT(DISTINCT step3.user_id)  AS checked_out,
-  COUNT(DISTINCT step4.user_id)  AS purchased,
+  COUNT(DISTINCT step1.user_id) AS viewed,
+  COUNT(DISTINCT step2.user_id) AS added_to_cart,
+  COUNT(DISTINCT step3.user_id) AS checked_out,
+  COUNT(DISTINCT step4.user_id) AS purchased,
   ROUND(COUNT(DISTINCT step2.user_id) * 100.0 /
         COUNT(DISTINCT step1.user_id), 2) AS view_to_cart_pct,
   ROUND(COUNT(DISTINCT step4.user_id) * 100.0 /
@@ -91,34 +103,40 @@ LEFT JOIN step4 USING (user_id);
 ---
 
 ## 3. Retention Analysis
-
+Day N retention = % of users who come back N days after their first event.
 ```sql
+-- Day 1, Day 7, Day 30 retention
 WITH first_seen AS (
   SELECT user_id, MIN(event_date) AS first_date
-  FROM events GROUP BY user_id
+  FROM events
+  GROUP BY user_id
 ),
 activity AS (
-  SELECT DISTINCT user_id, event_date FROM events
+  SELECT DISTINCT user_id, event_date
+  FROM events
 )
 SELECT
-  COUNT(DISTINCT f.user_id)                        AS total_users,
+  COUNT(DISTINCT f.user_id)                          AS total_users,
+  -- Day 1
   COUNT(DISTINCT CASE
     WHEN DATEDIFF(a.event_date, f.first_date) = 1
-    THEN a.user_id END)                            AS day1_retained,
+    THEN a.user_id END)                              AS day1_retained,
+  -- Day 7
   COUNT(DISTINCT CASE
     WHEN DATEDIFF(a.event_date, f.first_date) = 7
-    THEN a.user_id END)                            AS day7_retained,
+    THEN a.user_id END)                              AS day7_retained,
+  -- Day 30
   COUNT(DISTINCT CASE
     WHEN DATEDIFF(a.event_date, f.first_date) = 30
-    THEN a.user_id END)                            AS day30_retained,
+    THEN a.user_id END)                              AS day30_retained,
   ROUND(COUNT(DISTINCT CASE
     WHEN DATEDIFF(a.event_date, f.first_date) = 1
     THEN a.user_id END) * 100.0 /
-    COUNT(DISTINCT f.user_id), 2)                  AS day1_pct,
+    COUNT(DISTINCT f.user_id), 2)                    AS day1_retention_pct,
   ROUND(COUNT(DISTINCT CASE
     WHEN DATEDIFF(a.event_date, f.first_date) = 7
     THEN a.user_id END) * 100.0 /
-    COUNT(DISTINCT f.user_id), 2)                  AS day7_pct
+    COUNT(DISTINCT f.user_id), 2)                    AS day7_retention_pct
 FROM first_seen f
 LEFT JOIN activity a ON f.user_id = a.user_id;
 ```
@@ -128,16 +146,30 @@ LEFT JOIN activity a ON f.user_id = a.user_id;
 ## 4. DAU / WAU / MAU + Stickiness
 
 ```sql
--- DAU
+-- DAU — Daily Active Users
 SELECT event_date, COUNT(DISTINCT user_id) AS DAU
-FROM events GROUP BY event_date;
+FROM events
+GROUP BY event_date
+ORDER BY event_date;
 
--- MAU
-SELECT DATE_FORMAT(event_date, '%Y-%m') AS month,
+-- WAU — Weekly Active Users
+SELECT
+  YEAR(event_date)  AS yr,
+  WEEK(event_date)  AS wk,
+  COUNT(DISTINCT user_id) AS WAU
+FROM events
+GROUP BY YEAR(event_date), WEEK(event_date)
+ORDER BY yr, wk;
+
+-- MAU — Monthly Active Users
+SELECT
+  DATE_FORMAT(event_date, '%Y-%m') AS month,
   COUNT(DISTINCT user_id) AS MAU
-FROM events GROUP BY DATE_FORMAT(event_date, '%Y-%m');
+FROM events
+GROUP BY DATE_FORMAT(event_date, '%Y-%m')
+ORDER BY month;
 
--- DAU/MAU stickiness ratio
+-- DAU/MAU ratio — measures stickiness (higher = more sticky)
 WITH dau AS (
   SELECT event_date, COUNT(DISTINCT user_id) AS daily_users
   FROM events GROUP BY event_date
@@ -148,23 +180,24 @@ mau AS (
   FROM events GROUP BY DATE_FORMAT(event_date, '%Y-%m')
 )
 SELECT
-  DATE_FORMAT(d.event_date, '%Y-%m')              AS month,
-  AVG(d.daily_users)                              AS avg_dau,
-  m.monthly_users                                 AS mau,
-  ROUND(AVG(d.daily_users) * 100.0
-        / m.monthly_users, 2)                     AS dau_mau_ratio
+  DATE_FORMAT(d.event_date, '%Y-%m') AS month,
+  AVG(d.daily_users)                 AS avg_dau,
+  m.monthly_users                    AS mau,
+  ROUND(AVG(d.daily_users) * 100.0 / m.monthly_users, 2) AS dau_mau_ratio
 FROM dau d
 JOIN mau m ON DATE_FORMAT(d.event_date, '%Y-%m') = m.month
-GROUP BY DATE_FORMAT(d.event_date, '%Y-%m'), m.monthly_users;
+GROUP BY DATE_FORMAT(d.event_date, '%Y-%m'), m.monthly_users
+ORDER BY month;
 ```
 
-> 💡 DAU/MAU = stickiness. WhatsApp ~70%, Facebook ~50%, most apps <20%.
+> 💡 DAU/MAU ratio is a key product health metric. WhatsApp ~70%, Facebook ~50%, most apps < 20%. Interviewers love asking you to compute and interpret this.
 
 ---
 
 ## 5. RFM Segmentation
-
+RFM = Recency, Frequency, Monetary — the classic DS segmentation framework.
 ```sql
+-- Table: orders(order_id, user_id, amount, order_date)
 WITH rfm_raw AS (
   SELECT user_id,
     DATEDIFF(CURRENT_DATE, MAX(order_date)) AS recency_days,
@@ -198,6 +231,8 @@ ORDER BY total_rfm DESC;
 ## 6. Session Analysis
 
 ```sql
+-- Table: page_views(user_id, page, view_time)
+-- Define session: gap > 30 mins = new session
 WITH gaps AS (
   SELECT user_id, page, view_time,
     LAG(view_time) OVER (
@@ -228,6 +263,8 @@ GROUP BY user_id, session_id;
 ## 7. A/B Test Results
 
 ```sql
+-- Tables: ab_assignments(user_id, variant), orders(user_id, amount, order_date)
+-- Question: Did the treatment group convert better?
 WITH experiment AS (
   SELECT a.variant,
     COUNT(DISTINCT a.user_id)  AS total_users,
@@ -252,6 +289,7 @@ FROM experiment ORDER BY variant;
 ## 8. Power Users & Feature Adoption
 
 ```sql
+-- What % of users use each feature?
 -- Feature adoption rate
 SELECT feature_name,
   COUNT(DISTINCT user_id) AS users_used,
@@ -262,6 +300,7 @@ GROUP BY feature_name
 ORDER BY adoption_pct DESC;
 
 -- Top 10% power users
+-- Power users: top 10% by event count
 WITH activity AS (
   SELECT user_id, COUNT(*) AS event_count
   FROM events GROUP BY user_id
@@ -278,7 +317,9 @@ HAVING decile = 1;
 
 ### Q1 — Easy ✅
 Simple 3-step funnel.
-
+Table: events(user_id, event_type, event_date)
+Events: 'signup', 'first_login', 'first_purchase'
+Build a simple 3-step funnel showing user count and conversion rate at each step.
 ```sql
 WITH funnel AS (
   SELECT
@@ -299,6 +340,8 @@ FROM funnel;
 ```
 
 ### Q2 — Medium ✅
+Table: orders(order_id, user_id, amount, order_date)
+Compute RFM scores for each user. Recency = days since last order, Frequency = total orders, Monetary = total spend. Use NTILE(4) to score each dimension 1–4.
 RFM scores with NTILE(4).
 
 ```sql
@@ -318,7 +361,8 @@ FROM rfm_raw;
 
 ### Q3 — Hard ✅
 Weekly cohort retention — Week 0 through Week 4.
-
+Tables: users(user_id, signup_date), events(user_id, event_type, event_date)
+For each weekly signup cohort in 2025, calculate Week 0, Week 1, Week 2, Week 4 retention rates (% of cohort who had any event that week). Return cohort week, cohort size, and retention % for each week.
 ```sql
 WITH cohorts AS (
   SELECT user_id,
@@ -367,6 +411,7 @@ ORDER BY c.cohort_week;
 - **Session detection** → LAG + TIMESTAMPDIFF > 30 min threshold
 - **A/B test** → LEFT JOIN on variant + date window + conversion rate
 - **Cohort pivot** → CASE WHEN week_number = N inside COUNT DISTINCT
+- **Power users**→NTILE(10) on event count
 
 ---
 
