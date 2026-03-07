@@ -245,7 +245,24 @@ FROM users;
 ---
 
 ## Practice Questions
+1 — Easy
 
+Table: users(user_id, email, phone, country)
+Return user_id, cleaned email (lowercase, trimmed), masked phone (show only last 4 digits as ****1234), and cleaned country (trimmed, proper upper case).
+
+
+🟡 Q2 — Medium
+
+Table: products(product_id, product_name, tags)
+tags column format: 'color:red,size:large,brand:nike'
+Extract color, size, and brand as separate columns. Only return products where color is 'red' or 'blue'.
+
+
+🔴 Q3 — Hard
+
+Table: page_views(view_id, user_id, url, view_date)
+URL format: 'https://site.com/page?utm_source=google&utm_medium=cpc&utm_campaign=sale'
+Extract utm_source, utm_medium, utm_campaign from the URL. Show total views and unique users per utm_source per month in 2025. Only include sources with more than 100 views.
 ### Q1 — Easy ✅
 Clean email, masked phone, clean country.
 
