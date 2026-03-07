@@ -90,7 +90,7 @@ LEFT JOIN employees e ON e.dept_id = d.dept_id;
 SELECT * FROM A RIGHT JOIN B ON A.id = B.id;
 SELECT * FROM B LEFT JOIN A  ON A.id = B.id;```
 ---
-
+```
 ## 5. FULL OUTER JOIN
 Returns everything from both tables. NULLs fill in where there's no match.
 ```sql
