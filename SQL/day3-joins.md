@@ -52,18 +52,20 @@ INNER JOIN products p  ON o.product_id  = p.product_id;
 ## 3. LEFT JOIN + Anti-Join
 
 ```sql
--- All employees, NULL dept_name if no department
+-- All employees, with their department if it exists
 SELECT e.name, d.dept_name
 FROM employees e
 LEFT JOIN departments d ON e.dept_id = d.dept_id;
+-- employees with no department → dept_name = NULL
 ```
 
 ```sql
--- Anti-join: employees with NO department (LEFT JOIN + IS NULL)
+-- Classic FAANG pattern: find rows with NO match (anti-join)
+-- "Find employees who are NOT assigned to any department"
 SELECT e.name
 FROM employees e
 LEFT JOIN departments d ON e.dept_id = d.dept_id
-WHERE d.dept_id IS NULL;
+WHERE d.dept_id IS NULL;  -- ← the key: filter where right side is NULL
 ```
 
 > ⚠️ **LEFT JOIN + WHERE right.col IS NULL = Anti-join.** Finds rows that DON'T exist in the other table. Asked constantly at Meta/Google.
@@ -83,11 +85,14 @@ SELECT e.name, d.dept_name
 FROM departments d
 LEFT JOIN employees e ON e.dept_id = d.dept_id;
 ```
-
+```
+-- These two are identical:
+SELECT * FROM A RIGHT JOIN B ON A.id = B.id;
+SELECT * FROM B LEFT JOIN A  ON A.id = B.id;```
 ---
 
 ## 5. FULL OUTER JOIN
-
+Returns everything from both tables. NULLs fill in where there's no match.
 ```sql
 -- Everything from both tables
 SELECT e.name, d.dept_name
@@ -113,14 +118,18 @@ FROM employees e RIGHT JOIN departments d ON e.dept_id = d.dept_id;
 ---
 
 ## 6. SELF JOIN
-
+A table joined with itself. Used for hierarchies, comparisons within same table.
 ```sql
--- Employee + their manager name (manager_id references emp_id)
+-- employees(emp_id, name, manager_id)
+-- manager_id references emp_id in the same table
+
+-- Find each employee and their manager's name
 SELECT
-  e.name AS employee,
-  m.name AS manager
+  e.name        AS employee,
+  m.name        AS manager
 FROM employees e
 LEFT JOIN employees m ON e.manager_id = m.emp_id;
+-- LEFT JOIN so employees with no manager (CEO) still appear
 ```
 
 ```sql
@@ -136,7 +145,7 @@ JOIN employees b
 ---
 
 ## 7. CROSS JOIN
-
+Every row of A combined with every row of B. M × N rows.
 ```sql
 -- All size-color combinations (M × N rows)
 SELECT s.size, c.color
@@ -145,7 +154,9 @@ CROSS JOIN colors c;
 ```
 
 ```sql
--- Date spine: every user × every day grid
+-- Common FAANG use: generate a date spine
+-- dates table has one row per day
+-- combine with all users to get user × day grid for activity analysis
 SELECT u.user_id, d.date
 FROM users u
 CROSS JOIN dates d
@@ -160,6 +171,8 @@ WHERE d.date BETWEEN '2023-01-01' AND '2023-12-31';
 ```sql
 -- If join key has duplicates in either table, rows multiply
 -- Always verify uniqueness of join key before joining
+-- If departments has duplicate dept_ids, your JOIN multiplies rows
+-- Always check: SELECT COUNT(*) FROM departments WHERE dept_id IN (SELECT dept_id FROM departments GROUP BY dept_id HAVING COUNT(*) > 1)
 SELECT COUNT(*), COUNT(DISTINCT dept_id) FROM departments;
 ```
 
