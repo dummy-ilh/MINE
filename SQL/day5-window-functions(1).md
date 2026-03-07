@@ -311,7 +311,22 @@ GROUP BY user_id, session_id;
 ---
 
 ## Practice Questions
+🟢 Q1 — Easy
 
+Table: employees(emp_id, name, department, salary)
+For each employee show their name, salary, and rank within their department by salary (highest = rank 1). Use DENSE_RANK.
+
+
+🟡 Q2 — Medium
+
+Table: orders(order_id, customer_id, amount, order_date)
+For each customer show each order and the previous order's amount alongside it. Also show the difference between current and previous order amount.
+
+
+🔴 Q3 — Hard
+
+Table: daily_sales(sale_date, product_id, revenue)
+For each product, show each day's revenue and a 7-day moving average of revenue. Only include products where the latest 7-day moving average is above 500.
 ### Q1 — Easy ✅
 ```sql
 SELECT name, department, salary,
