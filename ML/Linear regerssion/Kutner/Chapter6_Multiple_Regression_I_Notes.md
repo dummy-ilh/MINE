@@ -878,3 +878,22 @@ $$174.15 \pm 2.101(11.93) \Rightarrow \boxed{149.1 \leq Y_{B(\text{new})} \leq 1
 
 ---
 
+The principles of diagnostics from Chapter 3 are equally, if not more, crucial in multiple regression. Violations of assumptions can be harder to spot and have more complex consequences.
+
+* **Scatter Plot Matrix:** A matrix of scatter plots showing the relationship between each pair of predictor variables, and between each predictor and the response variable. Helps visualize pairwise correlations and detect gross non-linearity.
+* **Three-Dimensional Scatter Plots:** Useful for visualizing relationships with two predictors and one response, but limited to three dimensions.
+* **Residual Plots:**
+    * **Residuals vs. Fitted Values ($\hat{Y}$):** Essential for checking constant variance and linearity.
+    * **Residuals vs. Individual Predictors ($X_k$):** Helpful for detecting specific non-linearity or heteroscedasticity related to a single predictor.
+    * **Residuals vs. Omitted Variables:** If you suspect an important variable is missing, plotting residuals against it can show if a pattern exists, indicating its importance.
+    * **Residuals vs. Time Order:** For detecting autocorrelation.
+* **Formal Tests:**
+    * **Correlation Test for Normality (e.g., Shapiro-Wilk, Anderson-Darling):** Applied to the residuals to check the normality assumption.
+    * **Brown-Forsythe Test for Constancy of Error Variance:** Robust test for heteroscedasticity across groups of residuals (e.g., grouped by predictor values).
+    * **Breusch-Pagan Test for Constancy of Error Variance:** A more general test for heteroscedasticity, checking if variance is related to predictor variables.
+    * **F Test for Lack of Fit:** Applicable if there are replicated observations in the multi-dimensional predictor space. Tests the appropriateness of the chosen functional form.
+* **Remedial Measures:** The same remedial measures apply as in simple linear regression:
+    * **Transformations:** Of $Y$ (for linearity, variance, normality) or $X$'s (for linearity).
+    * **Weighted Least Squares (WLS):** To address heteroscedasticity.
+    * **Robust Standard Errors:** To provide valid inferences in the presence of heteroscedasticity without changing point estimates.
+    * **Dealing with Outliers and Influential Points:** Using measures like Cook's distance, DFFITS, DFBETAS to identify and potentially address unusual observations.
