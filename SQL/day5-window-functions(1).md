@@ -17,17 +17,18 @@
 ---
 
 ## 1. What is a Window Function?
-
-Performs a calculation across related rows **without collapsing them** like GROUP BY.
+Performs a calculation across a set of rows related to the current row — without collapsing them like GROUP BY does.
 
 ```sql
--- GROUP BY: 1 row per department (loses individual detail)
+-- GROUP BY collapses rows — you lose individual row detail
 SELECT department, AVG(salary) FROM employees GROUP BY department;
+-- Result: 1 row per department
 
--- Window function: every row kept + dept avg alongside
+-- Window function keeps ALL rows + adds the aggregate alongside
 SELECT name, department, salary,
   AVG(salary) OVER (PARTITION BY department) AS dept_avg
 FROM employees;
+-- Result: every employee row + their dept avg on the same line
 ```
 
 **Syntax:**
@@ -74,6 +75,8 @@ FROM employees;
 ## 3. ROW_NUMBER, RANK, DENSE_RANK
 
 ```sql
+-- employees: Alice=100k, Bob=100k, Carol=90k, Dave=80k
+
 SELECT name, salary,
   ROW_NUMBER()  OVER (ORDER BY salary DESC) AS row_num,
   RANK()        OVER (ORDER BY salary DESC) AS rnk,
@@ -115,7 +118,7 @@ SELECT name, department, salary FROM ranked WHERE dr <= 3;
 ---
 
 ## 4. LAG and LEAD
-
+Access a value from a previous or next row without a self join.
 ```sql
 -- LAG: value from N rows before | LEAD: value from N rows ahead
 LAG(col, n, default)  OVER (PARTITION BY ... ORDER BY ...)
@@ -170,7 +173,7 @@ FROM product_prices;
 ---
 
 ## 5. Running Totals & Moving Averages
-
+The frame clause controls exactly which rows are included in the window.
 ### Frame Clause Options
 ```sql
 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW          -- all rows up to now
@@ -371,4 +374,4 @@ WHERE l.latest_7d_avg > 500;
 
 ---
 
-*Day 5 complete — 25 days to go 🚀*
+FunctionPurposeROW_NUMBER()Unique sequential number — no tiesRANK()Ties same rank, skips next (1,1,3)DENSE_RANK()Ties same rank, no skip (1,1,2)LAG(col, n)Value from N rows beforeLEAD(col, n)Value from N rows afterNTILE(n)Split into N equal bucketsFIRST_VALUE()First value in windowLAST_VALUE()Last value — always use explicit frameSUM/AVG OVER()Running total / moving average
