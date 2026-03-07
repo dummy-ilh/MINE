@@ -51,7 +51,7 @@ FROM employees;
 -- employees table has 100 rows, 20 have NULL manager_id
 SELECT COUNT(*)          -- returns 100
 SELECT COUNT(manager_id) -- returns 80
-```sql
+```
 ---
 
 ## 2. GROUP BY
