@@ -21,11 +21,13 @@
 A query inside another query. Can live in SELECT, FROM, or WHERE.
 
 ```sql
--- In WHERE
+-- Three places a subquery can live:
+
+-- 1. In WHERE
 SELECT name FROM employees
 WHERE salary > (SELECT AVG(salary) FROM employees);
 
--- In FROM (derived table)
+-- 2. In FROM (derived table)
 SELECT dept, avg_sal
 FROM (
   SELECT department AS dept, AVG(salary) AS avg_sal
@@ -34,7 +36,7 @@ FROM (
 ) dept_summary
 WHERE avg_sal > 90000;
 
--- In SELECT (scalar subquery)
+-- 3. In SELECT (scalar subquery)
 SELECT name, salary,
   (SELECT AVG(salary) FROM employees) AS company_avg
 FROM employees;
@@ -76,7 +78,8 @@ WHERE user_id IN (
 
 ### Non-Correlated — runs ONCE
 ```sql
--- Inner query has no reference to outer — runs independently
+-- Inner query has no reference to outer query
+-- Runs independently, result is reused
 SELECT name FROM employees
 WHERE salary > (SELECT AVG(salary) FROM employees);
 --              ↑ runs once, returns one number
@@ -85,12 +88,15 @@ WHERE salary > (SELECT AVG(salary) FROM employees);
 ### Correlated — runs for EVERY row
 ```sql
 -- Inner query references outer query's current row
+-- Runs once PER ROW — can be slow on large tables
 SELECT e.name, e.salary
 FROM employees e
 WHERE e.salary > (
-  SELECT AVG(salary) FROM employees
+  SELECT AVG(salary)
+  FROM employees
   WHERE department = e.department  -- ← references outer row
 );
+-- For each employee, calculates avg of THEIR department
 ```
 
 ### More Correlated Examples
@@ -133,19 +139,25 @@ WHERE salary > (
 ## 3. EXISTS vs IN
 
 ```sql
--- IN: pulls all values then checks membership
+-- IN: pulls all values, then checks membership
 SELECT name FROM employees
 WHERE dept_id IN (
   SELECT dept_id FROM departments WHERE location = 'NYC'
 );
+-- Works fine for small result sets
+-- ❌ Slow if subquery returns millions of rows
+-- ❌ Returns wrong results if subquery has NULLs
 
--- EXISTS: short-circuits on first match — faster, NULL-safe
+-- EXISTS: stops as soon as it finds ONE match (short-circuits)
 SELECT name FROM employees e
 WHERE EXISTS (
   SELECT 1 FROM departments d
   WHERE d.dept_id = e.dept_id
   AND d.location = 'NYC'
 );
+-- ✅ Faster for large datasets
+-- ✅ NULL-safe
+-- SELECT 1 is convention — EXISTS only cares if a row exists
 ```
 
 ### NOT EXISTS vs NOT IN — Critical Difference
@@ -203,9 +215,10 @@ WHERE EXISTS (
 
 ## 4. CTEs — WITH Clause
 
-Named temporary result set. Defined at top, reused below.
+CTE = Common Table Expression. A named temporary result set you define at the top and reuse.
 
 ```sql
+-- Basic CTE
 WITH dept_avg AS (
   SELECT department, AVG(salary) AS avg_sal
   FROM employees
@@ -216,7 +229,7 @@ FROM employees e
 JOIN dept_avg d ON e.department = d.department
 WHERE e.salary > d.avg_sal;
 ```
-
+💡 CTEs don't run faster than subqueries — the benefit is readability and reusability.
 ### CTE vs Nested Subquery
 
 ```sql
@@ -311,7 +324,27 @@ ORDER BY revenue DESC;
 | Debugging | Hard | Easy — test each block |
 | Recursion | ❌ No | ✅ Yes |
 | Performance | Same in most DBs | Same in most DBs |
+```
+-- ❌ Subquery hell — hard to read
+SELECT name FROM employees
+WHERE dept_id IN (
+  SELECT dept_id FROM departments
+  WHERE location IN (
+    SELECT location FROM offices
+    WHERE country = 'India'
+  )
+);
 
+-- ✅ CTE version — clear and debuggable
+WITH india_offices AS (
+  SELECT location FROM offices WHERE country = 'India'
+),
+india_depts AS (
+  SELECT dept_id FROM departments
+  WHERE location IN (SELECT location FROM india_offices)
+)
+SELECT name FROM employees
+WHERE dept_id IN (SELECT dept_id FROM india_depts);```
 ---
 
 ## 7. Scalar Subqueries in SELECT
@@ -349,8 +382,16 @@ SELECT
   ), 2) AS pct_of_customer_total
 FROM orders o1
 ORDER BY customer_id, amount DESC;
-```
 
+sql-- Running total using scalar subquery (before window functions)
+SELECT
+  order_date,
+  amount,
+  (SELECT SUM(amount) FROM orders o2
+   WHERE o2.order_date <= o1.order_date) AS running_total
+FROM orders o1
+ORDER BY order_date;
+-- ⚠️ Very slow — use window functions instead (Day 5!)```
 ---
 
 ## 8. Classic FAANG Subquery Patterns
@@ -458,5 +499,26 @@ HAVING COUNT(DISTINCT o.product_id) = (SELECT COUNT(*) FROM products);
 - **Multiple CTEs** → build complex logic step by step — the FAANG standard
 
 ---
+```
+sql-- "Find the second highest salary" (classic)
+SELECT MAX(salary) AS second_highest
+FROM employees
+WHERE salary < (SELECT MAX(salary) FROM employees);
+sql-- "Find departments where ALL employees earn above 80k" (ALL keyword)
+SELECT department
+FROM employees
+GROUP BY department
+HAVING MIN(salary) > 80000;
 
-*Day 4 complete — 26 days to go 🚀*
+-- Equivalent with ALL
+SELECT DISTINCT department
+FROM employees e1
+WHERE 80000 < ALL (
+  SELECT salary FROM employees e2
+  WHERE e1.department = e2.department
+);
+sql-- "Find customers who ordered every product" (relational division)
+SELECT customer_id
+FROM orders
+GROUP BY customer_id
+HAVING COUNT(DISTINCT product_id) = (SELECT COUNT(*) FROM products);```
