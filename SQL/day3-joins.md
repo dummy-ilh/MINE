@@ -315,7 +315,22 @@ JOIN departments d USING (dept_id);
 ---
 
 ## Practice Questions
+🟢 Q1 — Easy
 
+Tables: employees(emp_id, name, dept_id, salary) and departments(dept_id, dept_name)
+Get each employee's name and their department name. Include employees with no department.
+
+
+🟡 Q2 — Medium
+
+Same tables plus projects(project_id, dept_id, budget)
+Find departments that have no projects assigned. Return dept_id, dept_name.
+
+
+🔴 Q3 — Hard
+
+Table: employees(emp_id, name, manager_id, salary)
+Find all employees who earn more than their direct manager. Return employee name, employee salary, manager name, manager salary.
 ### Q1 — Easy ✅
 Get each employee's name and department name. Include employees with no department.
 
