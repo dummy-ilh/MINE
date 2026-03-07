@@ -314,7 +314,21 @@ HAVING decile = 1;
 ---
 
 ## Practice Questions
+Table: events(user_id, event_type, event_date)
+Events: 'signup', 'first_login', 'first_purchase'
+Build a simple 3-step funnel showing user count and conversion rate at each step.
 
+
+🟡 Q2 — Medium
+
+Table: orders(order_id, user_id, amount, order_date)
+Compute RFM scores for each user. Recency = days since last order, Frequency = total orders, Monetary = total spend. Use NTILE(4) to score each dimension 1–4.
+
+
+🔴 Q3 — Hard
+
+Tables: users(user_id, signup_date), events(user_id, event_type, event_date)
+For each weekly signup cohort in 2025, calculate Week 0, Week 1, Week 2, Week 4 retention rates (% of cohort who had any event that week). Return cohort week, cohort size, and retention % for each week.
 ### Q1 — Easy ✅
 Simple 3-step funnel.
 Table: events(user_id, event_type, event_date)
