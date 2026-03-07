@@ -219,4 +219,68 @@ ORDER BY salary DESC;
 
 ---
 
-*Day 1 complete — 29 days to go 🚀*
+## COALESCE — Deep Dive
+
+Think of it as **"give me the first non-null value from this list."**
+
+```sql
+COALESCE(val1, val2, val3, ...)
+```
+It checks left to right and returns the **first one that isn't NULL.**
+
+---
+
+### Real world scenario
+
+You have a `contacts` table:
+
+| user_id | phone | work_email | personal_email |
+|---|---|---|---|
+| 1 | 9876543210 | a@co.com | a@gmail.com |
+| 2 | NULL | b@co.com | b@gmail.com |
+| 3 | NULL | NULL | c@gmail.com |
+| 4 | NULL | NULL | NULL |
+
+```sql
+SELECT user_id,
+  COALESCE(phone, work_email, personal_email, 'no contact') AS best_contact
+FROM contacts;
+```
+
+| user_id | best_contact |
+|---|---|
+| 1 | 9876543210 ← phone exists, stops here |
+| 2 | b@co.com ← phone null, takes work_email |
+| 3 | c@gmail.com ← first two null, takes personal |
+| 4 | 'no contact' ← all null, takes the fallback |
+
+---
+
+### Another common use — math with NULLs
+
+```sql
+-- NULL + anything = NULL
+SELECT 100 + NULL;  -- returns NULL ❌
+
+-- COALESCE saves it
+SELECT 100 + COALESCE(bonus, 0) AS total  -- treats NULL bonus as 0 ✅
+FROM employees;
+```
+
+---
+
+### FAANG interview use case
+
+```sql
+-- Fill missing city with country as fallback
+SELECT name,
+  COALESCE(city, country, 'Unknown') AS location
+FROM users;
+```
+
+---
+
+**One line summary:** COALESCE = *"first non-null wins."* Use it to handle missing data gracefully.
+
+---
+
