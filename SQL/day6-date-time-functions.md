@@ -187,7 +187,22 @@ ORDER BY cohort_month;
 ---
 
 ## Practice Questions
+🟢 Q1 — Easy
 
+Table: users(user_id, name, signup_date, country)
+Find all users who signed up in the last 90 days. Return user_id, name, signup_date, and how many days ago they signed up.
+
+
+🟡 Q2 — Medium
+
+Table: orders(order_id, customer_id, amount, order_date)
+Show monthly revenue for 2025, the previous month's revenue, and the month-over-month % change. Order by month.
+
+
+🔴 Q3 — Hard
+
+Tables: users(user_id, signup_date), events(user_id, event_date)
+Build a cohort retention table — for each signup month cohort, show how many users were active in month 0, 1, 2, and 3 after signup.
 ### Q1 — Easy ✅
 Users signed up in last 90 days with days ago count.
 
