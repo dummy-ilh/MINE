@@ -43,6 +43,15 @@ Imagine trying to predict **how much a portrait studio will sell** using only th
 - **Tractor sales:** Response = volume; Predictors = number of farms, crop production
 - **Short children study:** Response = plasma growth hormone; Predictors = gender, age, body measurements (14 total!)
 
+### General Linear Regression Model 
+The term "General Linear Regression Model" is crucial. It describes any model that is **linear in its parameters**, even if it includes non-linear transformations of the predictor variables or interaction terms. This means it can represent a wide variety of relationships.
+Examples of models falling under the general linear regression model:
+* **Polynomial regression:** $Y_i = \beta_0 + \beta_1 X_i + \beta_2 X_i^2 + \epsilon_i$ (Here $X_1 = X$ and $X_2 = X^2$, still linear in $\beta$'s).
+* **Interaction terms:** $Y_i = \beta_0 + \beta_1 X_{i1} + \beta_2 X_{i2} + \beta_3 X_{i1}X_{i2} + \epsilon_i$.
+* **Dummy variables:** For categorical predictors (e.g., $Y_i = \beta_0 + \beta_1 \text{Gender}_i + \beta_2 \text{Age}_i + \epsilon_i$, where Gender is 0 or 1).
+* **Transformed variables:** $Y_i = \beta_0 + \beta_1 \log(X_{i1}) + \beta_2 \sqrt{X_{i2}} + \epsilon_i$.
+
+The key is that the $\beta$ coefficients are multiplied by known constants or functions of $X$, and the terms are added.
 ---
 
 ## 2. Multiple Regression Models {#multiple-regression-models}
@@ -713,7 +722,7 @@ $$\boxed{\hat{Y} = -68.857 + 1.455 X_1 + 9.366 X_2}$$
 
 ---
 
-### Step 4: Diagnostics (Figure 6.8 & 6.9)
+### Step 4: Diagnostics 
 
 **Residual plots show:**
 - **(a) Residuals vs. $\hat{Y}$:** No systematic pattern → response plane is appropriate, variance appears constant
@@ -869,10 +878,3 @@ $$174.15 \pm 2.101(11.93) \Rightarrow \boxed{149.1 \leq Y_{B(\text{new})} \leq 1
 
 ---
 
-## Connections to Other Chapters
-
-- **Chapter 7:** Tests involving subsets of parameters; extra sums of squares decomposition
-- **Chapter 8:** Polynomial regression, interaction effects, and model building strategies
-- **Chapter 10:** Multicollinearity — when predictors are highly correlated with each other
-- **Chapter 11:** Influential observations and leverage in multiple regression
-- **Part III:** Nonlinear regression (when the model is not linear in parameters)
