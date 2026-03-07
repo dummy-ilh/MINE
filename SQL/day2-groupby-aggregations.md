@@ -401,4 +401,172 @@ ORDER BY month, avg_sal DESC;
 
 ---
 
-*Day 2 complete — 28 days to go 🚀*
+## 1. GROUP BY with CASE WHEN
+
+**The core idea:** You're creating a new "virtual column" on the fly, then grouping by it. SQL evaluates the CASE WHEN *before* grouping happens.
+
+**Why you can't use the alias in GROUP BY:**
+SQL processes clauses in this order: `FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY`
+
+GROUP BY runs *before* SELECT, so the alias doesn't exist yet when GROUP BY executes. The alias is only born in the SELECT phase.
+
+```sql
+-- ❌ This fails — alias doesn't exist at GROUP BY time
+SELECT
+  CASE WHEN salary >= 100000 THEN 'High' ELSE 'Low' END AS band,
+  COUNT(*)
+FROM employees
+GROUP BY band;  -- "band" is unknown here
+
+-- ✅ Option 1: Repeat the full expression (standard SQL, works everywhere)
+GROUP BY CASE WHEN salary >= 100000 THEN 'High' ELSE 'Low' END
+
+-- ✅ Option 2: Use a subquery / CTE — write it once, reuse cleanly
+WITH bucketed AS (
+  SELECT
+    CASE WHEN salary >= 100000 THEN 'High' ELSE 'Low' END AS band,
+    salary
+  FROM employees
+)
+SELECT band, COUNT(*) FROM bucketed GROUP BY band;
+
+-- ✅ Option 3: PostgreSQL / MySQL allow alias in GROUP BY (non-standard)
+GROUP BY band;  -- works in Postgres/MySQL, NOT in SQL Server/Oracle
+```
+
+**Mental model — what SQL actually does:**
+```
+Row 1: salary=120000 → CASE evaluates → 'High'   ──┐
+Row 2: salary=80000  → CASE evaluates → 'Low'    ──┤ grouped into buckets
+Row 3: salary=95000  → CASE evaluates → 'Low'    ──┤ then COUNT(*) per bucket
+Row 4: salary=160000 → CASE evaluates → 'High'   ──┘
+```
+
+---
+
+## 2. DISTINCT in Aggregates
+
+**The core idea:** `DISTINCT` inside an aggregate function deduplicates *before* the aggregation math runs.
+
+```
+COUNT(*)           → counts every row, including duplicates
+COUNT(user_id)     → counts every non-NULL user_id, including duplicates  
+COUNT(DISTINCT user_id) → deduplicates user_ids first, then counts
+```
+
+**The classic FAANG pattern — % of users who did X:**
+```sql
+SELECT
+  event_type,
+  COUNT(DISTINCT user_id) AS did_this,
+  ROUND(
+    COUNT(DISTINCT user_id) * 100.0 /
+    (SELECT COUNT(DISTINCT user_id) FROM user_events),  -- total unique users
+  2) AS pct
+FROM user_events
+GROUP BY event_type;
+```
+
+Why `* 100.0` and not `* 100`? Integer division truncates in most databases:
+```
+5 / 20     = 0       ❌  (integer division)
+5 * 100.0 / 20 = 25.0  ✅  (forced float division)
+```
+
+**`SUM(DISTINCT ...)` — the weird one:**
+```sql
+-- salary table: [50000, 50000, 80000, 80000, 100000]
+SUM(salary)          → 380000  (adds everything)
+SUM(DISTINCT salary) → 230000  (adds 50000 + 80000 + 100000, ignores dupes)
+```
+Rarely useful for business logic — usually a mistake. The main valid use case is avoiding double-counting in joins where rows get duplicated.
+
+**Common trap — COUNT(*) vs COUNT(col) vs COUNT(DISTINCT col):**
+```sql
+-- users table: [1, 2, 2, 3, NULL, NULL]
+COUNT(*)              → 6  (every row)
+COUNT(user_id)        → 4  (excludes NULLs)
+COUNT(DISTINCT user_id) → 3  (excludes NULLs + dedupes: 1,2,3)
+```
+
+---
+
+## 3. ROLLUP
+
+**The core idea:** ROLLUP automatically adds subtotal rows and a grand total row to your GROUP BY results — without writing UNION ALL manually.
+
+**Basic example:**
+```sql
+SELECT department, job_title, SUM(salary) AS total
+FROM employees
+GROUP BY ROLLUP(department, job_title);
+```
+
+This produces:
+```
+department   | job_title  | total
+-------------|------------|--------
+Engineering  | Engineer   | 300000   ← normal group
+Engineering  | Manager    | 150000   ← normal group
+Engineering  | NULL       | 450000   ← subtotal for Engineering dept
+Sales        | Rep        | 200000   ← normal group
+Sales        | NULL       | 200000   ← subtotal for Sales dept
+NULL         | NULL       | 650000   ← grand total
+```
+
+The **NULL values are the subtotals** — that's how ROLLUP signals "this row is a rollup/summary row."
+
+**Hierarchy matters:** ROLLUP rolls up from *right to left*. The last column collapses first.
+```sql
+GROUP BY ROLLUP(a, b, c)
+-- generates groupings: (a,b,c), (a,b), (a), ()
+-- NOT: (a,c) or (b,c) — it's strictly hierarchical
+```
+
+**Distinguishing real NULLs from rollup NULLs — use GROUPING():**
+```sql
+SELECT
+  CASE WHEN GROUPING(department) = 1 THEN 'ALL DEPTS' ELSE department END AS dept,
+  CASE WHEN GROUPING(job_title) = 1  THEN 'ALL TITLES' ELSE job_title END AS title,
+  SUM(salary)
+FROM employees
+GROUP BY ROLLUP(department, job_title);
+```
+`GROUPING(col)` returns `1` if that NULL was introduced by ROLLUP, `0` if it's a real NULL from data.
+
+**ROLLUP vs CUBE vs GROUPING SETS — the family:**
+```sql
+-- ROLLUP: hierarchical subtotals only (most common)
+GROUP BY ROLLUP(a, b)
+-- generates: (a,b), (a), ()
+
+-- CUBE: every possible combination of subtotals
+GROUP BY CUBE(a, b)
+-- generates: (a,b), (a), (b), ()
+
+-- GROUPING SETS: you pick exactly which groupings you want
+GROUP BY GROUPING SETS((a,b), (a), ())
+-- generates: exactly what you listed
+```
+
+**Real-world use — sales dashboard:**
+```sql
+SELECT
+  COALESCE(region, 'TOTAL')       AS region,
+  COALESCE(product, 'ALL PRODUCTS') AS product,
+  SUM(revenue)   AS revenue,
+  COUNT(*)       AS orders
+FROM sales
+GROUP BY ROLLUP(region, product)
+ORDER BY region, product;
+```
+
+---
+
+**Quick cheat sheet:**
+
+| Concept | Key rule | Common trap |
+|---|---|---|
+| GROUP BY CASE WHEN | Repeat full expression (or use CTE) | Alias doesn't exist at GROUP BY time |
+| COUNT(DISTINCT x) | Dedupes before counting | NULL is excluded silently |
+| ROLLUP | NULL = subtotal row, right-to-left collapse | Use GROUPING() to tell real NULLs apart |
