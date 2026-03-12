@@ -1,6 +1,4 @@
-# MIT 18.05 — Introduction to Probability and Statistics
-## Class 1 Notes: Introduction, Counting & Sets
-
+## 1 : Introduction, Counting & Sets
 > *Based on MIT OpenCourseWare materials by Jeremy Orloff and Jonathan Bloom, Spring 2022*
 
 ---
@@ -126,7 +124,7 @@ A **set** $S$ is a collection of elements. Here is the notation you need to know
 | $\emptyset$ | **Empty set**: the set with no elements | |
 | $A \cap B = \emptyset$ | $A$ and $B$ are **disjoint** (no common elements) | |
 | $A - B$ | **Difference**: elements in $A$ but *not* in $B$ | |
-| $\|S\|$ or $\#S$ | **Cardinality**: number of elements in $S$ | $|\{a,b,c\}| = 3$ |
+| $\|S\|$ or $\S$ | **Cardinality**: number of elements in $S$ | $|\{a,b,c\}| = 3$ |
 
 ### Worked Example — Animals
 
