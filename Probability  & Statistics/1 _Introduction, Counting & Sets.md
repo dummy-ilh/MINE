@@ -484,4 +484,3 @@ Neither school is universally "correct" — each has strengths. Understanding bo
 
 ---
 
-*MIT OpenCourseWare: https://ocw.mit.edu — 18.05 Introduction to Probability and Statistics, Spring 2022*
