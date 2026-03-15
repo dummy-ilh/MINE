@@ -1,9 +1,5 @@
-# MIT 18.05 — Introduction to Probability and Statistics
-## Class 3: Conditional Probability, Independence, and Bayes' Theorem
-### Complete Study Notes | Spring 2022
+# 3: Conditional Probability, Independence, and Bayes' Theorem
 
-> **Source:** MIT OpenCourseWare 18.05, Jeremy Orloff and Jonathan Bloom  
-> **Coverage:** Prep notes + In-class problems with full solutions and expanded explanations
 
 ---
 
@@ -595,7 +591,11 @@ The base rate fallacy is one of the most important and practically consequential
 
 ### 8.2 The Core Insight
 
-$$\underbrace{P(\text{test accurate})}_{\approx 95\%} \neq \underbrace{P(\text{positive test is correct})}_{\text{can be very low!}}$$
+$$
+\underbrace{P(\text{test accurate})}_{\text{≈ 95% overall accuracy}}
+\neq
+\underbrace{P(\text{disease} \mid \text{positive test})}_{\text{posterior probability}}
+$$
 
 When a disease is rare, there are vastly more healthy people than sick people. Even a small false positive rate will generate **many false positives** (because it's applied to a huge population of healthy people), drowning out the true positives.
 
@@ -1135,6 +1135,174 @@ $$P(O_1 \mid O_2) = \frac{P(O_2 \mid O_1) \cdot P(O_1)}{P(O_2)} = \frac{(4/7)(5/
 
 ---
 
-*End of MIT 18.05 Class 3 Study Notes*  
-*Source: MIT OpenCourseWare, 18.05 Introduction to Probability and Statistics, Spring 2022*  
-*Jeremy Orloff and Jonathan Bloom — https://ocw.mit.edu*
+
+![MIT 3.1](/images/MIT-3.1.PNG)
+
+![MIT 3.2](/images/MIT-3.2.PNG)
+
+
+
+## 🔴 Tier 1 — Almost Certain to Appear (Bayes + Base Rate)
+
+---
+
+### Q1. The Classic Disease Test
+**Asked at: Google, Meta, Amazon, Netflix DS s**
+
+> "A disease affects 1% of the population. A test has a 90% true positive rate and a 5% false positive rate. You test positive — what is the probability you actually have the disease?"
+
+**Framework to answer:**
+
+Step 1 — State Bayes' formula out loud:
+$$P(\text{disease} \mid +) = \frac{P(+ \mid \text{disease}) \cdot P(\text{disease})}{P(+)}$$
+
+Step 2 — Compute the denominator using total probability:
+$$P(+) = (0.90)(0.01) + (0.05)(0.99) = 0.009 + 0.0495 = 0.0585$$
+
+Step 3 — Plug in:
+$$P(\text{disease} \mid +) = \frac{0.009}{0.0585} \approx 15.4\%$$
+
+Step 4 — **Interpret** (ers love this): "Despite a 90% accurate test, only ~15% of positives truly have the disease because the base rate is so low. Most positives are false alarms from the healthy majority."
+
+**Common follow-up:** "How does the answer change if prevalence rises to 10%?" (Answer: jumps to ~67% — the base rate dominates the result.)
+
+---
+
+### Q2. Spam Filter / Content Moderation
+**Asked at: Meta, Google (ML roles)**
+
+> "Your spam classifier has 99% precision and 95% recall. Only 0.1% of all emails are spam. A flagged email — is it actually spam?"
+
+This is structurally identical to the disease test. Map the variables:
+- $P(\text{spam}) = 0.001$
+- $P(\text{flagged} \mid \text{spam}) = 0.95$ (recall)
+- $P(\text{flagged} \mid \text{not spam}) = 1 - \text{precision} = 0.01$
+
+$$P(\text{spam} \mid \text{flagged}) = \frac{(0.95)(0.001)}{(0.95)(0.001) + (0.01)(0.999)} \approx 8.7\%$$
+
+**Why FAANG asks this:** It's about model evaluation in production — a model with great offline metrics can still be unreliable when the positive class is rare. This tests whether you understand class imbalance.
+
+---
+
+## 🟠 Tier 2 — High Frequency (Conditional Probability + Independence)
+
+---
+
+### Q3. The Monty Hall / Three-Door Problem
+**Asked at: Google (brain teasers round), Amazon, hedge fund roles**
+
+> "You pick door 1. The host opens door 3 revealing a goat. Do you switch?"
+
+**Answer template:**
+
+"Always switch. I'll prove it with a probability tree.
+
+- $P(\text{car behind door 1}) = 1/3$. If so, switching loses.
+- $P(\text{car behind door 2 or 3}) = 2/3$. When the host opens the goat door, the full 2/3 probability concentrates on the remaining door.
+
+$$P(\text{win by switching}) = 0 \times \frac{1}{3} + 1 \times \frac{2}{3} = \frac{2}{3}$$
+
+The key insight is that Monty's action is not random — he has information. His choice leaks information that updates the remaining door's probability."
+
+**Common trap ers set:** "But now there are only 2 doors, so it must be 50-50?" — Explain that the 50-50 reasoning only holds when the host opens a door uniformly at random (not when they knowingly reveal a goat).
+
+---
+
+### Q4. Coin Toss Conditioning
+**Asked at: Google, quantitative research roles**
+
+> "I flip a fair coin 3 times. Given that at least one flip is heads, what is the probability all three are heads?"
+
+This is $P(\text{HHH} \mid \text{at least one H})$.
+
+$$P(\text{HHH} \mid \text{at least 1H}) = \frac{P(\text{HHH} \cap \text{at least 1H})}{P(\text{at least 1H})} = \frac{1/8}{7/8} = \frac{1}{7}$$
+
+**Contrast:** If instead you're told "the first flip was heads," the answer is $P(\text{HHH} \mid H_1) = 1/4$. The condition matters enormously — conditioning on "at least one heads" is a much weaker condition that applies to 7 of 8 outcomes, not 4.
+
+---
+
+### Q5. Are These Events Independent? (Die Roll)
+**Asked at: Meta, Amazon DS phone screens**
+
+> "Roll two dice. Are 'first die is 3' and 'sum is 7' independent? What about 'sum is 6'?"
+
+**Answer:** Independent of sum-7, not of sum-6. Here's why:
+
+For sum = 7: every value of the first die (1–6) pairs with exactly one second-die value to make 7. So knowing "sum is 7" gives no information about the first die. $P(\text{first is 3} \mid \text{sum is 7}) = 1/6 = P(\text{first is 3})$.
+
+For sum = 6: the first die can't be 6 (needs a 0 on die 2), so the condition shrinks the first die's range. $P(\text{first is 3} \mid \text{sum is 6}) = 1/5 \neq 1/6$.
+
+**The er is testing:** Whether you can verify independence rigorously vs. just guessing intuitively.
+
+---
+
+### Q6. Two-Stage Urn / Balls Problem
+**Asked at: Amazon, Apple, Netflix**
+
+> "Bag A has 3 red and 7 blue balls. Bag B has 6 red and 4 blue. You pick a bag at random and draw one ball. It's red. Which bag did it come from?"
+
+Use Bayes with total probability:
+
+$$P(A \mid \text{red}) = \frac{P(\text{red} \mid A) \cdot P(A)}{P(\text{red})} = \frac{(0.3)(0.5)}{(0.3)(0.5) + (0.6)(0.5)} = \frac{0.15}{0.45} = \frac{1}{3}$$
+
+Answer: 1/3 chance it came from bag A, 2/3 from bag B. Drawing a red ball is better explained by bag B (higher red density).
+
+---
+
+## 🟡 Tier 3 — Conceptual / Behavioural Variants
+
+---
+
+### Q7. A/B Test with Prior Knowledge (Meta / Netflix)
+
+> "Your A/B test shows the new feature lifts conversion by 5% with p=0.04. But historically only 10% of features actually improve metrics. Should you ship it?"
+
+This is a base rate fallacy problem in disguise.
+
+- Prior: $P(\text{feature works}) = 0.10$
+- $P(\text{p<0.05} \mid \text{feature works}) = 0.80$ (power)
+- $P(\text{p<0.05} \mid \text{feature doesn't work}) = 0.05$ (false positive rate = significance level)
+
+$$P(\text{feature works} \mid \text{p<0.05}) = \frac{(0.80)(0.10)}{(0.80)(0.10) + (0.05)(0.90)} = \frac{0.08}{0.125} = 64\%$$
+
+**Answer:** "Even with a statistically significant result, there's only a 64% chance the feature actually works, because most tested features don't improve metrics. I'd want to replicate the test or increase the prior by targeting features with stronger theoretical backing."
+
+---
+
+### Q8. The Rare Alert Problem (Amazon / Apple — fraud detection)
+
+> "Your fraud model has 1% false positive rate and 99% true positive rate. 0.01% of transactions are fraudulent. An alert fires — is this fraud?"
+
+$$P(\text{fraud} \mid \text{alert}) = \frac{(0.99)(0.0001)}{(0.99)(0.0001) + (0.01)(0.9999)} \approx \frac{0.000099}{0.010098} \approx 0.98\%$$
+
+Despite 99% sensitivity, fewer than 1% of alerts are real fraud. The extreme rarity of fraud (1 in 10,000 transactions) overwhelms even an excellent detector.
+
+**What the er is really asking:** "Do you understand why precision matters more than recall when positives are rare?"
+
+---
+
+## How to Structure Any Bayes Answer in an 
+
+Use this 4-step verbal template every time:
+
+**1. Define events clearly** — "Let $D$ be the event the person has the disease, $T^+$ be testing positive."
+
+**2. State what you know vs. what you want** — "I know the false positive and true positive rates. I want $P(D \mid T^+)$, which requires inverting with Bayes."
+
+**3. Compute the denominator via total probability** — "The total probability of testing positive is..."
+
+**4. Interpret the result** — always say something about the base rate and what it means practically.
+
+> ers give full marks for correct interpretation even if arithmetic is slightly off. They give low marks for correct arithmetic with no interpretation.
+
+---
+
+## Quick Reference: Formula Card for s
+
+| Formula | When to use |
+|---|---|
+| $P(A\mid B) = P(A\cap B)/P(B)$ | Any conditional prob question |
+| $P(A\cap B) = P(A\mid B)\cdot P(B)$ | Computing joint probabilities in a tree |
+| $P(A) = \sum_i P(A\mid B_i)P(B_i)$ | Finding denominator in Bayes |
+| $P(B\mid A) = \frac{P(A\mid B)P(B)}{P(A)}$ | Inverting — the core Bayes formula |
+| $P(A\cap B) = P(A)\cdot P(B)$ | **Only** if events are independent |
