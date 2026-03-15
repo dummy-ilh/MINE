@@ -1196,7 +1196,133 @@ $$X \sim N(\mu,\sigma^2) \implies Z = \frac{X-\mu}{\sigma} \sim N(0,1)$$
 - **Normal distribution:** The most important in statistics. No closed-form CDF; use tables or `pnorm`.
 
 ---
+---
 
-*End of MIT 18.05 Class 5 Study Notes*  
-*Source: MIT OpenCourseWare, 18.05 Introduction to Probability and Statistics, Spring 2022*  
-*Jeremy Orloff and Jonathan Bloom — https://ocw.mit.edu*
+## 🔴 Tier 1 — Near Certain (Variance + Normal)
+
+---
+
+**Q1. What is variance? What does it measure? How does it differ from standard deviation?**
+
+"Variance is $\text{Var}(X) = E[(X-\mu)^2]$ — the expected squared distance from the mean. It measures the *spread* of the distribution around its centre. Standard deviation $\sigma = \sqrt{\text{Var}(X)}$ is the square root, restoring the same units as $X$ itself. We use standard deviation for interpretation (e.g., 'values are typically within $\pm 2\sigma$ of the mean') and variance for computation (because it has clean additive properties). In ML: variance quantifies model instability — a high-variance model changes drastically with small data changes."
+
+---
+
+**Q2. What are the three key properties of variance?**
+
+"Property 1 — addition (independence required): if $X \perp Y$, then $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y)$. Property 2 — scaling and shifting: $\text{Var}(aX+b) = a^2\text{Var}(X)$. The constant $b$ drops out entirely because shifting moves the centre but not the spread. Property 3 — shortcut formula: $\text{Var}(X) = E[X^2] - E[X]^2$. This is almost always the fastest way to compute variance by hand."
+
+---
+
+**Q3. Can you add variances $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y)$? What's the catch?**
+
+"Only when $X$ and $Y$ are independent. This is one of the most common exam traps. If $\text{Var}(X) = 3$, then $\text{Var}(X + X) = \text{Var}(2X) = 4 \cdot 3 = 12$, not $3 + 3 = 6$. Compare with expectation: $E[X+Y] = E[X] + E[Y]$ always holds with no independence assumption. Variance is more restrictive. In practice: if you're combining forecasts from the same model on correlated data, variance doesn't add — you need the full covariance structure."
+
+---
+
+**Q4. What is the variance of a Bernoulli($p$) and why does it peak at $p = 0.5$?**
+
+"$\text{Var}(\text{Ber}(p)) = p(1-p)$. At $p=0.5$ this equals $1/4$, the maximum. At $p=0$ or $p=1$ the variable is constant (always 0 or always 1) so variance is 0. Intuitively: a fair coin has maximum unpredictability — you have no information about the next outcome. A heavily biased coin is nearly predictable, so its variance is near 0. This matters in A/B testing: the variance of a conversion rate estimator is $p(1-p)/n$, maximised when $p=0.5$, which is why balanced populations require the most data."
+
+---
+
+**Q5. You average $n$ independent measurements, each with standard deviation $\sigma$. What is the standard deviation of the average?**
+
+"$\sigma_{\bar{X}} = \sigma / \sqrt{n}$. Derivation: $\text{Var}(\bar{X}) = \text{Var}\left(\frac{\sum X_i}{n}\right) = \frac{1}{n^2} \cdot n\sigma^2 = \sigma^2/n$, so $\sigma_{\bar{X}} = \sigma/\sqrt{n}$. This is the mathematical foundation of why more data gives more precise estimates. To halve the standard error you need 4× as much data. It underlies confidence intervals, the Law of Large Numbers, and why ML training loss decreases with batch size."
+
+---
+
+**Q6. What is the normal distribution? State its PDF and the 68-95-99 rule.**
+
+"$X \sim N(\mu, \sigma^2)$ has PDF $f(x) = \frac{1}{\sigma\sqrt{2\pi}} e^{-(x-\mu)^2/2\sigma^2}$, defined on all of $\mathbb{R}$. The 68-95-99 rule: approximately 68% of probability lies within $1\sigma$ of the mean, 95% within $2\sigma$, and 99% within $3\sigma$. In ML: this means roughly 1-in-20 samples fall more than 2 standard deviations from the mean, and only 1-in-100 fall beyond 3. These thresholds are used directly in hypothesis testing and outlier detection."
+
+---
+
+**Q7. How do you standardise a normal random variable? Why does it work?**
+
+"If $X \sim N(\mu, \sigma^2)$ then $Z = (X - \mu)/\sigma \sim N(0,1)$. Proof by change of variables: substitute $z = (x-\mu)/\sigma$ into $f_X(x)\,dx$, the $\sigma$ in the denominator cancels the $\sigma$ from $dx = \sigma\,dz$, leaving exactly $\frac{1}{\sqrt{2\pi}}e^{-z^2/2}dz$. Why it matters: all normal probabilities reduce to the standard normal table. $P(a \leq X \leq b) = \Phi\left(\frac{b-\mu}{\sigma}\right) - \Phi\left(\frac{a-\mu}{\sigma}\right)$. In production ML, feature standardisation (z-scoring) uses exactly this transformation."
+
+---
+
+## 🟠 Tier 2 — High Frequency (Continuous Distributions + PDF/CDF)
+
+---
+
+**Q8. What is a probability density function? Can $f(x) > 1$?**
+
+"The PDF $f(x)$ of a continuous random variable satisfies $P(c \leq X \leq d) = \int_c^d f(x)\,dx$. It must be non-negative and integrate to 1, but there is no upper bound on its value. Yes, $f(x)$ can exceed 1 — for example, $\text{Uniform}(0, 0.1)$ has $f(x) = 10$. The PDF is a *density*, not a probability. Only integrals (areas) must be $\leq 1$. This is the most common conceptual error: people confuse 'high density' with 'high probability'. In an FAANG interview, if you say $f(x) \leq 1$ you will lose points."
+
+---
+
+**Q9. Why is $P(X = a) = 0$ for any continuous random variable? Does this mean $a$ is impossible?**
+
+"$P(X = a) = \int_a^a f(x)\,dx = 0$ — an integral over a zero-width interval is always 0. This does not mean $a$ is impossible. Every continuous random variable must take some value, but the probability of any *specific* value is 0. Only intervals have positive probability. Real-world analogy: the probability that someone's height is exactly 175.000000...cm (to infinite precision) is 0, yet we can still measure heights. In statistics, this means: for continuous distributions, $P(X < a) = P(X \leq a)$ and we can ignore set boundaries."
+
+---
+
+**Q10. What is the CDF? Give its 5 key properties.**
+
+"The CDF is $F(x) = P(X \leq x)$. Five properties: (1) Definition: $F(x) = P(X \leq x)$. (2) Bounded: $0 \leq F(x) \leq 1$. (3) Non-decreasing: $a \leq b \Rightarrow F(a) \leq F(b)$. (4) Limits: $F(x) \to 1$ as $x \to \infty$ and $F(x) \to 0$ as $x \to -\infty$. (5) Interval probability: $P(a \leq X \leq b) = F(b) - F(a)$. For continuous distributions: $F'(x) = f(x)$ — differentiate the CDF to get the PDF, integrate the PDF to get the CDF. If any of these properties fail, the function cannot be a valid CDF."
+
+---
+
+**Q11. Describe the exponential distribution. What makes it unique?**
+
+"$X \sim \text{Exp}(\lambda)$ has PDF $f(x) = \lambda e^{-\lambda x}$ on $[0,\infty)$, CDF $F(x) = 1 - e^{-\lambda x}$, mean $1/\lambda$, variance $1/\lambda^2$. It models waiting time for a memoryless continuous process. The memoryless property is its defining feature: $P(X > s+t \mid X > s) = P(X > t)$. Given you've already waited $s$ minutes, the distribution of additional wait time is identical to the original. This is why radioactive decay, inter-arrival times in Poisson processes, and certain server response times follow the exponential. It is the continuous analogue of the Geometric distribution."
+
+---
+
+**Q12. A server processes requests with exponential inter-arrival times at rate $\lambda = 2$ per second. What is the probability a request takes more than 1 second?**
+
+"$P(X > 1) = 1 - F(1) = e^{-\lambda \cdot 1} = e^{-2} \approx 0.135$. About 13.5% of requests take more than 1 second. For any threshold $t$: $P(X > t) = e^{-\lambda t}$. The right-tail formula is one of the cleanest in probability. By memorylessness, if a request has already been running for 1 second, the probability it needs more than 1 additional second is still $e^{-2} \approx 13.5\%$."
+
+---
+
+## 🟡 Tier 3 — Applied / ML Specific
+
+---
+
+**Q13. What is the bias-variance tradeoff? State it in terms of the variance formula.**
+
+"For a model prediction $\hat{f}(x)$, the expected squared error decomposes as: $E[(y - \hat{f})^2] = \text{Bias}^2 + \text{Var}(\hat{f}) + \sigma^2_\text{noise}$. This uses exactly $E[X^2] - E[X]^2 = \text{Var}(X)$ rearranged. Bias measures systematic error (the model is wrong on average). Variance measures sensitivity to training data (the model fluctuates). Noise is irreducible. Complex models (deep networks) tend to low bias / high variance. Simple models (linear regression) tend to high bias / low variance. Regularisation adds bias to reduce variance."
+
+---
+
+**Q14. You have i.i.d. samples $X_1, \ldots, X_n$ from $N(\mu, \sigma^2)$. What is the distribution of the sample mean $\bar{X}$?**
+
+"Since $X_i \sim N(\mu, \sigma^2)$ and the sum of independent normals is normal: $\sum X_i \sim N(n\mu, n\sigma^2)$. Scaling by $1/n$: $\bar{X} \sim N(\mu, \sigma^2/n)$. The mean of the sample mean equals the population mean (unbiased), and its variance is $\sigma^2/n$ (shrinks with $n$). The standard error is $\sigma/\sqrt{n}$. Standardising: $\frac{\bar{X} - \mu}{\sigma/\sqrt{n}} \sim N(0,1)$. This is the backbone of confidence intervals and hypothesis tests for the mean."
+
+---
+
+**Q15. (Google/Meta) You observe a random variable $X$ with PDF $f(x) = cx^2$ on $[0, 3]$. Find $c$, $E[X]$, and $P(X > 2)$.**
+
+"**Step 1 — find $c$:** $\int_0^3 cx^2\,dx = c \cdot 9 = 1 \Rightarrow c = 1/9$.
+
+**Step 2 — find $E[X]$:** $E[X] = \int_0^3 x \cdot \frac{x^2}{9}\,dx = \frac{1}{9}\int_0^3 x^3\,dx = \frac{1}{9} \cdot \frac{81}{4} = \frac{9}{4} = 2.25$.
+
+**Step 3 — find $P(X > 2)$:** CDF is $F(x) = x^3/27$, so $P(X > 2) = 1 - F(2) = 1 - 8/27 = 19/27 \approx 0.70$."
+
+---
+
+**Q16. How do you transform a continuous random variable? Walk through finding the PDF of $Y = \sqrt{X}$ if $X \sim U(0,1)$.**
+
+"Use the CDF method. Step 1: $F_Y(y) = P(Y \leq y) = P(\sqrt{X} \leq y) = P(X \leq y^2) = F_X(y^2) = y^2$ for $y \in [0,1]$ (since $F_X(x) = x$ for uniform). Step 2: differentiate to get the PDF: $f_Y(y) = 2y$ for $y \in [0,1]$. Interpretation: $Y = \sqrt{X}$ is not uniform — it is weighted toward larger values because the square root compresses the high end of $[0,1]$ more than the low end. In ML, this pattern appears whenever you transform features."
+
+---
+
+## One-Page Crisp Definitions (Class 5)
+
+| Term | 10-word definition |
+|---|---|
+| Variance | Expected squared deviation from the mean |
+| Standard deviation | Square root of variance; same units as $X$ |
+| PDF | Density function; integrate to get probability |
+| CDF | $F(x) = P(X \leq x)$; non-decreasing, 0 to 1 |
+| Uniform($a$,$b$) | Constant density; all values equally likely |
+| Exponential($\lambda$) | Memoryless waiting time; $f(x) = \lambda e^{-\lambda x}$ |
+| Normal($\mu$, $\sigma^2$) | Bell curve; completely described by mean and variance |
+| Standardisation | $Z = (X-\mu)/\sigma$ converts any normal to $N(0,1)$ |
+| Memoryless | Past wait gives zero information about future wait |
+| $68$-$95$-$99$ rule | $1\sigma/2\sigma/3\sigma$ capture $68\%/95\%/99\%$ |
+
+> The single most tested Class 5 concept across FAANG is: **"Can $f(x) > 1$?"** (yes) and **"What is $P(X=a)$ for continuous $X$?"** (always 0). Nail these cold.
