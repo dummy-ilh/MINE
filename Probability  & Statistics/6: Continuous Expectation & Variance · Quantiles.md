@@ -893,6 +893,3 @@ $$\text{95\% margin of error} = \pm \frac{1}{\sqrt{n}} \quad \text{(conservative
 
 ---
 
-*End of MIT 18.05 Class 6 Study Notes*  
-*Source: MIT OpenCourseWare, 18.05 Introduction to Probability and Statistics, Spring 2022*  
-*Jeremy Orloff and Jonathan Bloom — https://ocw.mit.edu*
