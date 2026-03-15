@@ -1,9 +1,5 @@
-# MIT 18.05 — Introduction to Probability and Statistics
-## Class 4: Discrete Random Variables & Expected Value
-### Complete Study Notes | Spring 2022
+## 4: Discrete Random Variables & Expected Value
 
-> **Source:** MIT OpenCourseWare 18.05, Jeremy Orloff and Jonathan Bloom  
-> **Coverage:** Prep notes A & B + In-class problems with full solutions and expanded explanations
 
 ---
 
