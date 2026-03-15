@@ -1,10 +1,4 @@
-# MIT 18.05 — Introduction to Probability and Statistics
-## Class 6: Continuous Expectation & Variance · Quantiles · Law of Large Numbers · Central Limit Theorem
-### Complete Study Notes | Spring 2022
-
-> **Source:** MIT OpenCourseWare 18.05, Jeremy Orloff and Jonathan Bloom  
-> **Coverage:** Prep notes A (Continuous Expectation/Variance/Quantiles) + Prep B (LoLN, Histograms, CLT)
-
+##  6: Continuous Expectation & Variance · Quantiles · Law of Large Numbers · Central Limit Theorem
 ---
 
 ## Table of Contents
