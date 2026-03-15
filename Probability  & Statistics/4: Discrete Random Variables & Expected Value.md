@@ -1248,6 +1248,125 @@ $$E[\text{Uniform}(N)] = \frac{N+1}{2}$$
 
 ---
 
-*End of MIT 18.05 Class 4 Study Notes*  
-*Source: MIT OpenCourseWare, 18.05 Introduction to Probability and Statistics, Spring 2022*  
-*Jeremy Orloff and Jonathan Bloom — https://ocw.mit.edu*
+Here's everything you need — crisp definitions first, then every FAANG question pattern from this chapter.---
+
+## FAANG Interview Questions — Chapter 4
+
+---
+
+### 🔴 Tier 1 — Near Certain to Appear
+
+---
+
+**Q1. What is a random variable? How is it different from a regular variable?**
+
+"A random variable is a function $X: \Omega \to \mathbb{R}$ — it maps each outcome in the sample space to a real number. A regular variable is a fixed (possibly unknown) number. A random variable is random because the experiment's outcome is random, and algebraic because we can add, square, and take expectations of it. The key insight: it is a *function*, not a number — it only becomes a number after the experiment runs."
+
+---
+
+**Q2. What is the difference between a PMF and a CDF?**
+
+"The PMF $p(a) = P(X = a)$ gives probability *at a single point*. The CDF $F(a) = P(X \leq a)$ gives cumulative probability *up to and including* $a$. You recover the PMF from the CDF by differencing: $p(a) = F(a) - F(a^-)$. The CDF is always non-decreasing, lives in $[0,1]$, and for discrete variables is a right-continuous staircase. The $\leq$ in the CDF definition (not $<$) is critical for discrete distributions."
+
+---
+
+**Q3. What is $E[X]$, and what does it represent?**
+
+"The expected value is the probability-weighted average of all values $X$ can take: $E[X] = \sum_j x_j \cdot p(x_j)$. Intuitively it is the centre of mass of the distribution — the balance point if you place masses $p(x_j)$ at positions $x_j$ on a number line. It is the long-run average you'd observe over many independent repetitions (Law of Large Numbers). It need not be a value $X$ can actually take — a fair die has $E[X] = 3.5$."
+
+---
+
+**Q4. State and explain linearity of expectation. Does it require independence?**
+
+"$E[X + Y] = E[X] + E[Y]$, always — no independence required. And $E[aX + b] = aE[X] + b$. The proof is one line: $E[X+Y] = \sum_i (x_i + y_i)P(\omega_i) = \sum_i x_i P(\omega_i) + \sum_i y_i P(\omega_i) = E[X] + E[Y]$. The power is that it works even for *dependent* variables, enabling elegant solutions like the Musical Chairs problem: $n$ people reshuffling, expected number back in their seat is always exactly 1, regardless of $n$."
+
+---
+
+**Q5. Is $E[h(X)] = h(E[X])$?**
+
+"No — only when $h$ is affine (linear). In general $E[h(X)] = \sum_j h(x_j) p(x_j) \neq h(E[X])$. Classic example: $E[X^2] \neq (E[X])^2$. The gap between them is exactly the variance: $\text{Var}(X) = E[X^2] - (E[X])^2 \geq 0$. For convex $h$, Jensen's inequality says $E[h(X)] \geq h(E[X])$. This matters enormously in ML — for example, minimising expected squared loss is not the same as squaring the expected error."
+
+---
+
+**Q6. What are the Bernoulli, Binomial, and Geometric distributions? When do you use each?**
+
+| | Bernoulli($p$) | Binomial($n,p$) | Geometric($p$) |
+|---|---|---|---|
+| Models | One trial | $n$ trials, count successes | Failures before 1st success |
+| Support | $\{0,1\}$ | $\{0,1,\ldots,n\}$ | $\{0,1,2,\ldots\}$ |
+| PMF | $p^k(1-p)^{1-k}$ | $\binom{n}{k}p^k(1-p)^{n-k}$ | $(1-p)^k p$ |
+| Mean | $p$ | $np$ | $(1-p)/p$ |
+
+"Use Bernoulli for a single binary outcome (click/no-click). Use Binomial for a fixed number of trials (how many of 1000 users convert). Use Geometric for waiting time (how many attempts until first purchase)."
+
+---
+
+### 🟠 Tier 2 — High Frequency
+
+---
+
+**Q7. Why is $E[\text{Binomial}(n,p)] = np$? Prove it without summing the binomial series.**
+
+"Write $X = X_1 + X_2 + \cdots + X_n$ where each $X_i \sim \text{Bernoulli}(p)$ is the indicator of success on trial $i$. By linearity: $E[X] = \sum_{i=1}^n E[X_i] = \sum_{i=1}^n p = np$. The binomial is a sum of Bernoullis — this decomposition is the entire insight, and linearity does the rest. No messy algebra needed."
+
+---
+
+**Q8. You flip a biased coin with $P(\text{H}) = 0.3$ until the first head. What is the expected number of flips?**
+
+"Number of flips = number of tails before first head, plus 1. Tails before first head follows $\text{Geometric}(0.3)$, so $E[\text{tails}] = (1-0.3)/0.3 = 0.7/0.3 \approx 2.33$. Expected total flips = $2.33 + 1 = 10/3 \approx 3.33$. Alternatively if you define Geometric as the number of trials until first success, $E[X] = 1/p = 1/0.3 \approx 3.33$ directly. Always clarify which convention you're using."
+
+---
+
+**Q9. A CDF table gives $F(1)=0.5$, $F(3)=0.75$, $F(5)=0.9$, $F(7)=1$. Find $P(X=3)$ and $P(1 < X \leq 5)$.**
+
+"$P(X=3) = F(3) - F(1) = 0.75 - 0.50 = 0.25$. For the interval: $P(1 < X \leq 5) = F(5) - F(1) = 0.90 - 0.50 = 0.40$. The strict inequality on the left means we subtract $F(1)$, which correctly excludes $X = 1$."
+
+---
+
+**Q10. Musical chairs / indicator variable trick.** $n$ items shuffled randomly — expected number back in original position?
+
+"Define indicator $X_i = 1$ if item $i$ returns to its position. Each $P(X_i = 1) = 1/n$ by symmetry, so $E[X_i] = 1/n$. Total $X = \sum_{i=1}^n X_i$. By linearity: $E[X] = n \cdot (1/n) = 1$, regardless of $n$. Note: the $X_i$ are not independent — but linearity doesn't need independence. This technique appears constantly in algorithm analysis (e.g., expected comparisons in quicksort)."
+
+---
+
+**Q11. What is the Gambler's Fallacy and why is it wrong?**
+
+"The fallacy: after many consecutive outcomes of one type, the other type is 'due.' It is wrong because independent trials have no memory — $P(\text{heads})$ is always $p$ regardless of history. The roulette wheel doesn't know what it previously showed. The 26 consecutive blacks at Monte Carlo in 1913 caused players to lose millions betting on red, when the true probability of red never changed. In data science: a sequence of model errors does not make the next prediction more likely to be correct if errors are independent."
+
+---
+
+### 🟡 Tier 3 — Conceptual / Applied
+
+---
+
+**Q12. Two games: (A) 10% chance of winning $95, 90% chance of losing $5. (B) Pay $5 upfront, 10% chance of winning $100. Which would you take?**
+
+"Both have identical expected value: $E[\text{gain}] = 0.1(95) + 0.9(-5) = \$5$. Mathematically equivalent. In practice, Kahneman and Tversky showed that most people reject (A) but accept (B) — loss aversion makes us treat potential losses as psychologically worse than equivalent costs. For a data scientist: this is why users respond differently to 'free trial then charge' vs. 'pay upfront then refund' even when the expected cost is identical."
+
+---
+
+**Q13. You build a model that makes independent errors with probability $p$ on each of $n$ predictions. What is the expected number of errors?**
+
+"Each prediction $X_i \sim \text{Bernoulli}(p)$. Total errors $X = \sum X_i \sim \text{Binomial}(n,p)$. By linearity: $E[X] = np$. For example, $n=1000$ predictions with $p=0.05$ error rate gives $E[\text{errors}] = 50$. The variance is $np(1-p) = 47.5$, so the standard deviation is $\approx 6.9$ errors."
+
+---
+
+**Q14. Why does $E[1/X] \neq 1/E[X]$? Give a concrete example.**
+
+"Because $h(x) = 1/x$ is nonlinear. Direct counterexample: $X$ takes values 1, 2, 3 each with probability 1/4, 1/2, 1/4. $E[X] = 2$, so $1/E[X] = 0.5$. But $E[1/X] = (1)(1/4) + (1/2)(1/2) + (1/3)(1/4) = 1/4 + 1/4 + 1/12 = 7/12 \approx 0.583 \neq 0.5$. Jensen's inequality: $1/x$ is convex, so $E[1/X] \geq 1/E[X]$."
+
+---
+
+**Q15. (Amazon / quant) Derive the expected value of the Geometric distribution.**
+
+"$E[X] = \sum_{k=0}^\infty k(1-p)^k p$. Use the identity: differentiate $\sum_{k=0}^\infty x^k = 1/(1-x)$ to get $\sum_{k=0}^\infty kx^{k-1} = 1/(1-x)^2$. Multiply by $x$: $\sum_{k=0}^\infty kx^k = x/(1-x)^2$. Substitute $x = 1-p$: $\sum k(1-p)^k = (1-p)/p^2$. Multiply by $p$: $E[X] = (1-p)/p$." This derivation — differentiating a power series — is a standard technique at quant/research roles.
+
+---
+
+## The 3 Things Every FAANG Interviewer Tests from Chapter 4
+
+1. **Linearity of expectation with dependent variables** — the Musical Chairs / indicator trick. If you can't decompose a complex count into Bernoulli indicators and apply linearity, you will miss half the problems in this domain.
+
+2. **$E[h(X)] \neq h(E[X])$** — they will hand you a nonlinear function and ask you to compute the expected value, watching whether you blindly substitute $E[X]$ into $h$.
+
+3. **PMF vs CDF reading** — given a CDF table, find $P(X = a)$ and $P(a < X \leq b)$. The $\leq$ boundary is deliberately chosen to trap you.
