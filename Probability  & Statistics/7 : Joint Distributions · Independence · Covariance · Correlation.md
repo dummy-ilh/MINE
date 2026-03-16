@@ -1,8 +1,5 @@
-# MIT 18.05 — Introduction to Probability and Statistics
-## Class 7 Complete Study Notes: Joint Distributions · Independence · Covariance · Correlation
 
-> **Source:** MIT 18.05 Spring 2022 — Class 7 (Orloff & Bloom)
-> **Coverage:** Joint PMF/PDF/CDF · Marginal Distributions · Independence · Covariance · Correlation · Bivariate Normal
+##  7 : Joint Distributions · Independence · Covariance · Correlation
 
 ---
 
@@ -1193,6 +1190,842 @@ X⊥Y  ⟹  Cov(X,Y)=0,  but NOT vice versa   [Property 6]
 3. **Linearity (for sums):** Expand into sum of $\text{Cov}(X_i, Y_j)$, keep only shared terms
 
 ---
+# FAANG Interview Q&A — MIT 18.05 Class 7
+## Joint Distributions · Independence · Covariance · Correlation
 
-*End of MIT 18.05 Class 7 Study Notes*
-*Topics: Joint PMF/PDF/CDF · Marginals · Independence · Covariance · Correlation · Bivariate Normal · Causation*
+> **Scope:** Based on MIT 18.05 Class 7 (Spring 2022) — Orloff & Bloom
+> **Target:** Data Science · ML Engineering · Quantitative Research · Applied Scientist · SWE ML Track
+> **Companies:** Google · Meta · Amazon · Apple · Netflix · Jane Street · Two Sigma · Citadel · Stripe
+
+---
+
+## Master Index
+
+| # | Question | Difficulty | Topic |
+|---|---|---|---|
+| Q1 | What is a joint distribution and why does it matter in ML? | 🟢 Easy | Joint Distributions |
+| Q2 | How do you test whether two discrete random variables are independent? | 🟢 Easy | Independence |
+| Q3 | How do you test independence for continuous random variables? | 🟢 Easy | Independence |
+| Q4 | Given $f(x,y) = x+y$ on $[0,1]^2$, verify it's a valid pdf and find $P(X > 0.3, Y > 0.5)$ | 🟡 Medium | Joint PDF |
+| Q5 | What is a marginal distribution? How do you compute it? | 🟢 Easy | Marginals |
+| Q6 | How do you find the marginal CDF from the joint CDF? | 🟡 Medium | Marginal CDF |
+| Q7 | Define covariance. What are its key properties? | 🟢 Easy | Covariance |
+| Q8 | Prove that $\text{Cov}(X,Y) = E[XY] - \mu_X \mu_Y$ | 🟡 Medium | Covariance Proof |
+| Q9 | Prove that $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y) + 2\text{Cov}(X,Y)$ | 🟡 Medium | Variance of Sum |
+| Q10 | Flip a fair coin 11 times. $X$ = heads in first 6, $Y$ = heads in last 6. Find $\text{Cov}(X,Y)$ and $\text{Cor}(X,Y)$ | 🟡 Medium | Covariance Application |
+| Q11 | Can $\text{Cov}(X,Y) = 0$ but $X$ and $Y$ not be independent? Prove it with an example. | 🔴 Hard | Covariance Trap |
+| Q12 | What is correlation? Why is it preferred over covariance? | 🟢 Easy | Correlation |
+| Q13 | Prove $-1 \leq \rho \leq 1$ | 🔴 Hard | Correlation Bound |
+| Q14 | What is the bivariate normal distribution? When is $\rho=0$ sufficient for independence? | 🟡 Medium | Bivariate Normal |
+| Q15 | Two hospitals: large (45 births/day) and small (15 births/day). Which records more days with >60% boys? | 🟡 Medium | Sampling / CLT |
+| Q16 | Explain how correlation arises from overlapping coin flips. Generalize the formula. | 🟡 Medium | Correlation via Linearity |
+| Q17 | "Ice cream sales correlate with drowning deaths. Does ice cream cause drowning?" | 🟢 Easy | Causation |
+| Q18 | A feature has zero correlation with the label. Should you drop it from your ML model? | 🔴 Hard | ML Application |
+| Q19 | How do you compute $F(3.5, 4)$ from a discrete joint probability table? | 🟡 Medium | Joint CDF Discrete |
+| Q20 | Why does a smaller hospital show more extreme deviations from 50% boys than a larger one? Connect to variance. | 🔴 Hard | CLT + Variance + Sampling |
+
+---
+
+## Questions & Full Answers
+
+---
+
+### Q1 🟢 — What Is a Joint Distribution and Why Does It Matter in ML?
+
+**Question:** What is a joint distribution? Why is it important in machine learning and data science?
+
+---
+
+**Answer:**
+
+A **joint distribution** of two random variables $X$ and $Y$ is a complete description of the probability of every possible pair of outcomes $(x, y)$ simultaneously.
+
+**Discrete:** The joint PMF is $p(x_i, y_j) = P(X = x_i \text{ and } Y = y_j)$, organized as a table.
+
+**Continuous:** The joint PDF $f(x,y)$ satisfies $P((X,Y) \in R) = \iint_R f(x,y)\, dx\, dy$.
+
+Both must satisfy: (1) non-negativity, and (2) total probability = 1.
+
+**Why it matters for ML/DS:**
+
+| Application | Why Joint Distributions Matter |
+|---|---|
+| **Feature engineering** | Understand correlations between features; remove redundant ones |
+| **Generative models** | Learn the joint distribution $p(x, y)$ of data and labels |
+| **Bayesian inference** | Posterior $\propto$ likelihood × prior is a joint distribution over parameters and data |
+| **A/B testing** | Model joint behavior of test metrics to control false discovery rate |
+| **Anomaly detection** | A point may be normal marginally but anomalous in the joint space |
+| **Causal inference** | Joint distributions encode correlations; causal models encode interventions |
+
+> **FAANG context:** At Meta, the joint distribution of (user engagement, ad click rate) is key to ad ranking models. At Google, the joint distribution of (query, document) determines ranking scores. Understanding joint behavior — not just marginals — drives product quality.
+
+---
+
+### Q2 🟢 — Testing Independence for Discrete Variables
+
+**Question:** How do you check whether two discrete random variables are independent from their joint probability table?
+
+---
+
+**Answer:**
+
+**Definition:** $X$ and $Y$ are independent if and only if for **every** pair $(x_i, y_j)$:
+
+$$p(x_i, y_j) = p_X(x_i) \cdot p_Y(y_j)$$
+
+**Step-by-step procedure:**
+
+1. Compute all **row marginals** $p_X(x_i) = \sum_j p(x_i, y_j)$
+2. Compute all **column marginals** $p_Y(y_j) = \sum_i p(x_i, y_j)$
+3. For every cell, check whether $p(x_i, y_j) = p_X(x_i) \cdot p_Y(y_j)$
+4. If **any** cell fails → **not independent**
+
+**Fast shortcut to show dependence:** Find any single cell where the product rule fails. You only need ONE counterexample.
+
+**Example 1 — Independent (Two dice $X$, $Y$):**
+
+Every cell = $1/36$, every marginal = $1/6$, and $1/36 = (1/6)(1/6)$. ✓ Independent.
+
+**Example 2 — Dependent ($X$, $T$ = sum):**
+
+$P(X=1, T=8) = 0$ but $P(X=1) \cdot P(T=8) = (1/6)(5/36) \neq 0$. ✗ Not independent.
+
+> **Intuition:** If knowing $X$ restricts which values $T$ can take (it does — if $X=1$, then $T \leq 7$), they cannot be independent.
+
+**Common Mistake:** Checking only a few cells and concluding independence. You must verify the product rule holds at **all** cells, or equivalently show the joint table can be reconstructed as an outer product of the two marginal vectors.
+
+---
+
+### Q3 🟢 — Testing Independence for Continuous Variables
+
+**Question:** How do you test independence for continuous random variables given their joint PDF?
+
+---
+
+**Answer:**
+
+**Definition:** Continuous $X$ and $Y$ are independent if and only if:
+
+$$f(x,y) = f_X(x) \cdot f_Y(y) \quad \text{for all } (x,y)$$
+
+**Fastest test — the factorization shortcut:**
+
+$X$ and $Y$ are independent if and only if $f(x,y)$ can be written as:
+
+$$f(x,y) = g(x) \cdot h(y)$$
+
+for **any** functions $g$ and $h$ (they don't need to be normalized individually).
+
+**Three cases from MIT 18.05:**
+
+| PDF | Factors? | Independent? |
+|---|---|---|
+| $4x^2 y^3$ | $= (4x^2)(y^3)$ → yes | ✓ Yes |
+| $\frac{1}{2}(x^3 y + xy^3) = \frac{xy}{2}(x^2+y^2)$ | Cannot separate $(x^2+y^2)$ | ✗ No |
+| $6e^{-3x-2y} = 6e^{-3x} \cdot e^{-2y}$ | Yes — exponential of sum | ✓ Yes |
+
+**Critical requirement:** The joint **support** (range) must be a **rectangle**. If the support is a triangle, disk, or any non-rectangular region, $X$ and $Y$ are automatically dependent, regardless of whether $f$ appears to factor.
+
+> **Example of support dependence:** $f(x,y) = 2$ on the triangle $\{0 < x < 1, 0 < y < x\}$. Even though $f$ is constant (trivially a product), $X$ and $Y$ are NOT independent because the support is not rectangular — knowing $X = 0.2$ tells you $Y < 0.2$.
+
+---
+
+### Q4 🟡 — Validate a Joint PDF and Compute a Probability
+
+**Question:** Given $f(x,y) = x + y$ on $[0,1]^2$:
+(a) Verify this is a valid joint PDF.
+(b) Find $P(X > 0.3, Y > 0.5)$.
+(c) Find the marginal PDF $f_X(x)$.
+
+---
+
+**Answer:**
+
+**(a) Validity:**
+
+**Non-negativity:** $x + y \geq 0$ for $x, y \in [0,1]$. ✓
+
+**Total probability:**
+$$\int_0^1 \int_0^1 (x+y)\, dx\, dy = \int_0^1 \left[\frac{x^2}{2} + xy\right]_0^1 dy = \int_0^1 \left(\frac{1}{2} + y\right) dy = \frac{1}{2} + \frac{1}{2} = 1 \checkmark$$
+
+**(b) $P(X > 0.3, Y > 0.5)$:**
+
+$$P(A) = \int_{0.5}^{1} \int_{0.3}^{1} (x+y)\, dx\, dy$$
+
+**Inner integral** (over $x$):
+$$\int_{0.3}^{1} (x+y)\, dx = \left[\frac{x^2}{2} + xy\right]_{0.3}^{1} = \left(\frac{1}{2} + y\right) - \left(\frac{0.09}{2} + 0.3y\right) = 0.455 + 0.7y$$
+
+**Outer integral** (over $y$):
+$$\int_{0.5}^{1} (0.455 + 0.7y)\, dy = \left[0.455y + 0.35y^2\right]_{0.5}^{1} = 0.805 - 0.315 = 0.49$$
+
+**Answer: $P(X > 0.3, Y > 0.5) = 0.49$**
+
+**(c) Marginal PDF $f_X(x)$:**
+
+Integrate out $y$:
+$$f_X(x) = \int_0^1 (x+y)\, dy = \left[xy + \frac{y^2}{2}\right]_0^1 = x + \frac{1}{2}$$
+
+**Verification:** $\int_0^1 (x + 1/2)\, dx = [x^2/2 + x/2]_0^1 = 1/2 + 1/2 = 1$ ✓
+
+> **FAANG context:** This type of problem — validating a density and computing probabilities — appears in ML inference pipelines when you need to verify that a learned density model is properly normalized, and when computing likelihoods over regions of feature space.
+
+---
+
+### Q5 🟢 — What Is a Marginal Distribution?
+
+**Question:** What is a marginal distribution? How do you compute it from a joint distribution? Give an intuition for what it represents.
+
+---
+
+**Answer:**
+
+The **marginal distribution** of $X$ is the distribution of $X$ alone, obtained by "averaging out" (integrating or summing over) all values of $Y$.
+
+**Discrete:**
+$$p_X(x_i) = \sum_j p(x_i, y_j)$$
+
+**Continuous:**
+$$f_X(x) = \int_{-\infty}^{\infty} f(x,y)\, dy$$
+
+**Why "marginal"?** In a joint probability table, the marginals appear in the **margins** (border rows and columns) when you add up rows or columns.
+
+**Intuition:** The marginal is what you'd observe if you ran the experiment but **only recorded** $X$ and ignored $Y$. It collapses the 2D distribution down to 1D.
+
+**Example:** If $(X, Y)$ models (height, weight) of people, $f_X(x)$ is just the height distribution — the distribution you'd get if you measured everyone's height and forgot about weight.
+
+**Key property:** The marginals do NOT tell you the joint distribution unless $X \perp Y$. Two very different joint distributions can have the same marginals.
+
+> **ML implication:** A model trained on marginal distributions of features cannot capture feature interactions. That's why joint modeling (e.g., tree-based models, attention mechanisms) outperforms models that treat features as independent.
+
+---
+
+### Q6 🟡 — Marginal CDF from Joint CDF
+
+**Question:** If the joint CDF of $(X,Y)$ on $[a,b] \times [c,d]$ is $F(x,y)$, how do you extract the marginal CDF of $X$?
+
+---
+
+**Answer:**
+
+$$F_X(x) = F(x,\; d)$$
+
+Set $y$ equal to the **upper boundary** of $Y$'s range.
+
+**Why this works:** $F_X(x) = P(X \leq x) = P(X \leq x \text{ and } Y \leq \infty)$. Setting $y = d$ (or $y \to \infty$) means "no restriction on $Y$", which gives the marginal.
+
+Similarly: $F_Y(y) = F(b, y)$ — set $x$ to the right boundary.
+
+**Example:** Given $F(x,y) = \dfrac{x^2 y + xy^2}{2}$ on $[0,1]^2$:
+
+$$F_X(x) = F(x, 1) = \frac{x^2(1) + x(1)^2}{2} = \frac{x^2 + x}{2}$$
+
+$$P(X < 0.5) = F_X(0.5) = \frac{0.25 + 0.5}{2} = \frac{3}{8}$$
+
+**Sanity check:** $F_X(0) = 0$ ✓ and $F_X(1) = (1+1)/2 = 1$ ✓
+
+---
+
+### Q7 🟢 — Covariance: Definition and Properties
+
+**Question:** Define covariance. List its key properties. What does it measure?
+
+---
+
+**Answer:**
+
+**Definition:**
+
+$$\text{Cov}(X,Y) = E\bigl[(X - \mu_X)(Y - \mu_Y)\bigr]$$
+
+**Intuition:** Covariance measures whether $X$ and $Y$ deviate from their means **in the same direction** (positive covariance) or **opposite directions** (negative covariance).
+
+- When $X > \mu_X$ and $Y > \mu_Y$ simultaneously → product $(X-\mu_X)(Y-\mu_Y) > 0$ → positive contribution
+- When $X > \mu_X$ but $Y < \mu_Y$ → product $< 0$ → negative contribution
+
+**Six Key Properties:**
+
+| # | Property | Formula | When Used |
+|---|---|---|---|
+| 1 | Scaling | $\text{Cov}(aX+b, cY+d) = ac\,\text{Cov}(X,Y)$ | Unit conversion |
+| 2 | Bilinearity | $\text{Cov}(X_1+X_2, Y) = \text{Cov}(X_1,Y) + \text{Cov}(X_2,Y)$ | Expanding sums |
+| 3 | Self = Variance | $\text{Cov}(X,X) = \text{Var}(X)$ | Diagonal of covariance matrix |
+| 4 | Shortcut | $\text{Cov}(X,Y) = E[XY] - \mu_X\mu_Y$ | Computation |
+| 5 | Var of sum | $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y) + 2\text{Cov}(X,Y)$ | Portfolio variance, error propagation |
+| 6 | Independence → 0 | $X \perp Y \Rightarrow \text{Cov}(X,Y)=0$ | Simplifying calculations |
+
+**Warning:** Property 6 does NOT reverse. Zero covariance does NOT imply independence.
+
+**Units:** $\text{Cov}(X,Y)$ has units of (unit of $X$) × (unit of $Y$). This is why raw covariance is hard to interpret across different problems.
+
+---
+
+### Q8 🟡 — Prove $\text{Cov}(X,Y) = E[XY] - \mu_X \mu_Y$
+
+**Question:** Derive the shortcut covariance formula from the definition.
+
+---
+
+**Answer:**
+
+**Starting point:** $\text{Cov}(X,Y) = E[(X-\mu_X)(Y-\mu_Y)]$
+
+**Step 1:** Expand the product inside the expectation.
+
+$$\text{Cov}(X,Y) = E[XY - \mu_X Y - \mu_Y X + \mu_X \mu_Y]$$
+
+**Step 2:** Use linearity of expectation.
+
+$$= E[XY] - \mu_X E[Y] - \mu_Y E[X] + \mu_X \mu_Y$$
+
+**Step 3:** Substitute $E[X] = \mu_X$ and $E[Y] = \mu_Y$.
+
+$$= E[XY] - \mu_X \mu_Y - \mu_Y \mu_X + \mu_X \mu_Y$$
+
+**Step 4:** Simplify.
+
+$$= E[XY] - \mu_X \mu_Y \quad \square$$
+
+**Why this matters:** The shortcut is computationally faster. Instead of computing the joint expectation of $(X-\mu_X)(Y-\mu_Y)$, you compute $E[XY]$ (from the joint distribution) and subtract the product of the means.
+
+**Analogy to variance:** Recall $\text{Var}(X) = E[X^2] - \mu^2$. This formula is exactly that formula with $Y$ replacing the second $X$.
+
+---
+
+### Q9 🟡 — Prove $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y) + 2\text{Cov}(X,Y)$
+
+**Question:** Derive the formula for the variance of a sum of two (possibly dependent) random variables.
+
+---
+
+**Answer:**
+
+**Step 1:** Use Property 3: $\text{Var}(Z) = \text{Cov}(Z, Z)$.
+
+$$\text{Var}(X+Y) = \text{Cov}(X+Y,\; X+Y)$$
+
+**Step 2:** Apply bilinearity (Property 2) to expand.
+
+$$= \text{Cov}(X, X+Y) + \text{Cov}(Y, X+Y)$$
+$$= \text{Cov}(X,X) + \text{Cov}(X,Y) + \text{Cov}(Y,X) + \text{Cov}(Y,Y)$$
+
+**Step 3:** Use Property 3 and symmetry ($\text{Cov}(X,Y) = \text{Cov}(Y,X)$).
+
+$$= \text{Var}(X) + \text{Cov}(X,Y) + \text{Cov}(X,Y) + \text{Var}(Y)$$
+
+$$= \text{Var}(X) + \text{Var}(Y) + 2\text{Cov}(X,Y) \quad \square$$
+
+**Corollaries:**
+
+- If $X \perp Y$: $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y)$ (covariance term vanishes)
+- If $X$ and $Y$ are positively correlated: $\text{Var}(X+Y) > \text{Var}(X) + \text{Var}(Y)$
+- If $X$ and $Y$ are negatively correlated: $\text{Var}(X+Y) < \text{Var}(X) + \text{Var}(Y)$ — **diversification effect**
+
+> **FAANG context:** In portfolio theory (used in quant finance at Jane Street, Two Sigma), combining two negatively correlated assets reduces total variance — this is mathematical diversification. The formula shows exactly why: the $2\text{Cov}(X,Y)$ term is negative when $\rho < 0$.
+
+---
+
+### Q10 🟡 — Coin Flip Covariance and Correlation
+
+**Question:** Flip a fair coin 11 times. Let $X$ = number of heads in the first 6 flips, $Y$ = number of heads in the last 6 flips. Note: flip 6 appears in both. Compute $\text{Cov}(X,Y)$ and $\text{Cor}(X,Y)$.
+
+---
+
+**Answer:**
+
+**Step 1: Decompose into individual flips.**
+
+Let $X_i = $ result of flip $i$ ($X_i \sim \text{Bernoulli}(0.5)$, $\text{Var}(X_i) = 1/4$).
+
+$$X = X_1 + X_2 + X_3 + X_4 + X_5 + X_6$$
+$$Y = X_6 + X_7 + X_8 + X_9 + X_{10} + X_{11}$$
+
+**Step 2: Apply bilinearity of covariance.**
+
+$$\text{Cov}(X,Y) = \sum_{i=1}^{6} \sum_{j=6}^{11} \text{Cov}(X_i, X_j)$$
+
+**Step 3: Use independence of different flips.**
+
+$\text{Cov}(X_i, X_j) = 0$ for $i \neq j$ (independent flips).
+
+The only nonzero term is $i = j = 6$:
+
+$$\text{Cov}(X,Y) = \text{Cov}(X_6, X_6) = \text{Var}(X_6) = \frac{1}{4}$$
+
+**Step 4: Compute standard deviations.**
+
+$X$ = sum of 6 independent Bernoulli(0.5): $\text{Var}(X) = 6 \cdot \frac{1}{4} = \frac{3}{2}$, so $\sigma_X = \sqrt{\frac{3}{2}} = \frac{\sqrt{6}}{2}$.
+
+Similarly $\sigma_Y = \frac{\sqrt{6}}{2}$.
+
+**Step 5: Compute correlation.**
+
+$$\text{Cor}(X,Y) = \frac{1/4}{({\sqrt{6}}/{2})({\sqrt{6}}/{2})} = \frac{1/4}{6/4} = \frac{1}{6} \approx 0.167$$
+
+**Interpretation:** The mild positive correlation of $1/6$ comes entirely from the single shared flip. Out of 6 flips in each group, 1 is shared — so the theoretical correlation is exactly $1/6$. This matches the general formula $\rho = \text{overlap}/\text{group size} = 1/6$.
+
+---
+
+### Q11 🔴 — Zero Covariance But Not Independent
+
+**Question:** Provide a concrete example where $\text{Cov}(X,Y) = 0$ but $X$ and $Y$ are NOT independent. Explain why this doesn't contradict the rule "independence implies zero covariance."
+
+---
+
+**Answer:**
+
+**Example:** Let $X$ take values $\{-2, -1, 0, 1, 2\}$, each with probability $1/5$. Let $Y = X^2$.
+
+**Step 1: Compute $\text{Cov}(X,Y) = E[XY] - E[X]E[Y]$.**
+
+$E[X] = \frac{1}{5}(-2 - 1 + 0 + 1 + 2) = 0$ (symmetric distribution)
+
+$E[XY] = E[X \cdot X^2] = E[X^3] = \frac{1}{5}(-8 - 1 + 0 + 1 + 8) = 0$
+
+$$\text{Cov}(X,Y) = 0 - 0 \cdot E[Y] = 0$$
+
+**Step 2: Show they are NOT independent.**
+
+$P(X = -2, Y = 0) = 0$ (since if $X = -2$ then $Y = 4 \neq 0$)
+
+But $P(X = -2) \cdot P(Y = 0) = \frac{1}{5} \cdot \frac{1}{5} = \frac{1}{25} \neq 0$
+
+Product rule fails → **NOT independent**. In fact, $Y$ is **completely determined** by $X$; they are as dependent as two variables can be.
+
+**Why doesn't this contradict the rule?**
+
+The rule is: $X \perp Y \Rightarrow \text{Cov}(X,Y) = 0$.
+
+The **converse** is: $\text{Cov}(X,Y) = 0 \Rightarrow X \perp Y$ — this is **FALSE** in general.
+
+Covariance only captures **linear** relationships. The relationship $Y = X^2$ is **quadratic** (perfectly nonlinear), which covariance cannot detect because the symmetric distribution makes all odd moments zero.
+
+**Practical implication:**
+
+| Measure | What It Detects |
+|---|---|
+| Covariance / Correlation | Linear relationships only |
+| Mutual information | Any statistical dependence |
+| Distance correlation | Any non-trivial dependence |
+| Spearman correlation | Monotonic (not just linear) relationships |
+
+> **FAANG context:** In feature selection at Google or Meta, using only Pearson correlation to filter features can miss nonlinear dependencies. This is why mutual information or model-based feature importance (e.g., random forest feature importance) is often preferred over correlation for feature selection.
+
+---
+
+### Q12 🟢 — What Is Correlation and Why Is It Preferred?
+
+**Question:** What is the Pearson correlation coefficient? Why is it preferred over raw covariance?
+
+---
+
+**Answer:**
+
+**Definition:**
+
+$$\rho = \text{Cor}(X,Y) = \frac{\text{Cov}(X,Y)}{\sigma_X \sigma_Y}$$
+
+**Properties:**
+
+1. **Dimensionless:** No units — always a pure number in $[-1, 1]$
+2. **Scale-invariant:** $\text{Cor}(aX, bY) = \text{Cor}(X, Y)$ for $a, b > 0$
+3. **Bounded:** $-1 \leq \rho \leq 1$
+4. **Extremes:** $\rho = 1$ iff $Y = aX + b$ ($a > 0$); $\rho = -1$ iff $Y = aX + b$ ($a < 0$)
+5. **Measures linear association:** $\rho = 0$ means no linear relationship (but may have nonlinear)
+
+**Why preferred over covariance:**
+
+| Feature | Covariance | Correlation |
+|---|---|---|
+| Units | Unit$_X$ × Unit$_Y$ | Dimensionless |
+| Scale-invariant | No | Yes |
+| Interpretable magnitude | No | Yes ($[-1,1]$) |
+| Comparable across problems | No | Yes |
+
+**Example:** Height (cm) and weight (kg) have a very different covariance than height (inches) and weight (lbs), even though they measure the same relationship. Correlation is identical in both cases.
+
+**Interpretation guide:**
+
+| $|\rho|$ range | Interpretation |
+|---|---|
+| 0.0 – 0.1 | Negligible |
+| 0.1 – 0.3 | Weak |
+| 0.3 – 0.5 | Moderate |
+| 0.5 – 0.7 | Strong |
+| 0.7 – 0.9 | Very strong |
+| 0.9 – 1.0 | Near-perfect linear |
+
+---
+
+### Q13 🔴 — Prove $-1 \leq \rho \leq 1$
+
+**Question:** Prove that the correlation coefficient is always between $-1$ and $+1$.
+
+---
+
+**Answer:**
+
+**Proof using variance non-negativity:**
+
+**Step 1:** Variance is always non-negative. Consider:
+
+$$0 \leq \text{Var}\!\left(\frac{X}{\sigma_X} - \frac{Y}{\sigma_Y}\right)$$
+
+**Step 2:** Expand using $\text{Var}(A - B) = \text{Var}(A) + \text{Var}(B) - 2\text{Cov}(A,B)$:
+
+$$0 \leq \text{Var}\!\left(\frac{X}{\sigma_X}\right) + \text{Var}\!\left(\frac{Y}{\sigma_Y}\right) - 2\text{Cov}\!\left(\frac{X}{\sigma_X}, \frac{Y}{\sigma_Y}\right)$$
+
+**Step 3:** Evaluate each term:
+
+- $\text{Var}(X/\sigma_X) = \text{Var}(X)/\sigma_X^2 = \sigma_X^2/\sigma_X^2 = 1$
+- $\text{Var}(Y/\sigma_Y) = 1$
+- $\text{Cov}(X/\sigma_X, Y/\sigma_Y) = \text{Cov}(X,Y)/(\sigma_X \sigma_Y) = \rho$
+
+$$0 \leq 1 + 1 - 2\rho = 2 - 2\rho$$
+
+$$\Rightarrow \rho \leq 1$$
+
+**Step 4:** Repeat with the sum:
+
+$$0 \leq \text{Var}\!\left(\frac{X}{\sigma_X} + \frac{Y}{\sigma_Y}\right) = 2 + 2\rho$$
+
+$$\Rightarrow \rho \geq -1$$
+
+**When is $\rho = 1$?**
+
+$\rho = 1$ iff $\text{Var}(X/\sigma_X - Y/\sigma_Y) = 0$, meaning $X/\sigma_X - Y/\sigma_Y = c$ (constant a.s.), i.e., $Y = \frac{\sigma_Y}{\sigma_X} X - c\sigma_Y$ — a perfect positive linear relationship. $\square$
+
+---
+
+### Q14 🟡 — Bivariate Normal and When $\rho = 0$ Means Independence
+
+**Question:** What is the bivariate normal distribution? In what special case does zero correlation imply independence?
+
+---
+
+**Answer:**
+
+**Definition:**
+
+$$f(x,y) = \frac{1}{2\pi\sigma_X\sigma_Y\sqrt{1-\rho^2}} \exp\!\left\{-\frac{1}{2(1-\rho^2)}\left[\frac{(x-\mu_X)^2}{\sigma_X^2} - \frac{2\rho(x-\mu_X)(y-\mu_Y)}{\sigma_X\sigma_Y} + \frac{(y-\mu_Y)^2}{\sigma_Y^2}\right]\right\}$$
+
+**Key properties:**
+
+- Marginal of $X$: $N(\mu_X, \sigma_X^2)$
+- Marginal of $Y$: $N(\mu_Y, \sigma_Y^2)$
+- The parameter $\rho$ in the formula = the Pearson correlation between $X$ and $Y$
+
+**When does $\rho = 0 \Rightarrow$ independence?**
+
+For the bivariate normal specifically:
+
+$$\rho = 0 \iff X \text{ and } Y \text{ are independent}$$
+
+When $\rho = 0$, the exponent simplifies to $-\frac{1}{2}\left[\frac{(x-\mu_X)^2}{\sigma_X^2} + \frac{(y-\mu_Y)^2}{\sigma_Y^2}\right]$, and the joint PDF factors as $f_X(x) \cdot f_Y(y)$ — the definition of independence.
+
+**In general (non-normal distributions):** $\rho = 0$ does NOT imply independence. This is a special property of the Gaussian family.
+
+**Why this matters for ML:** In Gaussian graphical models and Gaussian processes, testing whether correlation is zero is equivalent to testing independence. This property does not hold for other distributions, which is why nonparametric independence tests (like HSIC or mutual information) are needed in general.
+
+---
+
+### Q15 🟡 — The Hospital Problem
+
+**Question:** A large hospital has ~45 births per day; a small one has ~15. Each records days when >60% of babies born are boys. Which hospital records more such days? Why?
+
+---
+
+**Answer:**
+
+**Intuition first:** Most people guess "about the same" — but the correct answer is the **smaller hospital**.
+
+**Key formula:** The fraction of boys $\hat{p}$ on any given day has standard deviation:
+
+$$\sigma_{\hat{p}} = \sqrt{\frac{p(1-p)}{n}} = \sqrt{\frac{0.25}{n}}$$
+
+| Hospital | $n$ | $\sigma_{\hat{p}}$ |
+|---|---|---|
+| Large | 45 | $\sqrt{0.25/45} \approx 0.074$ |
+| Small | 15 | $\sqrt{0.25/15} \approx 0.129$ |
+
+The small hospital has **nearly twice** the daily standard deviation. More variability = more frequent extreme outcomes.
+
+**Numerical computation:**
+
+$P(\text{>60\% boys in large hospital}) = P(X > 27)$ where $X \sim \text{Bin}(45, 0.5) \approx 0.068$
+
+$P(\text{>60\% boys in small hospital}) = P(X > 9)$ where $X \sim \text{Bin}(15, 0.5) \approx 0.151$
+
+**Expected days per year:**
+
+$$E[L] = 365 \times 0.068 \approx 25 \text{ days (large)}$$
+$$E[S] = 365 \times 0.151 \approx 55 \text{ days (small)}$$
+
+The small hospital records more than **double** the number of extreme days.
+
+**The deeper lesson — Law of Large Numbers:**
+
+As $n \to \infty$, the sample fraction converges to the true probability 0.5. Larger samples are more "accurate." Smaller samples are "noisy" — they produce more extreme deviations routinely.
+
+> **FAANG context:** This is exactly why A/B testing at Amazon or Netflix requires minimum sample sizes before declaring significance. A test with 100 users showing 60% conversion is much less surprising than 10,000 users showing 60%. Small sample sizes produce extreme-looking results by chance — this is why experiment platforms enforce power analysis before launch.
+
+---
+
+### Q16 🟡 — Correlation from Overlapping Sums
+
+**Question:** $X_1, \ldots, X_{2n+1}$ are i.i.d. Bernoulli(0.5). Let $X = \sum_{i=1}^{n+1} X_i$ and $Y = \sum_{i=n+1}^{2n+1} X_i$. Derive $\text{Cov}(X,Y)$, $\text{Cor}(X,Y)$, and explain the behavior as $n \to \infty$.
+
+---
+
+**Answer:**
+
+**Step 1: Identify the shared variable.**
+
+$X$ uses flips $1$ through $n+1$; $Y$ uses flips $n+1$ through $2n+1$. Only flip $n+1$ is shared.
+
+**Step 2: Apply bilinearity of covariance.**
+
+$$\text{Cov}(X,Y) = \sum_{i=1}^{n+1}\sum_{j=n+1}^{2n+1} \text{Cov}(X_i, X_j) = \text{Cov}(X_{n+1}, X_{n+1}) = \text{Var}(X_{n+1}) = \frac{1}{4}$$
+
+(All other terms are zero by independence.)
+
+**Step 3: Compute standard deviations.**
+
+$$\text{Var}(X) = (n+1) \cdot \frac{1}{4} \implies \sigma_X = \frac{\sqrt{n+1}}{2}$$
+
+Similarly $\sigma_Y = \frac{\sqrt{n+1}}{2}$.
+
+**Step 4: Compute correlation.**
+
+$$\text{Cor}(X,Y) = \frac{1/4}{\frac{\sqrt{n+1}}{2} \cdot \frac{\sqrt{n+1}}{2}} = \frac{1/4}{(n+1)/4} = \frac{1}{n+1}$$
+
+**Behavior as $n \to \infty$:**
+
+As $n$ grows, $\text{Cor}(X,Y) \to 0$. The one shared flip becomes a smaller and smaller fraction of each sum, so its influence vanishes.
+
+| $n$ | $n+1$ flips each | $\rho$ |
+|---|---|---|
+| 0 | 1 | 1.0 (identical) |
+| 1 | 2 | 0.50 |
+| 4 | 5 | 0.20 |
+| 9 | 10 | 0.10 |
+| 99 | 100 | 0.01 |
+
+**General formula for $m$ shared terms out of $k$ per group:**
+
+$$\rho = \frac{m}{k}$$
+
+> **ML connection:** This is the theoretical basis for **feature correlation from shared subsets** in ensemble models. If two trees in a random forest use many of the same features, their predictions are correlated. Increasing tree diversity (using fewer shared features via max_features) reduces this correlation and improves ensemble performance.
+
+---
+
+### Q17 🟢 — Correlation vs. Causation: Ice Cream and Drowning
+
+**Question:** Ice cream sales and drowning deaths are positively correlated. Does this mean ice cream causes drowning? How would you explain this in a data science interview?
+
+---
+
+**Answer:**
+
+**Answer: No. This is a textbook case of a confounding variable.**
+
+**Causal diagram:**
+
+```
+         Hot Weather
+        ↙            ↘
+Ice Cream Sales    Pool Attendance → Drownings
+```
+
+Both ice cream sales and drowning deaths are caused by **hot summer weather**. When it's hot, people buy more ice cream AND swim more. The two variables are correlated as a **shared effect of a common cause**, not because one causes the other.
+
+**Edward Tufte's principle:** *"Empirically observed covariation is a necessary but not sufficient condition for causality."*
+
+**What you need to establish causality:**
+
+1. **Temporal ordering** — the cause must precede the effect
+2. **Mechanism** — a plausible biological/physical pathway
+3. **Elimination of confounders** — controlling for all common causes
+4. **Randomized controlled experiment** — gold standard (randomly assign ice cream to see if drowning changes)
+
+**Other classic examples of confounded correlations:**
+
+| Correlation | True explanation |
+|---|---|
+| Nicolas Cage movies & pool drownings | Spurious (both trend over time) |
+| Student profession & early death (1685) | Students are young by definition |
+| HRT & lower heart disease | Both caused by high socioeconomic status |
+| Shoe size & reading ability in children | Both caused by age |
+
+> **FAANG context:** This comes up constantly in product analytics. "Users who see feature X have 20% higher retention" — is that because feature X causes retention, or because users who seek out feature X were already highly engaged? Answering this requires causal inference methods (A/B tests, instrumental variables, difference-in-differences), not just correlation.
+
+---
+
+### Q18 🔴 — Zero Correlation Feature: Should You Drop It from ML Model?
+
+**Question:** You compute the Pearson correlation between a feature $X$ and a binary label $Y$ and find $\rho = 0$. Should you drop this feature? What are the risks?
+
+---
+
+**Answer:**
+
+**Answer: Not necessarily. Zero Pearson correlation does NOT mean the feature is useless.**
+
+**Why you might keep it:**
+
+**1. Nonlinear relationship:** $\rho$ only measures linear association. $X$ could have a strong nonlinear relationship with $Y$.
+
+*Example:* If $Y = 1$ when $|X| > 2$ and $Y = 0$ otherwise (a threshold effect), Pearson correlation is 0, but $X$ perfectly predicts $Y$.
+
+**2. Interaction effects:** $X$ alone may not predict $Y$, but $X \times Z$ (interaction) might. Univariate correlation misses multivariate relationships.
+
+**3. Quadratic/polynomial effects:** $X$ may correlate with $Y^2$ or $\log(Y)$ but not $Y$ directly.
+
+**4. Class-conditional structure:** Even if overall $\text{Cor}(X,Y) = 0$, within each class the feature may be highly discriminative.
+
+**Better approaches than Pearson correlation for feature selection:**
+
+| Method | Detects |
+|---|---|
+| Pearson correlation | Linear relationships only |
+| Spearman correlation | Monotonic relationships |
+| Mutual information | Any statistical dependence |
+| ANOVA F-test | Linear separation between class means |
+| Random forest importance | Nonlinear + interaction effects |
+| Permutation importance | Model-agnostic importance |
+
+**When is it safe to drop?**
+
+Only drop a feature based on correlation alone if:
+- You have verified linearity of the relationship through residual plots
+- You have confirmed no interaction effects with other features
+- You have checked mutual information and it is also near zero
+- Computational/latency constraints require aggressive feature reduction
+
+> **FAANG context:** At Netflix, recommender system features with zero Pearson correlation with ratings have been found to significantly improve CTR models because of nonlinear effects. At Google Ads, features uncorrelated with click-through rates marginally can still have strong interactive effects with bidder behavior. Rule: test empirically before dropping.
+
+---
+
+### Q19 🟡 — Computing $F(3.5, 4)$ from a Discrete Joint Table
+
+**Question:** Given the joint PMF table of two dice (each cell = 1/36), compute $F(3.5, 4)$.
+
+---
+
+**Answer:**
+
+**Definition:** $F(3.5, 4) = P(X \leq 3.5 \text{ and } Y \leq 4)$
+
+**Step 1:** Identify which values satisfy each condition.
+
+- $X \leq 3.5$ means $X \in \{1, 2, 3\}$ (since $X$ takes integer values 1–6)
+- $Y \leq 4$ means $Y \in \{1, 2, 3, 4\}$
+
+**Step 2:** Count the cells in the shaded rectangle (rows 1–3, columns 1–4).
+
+Number of cells = $3 \times 4 = 12$, each with probability $1/36$.
+
+**Step 3:**
+
+$$F(3.5, 4) = 12 \times \frac{1}{36} = \frac{12}{36} = \frac{1}{3}$$
+
+**Conceptual note:** For discrete distributions, the CDF at a non-integer value like 3.5 just "rounds down" to the nearest value in the support. $F(3.5, 4) = F(3, 4)$ here.
+
+**Comparison with continuous case:** For continuous $(X,Y)$ with $F(x,y) = x^2y^2$:
+$F(0.35, 0.4) = (0.35)^2 (0.4)^2 = 0.1225 \times 0.16 = 0.0196$
+
+The visual structure is the same (a "lower-left rectangle" of probability), just evaluated differently.
+
+---
+
+### Q20 🔴 — Why Do Smaller Samples Show More Extreme Deviations?
+
+**Question:** Explain rigorously, using variance and the CLT, why a hospital with 15 daily births records more days with >60% boys than one with 45 daily births, even though the true probability of a boy is 50%.
+
+---
+
+**Answer:**
+
+**The core principle:** The standard error of a sample proportion is $\sigma_{\hat{p}} = \sqrt{p(1-p)/n}$, which **decreases** as $n$ increases. Smaller $n$ → larger $\sigma_{\hat{p}}$ → more probability in the tails.
+
+**Step 1: Derive the distribution of the daily fraction.**
+
+Let $\hat{p}_n$ = fraction of boys on a day with $n$ births. By CLT:
+
+$$\hat{p}_n \approx N\!\left(0.5,\; \frac{0.25}{n}\right)$$
+
+**Step 2: Compute the probability of exceeding 60%.**
+
+$$P(\hat{p}_n > 0.6) = P\!\left(Z > \frac{0.6 - 0.5}{\sqrt{0.25/n}}\right) = P\!\left(Z > \frac{0.1\sqrt{n}}{0.5}\right) = P(Z > 0.2\sqrt{n})$$
+
+**Step 3: Evaluate for each hospital.**
+
+| Hospital | $n$ | $0.2\sqrt{n}$ | $P(\hat{p} > 0.6)$ |
+|---|---|---|---|
+| Small | 15 | $0.2\sqrt{15} \approx 0.775$ | $P(Z > 0.775) \approx 0.219$ |
+| Large | 45 | $0.2\sqrt{45} \approx 1.342$ | $P(Z > 1.342) \approx 0.090$ |
+
+(Note: exact values use binomial, giving $\approx 0.151$ and $\approx 0.068$; CLT approximation is close.)
+
+**Step 4: Annual expected days.**
+
+$$E[\text{small}] \approx 365 \times 0.151 \approx 55 \text{ days}$$
+$$E[\text{large}] \approx 365 \times 0.068 \approx 25 \text{ days}$$
+
+**The mathematical intuition:**
+
+As $n$ increases, $\sigma_{\hat{p}} = \sqrt{0.25/n}$ shrinks at rate $1/\sqrt{n}$. The threshold 0.6 is always $0.1$ above the mean. Expressed in standard deviations:
+
+$$\frac{0.6 - 0.5}{\sigma_{\hat{p}}} = \frac{0.1}{\sqrt{0.25/n}} = 0.2\sqrt{n}$$
+
+This **grows** with $n$. Larger $n$ → the 60% threshold is **more standard deviations away** from the mean → smaller tail probability → fewer extreme days.
+
+**Connection to LLN:** The Law of Large Numbers guarantees $\hat{p}_n \to 0.5$ as $n \to \infty$. For large $n$, deviations of 10+ percentage points become vanishingly rare. For small $n$, they are routine.
+
+> **FAANG context:** This is the mathematical foundation of **statistical power** in A/B testing. Experiments with small traffic have high variance and frequently show large-looking (but unreliable) effects. This is why Netflix and Google enforce minimum detectable effect sizes and minimum traffic thresholds before running experiments. Reacting to noisy small-sample results is "peeking" — it inflates false positive rates. The hospital problem is the canonical illustration of why.
+
+---
+
+## Quick Reference: FAANG Cheat Sheet
+
+### Must-Know Formulas
+
+$$p(x_i,y_j) = p_X(x_i)\cdot p_Y(y_j) \iff X \perp Y \text{ (discrete)}$$
+
+$$f(x,y) = g(x)\cdot h(y) \iff X \perp Y \text{ (continuous, rectangular support)}$$
+
+$$\text{Cov}(X,Y) = E[XY] - E[X]E[Y]$$
+
+$$\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y) + 2\text{Cov}(X,Y)$$
+
+$$\rho = \frac{\text{Cov}(X,Y)}{\sigma_X\sigma_Y}, \quad -1 \leq \rho \leq 1$$
+
+$$\rho_{\text{overlap}} = \frac{\text{shared terms}}{\text{total terms per group}}$$
+
+$$\sigma_{\hat{p}} = \sqrt{\frac{p(1-p)}{n}} \quad \text{(decreases as } n \text{ increases)}$$
+
+---
+
+### The Three Most Dangerous Misconceptions
+
+| Misconception | Truth |
+|---|---|
+| Zero covariance → independent | False. Zero covariance only rules out **linear** dependence |
+| Correlation → causation | False. Need mechanism, temporal order, no confounders |
+| Large sample shows extreme results as often as small | False. $\sigma_{\hat{p}} \propto 1/\sqrt{n}$ — extremes are rarer with larger $n$ |
+
+---
+
+### Topic-to-Company Mapping
+
+| Topic | Where It Comes Up |
+|---|---|
+| Joint distributions, marginals | Bayesian inference, generative models (Google Brain, DeepMind) |
+| Independence testing, covariance | Feature engineering, PCA, recommendation systems (Netflix, Spotify) |
+| Correlation interpretation | A/B testing, experimentation platforms (Meta, Amazon, Airbnb) |
+| Zero cov ≠ independence | Feature selection, nonlinear ML (any DS role) |
+| Hospital/sampling problem | Experiment design, power analysis (all FAANG) |
+| Causation vs. correlation | Product analytics, causal inference (Meta CausalML, Uber) |
+| Bivariate normal, $\rho$ | Gaussian processes, Kalman filters (robotics, quant finance) |
+| Var of sum with covariance | Portfolio optimization, risk (Jane Street, Two Sigma, Citadel) |
+
+---
