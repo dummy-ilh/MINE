@@ -16,7 +16,6 @@ These books are categorized by their specific focus, ranging from beginner funda
 | **SQL Performance Explained** | Markus Winand | Query optimization, indexing, and execution behavior. |
 | **T-SQL Fundamentals** | Itzik Ben-Gan | Logic-heavy execution order and set-based thinking. |
 | **SQL for Data Scientists** | Renee Teate | Dataset construction and analysis-focused SQL. |
-| **Ace the Data Science Interview** | Huo & Singh | Real FAANG interview questions (SQL + general DS). |
 
 ---
 
@@ -34,7 +33,6 @@ These platforms are the most recommended for hands-on technical screening prepar
 
 ---
 
-### 🎯 Essential FAANG Topics to Master
 
 Based on the resources above, focus your 30-day plan on these high-yield concepts:
 
