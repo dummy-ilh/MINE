@@ -14,7 +14,7 @@ These books are categorized by their specific focus, ranging from beginner funda
 | **SQL Antipatterns** | Bill Karwin | Identifying and avoiding common design/query traps. |
 | **SQL Performance Explained** | Markus Winand | Query optimization, indexing, and execution behavior. |
 | **T-SQL Fundamentals** | Itzik Ben-Gan | Logic-heavy execution order and set-based thinking. |
-| **SQL for Data Scientists** | Renee Teate | Dataset construction and analysis-focused SQL. |
+
 
 ---
 
