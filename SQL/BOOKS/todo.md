@@ -10,9 +10,7 @@ These books are categorized by their specific focus, ranging from beginner funda
 | **Grokking the SQL Interview** | Javin Paul | Short, direct interview revision and common questions. |
 | **Learning SQL** | Alan Beaulieu | Fundamentals and ANSI SQL standards. |
 | **SQL Queries for Mere Mortals** | John Viescas | Logical query construction and "thinking" in SQL. |
-| **The Art of SQL** | Stephane Faroult | High-level query design philosophy and reasoning. |
 | **SQL Antipatterns** | Bill Karwin | Identifying and avoiding common design/query traps. |
-| **SQL Performance Explained** | Markus Winand | Query optimization, indexing, and execution behavior. |
 | **T-SQL Fundamentals** | Itzik Ben-Gan | Logic-heavy execution order and set-based thinking. |
 
 
