@@ -1,5 +1,5 @@
-# Regression Analysis — Chapter 4: Model Adequacy Checking
-*Based on lecture notes by Shalabh, IIT Kanpur*
+# Chapter 4: Model Adequacy Checking
+
 
 > ⚠️ **Note on images:** The source PDF at `home.iitk.ac.in` blocked direct access (SSL/robots restriction), so embedded figures could not be extracted. Images can be viewed in the [original PDF](https://home.iitk.ac.in/~shalab/regression/Chapter4-Regression-ModelAdequacyChecking.pdf).
 
