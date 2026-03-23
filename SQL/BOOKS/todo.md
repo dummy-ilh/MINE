@@ -6,7 +6,6 @@ These books are categorized by their specific focus, ranging from beginner funda
 
 | Book Title | Author | Primary Focus |
 | --- | --- | --- |
-| **SQL Practice Problems** | Sylvia Moestl Vasilik | Real-world, interview-style problem solving. |
 | **SQL Cookbook** | Anthony Molinaro | Problem-solution "recipes" for complex queries. |
 | **Grokking the SQL Interview** | Javin Paul | Short, direct interview revision and common questions. |
 | **Learning SQL** | Alan Beaulieu | Fundamentals and ANSI SQL standards. |
