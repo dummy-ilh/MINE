@@ -391,49 +391,245 @@ WHERE e.salary > m.salary;
 - **JOIN on subquery** → top 5 most asked FAANG pattern
 
 ---
+# SQL Joins — Complete Guide
 
-Tricky JOINs — FAANG Special
+---
 
-Trick 1: JOIN on Non-Equality Conditions
-Most people only know ON a.id = b.id. FAANG tests range and inequality joins.
-sql-- Find all employees who earn more than ANY engineer
--- (not just their own department)
-SELECT e.name, e.salary, e2.name AS engineer, e2.salary AS eng_salary
+## What is a JOIN?
+
+A JOIN combines rows from two tables based on a shared column (usually a foreign key).
+The type of JOIN controls what happens when a row in one table has **no match** in the other.
+
+---
+
+## 1. INNER JOIN
+
+**Returns:** Only rows that have a match in **both** tables. Unmatched rows are silently dropped.
+
+**Use when:**
+- You only want complete data — no gaps
+- You're reporting on things that definitely exist on both sides
+- Example: Show all customers who have placed at least one order
+
+**Do NOT use when:**
+- You need to see customers who haven't ordered yet (they'll vanish from results)
+- You're auditing for missing data
+
+**Real-world examples:**
+- Show all employees and their assigned department names
+- List all products that have been ordered at least once
+- Get all students who have enrolled in a course
+
+```sql
+SELECT c.name, o.total
+FROM customers c
+INNER JOIN orders o ON c.id = o.customer_id;
+```
+
+---
+
+## 2. LEFT JOIN (LEFT OUTER JOIN)
+
+**Returns:** All rows from the **left** table + matching rows from the right. If no match, right-side columns are `NULL`.
+
+**Use when:**
+- The left table is your main focus and the right table is optional extra info
+- You want to include records even if they have no related data
+- You want to find rows with NO match (add `WHERE right.id IS NULL`)
+
+**Do NOT use when:**
+- You strictly need both sides to have data (use INNER JOIN instead)
+
+**Real-world examples:**
+- List all customers, showing their last order (or NULL if they've never ordered)
+- Show all employees and their manager's name (new hires may have no manager yet)
+- Find all products that have **never** been ordered: `WHERE o.id IS NULL`
+- List all blog posts and their comments (posts with no comments still appear)
+
+```sql
+-- All customers, with or without orders
+SELECT c.name, o.total
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id;
+
+-- Find customers with NO orders at all
+SELECT c.name
+FROM customers c
+LEFT JOIN orders o ON c.id = o.customer_id
+WHERE o.id IS NULL;
+```
+
+---
+
+## 3. RIGHT JOIN (RIGHT OUTER JOIN)
+
+**Returns:** All rows from the **right** table + matching rows from the left. Left-side columns are `NULL` if no match.
+
+**Use when:**
+- The right table is your main focus
+- You inherited a query where the table order is fixed
+
+**Do NOT use when:**
+- You can just swap the table order and use a LEFT JOIN — which is almost always clearer to read
+
+**Real-world examples:**
+- List all departments, even those with no employees assigned yet
+- Show all job positions, with applicants if any exist
+
+```sql
+SELECT c.name, o.total
+FROM customers c
+RIGHT JOIN orders o ON c.id = o.customer_id;
+-- Same result as: orders LEFT JOIN customers
+```
+
+> 💡 **Tip:** Most developers avoid RIGHT JOIN entirely — just swap the table order and use LEFT JOIN for consistency.
+
+---
+
+## 4. FULL OUTER JOIN
+
+**Returns:** All rows from **both** tables. Unmatched rows on either side show `NULL` for the other table's columns.
+
+**Use when:**
+- No table is more important than the other
+- You're reconciling two data sources and need to see what's missing on either side
+- You're merging datasets and want to catch gaps
+
+**Do NOT use when:**
+- You only need matched rows (use INNER JOIN — FULL OUTER is expensive on large tables)
+- Your database is MySQL — it doesn't support FULL OUTER JOIN natively (use UNION of LEFT + RIGHT)
+
+**Real-world examples:**
+- Compare this month's sales vs last month's — see products that appeared in one but not the other
+- Sync two systems: find records in System A missing from System B and vice versa
+- Audit employee records across two HR databases
+
+```sql
+SELECT c.name, o.total
+FROM customers c
+FULL OUTER JOIN orders o ON c.id = o.customer_id;
+```
+
+---
+
+## 5. CROSS JOIN
+
+**Returns:** Every possible combination of rows from both tables. If Table A has 4 rows and Table B has 3, you get 4 × 3 = 12 rows.
+
+**Use when:**
+- You intentionally need every combination
+- Generating test/seed data
+- Building combination matrices
+
+**Do NOT use when:**
+- You forgot to write an ON clause — an accidental CROSS JOIN on large tables can crash your database
+- Tables are large (1000 × 1000 = 1,000,000 rows)
+
+**Real-world examples:**
+- Generate all size + color combinations for a clothing product (S/M/L × Red/Blue/Green)
+- Create a schedule grid: every employee × every shift slot
+- Build a multiplication table or probability matrix
+
+```sql
+SELECT s.size, c.color
+FROM sizes s
+CROSS JOIN colors c;
+```
+
+---
+
+## 6. SELF JOIN
+
+**Returns:** Rows from a table joined against itself, using two aliases to tell them apart.
+
+**Use when:**
+- Rows in a table have a relationship with other rows in the **same** table
+- Working with hierarchical or peer data
+
+**Do NOT use when:**
+- The relationship spans two different tables (use a normal JOIN)
+- You haven't aliased both sides — it will error
+
+**Real-world examples:**
+- Show each employee alongside their manager's name (both in the `employees` table)
+- Find pairs of products in the same category
+- Detect duplicate rows: join a table to itself on identical columns
+- Find all flights departing from and arriving at the same city on the same day
+
+```sql
+SELECT e.name AS employee, m.name AS manager
 FROM employees e
-JOIN employees e2
-  ON  e2.department = 'Engineering'
-  AND e.salary > e2.salary
-  AND e.department != 'Engineering';
-sql-- Assign discount tiers based on order amount ranges
--- discount_tiers(tier_name, min_amount, max_amount, discount_pct)
+JOIN employees m ON e.manager_id = m.id;
+```
+
+---
+
+## Quick Decision Cheatsheet
+
+| Scenario | Use |
+|---|---|
+| Only want complete matched data | `INNER JOIN` |
+| Left table is main, right is optional | `LEFT JOIN` |
+| Find rows with NO match in another table | `LEFT JOIN ... WHERE right.id IS NULL` |
+| Right table is main, left is optional | `RIGHT JOIN` (or flip + LEFT JOIN) |
+| Need everything from both, gaps included | `FULL OUTER JOIN` |
+| Every combination of two tables | `CROSS JOIN` |
+| Table relates to itself (hierarchy, peers) | `SELF JOIN` |
+
+---
+
+## Common Mistakes
+
+- **Accidentally getting a CROSS JOIN** — forgetting the `ON` clause in old-style SQL
+- **Using INNER JOIN when you meant LEFT JOIN** — silently losing rows with no match
+- **FULL OUTER JOIN in MySQL** — not supported; use `LEFT JOIN UNION RIGHT JOIN` instead
+- **Forgetting aliases in SELF JOIN** — both sides must have different names
+
+---
+
+## 9. Tricky FAANG JOIN Patterns
+
+---
+
+### Pattern 1: Range / Inequality JOIN
+
+- Join on a range instead of a single value
+- Useful for tier assignment, pricing bands, date buckets
+
+```sql
+-- Assign discount tier based on order amount range
 SELECT o.order_id, o.amount, t.tier_name, t.discount_pct
 FROM orders o
 JOIN discount_tiers t
   ON o.amount BETWEEN t.min_amount AND t.max_amount;
--- No equality — pure range join. Very common in pricing/ML feature tables.
+```
 
-Trick 2: Multiple JOIN Conditions
-sql-- Match on TWO columns — both must match
--- Prevents wrong matches when IDs repeat across regions
-SELECT *
-FROM orders_us o
-JOIN returns_us r
-  ON  o.order_id   = r.order_id
-  AND o.customer_id = r.customer_id;  -- extra safety condition
-sql-- Time-based JOIN — match events within a time window
--- "Find clicks that happened within 1 hour after an ad impression"
--- impressions(user_id, imp_time), clicks(user_id, click_time)
+---
+
+### Pattern 2: Time-Window JOIN (Meta / Google Ads)
+
+- Join rows only if they fall within a time gap of each other
+- Common in ad attribution, session analysis, funnel tracking
+
+```sql
+-- Clicks within 1 hour of ad impression
 SELECT i.user_id, i.imp_time, c.click_time
 FROM impressions i
 JOIN clicks c
   ON  i.user_id   = c.user_id
   AND c.click_time BETWEEN i.imp_time AND i.imp_time + INTERVAL 1 HOUR;
+```
 
-💡 Time-window JOINs are extremely common in Meta/Google ads & ML feature engineering interviews.
+---
 
+### Pattern 3: JOIN on Subquery Aggregate
 
-Trick 3: Joining on Aggregates (Derived Tables)
-sql-- Find employees who earn the MAX salary in their department
+- Subquery computes a group-level stat (MAX, MIN, COUNT), then JOIN filters to only matching rows
+- Classic for "top N per group" problems
+
+```sql
+-- Employee with max salary per department
 SELECT e.name, e.department, e.salary
 FROM employees e
 JOIN (
@@ -443,7 +639,10 @@ JOIN (
 ) dept_max
   ON  e.department = dept_max.department
   AND e.salary     = dept_max.max_sal;
-sql-- Find the most recent order per customer
+```
+
+```sql
+-- Most recent order per customer
 SELECT o.customer_id, o.order_id, o.amount, o.order_date
 FROM orders o
 JOIN (
@@ -453,80 +652,95 @@ JOIN (
 ) last_order
   ON  o.customer_id = last_order.customer_id
   AND o.order_date  = last_order.latest;
+```
 
-💡 This pattern (JOIN on subquery aggregate) is one of the top 5 FAANG SQL patterns. Comes up in almost every DS phone screen.
+---
 
+### Pattern 4: CROSS JOIN + Anti-JOIN (Recommendations)
 
-Trick 4: CROSS JOIN for Gap Detection
-sql-- "Which user-product combinations have NEVER been purchased?"
--- Generate all possible pairs, then anti-join against actual purchases
+- CROSS JOIN generates all possible pairs
+- LEFT JOIN + `WHERE NULL` filters out pairs that already exist
+- Used for "what hasn't this user seen/bought?" (Netflix, Amazon)
 
-SELECT u.user_id, p.product_id
-FROM users u
-CROSS JOIN products p
-
-EXCEPT  -- or use LEFT JOIN + IS NULL
-
-SELECT user_id, product_id
-FROM purchases;
-sql-- Same with LEFT JOIN (works in MySQL too)
+```sql
+-- User-product combinations never purchased
 SELECT u.user_id, p.product_id
 FROM users u
 CROSS JOIN products p
 LEFT JOIN purchases pur
-  ON  u.user_id   = pur.user_id
+  ON  u.user_id    = pur.user_id
   AND p.product_id = pur.product_id
 WHERE pur.purchase_id IS NULL;
+```
 
-💡 This is the foundation of recommendation system queries at Netflix/Amazon — find what users haven't seen/bought yet.
+---
 
+### Pattern 5: Chained LEFT JOINs — Filter in ON vs WHERE
 
-Trick 5: Chained LEFT JOINs — NULL Propagation Trap
-sql-- ❌ Trap: filtering middle table in WHERE breaks outer joins
+- Putting a filter in `WHERE` on a LEFT JOIN silently converts it to an INNER JOIN
+- Always move optional filters into the `ON` clause to preserve nulls
+
+```sql
+-- ❌ Wrong — WHERE kills rows where dept is NULL (acts like INNER JOIN)
 SELECT e.name, d.dept_name, p.project_name
 FROM employees e
 LEFT JOIN departments d ON e.dept_id = d.dept_id
 LEFT JOIN projects p    ON d.dept_id = p.dept_id
-WHERE d.location = 'NYC';  -- ❌ kills LEFT JOIN, excludes employees with no dept
-sql-- ✅ Filter in ON clause to preserve LEFT JOIN behavior
+WHERE d.location = 'NYC';
+
+-- ✅ Correct — filter inside ON keeps all employees
 SELECT e.name, d.dept_name, p.project_name
 FROM employees e
 LEFT JOIN departments d
-  ON  e.dept_id    = d.dept_id
-  AND d.location   = 'NYC'       -- ✅ filter stays in ON
+  ON  e.dept_id  = d.dept_id
+  AND d.location = 'NYC'
 LEFT JOIN projects p ON d.dept_id = p.dept_id;
+```
 
-Trick 6: SELF JOIN for Consecutive Events
-sql-- "Find users who logged in on two consecutive days"
--- logins(user_id, login_date)
+---
 
+### Pattern 6: Consecutive Events (Retention / Fraud)
+
+- Self-join on the same table with a time offset condition
+- Used for streak detection, fraud signals, funnel step sequencing
+
+```sql
+-- Users who logged in on two consecutive days
 SELECT DISTINCT a.user_id
 FROM logins a
 JOIN logins b
-  ON  a.user_id   = b.user_id
+  ON  a.user_id    = b.user_id
   AND b.login_date = a.login_date + INTERVAL 1 DAY;
-sql-- "Find sessions where a user had two events within 5 minutes"
--- events(user_id, event_type, event_time)
+```
 
+```sql
+-- Two events within 5 minutes for the same user
 SELECT a.user_id, a.event_type AS event1, b.event_type AS event2
 FROM events a
 JOIN events b
-  ON  a.user_id   = b.user_id
+  ON  a.user_id    = b.user_id
   AND b.event_time BETWEEN a.event_time AND a.event_time + INTERVAL 5 MINUTE
-  AND a.event_time < b.event_time;  -- avoid self-matching same row
+  AND a.event_time < b.event_time;
+```
 
-💡 Consecutive event patterns come up in retention, funnel analysis, and fraud detection — all massive DS/MLE interview topics.
+---
 
+### Pattern 7: USING vs ON
 
-Trick 7: USING vs ON
-sql-- When both tables have identically named join column
--- ON version
+- `ON` works everywhere, even when column names differ
+- `USING` is cleaner shorthand when the column name is identical in both tables — and deduplicates it in the result set
+
+```sql
+-- ON (always works)
 SELECT e.name, d.dept_name
 FROM employees e
 JOIN departments d ON e.dept_id = d.dept_id;
 
--- USING version (cleaner, but only when column names match exactly)
+-- USING (cleaner when column names match exactly)
+-- dept_id appears only once in the result set
 SELECT e.name, d.dept_name
 FROM employees e
 JOIN departments d USING (dept_id);
--- dept_id appears only once in result (not duplicated like with ON)
+```
+
+---
