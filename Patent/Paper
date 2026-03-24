@@ -1,0 +1,15 @@
+Title: Supervised Tree Explanations for Unsupervised Clusters: A Novel Approach to Explainability and Size Determination
+
+Abstract:
+
+In the realm of machine learning, explaining the behavior of models, particularly in unsupervised clustering tasks, remains a challenging endeavor. While the field has witnessed significant progress in explainability techniques for supervised learning, the landscape is relatively sparse when it comes to unsupervised clustering. This paper introduces a novel approach termed Supervised Tree Explanations for Unsupervised Clusters (STEUCl), which leverages decision trees to elucidate the rationale behind predictions within clusters.
+
+The methodology entails constructing decision trees on clustered data to uncover the underlying patterns and relationships leading to each prediction. By employing supervised tree explanations, our method provides insights into why certain instances belong to specific clusters, thus enhancing the interpretability of unsupervised clustering results. Furthermore, we extend the utility of STEUCl beyond mere explanation by demonstrating its effectiveness in determining cluster sizes through tree depth analysis.
+
+To evaluate the efficacy of our proposed approach, we conducted experiments on a publicly available dataset. The results demonstrate the capability of STEUCl to yield meaningful explanations for cluster assignments, thereby shedding light on the intrinsic structure of the data. Additionally, the ability to estimate cluster sizes using tree depth proves to be a valuable asset, offering practical insights into the composition and distribution of clusters within the dataset.
+
+Overall, this research contributes to bridging the gap between unsupervised clustering and model explainability, offering a promising avenue for understanding and interpreting clustering results in various domains.
+
+
+-------------------------------
+

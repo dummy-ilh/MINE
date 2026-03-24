@@ -1,15 +1,8 @@
-Below is your exact content rewritten into **clean Markdown** with images embedded (I used diagrams from GeeksforGeeks and the image URL you provided). I kept your original wording and math intact, only adding headings, LaTeX blocks, and image embeds so the document is ready to use.
-
-> **Notes**
->
-> * The main reference for definitions, math, and diagrams is the GeeksforGeeks article I fetched. ([GeeksforGeeks][1])
-> * I also embedded the Google-licensed thumbnail URL you supplied near the LSTM section.
-
 ---
 
 # What is a Recurrent Neural Network (RNN)?
 
-A Recurrent Neural Network (RNN) is a type of neural network designed to handle sequential data or time series data, like text, audio, or video. Unlike a traditional Feedforward Neural Network where information flows in a single direction, an RNN has a **"loop"** that allows information to persist and be used in future calculations. This gives it a form of **"memory."** 🧠 ([GeeksforGeeks][1])
+A Recurrent Neural Network (RNN) is a type of neural network designed to handle sequential data or time series data, like text, audio, or video. Unlike a traditional Feedforward Neural Network where information flows in a single direction, an RNN has a **"loop"** that allows information to persist and be used in future calculations. This gives it a form of **"memory."** 🧠 
 
 Think of it like a human reading a sentence: you understand the meaning of the current word by also remembering the words that came before it. An RNN does the same, using the output from a previous step as an additional input for the current step.
 
@@ -21,7 +14,7 @@ To better understand this "loop," we often **unroll the RNN over time**. This ma
 
 **Unrolled RNN (time steps)**
 ![RNN Unrolled Over Time (GeeksforGeeks)](https://images.openai.com/thumbnails/url/9Dxb7Xicu1mSUVJSUGylr5-al1xUWVCSmqJbkpRnoJdeXJJYkpmsl5yfq5-Zm5ieWmxfaAuUsXL0S7F0Tw7Ot6zQdfKLsggwLbPMSAyuTCwqdDKINDV3d8stSPY2jSjzMi82S0pN8vI0CSypKMv3T0l3LcsoLDFMdFQrBgALUSnj)
-*Figure: RNN unrolled across time-steps.* ([GeeksforGeeks][1])
+*Figure: RNN unrolled across time-steps.* 
 
 ---
 

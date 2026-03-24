@@ -1,0 +1,1328 @@
+
+##  5: Variance · Continuous Random Variables · Continuous Distributions
+
+
+---
+
+## Table of Contents
+
+1. [Learning Goals](#1-learning-goals)
+2. [Spread and Why We Need More Than the Mean](#2-spread-and-why-we-need-more-than-the-mean)
+3. [Variance and Standard Deviation — Discrete Case](#3-variance-and-standard-deviation--discrete-case)
+4. [Properties of Variance](#4-properties-of-variance)
+5. [Continuous Random Variables — Introduction](#5-continuous-random-variables--introduction)
+6. [Probability Density Functions (PDF)](#6-probability-density-functions-pdf)
+7. [Cumulative Distribution Function — Continuous Case](#7-cumulative-distribution-function--continuous-case)
+8. [Gallery of Continuous Distributions](#8-gallery-of-continuous-distributions)
+9. [Transforming Continuous Random Variables](#9-transforming-continuous-random-variables)
+10. [In-Class Concept Questions — Full Solutions](#10-in-class-concept-questions--full-solutions)
+11. [In-Class Board Problems — Full Solutions](#11-in-class-board-problems--full-solutions)
+12. [Complete Distribution Reference Table](#12-complete-distribution-reference-table)
+13. [Common Mistakes Reference](#13-common-mistakes-reference)
+14. [Quick Summary & Formula Sheet](#14-quick-summary--formula-sheet)
+
+---
+
+## 1. Learning Goals
+
+By the end of this class you should be able to:
+
+1. **Compute** the variance and standard deviation of a discrete random variable using both the definition and the shortcut formula.
+2. **Understand** standard deviation as a measure of scale or spread.
+3. **Apply** variance properties: scaling, shifting, and addition (for independent variables).
+4. **Define** a continuous random variable and its probability density function (pdf).
+5. **Explain** why $P(X = a) = 0$ for any continuous random variable.
+6. **Compute** probabilities for continuous distributions by integrating the pdf.
+7. **Find** the cdf of a continuous random variable from its pdf, and vice versa.
+8. **Know** the Uniform, Exponential, and Normal distributions and what they model.
+9. **Transform** a continuous random variable to find the pdf/cdf of a derived variable.
+10. **Standardise** a normal random variable to the standard normal $N(0,1)$.
+
+---
+
+## 2. Spread and Why We Need More Than the Mean
+
+### 2.1 Concept Overview
+
+The expected value $E[X]$ tells us the *location* of a distribution — where it is centred. But two completely different distributions can share the same mean. What distinguishes them is how *spread out* the probability mass is around that centre.
+
+> **Motivating example:** Both $X$ (concentrated near 0) and $Y$ (spread far from 0) have mean 0, but they behave very differently in practice. A gamble with $Y$ is far riskier.
+
+---
+
+### 2.2 Motivating Example
+
+Consider two random variables, both with mean 0:
+
+| Values of $X$ | $-2$ | $-1$ | $0$ | $1$ | $2$ |
+|---|---|---|---|---|---|
+| pmf $p(x)$ | 1/10 | 2/10 | 4/10 | 2/10 | 1/10 |
+
+| Values of $Y$ | $-3$ | $3$ |
+|---|---|---|
+| pmf $p(y)$ | 1/2 | 1/2 |
+
+Both have $E[X] = E[Y] = 0$. But $X$ concentrates most of its mass near 0, while $Y$ places all its mass at the extremes. They are very different random variables despite identical means.
+
+> **Key insight for ML/Finance:** Mean is not enough. A model prediction has both a mean (accuracy) and a variance (reliability/stability). Risk management, portfolio theory, and regularisation all hinge on controlling variance.
+
+---
+
+## 3. Variance and Standard Deviation — Discrete Case
+
+### 3.1 Concept Overview
+
+**Variance** quantifies the average squared distance from the mean. We square the distances for two reasons: (1) to prevent positive and negative deviations from cancelling, and (2) to penalise large deviations more than small ones.
+
+**Standard deviation** is the square root of variance, restoring the same units as $X$.
+
+---
+
+### 3.2 Formal Definitions
+
+> **Definition (Variance):** If $X$ is a random variable with mean $E[X] = \mu$, then the **variance** is:
+>
+> $$\boxed{\text{Var}(X) = E[(X - \mu)^2] = \sum_i p(x_i)(x_i - \mu)^2}$$
+
+> **Definition (Standard Deviation):**
+>
+> $$\boxed{\sigma = \sqrt{\text{Var}(X)}}$$
+
+**Alternative notation:** $\text{Var}(X) = \sigma^2$ and $\sigma$ — just as the mean is $\mu$.
+
+---
+
+### 3.3 Units
+
+- $\sigma$ has the **same units** as $X$.
+- $\text{Var}(X)$ has units of $X$ **squared**.
+
+This is why standard deviation $\sigma$ is the natural measure of spread — it lives in the same space as the data. If $X$ is in metres, $\sigma$ is in metres, but $\text{Var}(X)$ is in metres squared.
+
+---
+
+### 3.4 Worked Examples
+
+---
+
+#### Example 1 — Computing Variance from a Table
+
+**Problem:** Compute the mean, variance, and standard deviation of $X$ with:
+
+| Value $x$ | 1 | 3 | 5 |
+|---|---|---|---|
+| pmf $p(x)$ | 1/4 | 1/4 | 1/2 |
+
+**Step 1: Compute $E[X] = \mu$.**
+
+$$\mu = 1 \cdot \frac{1}{4} + 3 \cdot \frac{1}{4} + 5 \cdot \frac{1}{2} = \frac{1}{4} + \frac{3}{4} + \frac{10}{4} = \frac{14}{4} = \frac{7}{2}$$
+
+**Step 2: Extend the table with $(x - \mu)^2$.**
+
+| Value $x$ | 1 | 3 | 5 |
+|---|---|---|---|
+| $p(x)$ | 1/4 | 1/4 | 1/2 |
+| $(x - 7/2)^2$ | $(1-3.5)^2 = 25/4$ | $(3-3.5)^2 = 1/4$ | $(5-3.5)^2 = 9/4$ |
+
+**Step 3: Compute the variance as a weighted average.**
+
+$$\text{Var}(X) = \frac{1}{4} \cdot \frac{25}{4} + \frac{1}{4} \cdot \frac{1}{4} + \frac{1}{2} \cdot \frac{9}{4} = \frac{25}{16} + \frac{1}{16} + \frac{9}{8} = \frac{25+1+18}{16} = \frac{44}{16} = \frac{11}{4}$$
+
+**Step 4: Standard deviation.**
+
+$$\sigma = \sqrt{\frac{11}{4}} = \frac{\sqrt{11}}{2} \approx 1.658$$
+
+**Interpretation:** On average, the value of $X$ deviates from its mean of 3.5 by about 1.66 units.
+
+---
+
+#### Example 2 — Four Distributions with the Same Mean, Different Spreads
+
+**Problem:** For each of $X$, $Y$, $Z$, $W$, compute the variance. All have mean 3.
+
+**(i) Uniform $X$ on $\{1,2,3,4,5\}$:**
+
+| Value | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| $p(x)$ | 1/5 | 1/5 | 1/5 | 1/5 | 1/5 |
+| $(x-3)^2$ | 4 | 1 | 0 | 1 | 4 |
+
+$$\text{Var}(X) = \frac{4+1+0+1+4}{5} = \frac{10}{5} = 2$$
+
+**(ii) Bell-shaped $Y$ concentrated near 3:**
+
+| Value | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| $p(y)$ | 1/10 | 2/10 | 4/10 | 2/10 | 1/10 |
+| $(y-3)^2$ | 4 | 1 | 0 | 1 | 4 |
+
+$$\text{Var}(Y) = \frac{4}{10} + \frac{2}{10} + 0 + \frac{2}{10} + \frac{4}{10} = \frac{12}{10} = 1.2$$
+
+**(iii) Bimodal $Z$ concentrated at extremes:**
+
+| Value | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| $p(z)$ | 5/10 | 0 | 0 | 0 | 5/10 |
+| $(z-3)^2$ | 4 | 1 | 0 | 1 | 4 |
+
+$$\text{Var}(Z) = \frac{5}{10} \cdot 4 + 0 + 0 + 0 + \frac{5}{10} \cdot 4 = 2 + 2 = 4$$
+
+**(iv) Constant $W = 3$ (degenerate):**
+
+$$\text{Var}(W) = 0$$
+
+$W$ is constant — it never varies — so its variance is exactly 0.
+
+**Summary table (all have $\mu = 3$):**
+
+| Variable | Shape | Variance |
+|---|---|---|
+| $Z$ | Bimodal (extremes) | 4 |
+| $X$ | Uniform (flat) | 2 |
+| $Y$ | Bell (concentrated) | 1.2 |
+| $W$ | Constant | 0 |
+
+**Visual insight:** Larger variance $\leftrightarrow$ more probability mass far from the mean. Smaller variance $\leftrightarrow$ mass concentrated near the mean.
+
+---
+
+#### Example 3 — Variance of Bernoulli($p$)
+
+**Problem:** Find $\text{Var}(X)$ for $X \sim \text{Bernoulli}(p)$.
+
+**Method 1 — Direct definition:**
+
+| $X$ | 0 | 1 |
+|---|---|---|
+| $p(x)$ | $1-p$ | $p$ |
+| $(X - p)^2$ | $(0-p)^2 = p^2$ | $(1-p)^2$ |
+
+$$\text{Var}(X) = (1-p) \cdot p^2 + p \cdot (1-p)^2 = p(1-p)[p + (1-p)] = p(1-p)$$
+
+$$\boxed{\text{Var}(\text{Bernoulli}(p)) = p(1-p)}$$
+
+**Method 2 — Using the shortcut formula (previewing Property 3):**
+
+Since $X^2 = X$ for a Bernoulli (because $0^2 = 0$ and $1^2 = 1$):
+
+$$E[X^2] = p, \quad E[X] = p \implies \text{Var}(X) = p - p^2 = p(1-p) \checkmark$$
+
+**Maximum variance:** When is $p(1-p)$ maximised? Taking the derivative: $1 - 2p = 0 \implies p = 1/2$.
+
+$$\text{Var}_{\max} = (1/2)(1/2) = 1/4$$
+
+> **Interpretation:** A fair coin ($p=1/2$) has the most variability — you have no information about whether the next flip is heads or tails. A very biased coin ($p \approx 0$ or $p \approx 1$) is nearly predictable, so its variance is close to 0.
+
+---
+
+### 3.5 The Shortcut Formula — Property 3
+
+Computing $(x - \mu)^2$ for each value can be tedious. Here is an algebraically equivalent formula that is often faster:
+
+$$\boxed{\text{Var}(X) = E[X^2] - E[X]^2 = E[X^2] - \mu^2}$$
+
+**Derivation (from first principles):**
+
+$$E[(X-\mu)^2] = E[X^2 - 2\mu X + \mu^2]$$
+$$= E[X^2] - 2\mu E[X] + \mu^2 \quad \text{(linearity of E)}$$
+$$= E[X^2] - 2\mu^2 + \mu^2 \quad \text{(since } E[X] = \mu \text{)}$$
+$$= E[X^2] - \mu^2 \qquad \square$$
+
+---
+
+#### Example 4 — Shortcut Formula on the Bell Distribution
+
+**Problem:** Recompute $\text{Var}(Y)$ from Example 2(ii) using $\text{Var}(Y) = E[Y^2] - E[Y]^2$.
+
+| Value | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| $p(y)$ | 1/10 | 2/10 | 4/10 | 2/10 | 1/10 |
+| $y^2$ | 1 | 4 | 9 | 16 | 25 |
+
+**Step 1:** $E[Y] = 3$ (computed earlier or by symmetry).
+
+**Step 2:** $E[Y^2] = 1\cdot\frac{1}{10} + 4\cdot\frac{2}{10} + 9\cdot\frac{4}{10} + 16\cdot\frac{2}{10} + 25\cdot\frac{1}{10}$
+
+$$= \frac{1 + 8 + 36 + 32 + 25}{10} = \frac{102}{10} = 10.2$$
+
+**Step 3:** $\text{Var}(Y) = 10.2 - 3^2 = 10.2 - 9 = 1.2 \checkmark$
+
+---
+
+## 4. Properties of Variance
+
+### 4.1 The Three Key Properties
+
+> **Property 1 (Independence required for addition):**
+> If $X$ and $Y$ are **independent**, then:
+> $$\boxed{\text{Var}(X + Y) = \text{Var}(X) + \text{Var}(Y)}$$
+
+> **Property 2 (Scaling and shifting):**
+> For constants $a$ and $b$:
+> $$\boxed{\text{Var}(aX + b) = a^2 \text{Var}(X)}$$
+> Note: shifting by $b$ does **not** affect variance (shifting moves the centre, not the spread).
+
+> **Property 3 (Shortcut formula):**
+> $$\boxed{\text{Var}(X) = E[X^2] - E[X]^2}$$
+
+---
+
+### 4.2 Critical Warning: Independence in Property 1
+
+Property 1 requires independence. The statement $\text{Var}(X + Y) = \text{Var}(X) + \text{Var}(Y)$ is **false** in general for dependent variables.
+
+The most dangerous trap: $\text{Var}(X + X) \neq \text{Var}(X) + \text{Var}(X)$ because $X$ is not independent of itself!
+
+$$\text{Var}(X + X) = \text{Var}(2X) = 4\text{Var}(X) \quad \text{(correct)}$$
+$$\text{Var}(X + X) = \text{Var}(X) + \text{Var}(X) = 2\text{Var}(X) \quad \text{(WRONG)}$$
+
+> **Contrast with expectation:** $E[X + Y] = E[X] + E[Y]$ always holds — no independence needed. Variance addition is more restrictive.
+
+---
+
+### 4.3 Proof of Property 2
+
+Let $\mu = E[X]$. Then $E[aX + b] = a\mu + b$.
+
+$$\text{Var}(aX+b) = E[(aX+b-(a\mu+b))^2] = E[(aX - a\mu)^2] = E[a^2(X-\mu)^2] = a^2 E[(X-\mu)^2] = a^2 \text{Var}(X) \quad \square$$
+
+**Key insight:** Shifting by $b$ vanishes because the shift appears in both $aX+b$ and its mean $a\mu+b$, cancelling perfectly. Scaling by $a$ contributes $a^2$ because variance involves squared distances.
+
+---
+
+### 4.4 Worked Examples — Property Applications
+
+#### Example 5 — Applying All Three Properties
+
+**Problem:** $X$ and $Y$ are independent with $\text{Var}(X) = 3$, $\text{Var}(Y) = 5$. Find:
+
+**(i) $\text{Var}(X + Y)$**
+
+Since $X$ and $Y$ are independent: $\text{Var}(X+Y) = 3 + 5 = 8$.
+
+**(ii) $\text{Var}(3X + 4)$**
+
+Using Property 2: $\text{Var}(3X + 4) = 9 \cdot \text{Var}(X) = 9 \cdot 3 = 27$.
+
+The "+4" contributes nothing to variance.
+
+**(iii) $\text{Var}(X + X)$**
+
+Do NOT use Property 1 here — $X$ is not independent of itself! Use Property 2:
+
+$$\text{Var}(X + X) = \text{Var}(2X) = 4\text{Var}(X) = 12$$
+
+Wrong answer if using Property 1 naively: $3 + 3 = 6$ (incorrect).
+
+**(iv) $\text{Var}(X + 3Y)$**
+
+Since $X$ and $3Y$ are independent (because $X$ and $Y$ are):
+
+$$\text{Var}(X + 3Y) = \text{Var}(X) + \text{Var}(3Y) = 3 + 9\cdot 5 = 3 + 45 = 48$$
+
+---
+
+### 4.5 Variance of Binomial($n$, $p$)
+
+Since $Y \sim \text{Binomial}(n,p)$ is the sum of $n$ independent $\text{Bernoulli}(p)$ variables:
+
+$$\text{Var}(Y) = \text{Var}(Y_1) + \text{Var}(Y_2) + \cdots + \text{Var}(Y_n) = n \cdot p(1-p)$$
+
+$$\boxed{\text{Var}(\text{Binomial}(n,p)) = np(1-p)}$$
+
+---
+
+### 4.6 Standard Deviation of the Sample Mean
+
+**Problem:** $X_1, \ldots, X_n$ are independent, each with $\text{Var}(X_i) = \sigma^2 = 4$ (i.e., $\sigma = 2$). Let $\bar{X} = \frac{X_1 + \cdots + X_n}{n}$.
+
+**Step 1:** Variance of the sum (using independence):
+
+$$\text{Var}(X_1 + \cdots + X_n) = n \cdot 4 = 4n$$
+
+**Step 2:** Scale by $1/n$ using Property 2 ($a = 1/n$):
+
+$$\text{Var}(\bar{X}) = \text{Var}\left(\frac{X_1 + \cdots + X_n}{n}\right) = \frac{1}{n^2} \cdot 4n = \frac{4}{n}$$
+
+**Step 3:** Standard deviation of $\bar{X}$:
+
+$$\sigma_{\bar{X}} = \sqrt{\frac{4}{n}} = \frac{2}{\sqrt{n}}$$
+
+> **Fundamental insight:** The standard deviation of the average of $n$ independent measurements is $\sigma/\sqrt{n}$ — it shrinks as you take more measurements. This is the mathematical foundation for why more data gives more precise estimates. It's the engine behind the Law of Large Numbers and confidence intervals.
+
+---
+
+### 4.7 Extra Problem — Variance of Uniform Distribution
+
+**Problem:** $X$ is uniform on $\{1,2,3,4,5\}$. Compute $\text{Var}(X)$. Then find $\text{Var}(Y)$ where $Y$ is uniform on $\{7,8,9,10,11\}$.
+
+**For $X$:**
+
+$$E[X] = \frac{1+2+3+4+5}{5} = 3, \qquad E[X^2] = \frac{1+4+9+16+25}{5} = \frac{55}{5} = 11$$
+
+$$\text{Var}(X) = 11 - 9 = 2$$
+
+**For $Y$:**
+
+Note that $Y = X + 6$ (just shift all values by 6). By Property 2 with $a=1$, $b=6$:
+
+$$\text{Var}(Y) = \text{Var}(X+6) = 1^2 \cdot \text{Var}(X) = 2$$
+
+**Interpretation:** Shifting a distribution doesn't change its spread. $Y$ and $X$ have the same shape — just relocated 6 units to the right.
+
+---
+
+## 5. Continuous Random Variables — Introduction
+
+### 5.1 Concept Overview
+
+Discrete random variables take countable values (1, 2, 3, ...). **Continuous random variables** take values in a continuous range — like all real numbers in $[0, 1]$, or all of $\mathbb{R}$.
+
+**The fundamental transition:** Moving from discrete to continuous, we replace:
+- **Sums** $\to$ **Integrals**
+- **pmf** $\to$ **pdf** (probability density function)
+- $P(X = a) = p(a)$ $\to$ $P(X = a) = 0$ always
+
+---
+
+### 5.2 Intuition — Why Do We Need Density?
+
+Imagine measuring someone's height. The probability that their height is *exactly* 175.000000... cm (to infinite precision) is 0. Yet height is a perfectly meaningful quantity. The paradox resolves by recognising that for continuous variables, **only intervals have positive probability**, not individual points.
+
+The probability density function $f(x)$ tells you how probability is *concentrated* — not the probability itself. Think of it like mass density in physics: a rod has density (kg/m), and you integrate to find mass (kg). Similarly, $f(x)$ has units of probability per unit $x$, and you integrate to find probability.
+
+---
+
+### 5.3 The Calculus Connection
+
+The transition from discrete to continuous mirrors the transition from finite sums to integrals:
+
+$$\text{Discrete: } P(A) = \sum_{x \in A} p(x) \qquad \longleftrightarrow \qquad \text{Continuous: } P(X \in A) = \int_A f(x)\, dx$$
+
+An integral is simply a continuous sum — the limit of Riemann sums as the interval width $\Delta x \to 0$:
+
+$$\int_a^b f(x)\, dx = \lim_{\Delta x \to 0} \sum_i f(x_i) \Delta x$$
+
+---
+
+## 6. Probability Density Functions (PDF)
+
+### 6.1 Formal Definition
+
+> **Definition (Continuous Random Variable):** A random variable $X$ is **continuous** if there exists a function $f(x)$ such that for any $c \leq d$:
+>
+> $$\boxed{P(c \leq X \leq d) = \int_c^d f(x)\, dx}$$
+>
+> The function $f(x)$ is called the **probability density function (pdf)**.
+
+**Required properties of any valid pdf:**
+
+1. $f(x) \geq 0$ for all $x$ (non-negative)
+2. $\displaystyle\int_{-\infty}^{\infty} f(x)\, dx = 1$ (total probability equals 1)
+
+---
+
+### 6.2 Critical Differences: PDF vs PMF
+
+| Property | PMF $p(x)$ (discrete) | PDF $f(x)$ (continuous) |
+|---|---|---|
+| Represents | Probability at $x$ | Probability *density* at $x$ |
+| Must be $\leq 1$? | Yes | **No** — can exceed 1 |
+| To get probability | Sum $p(x)$ over values | **Integrate** $f(x)$ over interval |
+| At a point | $P(X=a) = p(a) \geq 0$ | $P(X=a) = 0$ always |
+
+> **Key insight:** $f(x)$ is not a probability — it is a density. You must integrate it to obtain probability. The analogy is exact: density (kg/m) integrated over length gives mass (kg).
+
+---
+
+### 6.3 $P(X = a) = 0$ — The Point Probability Puzzle
+
+For any continuous random variable and any value $a$:
+
+$$P(X = a) = \int_a^a f(x)\, dx = 0$$
+
+An integral over a zero-width interval is always 0. This is not a bug — it is the correct result.
+
+> **Does $P(X = a) = 0$ mean $X$ never equals $a$?** No! The probability of any specific value is 0, yet the random variable must take *some* value. This is exactly like saying the probability that a dart lands on any particular mathematical point is 0, yet the dart must land somewhere. Only intervals have non-zero probability.
+
+**Consequence for intervals:** Because endpoints have probability 0, it makes no difference whether we use strict or non-strict inequalities:
+
+$$P(c < X < d) = P(c \leq X \leq d) = P(c \leq X < d) = \int_c^d f(x)\, dx$$
+
+---
+
+### 6.4 Graphical View
+
+The probability $P(c \leq X \leq d)$ equals the **area under the pdf curve** between $c$ and $d$. The total area under any pdf is exactly 1.
+
+---
+
+### 6.5 Worked Examples
+
+---
+
+#### Example 6 — Uniform PDF with $f(x) > 1$
+
+**Problem:** $X$ has pdf $f(x) = 3$ on $[0, 1/3]$ (and 0 elsewhere). Find $P(0.1 \leq X \leq 0.2)$ and $P(0.1 \leq X \leq 1)$.
+
+**First, verify it's valid:**
+
+$$\int_{-\infty}^{\infty} f(x)\, dx = \int_0^{1/3} 3\, dx = 3 \cdot \frac{1}{3} = 1 \checkmark$$
+
+Note: $f(x) = 3 > 1$ — this is fine! The density can exceed 1; only probabilities (integrals) must be $\leq 1$.
+
+**$P(0.1 \leq X \leq 0.2)$:**
+
+$$P(0.1 \leq X \leq 0.2) = \int_{0.1}^{0.2} 3\, dx = 3 \times 0.1 = 0.3$$
+
+(Geometrically: area of rectangle = width × height = $0.1 \times 3$.)
+
+**$P(0.1 \leq X \leq 1)$:**
+
+The pdf is 0 for $x > 1/3$, so:
+
+$$P(0.1 \leq X \leq 1) = \int_{0.1}^{1/3} 3\, dx = 3 \times \left(\frac{1}{3} - 0.1\right) = 3 \times \frac{7}{30} = 0.7$$
+
+---
+
+#### Example 7 — Finding the Normalisation Constant
+
+**Problem:** $X$ has range $[0,1]$ and pdf $f(x) = Cx^2$. Find $C$.
+
+**Step 1:** Set total probability equal to 1.
+
+$$\int_0^1 Cx^2\, dx = 1$$
+
+**Step 2:** Evaluate:
+
+$$C \cdot \frac{x^3}{3}\Big|_0^1 = C \cdot \frac{1}{3} = 1 \implies C = 3$$
+
+**Answer:** $f(x) = 3x^2$ on $[0,1]$.
+
+**Verification:** $\int_0^1 3x^2\, dx = [x^3]_0^1 = 1$. ✓
+
+---
+
+#### Example 8 — Computing a Probability from the PDF
+
+**Problem:** For $X$ with pdf $f(x) = 3x^2$ on $[0,1]$, find $P(X \leq 1/2)$.
+
+$$P(X \leq 1/2) = \int_0^{1/2} 3x^2\, dx = \left[x^3\right]_0^{1/2} = \frac{1}{8}$$
+
+**Interpretation:** Only 12.5% of the probability falls in the left half $[0, 1/2]$, even though that's half the range. The density $3x^2$ is heavier on the right, so values near 1 are more likely.
+
+---
+
+## 7. Cumulative Distribution Function — Continuous Case
+
+### 7.1 Definition
+
+The cdf for continuous random variables has exactly the same meaning as for discrete:
+
+$$\boxed{F(b) = P(X \leq b) = \int_{-\infty}^b f(x)\, dx}$$
+
+For $X$ with range $[a, b]$, the cdf is:
+
+$$F(x) = \begin{cases} 0 & x < a \\ \int_a^x f(t)\, dt & a \leq x \leq b \\ 1 & x > b \end{cases}$$
+
+---
+
+### 7.2 Properties of the CDF (Continuous)
+
+These are identical to the discrete case plus one new property:
+
+1. $F(x) = P(X \leq x)$
+2. $0 \leq F(x) \leq 1$
+3. $F$ is **non-decreasing**: $a \leq b \implies F(a) \leq F(b)$
+4. $\lim_{x \to +\infty} F(x) = 1$ and $\lim_{x \to -\infty} F(x) = 0$
+5. $P(a \leq X \leq b) = F(b) - F(a)$
+6. **New: $F'(x) = f(x)$** — the Fundamental Theorem of Calculus links pdf and cdf.
+
+> **Property 6 is the key bridge:** differentiate the cdf to get the pdf; integrate the pdf to get the cdf.
+
+**Property 5 derivation:**
+
+$$\int_a^b f(x)\, dx = \int_{-\infty}^b f(x)\, dx - \int_{-\infty}^a f(x)\, dx = F(b) - F(a)$$
+
+For continuous random variables, the continuous cdf has no jumps (unlike the discrete case), so it is smooth wherever $f$ is continuous.
+
+---
+
+### 7.3 Worked Examples
+
+---
+
+#### Example 9 — CDF from a Constant PDF
+
+**Problem:** $f(x) = 3$ on $[0, 1/3]$. Find the full CDF.
+
+For $0 \leq a \leq 1/3$:
+
+$$F(a) = \int_0^a 3\, dx = 3a$$
+
+Full piecewise CDF:
+
+$$F(a) = \begin{cases} 0 & a < 0 \\ 3a & 0 \leq a \leq 1/3 \\ 1 & a > 1/3 \end{cases}$$
+
+**Shape:** The CDF is a straight line on $[0, 1/3]$ — a uniformly increasing function. This makes sense since the density is constant.
+
+---
+
+#### Example 10 — CDF of $f(x) = 3x^2$
+
+**Problem:** $f(x) = 3x^2$ on $[0,1]$. Find the CDF.
+
+For $0 \leq a \leq 1$:
+
+$$F(a) = \int_0^a 3x^2\, dx = \left[x^3\right]_0^a = a^3$$
+
+Full piecewise CDF:
+
+$$F(a) = \begin{cases} 0 & a < 0 \\ a^3 & 0 \leq a \leq 1 \\ 1 & a > 1 \end{cases}$$
+
+**Compute $P(X < 1/2)$:**
+
+$$P(X < 1/2) = F(1/2) = (1/2)^3 = 1/8$$
+
+**Shape:** $a^3$ starts slowly (small density near 0) and grows steeply (high density near 1). This is an increasing, concave-then-convex curve from 0 to 1.
+
+---
+
+#### Example 11 — Finding $b$ from a CDF (Board Problem 3)
+
+**Problem:** $Y$ has range $[0, b]$ and $\text{cdf } F(y) = y^2/9$. Find $b$ and the pdf.
+
+**Part (a) — Find $b$:**
+
+$$F(b) = 1 \implies \frac{b^2}{9} = 1 \implies b = 3$$
+
+**Part (b) — Find the pdf:**
+
+$$f(y) = F'(y) = \frac{2y}{9} \quad \text{for } 0 \leq y \leq 3$$
+
+**Verification:** $\int_0^3 \frac{2y}{9}\, dy = \frac{y^2}{9}\Big|_0^3 = 1$ ✓
+
+---
+
+#### Example 12 — The Cubic PDF (Board Problem 2)
+
+**Problem:** $X$ has range $[0,2]$ and pdf $f(x) = cx^2$.
+
+**(a) Find $c$:**
+
+$$\int_0^2 cx^2\, dx = c \cdot \frac{8}{3} = 1 \implies c = \frac{3}{8}$$
+
+**(b) Find the CDF for $0 \leq x \leq 2$:**
+
+$$F(x) = \int_0^x \frac{3}{8}t^2\, dt = \frac{3}{8} \cdot \frac{x^3}{3} = \frac{x^3}{8}$$
+
+**(c) Compute $P(1 \leq X \leq 2)$:**
+
+$$P(1 \leq X \leq 2) = F(2) - F(1) = 1 - \frac{1}{8} = \frac{7}{8}$$
+
+**Interpretation:** 87.5% of the probability falls in the upper half $[1,2]$. The cubic density $3x^2/8$ places very little mass near 0 and a lot near 2.
+
+---
+
+## 8. Gallery of Continuous Distributions
+
+### 8.1 Concept Overview
+
+We now introduce the three most important continuous distributions. Each is parametrised — it has parameters you can tune to fit data. Understanding what each distribution *models* is as important as knowing its formula.
+
+---
+
+### 8.2 Uniform Distribution
+
+> **$X \sim \text{Uniform}(a, b)$** (also written $U(a,b)$)
+
+**Parameters:** $a$ (lower bound), $b$ (upper bound).
+
+**Range:** $[a, b]$.
+
+**PDF:**
+$$\boxed{f(x) = \frac{1}{b-a} \quad \text{for } a \leq x \leq b}$$
+
+**CDF:**
+$$F(x) = \frac{x-a}{b-a} \quad \text{for } a \leq x \leq b$$
+
+**Mean and Variance:**
+
+$$E[X] = \frac{a+b}{2}, \qquad \text{Var}(X) = \frac{(b-a)^2}{12}$$
+
+**Models:** Situations where all outcomes in a range are equally likely (equal probability density).
+
+**Examples:**
+1. Measurement rounding error: measuring to the nearest mm introduces error $\sim U(-0.5, 0.5)$ mm.
+2. Spinner games: a uniformly spun arrow stops at angle $\sim U(0, 2\pi)$.
+3. Random number generators: all standard RNGs begin with a $U(0,1)$ generator; all other distributions are transformations of this.
+
+**Shape:** Perfectly flat rectangle. Both pdf and cdf are linear.
+
+---
+
+### 8.3 Exponential Distribution
+
+> **$X \sim \text{Exponential}(\lambda)$** (also written $\text{Exp}(\lambda)$)
+
+**Parameter:** $\lambda > 0$ (rate).
+
+**Range:** $[0, \infty)$.
+
+**PDF:**
+$$\boxed{f(x) = \lambda e^{-\lambda x} \quad \text{for } x \geq 0}$$
+
+**CDF:**
+$$\boxed{F(x) = 1 - e^{-\lambda x} \quad \text{for } x \geq 0}$$
+
+**Right-tail probability:**
+$$P(X > x) = 1 - F(x) = e^{-\lambda x}$$
+
+**Mean and Variance:**
+
+$$E[X] = \frac{1}{\lambda}, \qquad \text{Var}(X) = \frac{1}{\lambda^2}$$
+
+**Models:** Waiting time for a continuous process to change state (memoryless waiting).
+
+**Examples:**
+1. Waiting time for a taxi on Mass Ave (taxis arrive at rate $\lambda = 1/10$ per minute, so $E[X] = 10$ minutes).
+2. Time until radioactive decay of an unstable isotope ($\lambda$ related to half-life).
+3. Time between customer arrivals at a service queue (Poisson process).
+
+**Shape:** Starts at $\lambda$ when $x=0$ and decays exponentially. Larger $\lambda$ = steeper decay = shorter expected wait.
+
+---
+
+#### The Memoryless Property of the Exponential Distribution
+
+This is the exponential distribution's most remarkable feature:
+
+$$\boxed{P(X > s+t \mid X > s) = P(X > t)}$$
+
+**In words:** Given that you've already waited $s$ minutes, the probability of waiting $t$ more minutes is the same as if you had just arrived. The past waiting time provides zero information about future waiting time.
+
+**Proof:**
+
+$$P(X > s+t \mid X > s) = \frac{P(X > s+t \text{ and } X > s)}{P(X > s)} = \frac{P(X > s+t)}{P(X > s)} = \frac{e^{-\lambda(s+t)}}{e^{-\lambda s}} = e^{-\lambda t} = P(X > t) \quad \square$$
+
+**Contrast:** Subway waiting time is NOT memoryless. If no train has come in 5 minutes and trains run every 12 minutes, a train is now very likely in the next 7 minutes — very different from arrival probability at time 0.
+
+**Connection to Geometric distribution:** The exponential distribution is the continuous analogue of the geometric distribution. Both are memoryless:
+- Geometric: memoryless waiting for a discrete event (number of failures before first success).
+- Exponential: memoryless waiting for a continuous event (time until first arrival).
+
+---
+
+#### Worked Example — Taxi Problem (Board Problem 4)
+
+**Problem:** Taxis pass at an average of once every 10 minutes. $X \sim \text{Exponential}(1/10)$ with $f(x) = \frac{1}{10}e^{-x/10}$.
+
+**(a) Compute $P(3 < X < 7)$:**
+
+$$P(3 < X < 7) = \int_3^7 \frac{1}{10} e^{-x/10}\, dx = \left[-e^{-x/10}\right]_3^7 = e^{-3/10} - e^{-7/10}$$
+
+$$\approx 0.7408 - 0.4966 \approx 0.244$$
+
+**Interpretation:** There is about a 24.4% chance the taxi arrives between 3 and 7 minutes.
+
+**(b) CDF:**
+
+$$F(x) = 1 - e^{-x/10} \quad \text{for } x \geq 0$$
+
+---
+
+### 8.4 Normal (Gaussian) Distribution
+
+The most important distribution in all of probability and statistics.
+
+> **$X \sim N(\mu, \sigma^2)$** (or $\text{Normal}(\mu, \sigma^2)$)
+
+**Parameters:** $\mu$ (mean), $\sigma^2$ (variance) — note: the second parameter is variance, not standard deviation.
+
+**Range:** $(-\infty, \infty)$.
+
+**PDF:**
+$$\boxed{f(x) = \frac{1}{\sigma\sqrt{2\pi}} e^{-(x-\mu)^2 / 2\sigma^2}}$$
+
+**CDF:** No closed-form formula. Use tables or software (R: `pnorm(x, mu, sigma)`).
+
+**Mean and Variance:**
+$$E[X] = \mu, \qquad \text{Var}(X) = \sigma^2$$
+
+**Models:** Measurement errors, IQ/ability, heights, sums of many independent contributions (Central Limit Theorem — coming later).
+
+**Historical note:** Carl Friedrich Gauss introduced the normal distribution in 1809 alongside maximum likelihood estimation and least squares — all of which appear in this course.
+
+---
+
+#### The Standard Normal Distribution
+
+The special case $Z \sim N(0, 1)$ (mean 0, variance 1) is called the **standard normal**.
+
+- Standard normal pdf: $\phi(z) = \frac{1}{\sqrt{2\pi}} e^{-z^2/2}$
+- Standard normal cdf: $\Phi(z) = P(Z \leq z)$
+
+**Key normal probability table:**
+
+| $z$ | $-3$ | $-2$ | $-1$ | $0$ | $0.5$ | $1$ | $2$ | $3$ |
+|---|---|---|---|---|---|---|---|---|
+| $\Phi(z)$ | 0.0013 | 0.0228 | 0.1587 | 0.5000 | 0.6915 | 0.8413 | 0.9772 | 0.9987 |
+
+---
+
+#### The 68-95-99.7 Rule (Must Know)
+
+For any $X \sim N(\mu, \sigma^2)$:
+
+$$\boxed{P(\mu - \sigma \leq X \leq \mu + \sigma) \approx 0.68}$$
+$$\boxed{P(\mu - 2\sigma \leq X \leq \mu + 2\sigma) \approx 0.95}$$
+$$\boxed{P(\mu - 3\sigma \leq X \leq \mu + 3\sigma) \approx 0.99}$$
+
+> **Mnemonic:** "68-95-99" or "one-two-three sigma rules."
+
+**Using symmetry:** Since $\phi(z)$ is symmetric about $z=0$:
+
+$$\Phi(-z) = 1 - \Phi(z)$$
+
+$$P(Z \leq 1) \approx ?$$
+
+By the 68% rule: $P(-1 \leq Z \leq 1) \approx 0.68$, so the two tails have total probability $0.32$. Each tail has $0.16$. Therefore $P(Z \leq 1) = 0.68 + 0.16 = 0.84$.
+
+---
+
+#### Worked Example — Symmetry Calculation (Example 4 from notes)
+
+**Problem:** The 68% rule gives $P(-1 \leq Z \leq 1) \approx 0.68$. Estimate $\Phi(1)$.
+
+$$\Phi(1) = P(Z \leq 1) = P(Z \leq -1) + P(-1 \leq Z \leq 1) = 0.16 + 0.68 = 0.84$$
+
+Or more simply: $\Phi(1) = 1 - \Phi(-1) = 1 - 0.16 = 0.84$.
+
+**R verification:** `pnorm(1,0,1)` = 0.8413.
+
+---
+
+#### Using R for Normal Probabilities
+
+```r
+pnorm(x, mu, sigma)  # computes F(x) = P(X <= x) for N(mu, sigma^2)
+
+pnorm(1, 0, 1)                       # = 0.8413  (P(Z <= 1))
+pnorm(0, 0, 1)                       # = 0.5     (P(Z <= 0))
+pnorm(1,0,1) - pnorm(-1,0,1)         # = 0.6827  (P(-1 <= Z <= 1))
+pnorm(c(-3,-2,-1,0,1,2,3), 0, 1)     # full table
+```
+
+**Important:** `pnorm(x, mu, sigma)` uses $\sigma$ (standard deviation), not $\sigma^2$ (variance). Be careful with the notation $N(\mu, \sigma^2)$ — always extract $\sigma = \sqrt{\sigma^2}$ before using R.
+
+---
+
+#### Worked Example — Normal Probability Calculation (Example 5)
+
+**Problem:** Find $P(-1.5 \leq Z \leq 2)$.
+
+$$P(-1.5 \leq Z \leq 2) = \Phi(2) - \Phi(-1.5) = \text{pnorm}(2,0,1) - \text{pnorm}(-1.5,0,1)$$
+
+From R: $= 0.9772 - 0.0668 = 0.9104$
+
+---
+
+### 8.5 Pareto Distribution (Brief Introduction)
+
+> **$X \sim \text{Pareto}(m, \alpha)$**
+
+**Parameters:** $m > 0$ (minimum value), $\alpha > 0$ (shape, controls tail heaviness).
+
+**Range:** $[m, \infty)$.
+
+**PDF:** $f(x) = \frac{\alpha m^\alpha}{x^{\alpha+1}}$
+
+**CDF:** $F(x) = 1 - \left(\frac{m}{x}\right)^\alpha$
+
+**Tail:** $P(X > x) = \left(\frac{m}{x}\right)^\alpha$ (power law tail — much heavier than exponential!)
+
+**Models:** Power laws — income inequality (Pareto's original use), meteor sizes, city populations, internet traffic, word frequencies, file sizes. The "80-20 rule" comes from Pareto distributions.
+
+---
+
+## 9. Transforming Continuous Random Variables
+
+### 9.1 Concept Overview
+
+Given $X$ with known pdf/cdf, we often need to find the distribution of $Y = g(X)$ — a transformed version. There are two approaches: transform via the **cdf** (usually easier) or via the **pdf** directly (change of variables, u-substitution).
+
+---
+
+### 9.2 The CDF Method (Recommended)
+
+**Algorithm:**
+
+1. Write $F_Y(y) = P(Y \leq y)$
+2. Replace $Y$ with its formula in $X$: $P(g(X) \leq y)$
+3. Algebraically isolate $X$: $P(X \leq h(y))$ for some function $h$
+4. Recognise this as $F_X(h(y))$
+5. Substitute the known $F_X$ formula
+6. Differentiate to get $f_Y(y) = F_Y'(y)$
+
+---
+
+#### Example 13 — CDF Method for $Y = X^2$ (Example 1 from notes)
+
+**Problem:** $X$ has range $[0,2]$ and cdf $F_X(x) = x^2/4$. Find the pdf and cdf of $Y = X^2$.
+
+**Range of $Y$:** Since $X \in [0,2]$, $Y = X^2 \in [0,4]$.
+
+**Step 1:** $F_Y(y) = P(Y \leq y)$
+
+**Step 2:** $= P(X^2 \leq y)$
+
+**Step 3:** $= P(X \leq \sqrt{y})$ (since $X \geq 0$, taking square roots preserves the inequality)
+
+**Step 4:** $= F_X(\sqrt{y})$
+
+**Step 5:** $= \frac{(\sqrt{y})^2}{4} = \frac{y}{4}$
+
+$$\boxed{F_Y(y) = \frac{y}{4}} \quad \text{for } 0 \leq y \leq 4$$
+
+**PDF by differentiation:**
+
+$$f_Y(y) = F_Y'(y) = \frac{1}{4} \quad \text{for } 0 \leq y \leq 4$$
+
+**Interesting result:** Even though $X$ follows a distribution with pdf $f_X(x) = x/2$ (increasing), $Y = X^2$ follows a *uniform* distribution on $[0,4]$!
+
+---
+
+#### Example 14 — Exponential Transformation $Y = X^2$ (Example 4 from notes)
+
+**Problem:** $X \sim \text{Exp}(\lambda)$ with $f_X(x) = \lambda e^{-\lambda x}$ on $[0,\infty)$. Find $f_Y(y)$ where $Y = X^2$.
+
+**Using the pdf (change-of-variables) method:**
+
+$$y = x^2 \implies dy = 2x\, dx \implies dx = \frac{dy}{2\sqrt{y}}$$
+
+$$f_X(x) = \lambda e^{-\lambda x} = \lambda e^{-\lambda\sqrt{y}}$$
+
+Combining:
+
+$$f_Y(y)\, dy = f_X(x)\, dx = \lambda e^{-\lambda\sqrt{y}} \cdot \frac{dy}{2\sqrt{y}} = \frac{\lambda}{2\sqrt{y}} e^{-\lambda\sqrt{y}}\, dy$$
+
+$$\boxed{f_Y(y) = \frac{\lambda}{2\sqrt{y}} e^{-\lambda\sqrt{y}} \quad \text{for } y \geq 0}$$
+
+**Alternatively via CDF method (Example 5 from notes):**
+
+$$F_Y(y) = P(X^2 \leq y) = P(X \leq \sqrt{y}) = F_X(\sqrt{y}) = 1 - e^{-\lambda\sqrt{y}}$$
+
+Differentiating: $f_Y(y) = F_Y'(y) = \frac{\lambda}{2\sqrt{y}} e^{-\lambda\sqrt{y}}$ ✓
+
+---
+
+### 9.3 Standardisation of Normal Random Variables
+
+This is one of the most important theorems in statistics:
+
+> **Theorem (Standardisation):** If $X \sim N(\mu, \sigma^2)$, then:
+> $$\boxed{Z = \frac{X - \mu}{\sigma} \sim N(0,1)}$$
+
+**Proof using change of variables:**
+
+Let $z = (x-\mu)/\sigma$, so $x = \sigma z + \mu$ and $dx = \sigma\, dz$.
+
+$$f_X(x)\, dx = \frac{1}{\sigma\sqrt{2\pi}} e^{-(x-\mu)^2/2\sigma^2}\, dx = \frac{1}{\sigma\sqrt{2\pi}} e^{-z^2/2} \cdot \sigma\, dz = \frac{1}{\sqrt{2\pi}} e^{-z^2/2}\, dz = f_Z(z)\, dz$$
+
+Since this is exactly the standard normal density, $Z \sim N(0,1)$. $\square$
+
+**Why this matters:** All normal probabilities reduce to standard normal calculations:
+
+$$P(a \leq X \leq b) = P\left(\frac{a-\mu}{\sigma} \leq Z \leq \frac{b-\mu}{\sigma}\right) = \Phi\left(\frac{b-\mu}{\sigma}\right) - \Phi\left(\frac{a-\mu}{\sigma}\right)$$
+
+**Example (from notes):** $X \sim N(5, 9)$ (so $\mu = 5$, $\sigma = 3$). Then $Z = (X-5)/3 \sim N(0,1)$.
+
+---
+
+## 10. In-Class Concept Questions — Full Solutions
+
+### Concept Question 1 — Ordering Variances from a Graph
+
+**Problem:** Three distributions (A), (B), (C) each on $\{1,2,3,4,5\}$:
+- (A): Roughly uniform, equal bars
+- (B): Bell-shaped, concentrated near the centre at 3
+- (C): Bimodal, mass at extremes 1 and 5
+
+Order by standard deviation, largest to smallest.
+
+**Solution: C, A, B**
+
+All three distributions are symmetric about 3, so all have mean 3. Variance depends on how much probability is concentrated *far* from the mean.
+
+- (C) has ALL mass at values 1 and 5, which are as far as possible from mean 3 → **largest variance**
+- (A) spreads mass equally across all 5 values → **medium variance**
+- (B) concentrates mass near 3 → **smallest variance**
+
+**Answer: C, A, B (choice 5)**
+
+---
+
+### Concept Question 2 — Zero Variance
+
+**Problem:** True or False: If $\text{Var}(X) = 0$ then $X$ is constant.
+
+**Answer: True**
+
+**Proof:** $\text{Var}(X) = \sum p(x_i)(x_i - \mu)^2$. This is a sum of non-negative terms. The sum equals 0 if and only if every term is 0. Each term $(x_i - \mu)^2 = 0$ only when $x_i = \mu$. So all values with positive probability must equal $\mu$, meaning $X$ is constant.
+
+---
+
+### Concept Question 3 — Scale Matters for Standard Deviation
+
+**Problem:** Which has bigger standard deviation, $Y$ (range $-3$ to $3$, two-point distribution) or $W$ (range $10$ to $50$, bell-shaped)?
+
+**Intuitive guess:** $W$ looks more concentrated, but its scale is much larger!
+
+**Calculation:**
+
+$\text{Var}(Y) = (1/2)(3-0)^2 + (1/2)(-3-0)^2 = 9$, so $\sigma_Y = 3$.
+
+For $W$ with $E[W] = 30$ (by symmetry) and values $\{10,20,30,40,50\}$ with pmf $\{0.1, 0.2, 0.4, 0.2, 0.1\}$:
+
+$$\text{Var}(W) = 0.1(10-30)^2 + 0.2(20-30)^2 + 0.4(30-30)^2 + 0.2(40-30)^2 + 0.1(50-30)^2$$
+$$= 0.1(400) + 0.2(100) + 0 + 0.2(100) + 0.1(400) = 40 + 20 + 0 + 20 + 40 = 120$$
+
+$\sigma_W = \sqrt{120} \approx 10.95 > 3 = \sigma_Y$.
+
+**Answer: $W$ has larger standard deviation.**
+
+**Key lesson:** Scale dominates. A spread-out range can easily overcome visual concentration.
+
+---
+
+### Concept Question 4 — Properties of Continuous RVs
+
+**(a) Can $f(x) = 10$ for some $x$?**
+
+Yes. The pdf is a density, not a probability. Only integrals (areas) must be $\leq 1$. As long as $f(x) \geq 0$ and $\int f(x)\, dx = 1$, any value is allowed.
+
+**(b) What is $P(X = a)$?**
+
+$P(X = a) = 0$ for any $a$ and any continuous random variable.
+
+**(c) Does $P(X = a) = 0$ mean $X$ never equals $a$?**
+
+No. Every specific value has probability 0, yet the random variable must take some value. This is the fundamental feature of continuous distributions — only intervals carry positive probability.
+
+---
+
+### Concept Question 5 — Valid CDFs
+
+**Identifying valid CDFs from graphs:**
+
+- **Graph A:** Takes negative values → **invalid** (CDFs are always in $[0,1]$).
+- **Graph B:** Increases from 0 to 1 → **valid** ✓
+- **Graph C:** Increases from 0 to 1 → **valid** ✓
+- **Graph D:** Has a decreasing portion → **invalid** (CDFs must be non-decreasing, since accumulated probability can only increase or stay constant).
+
+**Answer:** Graphs B and C are valid CDFs.
+
+---
+
+## 11. In-Class Board Problems — Full Solutions
+
+### Problem 1 — Variance Computations
+
+**(a) $\text{Var}(\text{Bernoulli}(p))$:** See Section 3.4 — answer is $p(1-p)$.
+
+**(b) $\text{Var}(\text{Binomial}(n,p)) = np(1-p)$:** See Section 4.5.
+
+**(c) Standard deviation of the sample mean:** See Section 4.6 — answer is $\sigma/\sqrt{n} = 2/\sqrt{n}$.
+
+---
+
+### Problem 2 — Full Continuous Distribution (Cubic PDF)
+
+Already solved in Examples 12 (Section 7.3). Summary:
+- $c = 3/8$
+- $F(x) = x^3/8$
+- $P(1 \leq X \leq 2) = 7/8$
+
+---
+
+### Problem 3 — Finding Endpoints and PDF from CDF
+
+Already solved in Example 11 (Section 7.3). Summary:
+- $b = 3$
+- $f(y) = 2y/9$
+
+---
+
+### Problem 4 — Exponential Distribution (Taxi Problem)
+
+Already solved in Section 8.3. Summary:
+- $P(3 < X < 7) \approx 0.244$
+- CDF: $F(x) = 1 - e^{-x/10}$
+
+---
+
+### In-Class Example — Computation from Tables
+
+**Problem:** Compute $\text{Var}(X)$ and $\sigma$ for:
+
+| Values $x$ | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| pmf $p(x)$ | 1/10 | 2/10 | 4/10 | 2/10 | 1/10 |
+
+**Method 1 — Definition:**
+
+**Step 1:** $\mu = \frac{1}{10} + \frac{4}{10} + \frac{12}{10} + \frac{8}{10} + \frac{5}{10} = \frac{30}{10} = 3$
+
+**Step 2:** Extended table:
+
+| Values $X$ | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| $p(x)$ | 1/10 | 2/10 | 4/10 | 2/10 | 1/10 |
+| $(X-3)^2$ | 4 | 1 | 0 | 1 | 4 |
+
+**Step 3:**
+
+$$\text{Var}(X) = \frac{1 \cdot 4 + 2 \cdot 1 + 4 \cdot 0 + 2 \cdot 1 + 1 \cdot 4}{10} = \frac{12}{10} = 1.2$$
+
+$$\sigma = \sqrt{1.2} \approx 1.095$$
+
+**Method 2 — Shortcut formula:**
+
+| $X$ | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| $p(x)$ | 1/10 | 2/10 | 4/10 | 2/10 | 1/10 |
+| $X^2$ | 1 | 4 | 9 | 16 | 25 |
+
+$$E[X^2] = \frac{1 + 8 + 36 + 32 + 25}{10} = \frac{102}{10} = 10.2$$
+
+$$\text{Var}(X) = 10.2 - 3^2 = 10.2 - 9 = 1.2 \checkmark$$
+
+---
+
+## 12. Complete Distribution Reference Table
+
+### Discrete Distributions
+
+| Distribution | Range | PMF $p(k)$ | Mean | Variance |
+|---|---|---|---|---|
+| $\text{Bernoulli}(p)$ | $\{0,1\}$ | $p^k(1-p)^{1-k}$ | $p$ | $p(1-p)$ |
+| $\text{Binomial}(n,p)$ | $\{0,\ldots,n\}$ | $\binom{n}{k}p^k(1-p)^{n-k}$ | $np$ | $np(1-p)$ |
+| $\text{Geometric}(p)$ | $\{0,1,2,\ldots\}$ | $(1-p)^k p$ | $(1-p)/p$ | $(1-p)/p^2$ |
+| $\text{Uniform}(n)$ | $\{1,\ldots,n\}$ | $1/n$ | $(n+1)/2$ | $(n^2-1)/12$ |
+
+### Continuous Distributions
+
+| Distribution | Range | PDF $f(x)$ | Mean | Variance |
+|---|---|---|---|---|
+| $\text{Uniform}(a,b)$ | $[a,b]$ | $1/(b-a)$ | $(a+b)/2$ | $(b-a)^2/12$ |
+| $\text{Exponential}(\lambda)$ | $[0,\infty)$ | $\lambda e^{-\lambda x}$ | $1/\lambda$ | $1/\lambda^2$ |
+| $\text{Normal}(\mu,\sigma^2)$ | $(-\infty,\infty)$ | $\frac{1}{\sigma\sqrt{2\pi}}e^{-(x-\mu)^2/2\sigma^2}$ | $\mu$ | $\sigma^2$ |
+| $\text{Pareto}(m,\alpha)$ | $[m,\infty)$ | $\alpha m^\alpha / x^{\alpha+1}$ | $\alpha m/(\alpha-1)^*$ | power law |
+
+*Mean exists only for $\alpha > 1$.
+
+### Key Formulas
+
+| Concept | Discrete | Continuous |
+|---|---|---|
+| Expected value | $\sum x_j p(x_j)$ | $\int x f(x)\, dx$ |
+| Variance | $\sum p(x_j)(x_j-\mu)^2$ | $\int (x-\mu)^2 f(x)\, dx$ |
+| Shortcut | $E[X^2] - E[X]^2$ | $E[X^2] - E[X]^2$ |
+| CDF | $F(a) = P(X \leq a) = \sum_{x \leq a} p(x)$ | $F(a) = P(X \leq a) = \int_{-\infty}^a f(x)\, dx$ |
+| PDF from CDF | — | $f(x) = F'(x)$ |
+
+---
+
+## 13. Common Mistakes Reference
+
+| Mistake | Why it's wrong | Correct approach |
+|---|---|---|
+| $\text{Var}(X+X) = \text{Var}(X) + \text{Var}(X)$ | $X$ is not independent of itself | $\text{Var}(2X) = 4\text{Var}(X)$ |
+| $\text{Var}(X+b) = \text{Var}(X) + b$ | Shifting doesn't affect spread | $\text{Var}(aX+b) = a^2\text{Var}(X)$ |
+| $f(x) \leq 1$ always | pdf is density, not probability | pdf can exceed 1; integrate to get probability |
+| $P(X = a) = f(a)$ | For continuous RVs, any point has probability 0 | $P(X = a) = 0$; use $P(c \leq X \leq d) = \int_c^d f(x)\, dx$ |
+| $P(c < X < d) \neq P(c \leq X \leq d)$ | This equality holds for continuous RVs | For continuous distributions, strict/non-strict inequalities give the same probability |
+| Using variance addition for dependent variables | Property 1 requires independence | Only $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y)$ when $X,Y$ independent |
+| Confusing $N(\mu, \sigma^2)$ parameter with R's `pnorm` | R uses $\sigma$, not $\sigma^2$ | Extract $\sigma = \sqrt{\sigma^2}$ before calling `pnorm(x, mu, sigma)` |
+| "Large variance = bad / small variance = good" | Context matters | High variance can be desirable (diversity, exploration) or undesirable (risk, noise) |
+| Forgetting memoryless property of exponential | May incorrectly compute conditional probabilities | $P(X > s+t \mid X > s) = P(X > t)$ — the past doesn't matter |
+| "Var = 0 means the variable is 0" | Var = 0 means the variable is *constant*, not necessarily 0 | $\text{Var}(X) = 0 \iff X = \mu$ (constant at its mean) |
+
+---
+
+## 14. Quick Summary & Formula Sheet
+
+### Variance and Standard Deviation
+
+$$\text{Var}(X) = E[(X-\mu)^2] = E[X^2] - \mu^2, \qquad \sigma = \sqrt{\text{Var}(X)}$$
+
+### Variance Properties
+
+| Property | Formula | Condition |
+|---|---|---|
+| Scale and shift | $\text{Var}(aX+b) = a^2\text{Var}(X)$ | Always |
+| Addition | $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y)$ | $X,Y$ independent only |
+| Shortcut | $\text{Var}(X) = E[X^2] - E[X]^2$ | Always |
+
+### Named Distribution Variances
+
+$$\text{Var}(\text{Ber}(p)) = p(1-p), \quad \text{Var}(\text{Bin}(n,p)) = np(1-p), \quad \text{Var}(\text{Geo}(p)) = \frac{1-p}{p^2}$$
+
+$$\text{Var}(U(a,b)) = \frac{(b-a)^2}{12}, \quad \text{Var}(\text{Exp}(\lambda)) = \frac{1}{\lambda^2}, \quad \text{Var}(N(\mu,\sigma^2)) = \sigma^2$$
+
+### Continuous Distributions: Key Relationships
+
+$$P(c \leq X \leq d) = \int_c^d f(x)\, dx = F(d) - F(c), \qquad f(x) = F'(x)$$
+
+### The 68-95-99 Rule
+
+$$P(\mu - \sigma \leq X \leq \mu + \sigma) \approx 0.68$$
+$$P(\mu - 2\sigma \leq X \leq \mu + 2\sigma) \approx 0.95$$
+$$P(\mu - 3\sigma \leq X \leq \mu + 3\sigma) \approx 0.99$$
+
+### Standardisation
+
+$$X \sim N(\mu,\sigma^2) \implies Z = \frac{X-\mu}{\sigma} \sim N(0,1)$$
+
+### Key Insights
+
+- **Variance measures spread.** Equal means do not imply equal distributions.
+- **Shifting doesn't change variance.** Only scaling does (by $a^2$).
+- **Variance addition requires independence.** Expectation addition does not.
+- **$\sigma/\sqrt{n}$:** Standard deviation of the average of $n$ independent measurements.
+- **PDF $\neq$ probability.** It is a density; integrate to get probability.
+- **$P(X=a) = 0$** for any continuous $X$ and any $a$ — but $X$ can still equal $a$.
+- **Memoryless:** Exponential and Geometric are the only memoryless distributions (continuous and discrete respectively).
+- **Normal distribution:** The most important in statistics. No closed-form CDF; use tables or `pnorm`.
+
+---
+---
+
+## 🔴 Tier 1 — Near Certain (Variance + Normal)
+
+---
+
+**Q1. What is variance? What does it measure? How does it differ from standard deviation?**
+
+"Variance is $\text{Var}(X) = E[(X-\mu)^2]$ — the expected squared distance from the mean. It measures the *spread* of the distribution around its centre. Standard deviation $\sigma = \sqrt{\text{Var}(X)}$ is the square root, restoring the same units as $X$ itself. We use standard deviation for interpretation (e.g., 'values are typically within $\pm 2\sigma$ of the mean') and variance for computation (because it has clean additive properties). In ML: variance quantifies model instability — a high-variance model changes drastically with small data changes."
+
+---
+
+**Q2. What are the three key properties of variance?**
+
+"Property 1 — addition (independence required): if $X \perp Y$, then $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y)$. Property 2 — scaling and shifting: $\text{Var}(aX+b) = a^2\text{Var}(X)$. The constant $b$ drops out entirely because shifting moves the centre but not the spread. Property 3 — shortcut formula: $\text{Var}(X) = E[X^2] - E[X]^2$. This is almost always the fastest way to compute variance by hand."
+
+---
+
+**Q3. Can you add variances $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y)$? What's the catch?**
+
+"Only when $X$ and $Y$ are independent. This is one of the most common exam traps. If $\text{Var}(X) = 3$, then $\text{Var}(X + X) = \text{Var}(2X) = 4 \cdot 3 = 12$, not $3 + 3 = 6$. Compare with expectation: $E[X+Y] = E[X] + E[Y]$ always holds with no independence assumption. Variance is more restrictive. In practice: if you're combining forecasts from the same model on correlated data, variance doesn't add — you need the full covariance structure."
+
+---
+
+**Q4. What is the variance of a Bernoulli($p$) and why does it peak at $p = 0.5$?**
+
+"$\text{Var}(\text{Ber}(p)) = p(1-p)$. At $p=0.5$ this equals $1/4$, the maximum. At $p=0$ or $p=1$ the variable is constant (always 0 or always 1) so variance is 0. Intuitively: a fair coin has maximum unpredictability — you have no information about the next outcome. A heavily biased coin is nearly predictable, so its variance is near 0. This matters in A/B testing: the variance of a conversion rate estimator is $p(1-p)/n$, maximised when $p=0.5$, which is why balanced populations require the most data."
+
+---
+
+**Q5. You average $n$ independent measurements, each with standard deviation $\sigma$. What is the standard deviation of the average?**
+
+"$\sigma_{\bar{X}} = \sigma / \sqrt{n}$. Derivation: $\text{Var}(\bar{X}) = \text{Var}\left(\frac{\sum X_i}{n}\right) = \frac{1}{n^2} \cdot n\sigma^2 = \sigma^2/n$, so $\sigma_{\bar{X}} = \sigma/\sqrt{n}$. This is the mathematical foundation of why more data gives more precise estimates. To halve the standard error you need 4× as much data. It underlies confidence intervals, the Law of Large Numbers, and why ML training loss decreases with batch size."
+
+---
+
+**Q6. What is the normal distribution? State its PDF and the 68-95-99 rule.**
+
+"$X \sim N(\mu, \sigma^2)$ has PDF $f(x) = \frac{1}{\sigma\sqrt{2\pi}} e^{-(x-\mu)^2/2\sigma^2}$, defined on all of $\mathbb{R}$. The 68-95-99 rule: approximately 68% of probability lies within $1\sigma$ of the mean, 95% within $2\sigma$, and 99% within $3\sigma$. In ML: this means roughly 1-in-20 samples fall more than 2 standard deviations from the mean, and only 1-in-100 fall beyond 3. These thresholds are used directly in hypothesis testing and outlier detection."
+
+---
+
+**Q7. How do you standardise a normal random variable? Why does it work?**
+
+"If $X \sim N(\mu, \sigma^2)$ then $Z = (X - \mu)/\sigma \sim N(0,1)$. Proof by change of variables: substitute $z = (x-\mu)/\sigma$ into $f_X(x)\,dx$, the $\sigma$ in the denominator cancels the $\sigma$ from $dx = \sigma\,dz$, leaving exactly $\frac{1}{\sqrt{2\pi}}e^{-z^2/2}dz$. Why it matters: all normal probabilities reduce to the standard normal table. $P(a \leq X \leq b) = \Phi\left(\frac{b-\mu}{\sigma}\right) - \Phi\left(\frac{a-\mu}{\sigma}\right)$. In production ML, feature standardisation (z-scoring) uses exactly this transformation."
+
+---
+
+## 🟠 Tier 2 — High Frequency (Continuous Distributions + PDF/CDF)
+
+---
+
+**Q8. What is a probability density function? Can $f(x) > 1$?**
+
+"The PDF $f(x)$ of a continuous random variable satisfies $P(c \leq X \leq d) = \int_c^d f(x)\,dx$. It must be non-negative and integrate to 1, but there is no upper bound on its value. Yes, $f(x)$ can exceed 1 — for example, $\text{Uniform}(0, 0.1)$ has $f(x) = 10$. The PDF is a *density*, not a probability. Only integrals (areas) must be $\leq 1$. This is the most common conceptual error: people confuse 'high density' with 'high probability'. In an FAANG interview, if you say $f(x) \leq 1$ you will lose points."
+
+---
+
+**Q9. Why is $P(X = a) = 0$ for any continuous random variable? Does this mean $a$ is impossible?**
+
+"$P(X = a) = \int_a^a f(x)\,dx = 0$ — an integral over a zero-width interval is always 0. This does not mean $a$ is impossible. Every continuous random variable must take some value, but the probability of any *specific* value is 0. Only intervals have positive probability. Real-world analogy: the probability that someone's height is exactly 175.000000...cm (to infinite precision) is 0, yet we can still measure heights. In statistics, this means: for continuous distributions, $P(X < a) = P(X \leq a)$ and we can ignore set boundaries."
+
+---
+
+**Q10. What is the CDF? Give its 5 key properties.**
+
+"The CDF is $F(x) = P(X \leq x)$. Five properties: (1) Definition: $F(x) = P(X \leq x)$. (2) Bounded: $0 \leq F(x) \leq 1$. (3) Non-decreasing: $a \leq b \Rightarrow F(a) \leq F(b)$. (4) Limits: $F(x) \to 1$ as $x \to \infty$ and $F(x) \to 0$ as $x \to -\infty$. (5) Interval probability: $P(a \leq X \leq b) = F(b) - F(a)$. For continuous distributions: $F'(x) = f(x)$ — differentiate the CDF to get the PDF, integrate the PDF to get the CDF. If any of these properties fail, the function cannot be a valid CDF."
+
+---
+
+**Q11. Describe the exponential distribution. What makes it unique?**
+
+"$X \sim \text{Exp}(\lambda)$ has PDF $f(x) = \lambda e^{-\lambda x}$ on $[0,\infty)$, CDF $F(x) = 1 - e^{-\lambda x}$, mean $1/\lambda$, variance $1/\lambda^2$. It models waiting time for a memoryless continuous process. The memoryless property is its defining feature: $P(X > s+t \mid X > s) = P(X > t)$. Given you've already waited $s$ minutes, the distribution of additional wait time is identical to the original. This is why radioactive decay, inter-arrival times in Poisson processes, and certain server response times follow the exponential. It is the continuous analogue of the Geometric distribution."
+
+---
+
+**Q12. A server processes requests with exponential inter-arrival times at rate $\lambda = 2$ per second. What is the probability a request takes more than 1 second?**
+
+"$P(X > 1) = 1 - F(1) = e^{-\lambda \cdot 1} = e^{-2} \approx 0.135$. About 13.5% of requests take more than 1 second. For any threshold $t$: $P(X > t) = e^{-\lambda t}$. The right-tail formula is one of the cleanest in probability. By memorylessness, if a request has already been running for 1 second, the probability it needs more than 1 additional second is still $e^{-2} \approx 13.5\%$."
+
+---
+
+## 🟡 Tier 3 — Applied / ML Specific
+
+---
+
+**Q13. What is the bias-variance tradeoff? State it in terms of the variance formula.**
+
+"For a model prediction $\hat{f}(x)$, the expected squared error decomposes as: $E[(y - \hat{f})^2] = \text{Bias}^2 + \text{Var}(\hat{f}) + \sigma^2_\text{noise}$. This uses exactly $E[X^2] - E[X]^2 = \text{Var}(X)$ rearranged. Bias measures systematic error (the model is wrong on average). Variance measures sensitivity to training data (the model fluctuates). Noise is irreducible. Complex models (deep networks) tend to low bias / high variance. Simple models (linear regression) tend to high bias / low variance. Regularisation adds bias to reduce variance."
+
+---
+
+**Q14. You have i.i.d. samples $X_1, \ldots, X_n$ from $N(\mu, \sigma^2)$. What is the distribution of the sample mean $\bar{X}$?**
+
+"Since $X_i \sim N(\mu, \sigma^2)$ and the sum of independent normals is normal: $\sum X_i \sim N(n\mu, n\sigma^2)$. Scaling by $1/n$: $\bar{X} \sim N(\mu, \sigma^2/n)$. The mean of the sample mean equals the population mean (unbiased), and its variance is $\sigma^2/n$ (shrinks with $n$). The standard error is $\sigma/\sqrt{n}$. Standardising: $\frac{\bar{X} - \mu}{\sigma/\sqrt{n}} \sim N(0,1)$. This is the backbone of confidence intervals and hypothesis tests for the mean."
+
+---
+
+**Q15. (Google/Meta) You observe a random variable $X$ with PDF $f(x) = cx^2$ on $[0, 3]$. Find $c$, $E[X]$, and $P(X > 2)$.**
+
+"**Step 1 — find $c$:** $\int_0^3 cx^2\,dx = c \cdot 9 = 1 \Rightarrow c = 1/9$.
+
+**Step 2 — find $E[X]$:** $E[X] = \int_0^3 x \cdot \frac{x^2}{9}\,dx = \frac{1}{9}\int_0^3 x^3\,dx = \frac{1}{9} \cdot \frac{81}{4} = \frac{9}{4} = 2.25$.
+
+**Step 3 — find $P(X > 2)$:** CDF is $F(x) = x^3/27$, so $P(X > 2) = 1 - F(2) = 1 - 8/27 = 19/27 \approx 0.70$."
+
+---
+
+**Q16. How do you transform a continuous random variable? Walk through finding the PDF of $Y = \sqrt{X}$ if $X \sim U(0,1)$.**
+
+"Use the CDF method. Step 1: $F_Y(y) = P(Y \leq y) = P(\sqrt{X} \leq y) = P(X \leq y^2) = F_X(y^2) = y^2$ for $y \in [0,1]$ (since $F_X(x) = x$ for uniform). Step 2: differentiate to get the PDF: $f_Y(y) = 2y$ for $y \in [0,1]$. Interpretation: $Y = \sqrt{X}$ is not uniform — it is weighted toward larger values because the square root compresses the high end of $[0,1]$ more than the low end. In ML, this pattern appears whenever you transform features."
+
+---
+
+## One-Page Crisp Definitions (Class 5)
+
+| Term | 10-word definition |
+|---|---|
+| Variance | Expected squared deviation from the mean |
+| Standard deviation | Square root of variance; same units as $X$ |
+| PDF | Density function; integrate to get probability |
+| CDF | $F(x) = P(X \leq x)$; non-decreasing, 0 to 1 |
+| Uniform($a$,$b$) | Constant density; all values equally likely |
+| Exponential($\lambda$) | Memoryless waiting time; $f(x) = \lambda e^{-\lambda x}$ |
+| Normal($\mu$, $\sigma^2$) | Bell curve; completely described by mean and variance |
+| Standardisation | $Z = (X-\mu)/\sigma$ converts any normal to $N(0,1)$ |
+| Memoryless | Past wait gives zero information about future wait |
+| $68$-$95$-$99$ rule | $1\sigma/2\sigma/3\sigma$ capture $68\%/95\%/99\%$ |
+
+> The single most tested Class 5 concept across FAANG is: **"Can $f(x) > 1$?"** (yes) and **"What is $P(X=a)$ for continuous $X$?"** (always 0). Nail these cold.

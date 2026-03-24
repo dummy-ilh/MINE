@@ -1,0 +1,61 @@
+import pandas as pd
+import re
+
+def parse_email_thread(email_text):
+    emails = re.split(r'(?=From: )', email_text)
+    parsed_emails = []
+    
+    for i, email in enumerate(emails):
+        email_data = {
+            'From': None, 'To': None, 'Sent': None,
+            'Greetings': None, 'Signatures': None, 'Disclaimer': None
+        }
+        
+        from_match = re.search(r'From: (.*?)\n', email)
+        to_match = re.search(r'To: (.*?)\n', email)
+        sent_match = re.search(r'Sent: (.*?)\n', email)
+        
+        if from_match:
+            email_data['From'] = from_match.group(1).strip()
+        if to_match:
+            email_data['To'] = to_match.group(1).strip()
+        if sent_match:
+            email_data['Sent'] = sent_match.group(1).strip()
+        
+        greeting_match = re.search(r'^(Dear\s.*?),', email, re.MULTILINE)
+        if greeting_match:
+            email_data['Greetings'] = greeting_match.group(1).strip()
+        
+        signature_match = re.search(r'(Best regards,|Thanks,|Sincerely,)([\s\S]*?)$', email, re.MULTILINE)
+        if signature_match:
+            email_data['Signatures'] = signature_match.group(0).strip()
+        
+        post_signature_lines = email.split(signature_match.group(0))[-1].strip().split('\n') if signature_match else []
+        if len(post_signature_lines) >= 2:
+            email_data['Signatures'] += f"\n{post_signature_lines[0].strip()}\n{post_signature_lines[1].strip()}"
+        
+        disclaimer_match = re.search(r'(Disclaimer:|This message contains confidential information[\s\S]*)$', email, re.MULTILINE)
+        if disclaimer_match:
+            email_data['Disclaimer'] = disclaimer_match.group(0).strip()
+        
+        parsed_emails.append(email_data)
+    
+    return parsed_emails
+
+def fill_missing_from(df):
+    for idx, row in df.iterrows():
+        if pd.isna(row['From']):
+            thread_id = row['Thread ID']
+            message_id = row['Message ID']
+            next_msg = df[(df['Thread ID'] == thread_id) & (df['Message ID'] > message_id)].sort_values('Message ID').head(1)
+            if not next_msg.empty:
+                df.at[idx, 'From'] = next_msg['To'].values[0]
+    return df
+
+new_df['parsed_emails'] = new_df['cntent_cleanedup'].apply(parse_email_thread)
+new_df.drop(columns=['cntent_cleanedup'], inplace=True)
+new_df_exploded = new_df.explode('parsed_emails')
+new_df_exploded = pd.concat([new_df_exploded.drop(columns=['parsed_emails']), new_df_exploded['parsed_emails'].apply(pd.Series)], axis=1)
+new_df_exploded = fill_missing_from(new_df_exploded)
+
+print(new_df_exploded)

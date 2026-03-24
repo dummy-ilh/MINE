@@ -1,0 +1,114 @@
+import pandas as pd
+import numpy as np
+import torch
+import time
+from torch.utils.data import DataLoader, RandomSampler, TensorDataset
+from transformers import DistilBertForSequenceClassification, DistilBertTokenizer, AdamW, get_linear_schedule_with_warmup
+import torch.nn as nn
+
+# Load and preprocess your dataset
+# ...
+
+num_labels = len(df_train['label'].unique())  # Number of unique labels
+
+# Initialize the DistilBERT model and tokenizer
+model_name = "distilbert-base-uncased"
+model = DistilBertForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
+tokenizer = DistilBertTokenizer.from_pretrained(model_name)
+
+# Tokenize and preprocess your training data
+# ...
+
+train_data = TensorDataset(input_ids, attention_masks, labels)
+train_sampler = RandomSampler(train_data)
+batch_size = 32  # Set your desired batch size
+train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=batch_size)
+
+# Set up optimizer and learning rate scheduler
+learning_rate = 5e-5
+epsilon = 1e-8
+num_warmup_steps = 0
+num_training_steps = len(train_dataloader) * num_epochs
+
+optimizer = AdamW(model.parameters(), lr=learning_rate, eps=epsilon)
+scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps)
+
+# Specify loss function
+loss_fn = nn.CrossEntropyLoss()
+
+# Training loop
+def train(model, train_dataloader, val_dataloader=None, epochs=4, evaluation=False):
+    # ...
+    for epoch_i in range(epochs):
+        # ...
+        for step, batch in enumerate(train_dataloader):
+            # ...
+            logits = model(input_ids=b_input_ids, attention_mask=b_attn_mask)
+
+            # ...
+            loss = loss_fn(logits.logits, b_labels)
+            # ...
+        
+        # ...
+        avg_train_loss = total_loss / len(train_dataloader)
+
+        # ...
+        if evaluation == True:
+            # ...
+            val_loss, val_accuracy = evaluate(model, val_dataloader)
+            # ...
+
+# Evaluation function
+def evaluate(model, val_dataloader):
+    # ...
+    for batch in val_dataloader:
+        # ...
+        with torch.no_grad():
+            logits = model(input_ids=b_input_ids, attention_mask=b_attn_mask)
+
+        # ...
+        loss = loss_fn(logits.logits, b_labels)
+        # ...
+    
+    # ...
+
+# Initialize model, optimizer, and scheduler
+def initialize_model(epochs=4):
+    # ...
+    model = DistilBertForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
+    # ...
+    optimizer = AdamW(model.parameters(), lr=learning_rate, eps=epsilon)
+    # ...
+    return model, optimizer, scheduler
+
+# Set seed for reproducibility
+set_seed(42)
+
+# Initialize DistilBERT model, optimizer, and scheduler
+distilbert_classifier, optimizer, scheduler = initialize_model(epochs=2)
+
+# Train DistilBERT model
+train(distilbert_classifier, train_dataloader, val_dataloader, epochs=2, evaluation=True)
+
+# Predict using the trained DistilBERT model
+def distilbert_predict(model, test_dataloader):
+    model.eval()
+    all_logits = []
+
+    for batch in test_dataloader:
+        b_input_ids, b_attn_mask = tuple(t.to(device) for t in batch)[:2]
+
+        with torch.no_grad():
+            logits = model(input_ids=b_input_ids, attention_mask=b_attn_mask)
+        all_logits.append(logits)
+
+    all_logits = torch.cat(all_logits, dim=0)
+    probs = torch.softmax(all_logits, dim=1).cpu().numpy()
+
+    return probs
+
+# Compute predicted probabilities using DistilBERT model
+probs_distilbert = distilbert_predict(distilbert_classifier, val_dataloader)
+
+# Evaluate the DistilBERT classifier
+evaluate_roc(probs_distilbert, y_val)

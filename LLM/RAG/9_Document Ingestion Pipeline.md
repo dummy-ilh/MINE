@@ -1,0 +1,323 @@
+
+
+> **Day 9 = Real Document Ingestion Pipeline**
+
+If ingestion is sloppy, retrieval quality collapses no matter how advanced your model is.
+
+Most RAG failures start here.
+
+---
+
+# 📘 Day 9 — Document Ingestion Pipeline (Production Thinking)
+
+---
+
+# 1️⃣ What “Ingestion” Actually Means
+
+In production, ingestion is not:
+
+> “Load PDF → split → embed”
+
+It is:
+
+```
+Raw Documents
+   ↓
+Parsing
+   ↓
+Cleaning
+   ↓
+Normalization
+   ↓
+Deduplication
+   ↓
+Chunking
+   ↓
+Metadata Attachment
+   ↓
+Embedding
+   ↓
+Indexing
+```
+
+Every stage matters.
+
+---
+
+# 2️⃣ Step 1 — Parsing Documents
+
+### Different sources behave differently:
+
+| Source    | Problems                      |
+| --------- | ----------------------------- |
+| PDFs      | Broken layout, missing spaces |
+| HTML      | Navigation junk               |
+| Markdown  | Code blocks                   |
+| Word Docs | Formatting noise              |
+| Tables    | Structure loss                |
+
+You must use format-aware parsers.
+
+Example (PDF with PyMuPDF):
+
+```python
+import fitz  # PyMuPDF
+
+def extract_pdf_text(path):
+    doc = fitz.open(path)
+    text = ""
+    for page in doc:
+        text += page.get_text()
+    return text
+```
+
+But this is naive — layout is often corrupted.
+
+Better:
+
+* Extract blocks
+* Preserve headings
+* Remove footers/headers
+
+---
+
+# 3️⃣ Cleaning & Normalization
+
+Raw text often contains:
+
+* Page numbers
+* Repeated headers
+* Navigation links
+* Extra whitespace
+* Encoding artifacts
+
+Basic cleaning:
+
+```python
+import re
+
+def clean_text(text):
+    text = re.sub(r'\n+', '\n', text)
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+```
+
+Production cleaning includes:
+
+* Removing boilerplate
+* Removing duplicate paragraphs
+* Language detection
+* Fixing encoding
+
+---
+
+# 4️⃣ Deduplication (Critical in Enterprise Systems)
+
+Duplicate content causes:
+
+* Embedding waste
+* Retrieval bias
+* Redundant context
+
+Basic approach:
+
+* Hash each chunk
+* Drop duplicates
+
+```python
+import hashlib
+
+def hash_text(text):
+    return hashlib.md5(text.encode()).hexdigest()
+```
+
+Store seen hashes before indexing.
+
+---
+
+# 5️⃣ Proper Chunking (Upgrade from Day 3)
+
+Now we implement section-aware chunking.
+
+Example:
+
+```python
+from tiktoken import get_encoding
+
+encoding = get_encoding("cl100k_base")
+
+def chunk_text(text, max_tokens=500, overlap=100):
+    tokens = encoding.encode(text)
+    chunks = []
+
+    start = 0
+    while start < len(tokens):
+        end = start + max_tokens
+        chunk = tokens[start:end]
+        chunks.append(encoding.decode(chunk))
+        start += max_tokens - overlap
+
+    return chunks
+```
+
+This is token-aware chunking.
+
+Better systems:
+
+* Detect headings
+* Chunk per section
+* Preserve titles in metadata
+
+---
+
+# 6️⃣ Metadata Attachment (Non-Negotiable)
+
+Each chunk should store:
+
+```python
+{
+    "doc_id": "refund_policy_2024",
+    "source": "Refund Policy PDF",
+    "section": "Late Refunds",
+    "page": 4,
+    "timestamp": "2024-01-12",
+    "access_level": "public"
+}
+```
+
+Why metadata matters:
+
+* Filtering (country, version)
+* Security (role-based access)
+* Re-ranking
+* Debugging
+
+Never index chunks without metadata.
+
+---
+
+# 7️⃣ Pipeline Example (Putting It Together)
+
+```python
+def ingest_document(path):
+    raw = extract_pdf_text(path)
+    cleaned = clean_text(raw)
+    chunks = chunk_text(cleaned)
+
+    records = []
+    for i, chunk in enumerate(chunks):
+        record = {
+            "id": f"{path}_{i}",
+            "text": chunk,
+            "metadata": {
+                "source": path,
+                "chunk_id": i
+            }
+        }
+        records.append(record)
+
+    return records
+```
+
+Then:
+
+* Embed `record["text"]`
+* Store embedding + metadata in vector DB
+
+---
+
+# 8️⃣ Common Ingestion Failures
+
+### ❌ Broken PDFs
+
+Text order scrambled → embeddings useless.
+
+Fix:
+
+* Layout-aware parsing
+* Use tools like unstructured.io
+
+---
+
+### ❌ Tables Flattened
+
+Numbers lose alignment.
+
+Fix:
+
+* Convert tables to structured text
+* Or store in SQL separately
+
+---
+
+### ❌ Huge Documents
+
+Single chunk per 10-page doc.
+
+Fix:
+
+* Section-level splitting
+
+---
+
+### ❌ Version Conflicts
+
+Old policies retrieved instead of new ones.
+
+Fix:
+
+* Version metadata
+* Filter by timestamp
+
+---
+
+# 9️⃣ Production Design Considerations
+
+## 🔹 Incremental indexing
+
+When a document updates:
+
+* Re-embed only changed chunks
+* Update index
+* Maintain version history
+
+## 🔹 Sharding by namespace
+
+Separate:
+
+* HR docs
+* Legal docs
+* Engineering docs
+
+Improves recall and security.
+
+---
+
+# 🔟 Interview-Level Answer
+
+If asked:
+
+> “What are the key steps in building a robust ingestion pipeline for RAG?”
+
+Strong answer:
+
+> “Parsing format-aware documents, cleaning and normalizing text, deduplicating content, applying semantically coherent chunking with overlap, attaching rich metadata, and incrementally indexing embeddings while preserving version control.”
+
+That signals production maturity.
+
+---
+
+# 🧠 Mental Model
+
+Ingestion determines what knowledge exists in your semantic universe.
+
+If ingestion is messy:
+
+Retrieval precision drops
+Hallucination risk rises
+Debugging becomes impossible
+
+Most RAG systems fail before retrieval even starts.
+
+---
+
