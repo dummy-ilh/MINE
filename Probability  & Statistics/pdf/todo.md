@@ -1,6 +1,5 @@
 | Category | Book | Rigor (1–5) | ML Relevance (1–5) | Difficulty (1–5) | Notes / Best Use |
 |----------|------|------------|--------------------|------------------|------------------|
-| Beginner | Naked Statistics (Wheelan) | 1 | 2 | 1 | Pure intuition, no math |
 | Beginner | Statistics (Freedman, Pisani, Purves) | 2 | 3 | 2 | Concept-driven intro, minimal calculus |
 | Beginner | Think Stats (Allen Downey) | 2 | 4 | 2 | Python + intuition for programmers |
 | Beginner | Think Bayes (Allen Downey) | 2 | 4 | 2 | Bayesian intro with code |
