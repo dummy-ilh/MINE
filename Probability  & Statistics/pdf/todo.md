@@ -12,16 +12,10 @@
 | Statistics | All of Statistics (Wasserman) | 5 | 5 | 5 | Compact ML-focused bible |
 | Statistics | Probability & Statistics for Engg (Devore) | 4 | 4 | 3 | Strong undergrad foundation |
 | Statistical Inference | Statistical Inference (Casella & Berger) | 5 | 5 | 5 | Gold standard theory |
-| Machine Learning | ISLR (James et al.) | 2 | 5 | 2 | Best first ML book |
-| Machine Learning | ESL (Hastie et al.) | 5 | 5 | 5 | Advanced ML theory |
-| Machine Learning | Pattern Recognition & ML (Bishop) | 5 | 5 | 5 | Bayesian ML bible |
-| Machine Learning | ML: Probabilistic Perspective (Murphy) | 5 | 5 | 5 | Most complete ML reference |
 | Data Science | Practical Statistics for Data Scientists | 2 | 5 | 2 | Industry-focused |
 | Data Science | Statistics for Data Scientists (Fernandez-Granda) | 3 | 5 | 3 | Modern DS perspective |
-| Bayesian | Bayesian Statistics the Fun Way (Will Kurt) | 2 | 4 | 2 | Easy Bayesian intro |
-| Bayesian | Bayesian Data Analysis (Gelman) | 5 | 5 | 5 | Bayesian gold standard |
 | Bayesian | Probability Theory: Logic of Science (Jaynes) | 5 | 5 | 5 | Philosophical + deep Bayesian |
 | Math Foundations | Mathematics for Computer Science (Lehman) | 4 | 4 | 3 | Discrete math + proofs |
 | Theory ML | Understanding Machine Learning (Shalev-Shwartz) | 5 | 5 | 5 | Learning theory |
-| Info Theory | Elements of Information Theory (Cover & Thomas) | 5 | 5 | 5 | Entropy, KL, core ML |
 | Interview Prep | Ace the Data Science Interview | 1 | 4 | 1 | Interview patterns |
+https://stat110.hsites.harvard.edu/
