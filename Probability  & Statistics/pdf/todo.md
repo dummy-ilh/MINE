@@ -1,7 +1,6 @@
 | Category | Book | Rigor (1–5) | ML Relevance (1–5) | Difficulty (1–5) | Notes / Best Use |
 |----------|------|------------|--------------------|------------------|------------------|
 | Beginner | Statistics (Freedman, Pisani, Purves) | 2 | 3 | 2 | Concept-driven intro, minimal calculus |
-| Beginner | Think Stats (Allen Downey) | 2 | 4 | 2 | Python + intuition for programmers |
 | Beginner | Think Bayes (Allen Downey) | 2 | 4 | 2 | Bayesian intro with code |
 | Probability | Introduction to Probability (Blitzstein & Hwang) | 4 | 5 | 3 | Best intuitive + rigorous start |
 | Probability | A First Course in Probability (Ross) | 3 | 4 | 3 | Clean fundamentals |
@@ -23,8 +22,6 @@
 | Bayesian | Bayesian Data Analysis (Gelman) | 5 | 5 | 5 | Bayesian gold standard |
 | Bayesian | Probability Theory: Logic of Science (Jaynes) | 5 | 5 | 5 | Philosophical + deep Bayesian |
 | Math Foundations | Mathematics for Computer Science (Lehman) | 4 | 4 | 3 | Discrete math + proofs |
-| Linear Algebra | Linear Algebra (Gilbert Strang) | 4 | 5 | 3 | Core ML math |
-| Optimization | Convex Optimization (Boyd) | 5 | 5 | 5 | Optimization for ML |
 | Theory ML | Understanding Machine Learning (Shalev-Shwartz) | 5 | 5 | 5 | Learning theory |
 | Info Theory | Elements of Information Theory (Cover & Thomas) | 5 | 5 | 5 | Entropy, KL, core ML |
 | Interview Prep | Ace the Data Science Interview | 1 | 4 | 1 | Interview patterns |
