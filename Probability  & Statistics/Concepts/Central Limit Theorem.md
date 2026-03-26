@@ -1,4 +1,4 @@
-# Central Limit Theorem — Complete Notes & FAANG Q&A
+# Central Limit Theorem 
 
 ---
 
@@ -156,4 +156,7 @@ Mini-batch gradient descent averages gradients — CLT explains why those batch 
 
 ---
 
-*Tags: Statistics · Probability · CLT · Sampling · A/B Testing · Inference · FAANG Prep*
+![clt1](./images/clt1.png)
+![clt2](./images/clt2.png)
+![clt3](./images/clt3.png)
+![clt4](./images/clt4.png)
