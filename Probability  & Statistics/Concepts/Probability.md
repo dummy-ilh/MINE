@@ -1,4 +1,4 @@
-# Chapter 2: Probability
+#  Probability
 ### Applied Statistics and Probability for Engineers — Montgomery & Runger (2018)
 
 ---
@@ -14,18 +14,7 @@
 - 2.8 Bayes' Theorem
 - 2.9 Random Variables
 
----
 
-## Motivating Example
-
-An athletic woman in her 20s arrives at an emergency department complaining of dizziness after running in hot weather. An ECG is used to check for a heart attack. The test has:
-- **False-positive rate = 0.1** (probability of an abnormal result when the patient is normal)
-- **False-negative rate = 0.1** (probability of a normal result when the patient is abnormal)
-- **Prior probability of a heart attack for this patient = 0.001**
-
-Despite the abnormal test, the probability of a heart attack given the ECG result is still **less than 0.01**.
-
-> The key insight: properly combining probabilities (using Bayes' theorem) can yield counterintuitive but correct answers. These methods apply equally to medical tests and tests of engineered products.
 
 ---
 
@@ -33,24 +22,8 @@ Despite the abnormal test, the probability of a heart attack given the ECG resul
 
 ### 2.1.1 Random Experiments
 
-When we measure current in a copper wire, the measurement may differ slightly each time due to uncontrolled variables (temperature, gauge variations, impurities, current source drifts). This experiment has a **random component**.
-
 > **Definition — Random Experiment:**
 > An experiment that can result in different outcomes, even though it is repeated in the same manner every time, is called a **random experiment**.
-
-- In some cases, random variation is small enough to be ignored.
-- In other cases, variation is large enough to affect conclusions.
-- The goal is to **understand, quantify, and model** the type of variation encountered.
-
-**Modeling approach:**
-1. Develop a mathematical model (abstraction) of the physical system — need not be perfect (e.g., Newton's laws aren't perfect but are useful).
-2. Validate the model with measurements.
-3. Use the model to predict and describe system behavior.
-
-Two types of models discussed in this text:
-- **Figure 2.1:** System components (controlled inputs → model → output)
-- **Figure 2.2:** Model incorporating uncontrollable inputs (noise) alongside controllable inputs — same controllable input settings do not produce identical outputs.
-
 ---
 
 ### 2.1.2 Sample Spaces
@@ -58,7 +31,6 @@ Two types of models discussed in this text:
 > **Definition — Sample Space:**
 > The set of all possible outcomes of a random experiment is called the **sample space** of the experiment, denoted as **S**.
 
-A sample space is often defined based on the objectives of the analysis.
 
 #### Example 2.1 — Camera Flash
 
@@ -671,4 +643,3 @@ A measurement like current in a copper wire can assume any value in an interval 
 
 ---
 
-*End of Chapter 2 Notes*
