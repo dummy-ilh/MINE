@@ -309,3 +309,6 @@ p-values validate whether changes to ranking algorithms produce significantly be
 >
 > Companies like Airbnb, Booking.com, and VWO have moved toward Bayesian A/B testing frameworks for these reasons.
 
+![clt1](./images/p1.png)
+![clt2](./images/p2.jpg)
+![clt3](./images/p3.jpg)
