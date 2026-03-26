@@ -604,4 +604,7 @@ Are you comparing 2 independent groups, small n, unknown σ?
 Are you comparing the same subjects measured twice?
   → Paired t-test
 ```
-
+![1](./images/t1.png)
+![1](./images/t2.png)
+![1](./images/t3.png)
+![1](./images/t4.jpg)
