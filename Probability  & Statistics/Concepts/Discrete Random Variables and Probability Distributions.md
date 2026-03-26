@@ -79,7 +79,7 @@ The probability distribution of X is specified by these values along with the pr
 For Example 3.3: f(0) = 0.6561, f(1) = 0.2916, f(2) = 0.0486, f(3) = 0.0036, f(4) = 0.0001. Check: probabilities sum to 1. ✓
 
 **Analogy:** Just as loading on a long thin beam is described by a function specifying mass at each discrete point, a discrete random variable's distribution is described by a PMF specifying probability at each possible value.
-![1](./images/3.1.png)
+![1](./images/3.1.PNG)
 ---
 
 ### Example  — Wafer Contamination (PMF with Infinite Range)
