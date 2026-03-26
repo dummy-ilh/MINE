@@ -1,5 +1,4 @@
-# Chapter 3: Discrete Random Variables and Probability Distributions
-### Applied Statistics and Probability for Engineers — Montgomery & Runger (2018)
+#  Discrete Random Variables and Probability Distribution
 
 ---
 
@@ -15,22 +14,7 @@
 
 ---
 
-## Motivating Example — RAID Systems
-
-A **Redundant Array of Independent Disks (RAID)** uses multiple physical disk drives as one logical unit. Data protection strategies include:
-- **Mirroring:** Copies written simultaneously to multiple drives — high redundancy, less storage capacity.
-- **Striping:** Data distributed across disks — better performance, vulnerable to single disk failure.
-- **Parity data:** Intermediate design; source data recoverable even with disk failure. RAID 5 recovers if one disk fails; RAID 6 recovers if two disks fail.
-
-Disk failures are assumed to be **independent with constant probability**. The **number of failed drives** can be modeled as a discrete random variable. Managing risk of data loss in such systems is one application of the topics in this chapter.
-
----
-
 ## 3.1 Probability Distributions and Probability Mass Functions
-
-Many physical systems can be modeled by the same or similar random experiments. In this chapter, several random experiments and **discrete random variables** that frequently arise in applications are analyzed.
-
-Random variables are so important that we often ignore the original sample space and focus on the **probability distribution** of the random variable.
 
 > **Definition — Probability Distribution:**
 > The **probability distribution** of a random variable X is a description of the probabilities associated with the possible values of X.
@@ -41,11 +25,11 @@ For a discrete random variable, the distribution is specified by:
 
 ---
 
-### Example 3.1 — Flash Recharge Time
+### Example — Flash Recharge Time
 
-Three cell-phone cameras are tested. The probability that a camera meets the recharge specification is **0.8**, and cameras perform independently. The random variable X = number of cameras that pass.
+Three cell-phone cameras are tested. The probability that a camera meets the recharge specification is **0.8**, and cameras perform independently. The random variable X = number of cameras that pass. 
 
-**Table 3.1 — Camera Flash Tests:**
+**Table  — Camera Flash Tests:**
 
 | Camera 1 | Camera 2 | Camera 3 | Probability | X |
 |----------|----------|----------|-------------|---|
@@ -62,17 +46,11 @@ For example, P(ppf) = (0.8)(0.8)(0.2) = 0.128.
 
 In Example 3.1, we might summarize the experiment in terms of the three possible values of X: {0, 1, 2}. This simplifies description and analysis.
 
----
 
-### Example 3.2 — Particles of Contamination
-
-Define X = number of contamination particles on a wafer in semiconductor manufacturing. Wafers possess many characteristics, but X summarizes only the number of particles. Possible values: integers from 0 up to some large maximum. If the maximum is large, assume range of X = non-negative integers {0, 1, 2, ...}.
-
-Note: More than one random variable can be defined for an experiment. We might also define Y = number of chips from a wafer that fail the final test.
 
 ---
 
-### Example 3.3 — Digital Channel
+### Example  — Digital Channel
 
 Let X = number of bits received in error in the next four bits transmitted through a digital communication channel. Possible values: {0, 1, 2, 3, 4}.
 
@@ -101,10 +79,10 @@ The probability distribution of X is specified by these values along with the pr
 For Example 3.3: f(0) = 0.6561, f(1) = 0.2916, f(2) = 0.0486, f(3) = 0.0036, f(4) = 0.0001. Check: probabilities sum to 1. ✓
 
 **Analogy:** Just as loading on a long thin beam is described by a function specifying mass at each discrete point, a discrete random variable's distribution is described by a PMF specifying probability at each possible value.
-
+![1](./images/3.1.png)
 ---
 
-### Example 3.4 — Wafer Contamination (PMF with Infinite Range)
+### Example  — Wafer Contamination (PMF with Infinite Range)
 
 Let X = number of semiconductor wafers that need to be analyzed to detect a large particle of contamination. Probability a wafer contains a large particle = 0.01; wafers are independent.
 
@@ -150,10 +128,11 @@ i.e., the PMF at xᵢ equals the **jump** in F at xᵢ.
 
 ---
 
-### Example 3.5 — Digital Channel (CDF)
+### Example  — Digital Channel (CDF)
 
 From Example 3.3, find P(X ≤ 3):
-
+The event that {X ≤ 3} is the union of the events
+{X = 0}, {X = 1}, {X = 2}, and {X = 3}
 $$P(X \leq 3) = P(X=0) + P(X=1) + P(X=2) + P(X=3)$$
 $$= 0.6561 + 0.2916 + 0.0486 + 0.0036 = 0.9999$$
 
@@ -161,7 +140,12 @@ Also: P(X = 3) = P(X ≤ 3) − P(X ≤ 2) = 0.9999 − 0.9963 = 0.0036
 
 The full CDF for this example is:
 
-$$F(x) = \begin{cases} 0 & x < 0 \\ 0.6561 & 0 \leq x < 1 \\ 0.9477 & 1 \leq x < 2 \\ 0.9963 & 2 \leq x < 3 \\ 0.9999 & 3 \leq x < 4 \\ 1 & 4 \leq x \end{cases}$$
+$$F(x) = \begin{cases} 0 & x < 0 \\ 
+0.6561 & 0 \leq x < 1 \\ 
+0.9477 & 1 \leq x < 2 \\ 
+0.9963 & 2 \leq x < 3 \\ 
+0.9999 & 3 \leq x < 4 \\ 
+1 & 4 \leq x \end{cases}$$
 
 For example: F(1.5) = P(X ≤ 1.5) = P(X = 0) + P(X = 1) = 0.6561 + 0.2916 = 0.9477.
 
