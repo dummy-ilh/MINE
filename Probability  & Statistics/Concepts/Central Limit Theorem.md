@@ -156,7 +156,7 @@ Mini-batch gradient descent averages gradients — CLT explains why those batch 
 
 ---
 
-![clt1](./images/clt1.png)
-![clt2](./images/clt2.png)
+![clt1](./images/clt1.jpg)
+![clt2](./images/clt2.jpg)
 ![clt3](./images/clt3.png)
 ![clt4](./images/clt4.png)
