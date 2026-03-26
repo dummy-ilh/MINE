@@ -155,7 +155,10 @@ For example: F(1.5) = P(X ≤ 1.5) = P(X = 0) + P(X = 1) = 0.6561 + 0.2916 = 0.9
 
 Given the cumulative distribution function:
 
-$$F(x) = \begin{cases} 0 & x < -2 \\ 0.2 & -2 \leq x < 0 \\ 0.7 & 0 \leq x < 2 \\ 1 & 2 \leq x \end{cases}$$
+$$F(x) = \begin{cases} 0 & x < -2 \\ 
+0.2 & -2 \leq x < 0 \\ 
+0.7 & 0 \leq x < 2 \\ 
+1 & 2 \leq x \end{cases}$$
 
 The only points with nonzero probability are −2, 0, and 2 (the jump points). The PMF at each point = jump size:
 
@@ -191,7 +194,7 @@ $$= \sum_x x^2 f(x) - 2\mu^2 + \mu^2 = \sum_x x^2 f(x) - \mu^2$$
 
 ---
 
-### Example 3.7 — Digital Channel (Mean and Variance)
+### Example  — Digital Channel (Mean and Variance)
 
 From Example 3.3, X = number of bits in error in next four bits transmitted.
 
@@ -217,7 +220,7 @@ $$V(X) = \sigma^2 = \sum_{i=1}^{5} f(x_i)(x_i - 0.4)^2 = 0.36$$
 
 ---
 
-### Example 3.8 — Marketing (Comparing Two Designs)
+### Example  — Marketing (Comparing Two Designs)
 
 Two new product designs are compared on the basis of revenue potential.
 
@@ -248,7 +251,7 @@ The standard deviation σ is large relative to μ, indicating high variability i
 - E(aX + b) = aE(X) + b
 - V(aX + b) = a²V(X)
 
-#### Example 3.9 — Digital Channel (Function of RV)
+#### Example  — Digital Channel (Function of RV)
 
 From Example 3.7, X = bits in error. Find E[X²]:
 
@@ -257,7 +260,7 @@ $$= 0 + 0.2916 + 0.1944 + 0.0324 + 0.0016 = 0.52$$
 
 Note: E[X²] = 0.52 ≠ [E(X)]² = (0.4)² = 0.16.
 
-**Continuing Example 3.8:** Suppose revenue for Design B is increased by 10%. New revenue U = h(Y) = 1.1Y.
+**Continuing Example :** Suppose revenue for Design B is increased by 10%. New revenue U = h(Y) = 1.1Y.
 
 $$E(U) = 1.1E(Y) = 1.1(3.5) = 3.85 \text{ million dollars}$$
 $$V(U) = 1.1^2 V(Y) = 1.21(5.25) = 6.35 \text{ million dollars squared}$$
