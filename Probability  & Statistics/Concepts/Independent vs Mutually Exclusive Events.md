@@ -314,5 +314,4 @@ P(A)P(B)=0.6 \times 0.7 = 0.42
 
 ---
 
-If you want next level:
- I can give you **conditional probability + Bayes + independence traps (FAANG level)**
+
