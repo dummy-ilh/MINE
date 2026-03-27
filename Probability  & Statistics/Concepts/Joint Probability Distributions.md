@@ -52,12 +52,52 @@ $$P[(X, Y) \in R] = \sum_{(x,y) \in R} f_{XY}(x, y)$$
 
 ---
 
-### Example 5.1 — Semiconductor Wafers
+# Joint Probability Table
 
-**Problem:** A wafer is inspected. X = number of contamination particles in a small area, Y = number in a second area. Given joint PMF table. Find $P(X = 1, Y = 1)$ and $P(X \leq 1, Y \leq 1)$.
+## Variables
+- **X** = Number of Bars of Signal Strength  
+- **Y** = Response Time (nearest second)
 
-**Method:** Read directly from the table and sum over the appropriate region:
-$$P(X \leq 1, Y \leq 1) = f(0,0) + f(0,1) + f(1,0) + f(1,1)$$
+---
+
+## Joint Probability Distribution (X, Y)
+
+| Y \ X | 1    | 2    | 3    | Marginal P(Y) |
+|------|------|------|------|---------------|
+| 4    | 0.15 | 0.10 | 0.05 | 0.30          |
+| 3    | 0.02 | 0.10 | 0.05 | 0.17          |
+| 2    | 0.02 | 0.03 | 0.20 | 0.25          |
+| 1    | 0.01 | 0.02 | 0.25 | 0.28          |
+
+---
+
+## Marginal Probability Distribution of X
+
+| X | P(X) |
+|---|------|
+| 1 | 0.20 |
+| 2 | 0.25 |
+| 3 | 0.55 |
+
+---
+
+## Example Calculation
+
+### Finding \( f_X(3) = P(X = 3) \)
+
+\[
+P(X = 3) = P(X = 3, Y = 1) + P(X = 3, Y = 2) + P(X = 3, Y = 3) + P(X = 3, Y = 4)
+\]
+
+\[
+= 0.25 + 0.20 + 0.05 + 0.05 = 0.55
+\]
+
+---
+
+## Key Insight
+- Marginal probability is obtained by **summing over the other variable**.
+- Here, to find \( P(X = 3) \), we sum across all values of **Y**.
 
 ---
 
