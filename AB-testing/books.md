@@ -33,16 +33,10 @@
 
 ---
 
-### 💡 Interview Checklist (What they are looking for)
+### 💡  Checklist 
 * [ ] **The "Peeking" Problem:** Do you know why checking results early ruins the p-value?
 * [ ] **Network Effects:** How do you test a feature on a social network where users interact?
 * [ ] **Guardrail Metrics:** If "Time Spent" goes up but "Customer Support Tickets" also double, is it a win?
 * [ ] **Twyman's Law:** "Any statistic that looks interesting or different is usually wrong."
 
-tep 1
 
-👉 Trustworthy Online Controlled Experiments
-
-Step 2
-
-👉 Statistical Methods in Online A/B Testing
