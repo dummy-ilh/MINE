@@ -3,7 +3,7 @@
 
 ## Chapter Overview (Plain-English Explanation)
 
-Chapters 3 and 4 dealt with **one random variable at a time**. But in engineering and science, measurements rarely come alone. The diameter of a shaft AND its length are both random. The current in a circuit AND the voltage across a resistor vary together. Chapter 5 extends probability theory to handle **two or more random variables simultaneously**.
+we dealt with **one random variable at a time**. But in engineering and science, measurements rarely come alone. The diameter of a shaft AND its length are both random. The current in a circuit AND the voltage across a resistor vary together. here we extend probability theory to handle **two or more random variables simultaneously**.
 
 The central new idea is the **joint distribution** — describing probabilities for combinations of values. From the joint distribution you can always recover the individual ("marginal") distributions, and you can quantify the **relationship** between variables using covariance and correlation.
 
@@ -33,32 +33,28 @@ These results are the mathematical foundation for all statistical inference meth
 
 ## 5.1 Joint Probability Distributions
 
-### Motivation
 
-In many experiments, two or more random variables are measured simultaneously. We need a way to describe the probability of **joint events** like $P(X = 2, Y = 5)$ or $P(X \leq 3, Y > 10)$.
-
----
 
 ### 5.1.1 Joint Probability Mass Function (Discrete Case)
 
-**Definition:** The **joint probability mass function** (joint PMF) of the discrete random variables X and Y is a function $f_{XY}(x, y)$ such that:
+>**Definition:** The **joint probability mass function** (joint PMF) of the discrete random variables X and Y is a function $f_{XY}(x, y)$ such that:
 
-1. $f_{XY}(x, y) \geq 0$ for all (x, y)
-2. $\displaystyle\sum_x \sum_y f_{XY}(x, y) = 1$
-3. $f_{XY}(x, y) = P(X = x, Y = y)$ for each pair (x, y) in the range
+>1. $f_{XY}(x, y) \geq 0$ for all (x, y)
+>2. $\displaystyle\sum_x \sum_y f_{XY}(x, y) = 1$
+>3. $f_{XY}(x, y) = P(X = x, Y = y)$ for each pair (x, y) in the range
 
 **Probability of a region R:**
 $$P[(X, Y) \in R] = \sum_{(x,y) \in R} f_{XY}(x, y)$$
 
 ---
 
-# Joint Probability Table
+# Example Joint Probability Table
 
 ## Variables
 - **X** = Number of Bars of Signal Strength  
 - **Y** = Response Time (nearest second)
 
----
+
 
 ## Joint Probability Distribution (X, Y)
 
@@ -69,7 +65,7 @@ $$P[(X, Y) \in R] = \sum_{(x,y) \in R} f_{XY}(x, y)$$
 | 2    | 0.02 | 0.03 | 0.20 | 0.25          |
 | 1    | 0.01 | 0.02 | 0.25 | 0.28          |
 
----
+
 
 ## Marginal Probability Distribution of X
 
@@ -78,8 +74,6 @@ $$P[(X, Y) \in R] = \sum_{(x,y) \in R} f_{XY}(x, y)$$
 | 1 | 0.20 |
 | 2 | 0.25 |
 | 3 | 0.55 |
-
----
 
 ## Example Calculation
 
@@ -92,8 +86,6 @@ P(X = 3) = P(X = 3, Y = 1) + P(X = 3, Y = 2) + P(X = 3, Y = 3) + P(X = 3, Y = 4)
 \[
 = 0.25 + 0.20 + 0.05 + 0.05 = 0.55
 \]
-
----
 
 ## Key Insight
 - Marginal probability is obtained by **summing over the other variable**.
@@ -114,7 +106,7 @@ $$P[(X, Y) \in R] = \iint_R f_{XY}(x, y)\,dx\,dy$$
 
 ---
 
-### Example 5.2 — Exponential Joint PDF
+### Example  — Exponential Joint PDF
 
 **Problem:** $f_{XY}(x, y) = e^{-x-y}$ for $x > 0$, $y > 0$; 0 otherwise. Verify validity and find $P(X < 1, Y < 1)$.
 
@@ -124,6 +116,153 @@ $$\int_0^{\infty}\int_0^{\infty} e^{-x-y}\,dx\,dy = \left(\int_0^{\infty} e^{-x}
 **Probability:**
 $$P(X < 1, Y < 1) = \int_0^1\int_0^1 e^{-x-y}\,dx\,dy = (1-e^{-1})^2 = (0.6321)^2 = 0.3996$$
 
+
+
+# Probability that \( Y > 2000 \)
+
+We are given a joint PDF:
+
+\[
+f_{XY}(x, y) = 6 \times 10^{-6} e^{-0.001x - 0.002y}
+\]
+
+We want to compute:
+
+\[
+P(Y > 2000)
+\]
+
+---
+
+## Method 1: Using Joint PDF (Double Integration)
+
+The region is split into two parts:
+
+### Region 1: \( 0 \le x \le 2000, \; y \ge 2000 \)
+
+\[
+\int_{0}^{2000} \left( \int_{2000}^{\infty} 6 \times 10^{-6} e^{-0.001x - 0.002y} \, dy \right) dx
+\]
+
+#### Inner Integral:
+
+\[
+\int_{2000}^{\infty} e^{-0.002y} dy 
+= \left[ \frac{e^{-0.002y}}{-0.002} \right]_{2000}^{\infty}
+= \frac{e^{-4}}{0.002}
+\]
+
+#### Outer Integral:
+
+\[
+6 \times 10^{-6} \cdot \frac{e^{-4}}{0.002} \int_{0}^{2000} e^{-0.001x} dx
+\]
+
+\[
+\int_{0}^{2000} e^{-0.001x} dx 
+= \left[ \frac{e^{-0.001x}}{-0.001} \right]_{0}^{2000}
+= \frac{1 - e^{-2}}{0.001}
+\]
+
+#### Final Value (Region 1):
+
+\[
+= 0.0475
+\]
+
+---
+
+### Region 2: \( x \ge 2000, \; y \ge x \)
+
+\[
+\int_{2000}^{\infty} \left( \int_{x}^{\infty} 6 \times 10^{-6} e^{-0.001x - 0.002y} \, dy \right) dx
+\]
+
+#### Inner Integral:
+
+\[
+\int_{x}^{\infty} e^{-0.002y} dy 
+= \frac{e^{-0.002x}}{0.002}
+\]
+
+#### Outer Integral:
+
+\[
+6 \times 10^{-6} \cdot \frac{1}{0.002} \int_{2000}^{\infty} e^{-0.003x} dx
+\]
+
+\[
+\int_{2000}^{\infty} e^{-0.003x} dx 
+= \left[ \frac{e^{-0.003x}}{-0.003} \right]_{2000}^{\infty}
+= \frac{e^{-6}}{0.003}
+\]
+
+#### Final Value (Region 2):
+
+\[
+= 0.0025
+\]
+
+### Final Answer
+
+\[
+P(Y > 2000) = 0.0475 + 0.0025 = 0.05
+\]
+
+
+## Method 2: Using Marginal PDF of \( Y \)
+
+### Step 1: Compute Marginal PDF
+
+\[
+f_Y(y) = \int_{0}^{y} 6 \times 10^{-6} e^{-0.001x - 0.002y} dx
+\]
+
+\[
+= 6 \times 10^{-6} e^{-0.002y} \int_{0}^{y} e^{-0.001x} dx
+\]
+
+\[
+= 6 \times 10^{-6} e^{-0.002y} \cdot \frac{1 - e^{-0.001y}}{0.001}
+\]
+
+\[
+= 6 \times 10^{-3} e^{-0.002y}(1 - e^{-0.001y}), \quad y > 0
+\]
+
+
+### Step 2: Compute Probability
+
+\[
+P(Y > 2000) = \int_{2000}^{\infty} 6 \times 10^{-3} e^{-0.002y}(1 - e^{-0.001y}) dy
+\]
+
+Split into two integrals:
+
+\[
+= 6 \times 10^{-3} \left[
+\int_{2000}^{\infty} e^{-0.002y} dy 
+- \int_{2000}^{\infty} e^{-0.003y} dy
+\right]
+\]
+
+\[
+= 6 \times 10^{-3} \left[
+\frac{e^{-4}}{0.002} - \frac{e^{-6}}{0.003}
+\right]
+\]
+
+### Final Answer
+
+\[
+P(Y > 2000) = 0.05
+\]
+
+## Key Takeaways
+
+- Always **split the region carefully** when limits depend on variables.
+- Sometimes **marginalization simplifies the problem significantly**.
+- Exponential PDFs often lead to **clean closed-form integrals**.
 ---
 
 ### Example 5.3 — Joint PDF on Restricted Range
@@ -724,4 +863,134 @@ Doubling n cuts $V(\bar{X})$ in half (standard error decreases by $1/\sqrt{2}$).
 
 ---
 
-*End of Chapter 5 Notes*
+# Probability with Independent Normal Random Variables
+
+## Given
+
+- \( X \sim N(10.5, 0.0025) \)
+  - Mean \( \mu_X = 10.5 \)
+  - Variance \( \sigma_X^2 = 0.0025 \Rightarrow \sigma_X = 0.05 \)
+
+- \( Y \sim N(3.2, 0.0036) \)
+  - Mean \( \mu_Y = 3.2 \)
+  - Variance \( \sigma_Y^2 = 0.0036 \Rightarrow \sigma_Y = 0.06 \)
+
+- \( X \) and \( Y \) are **independent**
+
+---
+
+## Problem
+
+Find:
+
+\[
+P(10.4 < X < 10.6,\; 3.15 < Y < 3.25)
+\]
+
+---
+
+## Step 1: Use Independence
+
+Since \( X \) and \( Y \) are independent:
+
+\[
+P(A \cap B) = P(A) \cdot P(B)
+\]
+
+\[
+P(10.4 < X < 10.6,\; 3.15 < Y < 3.25)
+= P(10.4 < X < 10.6) \times P(3.15 < Y < 3.25)
+\]
+
+---
+
+## Step 2: Standardize (Convert to Z)
+
+### For \( X \)
+
+\[
+Z = \frac{X - \mu_X}{\sigma_X}
+\]
+
+
+::contentReference[oaicite:0]{index=0}
+
+
+\[
+\frac{10.4 - 10.5}{0.05} = -2,\quad
+\frac{10.6 - 10.5}{0.05} = 2
+\]
+
+\[
+P(10.4 < X < 10.6) = P(-2 < Z < 2)
+\]
+
+---
+
+### For \( Y \)
+
+\[
+\frac{3.15 - 3.2}{0.06} = -0.833,\quad
+\frac{3.25 - 3.2}{0.06} = 0.833
+\]
+
+\[
+P(3.15 < Y < 3.25) = P(-0.833 < Z < 0.833)
+\]
+
+---
+
+## Step 3: Use Standard Normal Table
+
+- \( P(-2 < Z < 2) \approx 0.954 \)
+- \( P(-0.833 < Z < 0.833) \approx 0.596 \)
+
+---
+
+## Step 4: Multiply
+
+\[
+P = 0.954 \times 0.596 \approx 0.568
+\]
+
+---
+
+## Final Answer
+
+\[
+P(10.4 < X < 10.6,\; 3.15 < Y < 3.25) = 0.568
+\]
+
+---
+
+## Intuition 💡
+
+- Independence lets us **break a 2D probability into two 1D problems**.
+- Without independence, you'd need a **joint distribution** (much harder).
+- Standardization converts everything to a **single universal distribution (Z-table)**.
+
+---
+
+## Exam Tips 🚀
+
+- Always check: **Are variables independent?**
+- Convert to Z **carefully (common mistake: wrong σ)**.
+- Use symmetry:
+  - \( P(-a < Z < a) = 2P(0 < Z < a) \)
+
+---
+
+## Common Pitfalls ⚠️
+
+- Using variance instead of standard deviation.
+- Forgetting independence → multiplying incorrectly.
+- Wrong Z conversion signs.
+
+---
+
+## Practical Interpretation
+
+If dimensions are independent, you can compute tolerance probabilities easily — this is heavily used in:
+- Manufacturing quality control
+- Reliability engineering
+- Statistical process control (SPC)
