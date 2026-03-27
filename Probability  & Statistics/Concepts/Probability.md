@@ -642,4 +642,50 @@ A measurement like current in a copper wire can assume any value in an interval 
 | Bayes' theorem | P(A\|B) = P(B\|A)P(A) / P(B) |
 
 ---
+# Extra problems
+A class in probability theory consists of 6 men and 4 women. An examination is given,
+and the students are ranked according to their performance. Assume that no two
+students obtain the same score.
+(a) How many different rankings are possible?
+(b) If the men are ranked just among themselves and the women just among them-
+selves, how many different rankings are possible?
+Solution. (a) Because each ranking corresponds to a particular ordered arrangement
+of the 10 people, the answer to this part is 10! = 3,628,800.
+(b) Since there are 6! possible rankings of the men among themselves and 4! possi-
+ble rankings of the women among themselves, it follows from the basic principle that
+there are (6!)(4!) = (720)(24) = 17,280 possible rankings in this case.
 
+
+Ms. Jones has 10 books that she is going to put on her bookshelf. Of these, 4 are
+mathematics books, 3 are chemistry books, 2 are history books, and 1 is a language
+book. Ms. Jones wants to arrange her books so that all the books dealing with the
+same subject are together on the shelf. How many different arrangements are
+possible?
+Solution. There are 4! 3! 2! 1! arrangements such that the mathematics books are
+first in line, then the chemistry books, then the history books, and then the language
+book. Similarly, for each possible ordering of the subjects, there are 4! 3! 2! 1! possible
+arrangements. Hence, as there are 4! possible orderings of the subjects, the desired
+answer is 4! 4! 3! 2! 1! = 6912. 
+
+
+How many different letter arrangements can be formed from the letters PEPPER?
+Solution. We first note that there are 6! permutations of the letters P1E1P2P3E2R
+when the 3P’s and the 2E’s are distinguished from each other. However, consider
+any one of these permutations—for instance, P1P2E1P3E2R. If we now permute the
+P’s among themselves and the E’s among themselves, then the resultant arrangement
+would still be of the form PPEPER. That is, all 3! 2! permutations
+P1P2E1P3E2R P1P2E2P3E1R
+P1P3E1P2E2R P1P3E2P2E1R
+P2P1E1P3E2R P2P1E2P3E1R
+P2P3E1P1E2R P2P3E2P1E1R
+P3P1E1P2E2R P3P1E2P2E1R
+P3P2E1P1E2R P3P2E2P1E1R
+are of the form PPEPER. Hence, there are 6!/(3! 2!) = 60 possible letter arrange-
+ments of the letters PEPPER. 
+
+A chess tournament has 10 competitors, of which 4 are Russian, 3 are from the United
+States, 2 are from Great Britain, and 1 is from Brazil. If the tournament result lists just
+the nationalities of the players in the order in which they placed, how many outcomes
+are possible?
+Solution. There are 10!
+4! 3! 2! 1! = 12,60
