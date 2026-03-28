@@ -52,3 +52,5 @@
 
 **Suggested Priority Order:**
 `Metrics → Bias-Variance → Classical ML → Backprop → Transformers → ML System Design`
+
+https://stanford.edu/~shervine/teaching/cme-106/cheatsheet-probability/
