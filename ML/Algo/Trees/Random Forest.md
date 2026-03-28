@@ -106,6 +106,7 @@ Feature subsampling:
 ### Bootstrap Sampling — The Math
 
 From n samples, draw n with replacement:
+
 $$
 P(i \text{ not selected in one draw}) = 1 - \frac{1}{n}
 $$
@@ -263,7 +264,7 @@ Single Decision Tree (fully grown):
   High Variance ← tiny data change → totally different tree
 
 Random Forest:
-  Low Bias    ←  each tree is still fully grown (low bias)
+  Low Bias    ←  each tree is still fully grown (low bias) higher to DT
   Low Variance ← averaging B decorrelated trees ÷ variance
 ```
 
