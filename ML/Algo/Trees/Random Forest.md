@@ -29,6 +29,16 @@ pred_1      pred_2      pred_3
 ```
 
 ---
+Decision Trees are:
+* **High variance** models
+* Extremely sensitive to:
+  * Noise
+  * Small changes in data
+* Tend to **overfit**
+Example:Change one training point → tree structure can change drastically.
+### Core Idea
+> **Reduce variance by averaging many de-correlated trees**
+Random Forest =**Ensemble of decision trees + randomness + aggregation**
 
 # 1. The Algorithm
 
@@ -96,8 +106,17 @@ Feature subsampling:
 ### Bootstrap Sampling — The Math
 
 From n samples, draw n with replacement:
-$$P(\text{sample } i \text{ NOT selected in one draw}) = 1 - \frac{1}{n}$$
-$$P(\text{sample } i \text{ NOT selected in any of n draws}) = \left(1 - \frac{1}{n}\right)^n \xrightarrow{n \to \infty} e^{-1} \approx 0.368$$
+$$
+P(i \text{ not selected in one draw}) = 1 - \frac{1}{n}
+$$
+
+$$
+P(i \text{ never selected in } n \text{ draws}) = \left(1 - \frac{1}{n}\right)^n
+$$
+
+$$
+\approx e^{-1} \approx 0.368
+$$
 
 So each tree trains on **~63.2%** of the data.  
 The remaining **~36.8%** = **Out-of-Bag (OOB)** samples for that tree.
