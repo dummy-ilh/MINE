@@ -142,9 +142,14 @@ $$d(x, y) = \left(\sum_{i=1}^{n} |x_i - y_i|^p\right)^{1/p}$$
 
 **Intuition:** Forget how far apart — ask: **do they point in the same direction?** Captures angular similarity, ignoring magnitude.
 
-$$\text{cos\_sim}(x, y) = \frac{x \cdot y}{\|x\| \|y\|} = \frac{\sum_i x_i y_i}{\sqrt{\sum_i x_i^2} \cdot \sqrt{\sum_i y_i^2}}$$
+$$
+\cos\_sim(x, y) = \frac{x \cdot y}{\|x\| \|y\|}
+= \frac{\sum_i x_i y_i}{\sqrt{\sum_i x_i^2} \cdot \sqrt{\sum_i y_i^2}}
+$$
 
-$$d_{\cos}(x, y) = 1 - \text{cos\_sim}(x, y)$$
+$$
+d_{\cos}(x, y) = 1 - \cos\_sim(x, y)
+$$
 
 | Value | Angle | Meaning |
 |---|---|---|
@@ -776,4 +781,286 @@ Distance grows as $O(\sqrt{n})$. The **variance of distances** also grows, but t
 
 ---
 
-*Generated for FAANG MLE/DSE interview preparation. Cover all sections before interviews.*
+Here are **clean, copy-paste-ready sample calculations** for each major distance metric in proper Markdown + LaTeX.
+
+---
+
+# Sample Calculations for Distance Metrics
+
+---
+
+## 1. Euclidean Distance (L2)
+
+```markdown id="euclid1"
+Let:
+x = (1, 2), y = (4, 6)
+
+$$
+d(x, y) = \sqrt{(1-4)^2 + (2-6)^2}
+= \sqrt{(-3)^2 + (-4)^2}
+= \sqrt{9 + 16}
+= \sqrt{25}
+= 5
+$$
+```
+
+---
+
+## 2. Manhattan Distance (L1)
+
+```markdown id="manhattan1"
+Let:
+x = (1, 2), y = (4, 6)
+
+$$
+d(x, y) = |1-4| + |2-6|
+= 3 + 4
+= 7
+$$
+```
+
+---
+
+## 3. Minkowski Distance ($p = 3$ example)
+
+```markdown id="minkowski1"
+Let:
+x = (1, 2), y = (4, 6), p = 3
+
+$$
+d(x, y) = \left(|1-4|^3 + |2-6|^3\right)^{1/3}
+= (27 + 64)^{1/3}
+= 91^{1/3}
+$$
+```
+
+---
+
+## 4. Cosine Similarity + Distance
+
+```markdown id="cosine1"
+Let:
+x = (1, 2), y = (2, 3)
+
+Dot product:
+$$
+x \cdot y = 1 \cdot 2 + 2 \cdot 3 = 2 + 6 = 8
+$$
+
+Norms:
+$$
+\|x\| = \sqrt{1^2 + 2^2} = \sqrt{5}, \quad
+\|y\| = \sqrt{2^2 + 3^2} = \sqrt{13}
+$$
+
+Cosine similarity:
+$$
+\cos(x, y) = \frac{8}{\sqrt{5} \cdot \sqrt{13}} = \frac{8}{\sqrt{65}}
+$$
+
+Cosine distance:
+$$
+d_{\cos}(x, y) = 1 - \frac{8}{\sqrt{65}}
+$$
+```
+
+---
+
+## 5. Dot Product
+
+```markdown id="dot1"
+Let:
+x = (1, 2), y = (2, 3)
+
+$$
+x \cdot y = 1 \cdot 2 + 2 \cdot 3 = 8
+$$
+```
+
+---
+
+## 6. Mahalanobis Distance
+
+```markdown id="mahal1"
+Let:
+x = (1, 2), y = (4, 6)
+
+Difference:
+$$
+x - y = (-3, -4)
+$$
+
+Covariance matrix:
+$$
+\Sigma =
+\begin{bmatrix}
+1 & 0 \\
+0 & 1
+\end{bmatrix}
+\Rightarrow \Sigma^{-1} = I
+$$
+
+$$
+d_M(x, y) = \sqrt{(-3, -4)
+\begin{bmatrix}
+1 & 0 \\
+0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+-3 \\
+-4
+\end{bmatrix}}
+= \sqrt{9 + 16}
+= 5
+$$
+```
+
+---
+
+## 7. KL Divergence
+
+```markdown id="kl1"
+Let:
+P = (0.5, 0.5), Q = (0.9, 0.1)
+
+$$
+D_{KL}(P \| Q)
+= 0.5 \log \frac{0.5}{0.9}
++ 0.5 \log \frac{0.5}{0.1}
+$$
+
+$$
+= 0.5 \log(0.5556) + 0.5 \log(5)
+$$
+```
+
+---
+
+## 8. Jensen-Shannon Divergence
+
+```markdown id="jsd1"
+Let:
+P = (0.5, 0.5), Q = (1, 0)
+
+Midpoint:
+$$
+M = \left(0.75, 0.25\right)
+$$
+
+$$
+JSD(P \| Q)
+= \frac{1}{2} D_{KL}(P \| M)
++ \frac{1}{2} D_{KL}(Q \| M)
+$$
+```
+
+---
+
+## 9. Wasserstein Distance (1D)
+
+```markdown id="wasserstein1"
+Let:
+P = (0 at x=0), Q = (1 at x=2)
+
+All mass moves from 0 → 2
+
+$$
+W = 1 \times |2 - 0| = 2
+$$
+```
+
+---
+
+## 10. Hamming Distance
+
+```markdown id="hamming1"
+x = 1101
+y = 1001
+
+Compare positions:
+
+1 vs 1 → same  
+1 vs 0 → different  
+0 vs 0 → same  
+1 vs 1 → same  
+
+$$
+d_H = 1
+$$
+```
+
+---
+
+## 11. Levenshtein Distance
+
+```markdown id="lev1"
+Transform "kitten" → "sitting":
+
+kitten → sitten (substitution k→s)  
+sitten → sittin (substitution e→i)  
+sittin → sitting (insert g)  
+
+$$
+d = 3
+$$
+```
+
+---
+
+## 12. Jaccard Similarity
+
+```markdown id="jaccard1"
+A = {1, 2, 3}, B = {2, 3, 4}
+
+$$
+J(A, B) = \frac{|A \cap B|}{|A \cup B|}
+= \frac{2}{4}
+= 0.5
+$$
+
+$$
+d_J = 1 - 0.5 = 0.5
+$$
+```
+
+---
+
+## 13. Pearson Correlation Distance
+
+```markdown id="pearson1"
+x = (1, 2, 3), y = (2, 4, 6)
+
+Mean:
+$$
+\bar{x} = 2, \quad \bar{y} = 4
+$$
+
+Correlation:
+$$
+r = 1
+$$
+
+Distance:
+$$
+d = 1 - r = 0
+$$
+```
+
+---
+
+# Key Insight (Important for Interviews)
+
+* Same pair of points:
+
+  * Euclidean = 5
+  * Manhattan = 7
+  * Cosine ≈ depends on angle
+* **Same data → different geometry → different learning behavior**
+
+---
+
+If you want next level: I can derive
+
+* why cosine = L2 after normalization
+* KL vs cross-entropy rigorously
+* or give FAANG-style trick questions based on these calculations
