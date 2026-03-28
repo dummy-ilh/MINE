@@ -179,5 +179,127 @@ Always say this line:
 This alone boosts your answer level massively.
 
 ---
+Perfect! Day 2 is where we **start introducing subtle traps**—the kind that will make or break you in FAANG A/B rounds.
+
+---
+
+# 🧪 **Day 2: A/B Testing Question (Trap Edition)**
+
+## 📌 Problem
+
+You are working on a **streaming platform**.
+
+* You run an experiment on a new **“Skip Intro”** feature.
+* Results after 1 week:
+
+| Metric               | Control | Treatment |
+| -------------------- | ------- | --------- |
+| Watch Time per User  | 120 min | 125 min   |
+| Subscription Renewal | 60%     | 58%       |
+
+* p-value for Watch Time = 0.03
+* p-value for Renewal = 0.07
+
+---
+
+## ❓ Question
+
+**Do you ship the new “Skip Intro” feature?**
+
+Think carefully—this is a **Simpson’s paradox / multi-metric trap** style question.
+
+---
+
+### ✋ STOP — Your Turn First
+
+Structure your answer like yesterday:
+
+1. Interpret the metrics
+2. Consider statistical significance
+3. Check for business impact
+4. Identify pitfalls / hidden traps
+
+Good instincts again—you’re **spotting the key conflict**: watch time ↑ but subscription renewal ↓. That’s exactly the kind of scenario FAANG loves to test. But your answer is **too short** and misses several critical layers. Let’s break it down.
+
+---
+
+# 🧠 Step 1: What You Got Right
+
+### ✅ You noticed:
+
+* **Conflicting metrics:** watch time ↑, renewal ↓ ✔️
+* **Business impact matters:** you’re thinking beyond p-values ✔️
+
+This is the **high-level intuition** they want.
+
+---
+
+# ❌ Where Your Answer Falls Short
+
+1. **You didn’t mention significance clearly:**
+
+* Watch time p = 0.03 → statistically significant
+* Renewal p = 0.07 → not significant (but still a red flag)
+
+> Even non-significant metrics can signal negative trends. FAANG candidates **always flag these**.
+
+2. **You didn’t discuss guardrail metrics / user segments:**
+
+* Maybe **the increase in watch time is from heavy users**, while light users churn more → **Simpson’s paradox**
+* You need to check **segments**, not just overall averages.
+
+3. **No experiment design sanity check:**
+
+* Was randomization correct?
+* Was the experiment long enough?
+* Were all relevant metrics measured?
+
+---
+
+# 🧠 Step 2: Perfect FAANG-Level Reasoning
+
+### 1️⃣ Interpret Results
+
+* Watch time ↑ (120 → 125 min, p = 0.03) → users are watching more
+* Subscription ↓ (60 → 58%, p = 0.07) → possibly harmful trend, even if not significant
+
+### 2️⃣ Business Judgment
+
+* **Renewal is primary metric** → revenue impact matters more than watch time
+* Watch time increase is nice-to-have, but negative trend in revenue is **red flag**
+
+### 3️⃣ Check Hidden Traps
+
+* **Simpson’s paradox:** Maybe heavy users drive watch time increase, but light users churn → overall effect hides subgroup problems
+* **Multi-metric tradeoff:** Don’t optimize one metric blindly
+
+### 4️⃣ Next Steps
+
+* Analyze **user segments**: heavy vs light users
+* Check **guardrail metrics**: churn, engagement, complaints
+* Decide if the feature should be **rolled back, modified, or rolled out gradually**
+
+---
+
+# 🏆 FAANG-Level Answer (Example)
+
+> The experiment shows that watch time per user increased significantly (p = 0.03), but subscription renewal decreased slightly (p = 0.07).
+>
+> Although renewal is not statistically significant, it is a key business metric, so we must be cautious.
+>
+> Before shipping, I would analyze user segments to check for Simpson’s paradox—perhaps heavy users watch more while light users churn. I would also monitor guardrail metrics like complaints, retention, and engagement.
+>
+> Based on this, I would **not ship immediately**. Instead, I’d either refine the feature, run a longer test, or roll it out to a subset of users while monitoring key metrics.
+
+---
+
+# 🔥 Core Lesson (Day 2)
+
+> **Optimizing a secondary metric (watch time) while a primary metric (renewal/revenue) trends down is dangerous.**
+>
+> FAANG interviews often test **multi-metric tradeoffs** and **hidden segment effects**.
+
+---
+
 
 
