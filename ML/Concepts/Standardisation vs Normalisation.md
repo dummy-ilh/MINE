@@ -112,3 +112,4 @@ std = StandardScaler()
 print(std.fit_transform(X))
 # → [[-0.8], [-0.6], [-0.5], [-0.3], [2.3]]  — outlier is just another z-score
 ```
+![](./Images/stand.png)
