@@ -72,6 +72,7 @@ Other Controlled Experiments (non-randomized, natural)
 Randomized Controlled Experiments  ← Gold Standard
          ↓
 Systematic Reviews / Meta-Analysis  ← Highest evidence
+![](./images/1.PNG)
 ```
 
 **HiPPO** = Highest Paid Person's Opinion — a term used to describe intuition-based decision making that experiments are meant to replace.
@@ -205,12 +206,10 @@ The OEC makes strategy explicit and aligns bottom-up work (features and tactics)
 
 ---
 
-*Notes based on Chapter 1 of: Kohavi, Tang & Xu — Trustworthy Online Controlled Experiments (Cambridge University Press, 2020)*
-# Chapter 2: Running and Analyzing Experiments — An End-to-End Example
-### *Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*
+
 ---
 
-## Overview
+## Chapter 2
 
 This chapter walks through a complete, concrete A/B test from start to finish: hypothesis formation, metric selection, statistical design, execution, and decision-making. The running example is a fictional e-commerce site selling widgets. The principles apply broadly — websites, desktop apps, mobile apps, game consoles, assistants, and more.
 
@@ -248,7 +247,7 @@ Complete Purchase Process
   ↓
 Revenue
 ```
-
+![](./images/2.PNG)
 Users skip steps, go back, or repeat. Despite this messiness, the funnel is a useful mental model for identifying *where* in the flow a change takes effect.
 
 ### Hypothesis
@@ -292,7 +291,7 @@ For large sample sizes, the 95% CI is approximately:
 ```
 [Δ − 1.96σ,  Δ + 1.96σ]
 ```
-
+![](./images/3.PNG)
 Where:
 - Δ = observed difference between Treatment and Control means
 - σ = standard error of that difference
@@ -497,4 +496,4 @@ Documenting this reasoning creates a consistent decision framework across experi
 
 ---
 
-*Notes based on Chapter 2 of: Kohavi, Tang & Xu — Trustworthy Online Controlled Experiments (Cambridge University Press, 2020)*
+
