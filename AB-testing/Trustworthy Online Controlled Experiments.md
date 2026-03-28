@@ -1,4 +1,4 @@
-# Chapter 1: Introduction and Motivation
+<img width="694" height="393" alt="image" src="https://github.com/user-attachments/assets/32be5495-6aaa-4c77-b82e-1e237f40c951" /># Chapter 1: Introduction and Motivation
 
 
 ## The Bing Ad Headline Experiment (Motivating Example)
@@ -496,8 +496,6 @@ Documenting this reasoning creates a consistent decision framework across experi
 
 ---
 # Chapter 3 — Twyman's Law and Experimentation Trustworthiness
-*Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing*
-
 ---
 
 ## Twyman's Law
@@ -1221,7 +1219,7 @@ As companies move from Walk to Run phase, experiments need sufficient statistica
 ### Single-Layer Method (also called "numberline")
 
 In the Walk phase, experiments are few. Traffic is divided so each experiment variant receives a specified fraction of total traffic.
-
+![](./images/4.PNG)
 **Example (Figure 4.3):** 1,000 disjoint buckets, assigned via `f(UID) % 1000`
 - Experiment A: Control (m1–200, 20%), Treatment 1 (m201–400, 20%), Treatment 2 (m401–600, 20%)
 - Experiment B: Control (m601–800, 20%), Treatment (m801–1000, 20%)
@@ -1438,7 +1436,7 @@ This is a **first-order Taylor-series (linear) approximation**.
 - Do **not** mix client and server times — they can be in different time zones (Ch. 13); client clocks are often unreliable (sometimes years off when batteries die)
 
 ### Page Load Time (PLT) — Step-by-Step (Figure 5.2)
-
+![](./images/5.PNG)
 For a highly optimized site (e.g., a search engine):
 
 | Timestamp | Event |
