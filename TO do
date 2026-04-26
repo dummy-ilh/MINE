@@ -1,0 +1,95 @@
+# ML / DS / MLE Interview Checklist (Numbered)
+
+# ML / DS / MLE Interview Checklist (Numbered)
+
+## ML Foundations
+1. [ ] **ML Basics** — bias-variance tradeoff, overfitting, cross-validation, evaluation metrics (precision, recall, AUC)  
+2. [ ] **Prob & Stats** — probability distributions, Bayes theorem, MLE, hypothesis testing, CLT  
+3. [ ] **A/B Testing** — experiment design, p-values, statistical power, sample size calculation, common pitfalls  
+
+## Classical ML
+4. [ ] **Regression** — linear regression assumptions, ridge/lasso regularization, multicollinearity  
+5. [ ] **Logistic Regression** — log-odds, sigmoid, decision boundary, when to use vs others  
+6. [ ] **Classifiers** — SVM, KNN, Naive Bayes; understand trade-offs  
+7. [ ] **Trees** — decision trees, random forests, bagging, feature importance  
+8. [ ] **Boosting** — gradient boosting, XGBoost, LightGBM, differences vs bagging  
+
+## Deep Learning
+9. [ ] **DL Basics** — backprop, activations, optimizers, batch norm, dropout, learning rate schedules  
+10. [ ] **DL Architectures** — CNNs, RNNs, LSTMs, Transformers, attention  
+
+## LLM & GenAI
+11. [ ] **LLM Basics** — tokenization, pretraining, RLHF, fine-tuning vs prompting, scaling laws  
+12. [ ] **RAG** — embeddings, vector DBs, chunking, retrieval pipelines, evaluation  
+13. [ ] **Agents** — tool use, ReAct, planning, memory types  
+
+## Engineering
+14. [ ] **SQL** — joins, window functions, aggregations, query optimization  
+15. [ ] **Coding** — DS&A (arrays, graphs, DP), complexity; LeetCode medium level  
+16. [ ] **System Design** — feature stores, training pipelines, online/batch serving, monitoring, data drift  
+
+## Specialized / High-Impact Topics
+17. [ ] **Recommender Systems** — collaborative filtering, matrix factorization, content-based, two-tower models, cold start  
+18. [ ] **ML Metrics & Evaluation** — metric selection, offline vs online, ranking metrics (NDCG, MAP), calibration, business alignment  
+
+## Almost Universal Gaps
+19. [ ] **Feature Engineering** — categorical encoding, missing data, scaling, feature selection, leakage, target encoding pitfalls  
+20. [ ] **ML Problem Formulation** — defining labels, data, metrics, failure modes from vague business problems  
+
+## MLE / Applied Scientist Focus
+21. [ ] **Model Deployment & MLOps** — versioning, CI/CD, A/B testing in production, shadow & canary deployments, latency vs accuracy  
+22. [ ] **Data Engineering Basics** — Spark, Kafka, batch vs streaming, pipelines  
+
+## DS / Analytics Focus
+23. [ ] **Causal Inference** — diff-in-diff, instrumental variables, propensity score matching  
+
+## Often Forgotten
+24. [ ] **Optimization** — gradient descent variants, convexity, Lagrange multipliers, constrained optimization  
+25. [ ] **NLP Basics** — TF-IDF, Word2Vec, GloVe, tokenization, NER  
+-------------
+
+## ML Foundations
+1. [ ] **ML Basics** — bias-variance tradeoff, overfitting, cross-validation, evaluation metrics (precision, recall, AUC)  
+2. [ ] **Prob & Stats** — probability distributions, Bayes theorem, MLE, hypothesis testing, CLT  
+3. [ ] **A/B Testing** — experiment design, p-values, statistical power, sample size calculation, common pitfalls  
+
+## Classical ML
+4. [ ] **Regression** — linear regression assumptions, ridge/lasso regularization, multicollinearity  
+5. [ ] **Logistic Regression** — log-odds, sigmoid, decision boundary, when to use vs others  
+6. [ ] **Classifiers** — SVM, KNN, Naive Bayes; understand trade-offs  
+7. [ ] **Trees** — decision trees, random forests, bagging, feature importance  
+8. [ ] **Boosting** — gradient boosting, XGBoost, LightGBM, differences vs bagging  
+
+## Deep Learning
+9. [ ] **DL Basics** — backprop, activations, optimizers, batch norm, dropout, learning rate schedules  
+10. [ ] **DL Architectures** — CNNs, RNNs, LSTMs, Transformers, attention  
+
+## LLM & GenAI
+11. [ ] **LLM Basics** — tokenization, pretraining, RLHF, fine-tuning vs prompting, scaling laws  
+12. [ ] **RAG** — embeddings, vector DBs, chunking, retrieval pipelines, evaluation  
+13. [ ] **Agents** — tool use, ReAct, planning, memory types  
+
+## Engineering
+14. [ ] **SQL** — joins, window functions, aggregations, query optimization  
+15. [ ] **Coding** — DS&A (arrays, graphs, DP), complexity; LeetCode medium level  
+16. [ ] **System Design** — feature stores, training pipelines, online/batch serving, monitoring, data drift  
+
+## Specialized / High-Impact Topics
+17. [ ] **Recommender Systems** — collaborative filtering, matrix factorization, content-based, two-tower models, cold start  
+18. [ ] **ML Metrics & Evaluation** — metric selection, offline vs online, ranking metrics (NDCG, MAP), calibration, business alignment  
+
+## Almost Universal Gaps
+19. [ ] **Feature Engineering** — categorical encoding, missing data, scaling, feature selection, leakage, target encoding pitfalls  
+20. [ ] **ML Problem Formulation** — defining labels, data, metrics, failure modes from vague business problems  
+
+## MLE / Applied Scientist Focus
+21. [ ] **Model Deployment & MLOps** — versioning, CI/CD, A/B testing in production, shadow & canary deployments, latency vs accuracy  
+22. [ ] **Data Engineering Basics** — Spark, Kafka, batch vs streaming, pipelines  
+
+## DS / Analytics Focus
+23. [ ] **Causal Inference** — diff-in-diff, instrumental variables, propensity score matching  
+
+## Often Forgotten
+24. [ ] **Optimization** — gradient descent variants, convexity, Lagrange multipliers, constrained optimization  
+25. [ ] **NLP Basics** — TF-IDF, Word2Vec, GloVe, tokenization, NER  
+
