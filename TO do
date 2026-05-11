@@ -16,7 +16,6 @@
 
 ## LLM & GenAI
 11. [ ] **LLM Basics** — tokenization, pretraining, RLHF, fine-tuning vs prompting, scaling laws  
-12. [ ] **RAG** — embeddings, vector DBs, chunking, retrieval pipelines, evaluation  
 13. [ ] **Agents** — tool use, ReAct, planning, memory types  
 
 ## Engineering
@@ -38,7 +37,13 @@
 
 ## Often Forgotten
 24. [ ] **Optimization** — gradient descent variants, convexity, Lagrange multipliers, constrained optimization  
-25. [ ] **NLP Basics** — TF-IDF, Word2Vec, GloVe, tokenization, NER  
+
+
+
+
+
+
+
 -------------
 # ML / DS / MLE Interview Checklist (Numbered)
 
