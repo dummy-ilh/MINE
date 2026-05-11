@@ -28,9 +28,6 @@
 17. [ ] **Recommender Systems** — collaborative filtering, matrix factorization, content-based, two-tower models, cold start  
 18. [ ] **ML Metrics & Evaluation** — metric selection, offline vs online, ranking metrics (NDCG, MAP), calibration, business alignment  
 
-## Almost Universal Gaps
-19. [ ] **Feature Engineering** — categorical encoding, missing data, scaling, feature selection, leakage, target encoding pitfalls  
-20. [ ] **ML Problem Formulation** — defining labels, data, metrics, failure modes from vague business problems  
 
 ## MLE / Applied Scientist Focus
 21. [ ] **Model Deployment & MLOps** — versioning, CI/CD, A/B testing in production, shadow & canary deployments, latency vs accuracy  
