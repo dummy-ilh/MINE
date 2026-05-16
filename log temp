@@ -1,0 +1,53 @@
+Here are all 6 questions with model answers, Google-interview style.
+
+---
+
+**Q1 — Conceptual**
+
+*Logistic regression outputs a probability, yet it's called 'regression'. Explain the mathematical bridge between a linear combination of features and a valid probability. Why is the sigmoid specifically the right choice, and what would break if you used tanh instead?*
+
+The linear combination wx+b lives on (−∞, +∞). To map it to a valid probability in (0,1), we need a monotonic squashing function. The sigmoid σ(z) = 1/(1+e^−z) is derived directly from the Bernoulli log-likelihood — if you assume outputs follow a Bernoulli distribution and solve for the MLE, you get the sigmoid as the canonical link function. The key identity is log(p/1−p) = wx+b, meaning the model is linear in the log-odds (logit) space, which is where the "regression" name comes from. tanh maps to (−1,1), not (0,1), so it's not a valid probability without rescaling. More critically, it breaks the MLE derivation, loses the clean gradient (p−y)x, and makes the loss non-convex.
+
+---
+
+**Q2 — Optimization**
+
+*Why is cross-entropy loss preferred over MSE? Walk through the log-likelihood derivation and explain what happens to the loss landscape with MSE — specifically around vanishing gradients and non-convexity.*
+
+Taking the negative log-likelihood of a Bernoulli distribution gives −[y log p + (1−y) log(1−p)], which is cross-entropy. The gradient with respect to w is simply (p−y)x because the sigmoid's derivative cancels cleanly with the log derivative. With MSE, the gradient becomes (p−y) · σ(z)(1−σ(z)) · x. Since σ′ ≈ 0 for large |z|, gradients vanish when the model is confidently wrong — the worst possible time to stop learning. Additionally, MSE + sigmoid creates a non-convex loss surface with local minima, while cross-entropy + sigmoid is strictly convex, guaranteeing a unique global minimum reachable by gradient descent.
+
+---
+
+**Q3 — Assumptions & Limits**
+
+*LR assumes a linear decision boundary. A colleague suggests adding polynomial features. What are the tradeoffs, and when would you still prefer LR over a neural network even when the boundary is non-linear?*
+
+Adding degree-k polynomial features expands the feature space as O(d^k), which risks overfitting without strong regularization and becomes computationally expensive. You'd still prefer logistic regression when: (1) interpretability is non-negotiable — coefficients are directly actionable in medical scoring or credit risk; (2) you need well-calibrated probabilities out of the box without Platt scaling; (3) training data is small, where neural networks overfit aggressively; (4) inference latency or memory is constrained — LR is just a dot product. Neural networks give more expressivity but sacrifice interpretability, calibration guarantees, and require far more data and compute to train reliably.
+
+---
+
+**Q4 — Regularization**
+
+*Explain L1 vs L2 regularization — not just 'L1 gives sparsity' but why geometrically and probabilistically. With 10M features and ~1K relevant ones, which do you use and how do you set λ in production?*
+
+Geometrically, the L2 penalty is a sphere and L1 is a diamond. The loss contour intersects the L1 diamond at its corners, which lie on the coordinate axes — this forces coefficients to exactly zero, producing sparsity structurally. The L2 contour is smooth with no corners, so it only shrinks coefficients, never zeroing them. Probabilistically, L2 corresponds to a Gaussian prior on weights; L1 corresponds to a Laplace prior, which has heavier tails and more mass at zero. With 10M features and 1K relevant ones, you need L1 (or elastic net) — L2 cannot perform implicit feature selection. For λ, search a log-spaced grid using cross-validated log-loss on a time-stratified validation set to avoid leakage, and monitor coefficient stability across retraining cycles.
+
+---
+
+**Q5 — Imbalanced Data**
+
+*Fraud detection: 0.1% positive rate, 99.9% accuracy. Walk through everything wrong with this and give three distinct technical strategies to fix it.*
+
+The model has learned nothing — predicting "not fraud" always achieves 99.9% accuracy. Accuracy is the wrong metric entirely. Use AUC-PR (precision-recall curve), F1, or a business-cost-weighted metric where false negatives (missed fraud) cost far more than false positives. Three strategies: (1) Class-weight adjustment — set class weights inversely proportional to frequency (e.g. 1:1000), which rescales gradient contributions from minority samples, equivalent to oversampling without data duplication; (2) Threshold tuning — shift the decision threshold below 0.5 to increase recall at the cost of precision, calibrated to the business SLA; (3) Oversampling with SMOTE — synthesizes minority samples by interpolating in feature space rather than duplicating, giving the model richer signal. Important: after any resampling, recalibrate the output probabilities since the synthetic base rate no longer matches reality.
+
+---
+
+**Q6 — System Design**
+
+*Deploy LR at 500K predictions/second, p99 < 5ms, 50K sparse one-hot features. Full production architecture and LR-specific optimizations.*
+
+LR's prediction is σ(w·x) — just a dot product. With 50K features but only ~100 non-zero entries per request, the effective compute is O(100), not O(50K) — exploit this with sparse weight lookup rather than dense matrix multiply. Architecture: features computed from a low-latency feature store (Redis or in-memory), model weights stored in a hash table (50K × 4 bytes = 200KB, fits entirely in L2 cache), inference served in C++ or Go for sub-millisecond execution. LR-specific optimizations: no backprop graph at inference, so zero framework overhead; weights can be quantized to int8 without meaningful quality loss since LR is robust to precision; feature hashing reduces storage further; batch sparse lookups to reduce cache misses. Compared to a neural net, LR needs no GPU, no matrix multiplication libraries, and has 10–100x lower memory — it wins decisively on latency and cost at this scale.
+
+---
+
+**How to self-score:** For each answer, ask — did you hit the math, the intuition, AND the practical tradeoff? Google interviews expect all three, not just one.
