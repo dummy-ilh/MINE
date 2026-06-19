@@ -110,24 +110,8 @@ Here's a structured breakdown of **STAT 510 Lessons 1–5** with major topics an
 
 ## Lesson 1: Time Series Basics
 
-**Major topics:**
-- Definition of a univariate time series; time series plots
-- Stationarity (weak/strict) — constant mean, constant variance, autocovariance depends only on lag
-- Autocovariance Function (ACVF) and Autocorrelation Function (ACF)
-- The first-order autoregressive model, AR(1): $x_t = \mu + \phi(x_{t-1}-\mu) + w_t$
-- Properties of AR(1): theoretical ACF decays exponentially, $\rho_1 = \phi$, $\rho_2 = \phi^2$, etc.
-- White noise as the building block ($w_t$)
-- Estimating and interpreting the sample ACF vs the theoretical ACF
+**
 
-**Likely Q&A:**
-- *Q: What's the difference between strict and weak (second-order) stationarity?*
-  A: Strict stationarity means the entire joint distribution is time-invariant; weak stationarity only requires constant mean, constant variance, and autocovariance depending only on lag — weak stationarity is what's typically assumed/tested in practice.
-- *Q: For an AR(1) with $\phi=0.6$, what's $\rho_2$?*
-  A: $0.36$ (since $\rho_k = \phi^k$ for AR(1)).
-- *Q: Why does the sample ACF rarely match the theoretical ACF exactly?*
-  A: Sampling variability — with finite data, estimated autocorrelations always deviate from the true underlying process, so model identification is more "educated guessing" than exact pattern matching.
-- *Q: Why is a random walk not stationary?*
-  A: Its variance grows with $t$ (variance = $t\sigma^2_w$), violating the constant-variance condition.
 
 ---
 
