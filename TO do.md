@@ -8,8 +8,6 @@
 4. [ ] **Regression** — linear regression assumptions (LINE), ridge/lasso/elastic net regularization, multicollinearity, VIF, heteroscedasticity
 5. [ ] **Logistic Regression** — log-odds, sigmoid, decision boundary, calibration, when to use vs other classifiers, multinomial extension
 6. [ ] **Classifiers** — SVM (kernels, margin, support vectors), KNN (curse of dimensionality), Naive Bayes (conditional independence assumption); trade-offs and when each shines
-7. [ ] **Trees** — decision trees (splitting criteria, pruning), random forests, bagging, OOB error, feature importance (impurity vs permutation)
-8. [ ] **Boosting** — gradient boosting mechanics, XGBoost (regularization, tree construction), LightGBM (leaf-wise vs level-wise), CatBoost, DART, monotonic constraints, handling class imbalance; differences vs bagging
 
 ## Deep Learning
 9. [ ] **DL Basics** — backprop (chain rule, vanishing/exploding gradients), activations (ReLU, GELU, Swish), optimizers (SGD, Adam, AdamW), batch norm vs layer norm, dropout, learning rate schedules (warmup, cosine decay, cyclical)
