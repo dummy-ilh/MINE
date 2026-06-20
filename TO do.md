@@ -45,8 +45,6 @@
 ## DS / Analytics Focus
 28. [ ] **Causal Inference** — diff-in-diff, instrumental variables, propensity score matching, regression discontinuity, interference (SUTVA violations), quasi-experiments
 
-## Time Series
-29. [ ] **Time Series** — stationarity (ADF test, KPSS), differencing, ACF/PACF, ARIMA/SARIMA, exponential smoothing (Holt-Winters), temporal cross-validation, forecasting metrics (MAPE, SMAPE, WRMSSE), modern approaches (TFT, N-BEATS, TimesNet), when DL vs classical
 
 ## Often Forgotten
 30. [ ] **Optimization** — gradient descent variants (SGD, momentum, Adam), convexity, saddle points, Lagrange multipliers, constrained optimization, learning rate sensitivity
