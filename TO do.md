@@ -26,20 +26,20 @@
 16. [ ] **SQL** — joins (all types), window functions (ROW_NUMBER, LAG, LEAD, RANK), aggregations, CTEs, query optimization (indexes, execution plans), handling NULLs
 17. [ ] **Coding** — DS&A (arrays, hashmaps, graphs, trees, DP, sliding window), time/space complexity, LeetCode medium; ML-adjacent problems (matrix ops, reservoir sampling, top-K)
 18. [ ] **System Design** — feature stores (online vs offline), training pipelines, online/batch/streaming serving, two-phase retrieval, embedding freshness, feature skew, monitoring, data drift detection, model cards, rollback strategies
-19. [ ] **Data Engineering Basics** — Spark (RDDs, DataFrames, partitioning), Kafka (topics, partitions, consumer groups), batch vs streaming, pipeline orchestration (Airflow), data lake vs warehouse
+
 
 ## Specialized / High-Impact Topics
 20. [ ] **Recommender Systems** — collaborative filtering, matrix factorization (SVD, ALS), content-based, two-tower models, cold start, diversity vs relevance, position bias
 21. [ ] **Information Retrieval** — BM25, dense vs sparse retrieval, approximate nearest neighbor (HNSW, IVF), reranking, BEIR benchmarks, query understanding, inverted indexes
 22. [ ] **Bandits & Exploration** — ε-greedy, UCB, Thompson sampling, contextual bandits, explore-exploit tradeoff, offline evaluation of bandit policies
-23. [ ] **ML Metrics & Evaluation** — metric selection, offline vs online, ranking metrics (NDCG, MAP, MRR), calibration (Platt scaling, isotonic regression), business metric alignment, Goodhart's Law
+
 
 ## ML Problem Formulation & Feature Work
 24. [ ] **Feature Engineering** — categorical encoding (OHE, target encoding, hashing), missing data strategies, scaling (standard, min-max, robust), feature selection, leakage detection, target encoding pitfalls, feature crosses
 25. [ ] **ML Problem Formulation** — defining labels, data collection strategy, proxy metrics, metric decomposition, failure mode analysis from vague business problems; "design an ML system for X" style
 
 ## MLE / Applied Scientist Focus
-26. [ ] **Model Deployment & MLOps** — versioning, CI/CD for ML, A/B testing in production, shadow deployments, canary releases, training-serving skew, latency vs accuracy tradeoffs, model governance
+
 27. [ ] **Distributed Training** — data vs model vs pipeline parallelism, gradient accumulation, mixed precision (fp16/bf16), parameter servers vs all-reduce, TPU/GPU specifics, checkpointing strategies
 
 ## DS / Analytics Focus
