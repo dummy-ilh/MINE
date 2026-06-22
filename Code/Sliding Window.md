@@ -187,9 +187,27 @@ best = max(best, window_sum / k)
 **LC 1456 — Max Vowels in a Substring of Length K**
 Instead of summing numbers, add `1` if the character is a vowel.
 ```python
-window_sum += 1 if nums[right] in 'aeiou' else 0
-...
-window_sum -= 1 if nums[left] in 'aeiou' else 0
+def maxVowels(s, k):
+    vowels = set("aeiou")
+
+    count = 0
+
+    for ch in s[:k]:
+        if ch in vowels:
+            count += 1
+
+    best = count
+
+    for right in range(k, len(s)):
+        if s[right] in vowels:
+            count += 1
+
+        if s[right - k] in vowels:
+            count -= 1
+
+        best = max(best, count)
+
+    return best
 ```
 
 **LC 2461 — Maximum Sum of Distinct Subarrays of Length K**
