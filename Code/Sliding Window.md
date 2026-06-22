@@ -227,12 +227,22 @@ if right - left + 1 == k:
 **LC 219 — Contains Duplicate II (window size k+1)**
 No sum needed. Use a set; if the incoming element is already in the window-set, return True.
 ```python
-window_set.add(nums[right])
-if right - left + 1 == k + 1:
-    if nums[right] in window_set_before_adding:   # check before insert in real code
-        return True
-    window_set.discard(nums[left])
-    left += 1
+def containsNearbyDuplicate(nums, k):
+    window = set()
+    left = 0
+
+    for right in range(len(nums)):
+
+        if nums[right] in window:
+            return True
+
+        window.add(nums[right])
+
+        if right - left + 1 > k:
+            window.remove(nums[left])
+            left += 1
+
+    return False
 ```
 
 ---
