@@ -213,15 +213,16 @@ def maxVowels(s, k):
 **LC 2461 — Maximum Sum of Distinct Subarrays of Length K**
 Add a frequency map. Only count a window as valid if all `k` elements are distinct (map size == k).
 ```python
-freq[nums[right]] = freq.get(nums[right], 0) + 1
-if right - left + 1 == k:
-    if len(freq) == k:          # all distinct
-        best = max(best, window_sum)
-    freq[nums[left]] -= 1
-    if freq[nums[left]] == 0:
-        del freq[nums[left]]
-    window_sum -= nums[left]
-    left += 1
+def maximumSubarraySum(nums, k):
+    best = 0
+
+    for left in range(len(nums) - k + 1):
+        window = nums[left:left+k]
+
+        if len(set(window)) == k:
+            best = max(best, sum(window))
+
+    return best
 ```
 
 **LC 219 — Contains Duplicate II (window size k+1)**
