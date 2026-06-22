@@ -148,6 +148,22 @@ def fixed_window(nums, k):
         best = max(best, window_sum)
 
     return best
+
+
+def fixed_window(nums, k):
+    left = 0
+    window_sum = 0
+    best = 0
+    for right in range(len(nums)):
+        window_sum += nums[right]
+
+        # window has reached size k
+        if right - left + 1 == k:
+            best = max(best, window_sum)
+            window_sum -= nums[left]
+            left += 1
+    return best
+
 ```
 
 **Dry run:** Already done above in Section 1 (array `[2,1,5,1,3,2]`, `k=3` → answer `9`).
