@@ -944,3 +944,6 @@ for right in range(n):
 # MOST IMPORTANT TAKEAWAY
 
 You do not need to memorize 50 LeetCode problems. You need to memorize **7 small templates** and recognize, in under 30 seconds, which one a new problem secretly is. Every problem in Section 4's table is "Template X, with this one tiny change" — practice spotting the change, not re-deriving the whole solution from scratch.
+
+
+1176 2269
