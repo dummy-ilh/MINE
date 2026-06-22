@@ -138,18 +138,14 @@ for right in range(n):
 
 ```python
 def fixed_window(nums, k):
-    left = 0
-    window_sum = 0
-    best = 0
+    window_sum = sum(nums[:k])
+    best = window_sum
 
-    for right in range(len(nums)):
-        window_sum += nums[right]
+    for right in range(k, len(nums)):
+        window_sum += nums[right]      # add new element
+        window_sum -= nums[right - k]  # remove old element
 
-        # window has reached size k
-        if right - left + 1 == k:
-            best = max(best, window_sum)
-            window_sum -= nums[left]
-            left += 1
+        best = max(best, window_sum)
 
     return best
 ```
