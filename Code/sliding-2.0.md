@@ -418,8 +418,24 @@ while zero_count > k:
 ```
 
 **LC 1493 — Longest Subarray of 1's After Deleting One Element**
-Same as LC 1004 with `k = 1`.
+Same as LC 1004 with `k = 1`. For example, given nums = [0,1,1,1,0,1,1,0,1], deleting the middle 0 produces [0,1,1,1,1,1,0,1], where the longest contiguous block of 1s is [1,1,1,1,1], so the answer is 5.
+def longestSubarray(nums):
+    left = 0
+    zeros = 0
+    best = 0
 
+    for right in range(len(nums)):
+        if nums[right] == 0:
+            zeros += 1
+
+        while zeros > 1:
+            if nums[left] == 0:
+                zeros -= 1
+            left += 1
+
+        best = max(best, right - left)
+
+    return best
 ---
 
 ## TEMPLATE 3 — Smallest Valid Window
@@ -1231,6 +1247,5 @@ for right in range(n):
 
 ---
 
-# MOST IMPORTANT TAKEAWAY
 
-You do not need to memorize 50 LeetCode problems. You need to memorize **7 small templates** and recognize, in under 30 seconds, which one a new problem secretly is. Every problem in Section 4's table is "Template X, with this one tiny change" — practice spotting the change, not re-deriving the whole solution from scratch.
+424,76
