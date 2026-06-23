@@ -1,9 +1,5 @@
 # Sliding Window Mastery
 
-> Goal: Learn Sliding Window from zero to interview mastery using the **smallest possible number of templates**. By the end, you should see almost every problem as "same template, tiny change."
-
----
-
 # SECTION 1 — Sliding Window Intuition
 
 ### The Problem Brute Force Has
@@ -115,19 +111,6 @@ START
 ```
 
 Keep this page open mentally during every problem. It is your map.
-
----
-
-# SECTION 2.5 — Coding Style Used In This Guide
-
-To keep things beginner-friendly, every template below follows the same plain, explicit style:
-
-* No `dict.get()` shortcuts — frequency maps are built with plain loops or `Counter`.
-* Descriptive variable names: `current_sum`, `current_product`, `trailing_char` (the one leaving), `leading_char` (the one entering).
-* The window is built once **before** the main loop (first `k` elements added up front), then the main loop only handles the slide — this avoids an awkward "is the window full yet?" check inside the loop.
-* `while` loops are used **only** when the window size can actually vary (Templates 2, 3, 7). If the window size is fixed, a plain `for` loop is enough — no `while` needed at all.
-
-This mirrors how the examples in Section 3.5 are written, so once you're comfortable with those, every template below will look familiar.
 
 ---
 
@@ -243,7 +226,7 @@ Add a `Counter` alongside `current_sum`. Only count a window as valid if all `k`
 ```python
 from collections import Counter
 
-window_counter = Counter(nums[:k])
+window_counter = Counter(nums[:k]) # window_counter = Counter("gat")which becomes {    'g': 1,    'a': 1,    't': 1}
 current_sum = sum(nums[:k])
 max_sum = current_sum if len(window_counter) == k else 0
 
@@ -396,9 +379,16 @@ Answer: 3   ("ece")
 **LC 3 — Longest Substring Without Repeating Characters**
 Condition becomes "no duplicates" → shrink while any frequency > 1.
 ```python
-while freq[ch] > 1:
-    freq[s[left]] -= 1
-    left += 1
+freq = {}
+left = 0
+best = 0
+for right, ch in enumerate(s):
+    freq[ch] = freq.get(ch, 0) + 1
+    while freq[ch] > 1:
+        freq[s[left]] -= 1
+        left += 1
+    best = max(best, right - left + 1)
+return best
 ```
 
 **LC 424 — Longest Repeating Character Replacement**
