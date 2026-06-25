@@ -1,20 +1,6 @@
 # Product Sense Mastery Course
 
-Welcome. I've interviewed hundreds of candidates at Google and Apple for product data science roles. Most fail not because they lack technical skills — they fail because they can't **think like a product person while speaking like a data scientist.**
 
-That's what we're fixing.
-
----
-
-## How This Course Works
-
-I'll teach you one concept at a time. After each one, I'll either:
-- Give you a **practice question** to answer
-- Or ask if you're ready to move to the next concept
-
-You respond, I give you **real interviewer feedback** — brutal and honest, the way I'd debrief a candidate after their loop.
-
----
 
 ## The Course Map
 
@@ -101,4 +87,5 @@ That's the foundation everything else is built on.
 
 Tell me your answer in plain language. No jargon. Pretend you're explaining it over dinner.
 
-This is not a trick. I want to see how you think about the relationship between a user, a product, and a business before I teach you anything else.
+
+"Instagram wants you to keep coming back every day. To do that, it needs to show you stuff you actually enjoy — videos, photos, memes, whatever keeps you scrolling. The more you enjoy it, the more you open it tomorrow. And every time you're scrolling, Instagram quietly slips in ads. Those ads work really well because you're already in a good mood, already engaged. So businesses pay Instagram a lot of money to reach you in that moment. That's the whole game — make you happy enough to return, and sell that attention to brands."
