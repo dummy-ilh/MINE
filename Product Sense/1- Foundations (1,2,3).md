@@ -1,6 +1,3 @@
-
----
-
 ## Lesson 1: What Is Product Sense, Really?
 
 Most candidates think product sense means "knowing how to improve apps." That's surface-level.
