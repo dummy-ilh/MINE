@@ -210,10 +210,6 @@ One word = the single thing the entire product is trying to protect
 
 ## Lesson 2: The Interviewer's Hidden Rubric
 
-Here's something no prep course tells you. When I'm sitting across from you, I'm not just checking if your answer is "correct." There's no answer key.
-
-I'm scoring you on **5 dimensions.** Silently. The whole time.
-
 ---
 
 ## The 5 Dimensions
@@ -285,7 +281,6 @@ Here's something important. The weighting shifts by level:
 | L4 / Mid | User Empathy + Metric Intuition |
 | L5 / Senior | Business Judgment + Structured Curiosity |
 
-If you're interviewing for a senior role and you're only showing metric intuition — you're leaving the most important dimension on the table.
 
 ---
 
@@ -305,7 +300,6 @@ At the start of any product sense question, before you say anything substantive 
 
 > "Can I take 30 seconds to structure my thoughts?"
 
-Then actually do it. Jot notes if you can. Every strong candidate I've seen does this. It signals confidence, not weakness. Weakness is rambling for 3 minutes and hoping something lands.
 
 ---
 The order we'll build them in:
@@ -465,13 +459,6 @@ That's the skeleton of a professional metric investigation. You didn't know that
 
 ---
 
-## What This Tells Me About You
-
-Your instincts are good. Genuinely. What you're missing is not intelligence — it's **vocabulary and structure** to express what you're already thinking, faster and more completely.
-
-In an interview that answer would come out scattered. We need to make it come out **crisp and sequential** so the interviewer can follow your logic in real time.
-
-That's exactly what Lesson 4 teaches.
 
 ---
 
@@ -487,15 +474,10 @@ Then you questioned **the cause** — did something change?
 
 That order is not random. It's actually the correct order of investigation. You go from "is this real" before you ever ask "why did this happen."
 
-Most panicked candidates skip straight to why. They start theorizing causes before confirming the data is even telling them something true.
 
-You didn't do that. Hold onto that instinct.
 
 ---
-
-How would you answer. Dau dropping. Assume google search, insta, siri calls. 3 cases
-
-Great question. Let me walk you through all three like I'm in the interview room. Watch the structure — same skeleton every time, different thinking inside it.
+.
 
 ---
 
@@ -510,8 +492,6 @@ Every metric drop investigation follows this order:
 4. Did the world cause it?
 5. What user behavior does this represent?
 ```
-
-Never skip steps. Never reorder them. Now let's apply it.
 
 ---
 
@@ -792,16 +772,6 @@ Use these whenever the product is a marketplace, social network, or creator plat
 - Is the matching quality between supply and demand degrading?
 
 ---
-
-## How To Use This In An Interview
-
-Don't recite this list. That's the framework robot failure mode we talked about in Lesson 2.
-
-Instead, use it as a **mental checklist you run silently** while you speak out loud about the most interesting and relevant questions for that specific product.
-
-A good interview answer picks **6-8 of these questions**, sequences them logically, and explains *why* each one matters for *this specific product.*
-
-The questions you choose and the order you choose them in — that's what shows your product judgment.
 
 ---
 
