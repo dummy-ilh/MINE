@@ -4,8 +4,6 @@ Most candidates think product sense means "knowing how to improve apps." That's 
 
 **Real product sense is the ability to connect user behavior to business outcomes — and make decisions under ambiguity.**
 
-Here's the mental model I use to evaluate candidates:
-
 ```
 User has a need
     ↓
@@ -24,7 +22,7 @@ A product data scientist lives in **all five layers simultaneously.** You're not
 
 ---
 
-### The Three Failure Modes I See in Interviews
+### The Three Failure Modes 
 
 **Failure 1 — The Feature Monkey**
 Candidate jumps straight to "we should add a dark mode / notification / AI feature." No grounding in user problems. No metric attached. Just vibes.
@@ -51,10 +49,8 @@ That's the foundation everything else is built on.
 
 > A friend who knows nothing about tech asks you: *"What does Instagram actually want its users to do?"*
 
-Tell me your answer in plain language. No jargon. Pretend you're explaining it over dinner.
 
-
-"Instagram wants you to keep coming back every day. To do that, it needs to show you stuff you actually enjoy — videos, photos, memes, whatever keeps you scrolling. The more you enjoy it, the more you open it tomorrow. And every time you're scrolling, Instagram quietly slips in ads. Those ads work really well because you're already in a good mood, already engaged. So businesses pay Instagram a lot of money to reach you in that moment. That's the whole game — make you happy enough to return, and sell that attention to brands."
+>"Instagram wants you to keep coming back every day. To do that, it needs to show you stuff you actually enjoy — videos, photos, memes, whatever keeps you scrolling. The more you enjoy it, the more you open it tomorrow. And every time you're scrolling, Instagram quietly slips in ads. Those ads work really well because you're already in a good mood, already engaged. So businesses pay Instagram a lot of money to reach you in that moment. That's the whole game — make you happy enough to return, and sell that attention to brands."
 ---
 
 
