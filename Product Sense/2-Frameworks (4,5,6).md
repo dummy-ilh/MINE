@@ -907,9 +907,7 @@ Every time you're asked to define success — say this to yourself silently befo
 
 Three questions. Five seconds. Structures your entire answer before you open your mouth.
 
----
 
-Ready for Lesson 6: **The Diagnosis Framework** — where we turn your natural investigation instincts into a structured system for any metric movement, any product, any interview.
 ---
 
 
@@ -963,7 +961,7 @@ That's exactly how you diagnose a metric movement.
 
 ## The RICE Diagnosis Framework
 
-I developed this from watching hundreds of candidates. The ones who get offers follow this structure naturally. Now you'll follow it deliberately until it becomes natural.
+
 
 ```
 R — Reality check
@@ -1186,56 +1184,11 @@ Diagnose this:
 
 Use RICE. Out loud in your head as if you're in the interview room. Write it the way you'd say it.
 
-Don't worry about being perfect. I want to see how you apply the framework for the first time.
-
-
-Good. You're applying the skeleton correctly. Your instincts are right.
-
-Now let me show you the difference between knowing the framework and owning it.
-
----
-
-## Feedback
-
-**What you got right:**
-- Started with reality check. Good discipline.
-- Moved to segmentation before jumping to cause. Correct order.
-- Connected isolation to cause category. That's the right logic chain.
-
-**What's missing:**
-
-You applied the framework as a checklist. In an interview it needs to sound like thinking out loud — not steps being recited.
-
-Also three specific gaps:
-
-**Gap 1 — You didn't go deep enough inside each step**
-
-Reality check — you asked if capture changed. Good. But you didn't ask the most important question for a conversion metric specifically:
-
-> Did the definition of "conversion" change? Did the paywall move? Did we change the free trial length?
-
-Conversion rate is uniquely sensitive to product changes that aren't bugs. A 7 day free trial becoming a 3 day free trial would crater conversion rate overnight. That's not a tracking issue — that's a deliberate product change that someone forgot to flag.
-
-**Gap 2 — You didn't name specific segments that matter for Spotify**
-
-For Spotify specifically the segments that matter most are:
-
-- Free users vs trial users vs lapsed premium users — completely different conversion journeys
-- Student plan vs individual vs family — different price sensitivities
-- Mobile vs desktop — conversion flow is different on each
-- Market — Spotify's conversion rate in the US vs India vs Brazil behaves completely differently because purchasing power and competition differ
-
-Generic segmentation sounds like a framework. Product specific segmentation sounds like someone who understands the business.
-
-**Gap 3 — You skipped the Effect step almost entirely**
-
-You said "thus effect" — but effect is where senior candidates separate themselves. It's not just a label. It's a judgment call about severity, blast radius, and response.
 
 ---
 
 ## What The Full Answer Sounds Like
 
-Let me show you the complete RICE for this specific question delivered interview-ready:
 
 ---
 
@@ -1327,49 +1280,14 @@ The "because" is where your product judgment lives. Without it you sound like a 
 
 ---
 
-## Where You Are In The Course
-
-You've now completed the foundations and frameworks modules.
-
-```
-✅ Lesson 1 — What is product sense
-✅ Lesson 2 — The interviewer's rubric
-✅ Lesson 3 — Anatomy of a great product
-✅ Lesson 4 — Goal Metric Signal chain
-✅ Lesson 5 — Defining success
-✅ Lesson 6 — Diagnosis framework
-
-Coming up:
-⬜ Lesson 7 — Metric deep dives
-⬜ Lesson 8 — Product improvement questions
-⬜ Lesson 9 — Tradeoff questions
-⬜ Lesson 10 — Launch decisions
-```
-
-You're about to move into the question types module. This is where we take everything you've learned and apply it to the actual interview questions you'll face.
-
 ---
 
-Before Lesson 7 — one consolidation question:
-
-> In your own words, what is the difference between a primary metric and a guardrail metric, and why do you need both?
-
-Don't look back at previous lessons. Tell me what you've absorbed. This tells me if the foundations are solid before we build on top of them.
-
-
-Good. You've got the intuition. Let me sharpen the language.
-
----
-
-## What You Got Right
-
-You understood the relationship. Primary moves toward something. Guardrail prevents something else from breaking. That's the core idea.
 
 ---
 
 ## The Sharper Version
 
-Here's how to say this in an interview:
+
 
 > "Primary metrics measure progress toward the goal. Guardrail metrics protect against achieving that progress in ways that cause harm elsewhere. You need both because any metric can be gamed — and without guardrails, teams will optimise the primary metric in ways that look good on a dashboard but damage the actual product experience."
 
@@ -1414,10 +1332,306 @@ The guardrail has to be the specific thing the primary metric would sacrifice if
 
 ---
 
-## You're Ready For Lesson 7
+## Common RICE Diagnosis Questions — Real & Reconstructed
 
-Your foundations are solid. You understand the concepts. What we're building now is precision — tighter language, more specific thinking, deeper product knowledge.
+Organised by product. For each one I give you the question exactly as it would be asked — then the key insight that makes the answer strong.
 
-Lesson 7 is where it gets real. We move from frameworks into actual interview questions.
+---
 
-Ready for Lesson 7: **Metric Deep Dives** — where interviewers go three or four levels below the surface and most candidates drown. We'll make sure you don't.
+## Google Products
+
+---
+
+### Google Search
+
+**Q1:**
+> "Google Search DAU dropped 15% week over week globally. Walk me through your investigation."
+
+**The key insight:**
+The scariest hypothesis isn't a bug. It's behavioral substitution — users going to ChatGPT, TikTok, or Reddit instead. A bug fixes itself. Substitution doesn't.
+
+---
+
+**Q2:**
+> "Average searches per user per day is declining but average searches per country is increasing. How do you explain this?"
+
+**The key insight:**
+This is a composition problem. More countries are using Search — growing the denominator — but new country users search less frequently than established users. The per-user average falls even though total volume grows. Simpson's Paradox in action.
+
+---
+
+**Q3:**
+> "Google Search click through rate dropped 20% after a new SERP layout launched. How do you investigate?"
+
+**The key insight:**
+First question is not why CTR dropped. First question is whether the drop is bad. Zero click success — users getting answers directly on the SERP — is a legitimate success state for Search. CTR dropping because featured snippets are answering queries is a win not a loss.
+
+---
+
+**Q4:**
+> "Google Search revenue is up 10% but user satisfaction scores are down 8% simultaneously. What's happening and what do you do?"
+
+**The key insight:**
+This is the leading vs lagging indicator trap. Revenue is a lagging metric reflecting past behavior. Satisfaction is a leading indicator of future retention. Satisfaction falling while revenue rises means you're consuming future health to show present performance. Act on the satisfaction signal now before it shows up in revenue quarters later.
+
+---
+
+**Q5:**
+> "Query reformulation rate increased 25% after a ranking algorithm update. Walk me through your diagnosis."
+
+**The key insight:**
+Reformulation rate increasing after an algorithm change is almost certainly a direct consequence of that change. The algorithm is returning less relevant first results. Users are having to try again. This is a product regression not an external event. Rollback decision needs to be made fast.
+
+---
+
+### YouTube
+
+**Q6:**
+> "YouTube watch time increased 18% month over month but subscriber growth on creator channels dropped 12%. How do you explain this?"
+
+**The key insight:**
+Watch time increasing while subscriptions drop suggests users are watching but not finding creators worth following. Likely means algorithmic recommendations are surfacing content users consume passively but don't connect with emotionally. Quantity of consumption is up. Quality of connection is down. Long term creator ecosystem is at risk.
+
+---
+
+**Q7:**
+> "YouTube Premium conversion rate dropped 30% in one week. Walk me through your investigation."
+
+**The key insight:**
+Before investigating external causes — check if anything changed in the Premium offer itself. Free trial length, pricing, paywall placement, or the features visible to free users. A 30% drop in one week is almost always an internal change not an external event.
+
+---
+
+**Q8:**
+> "YouTube mobile DAU is flat but desktop DAU dropped 25%. What do you investigate first?"
+
+**The key insight:**
+Platform specific drops almost always have platform specific causes. Check if a Chrome or browser update broke the desktop experience. Check if a desktop UI change shipped. Check if the drop is concentrated among a specific OS or browser version. Mobile flat while desktop drops means the product is fine — the desktop delivery mechanism is broken.
+
+---
+
+**Q9:**
+> "Creator upload rate dropped 20% on YouTube. How do you diagnose this?"
+
+**The key insight:**
+Creator upload rate is a supply side metric. Diagnose it like a two-sided marketplace. Check if monetisation changed — did YouTube Partner Program criteria change making monetisation harder? Did a policy change demonetise certain content categories causing creators to stop uploading? Creator behavior follows incentives. Find the changed incentive.
+
+---
+
+### Google Maps
+
+**Q10:**
+> "Google Maps navigation session length dropped 15% but destination completion rate stayed flat. What does this mean?"
+
+**The key insight:**
+Sessions are shorter but users are still completing navigation. This is almost certainly a good signal — Maps is getting users to their destination faster. But verify — check if the drop correlates with shorter journeys being taken or with faster routing algorithms. Shorter sessions with flat completion is efficiency not failure.
+
+---
+
+**Q11:**
+> "Google Maps place searches increased 30% but conversion to navigation dropped 20%. How do you investigate?"
+
+**The key insight:**
+Users are searching for places but not navigating to them. Three hypotheses ranked by probability. First — place information is answering their question without navigation being needed — they wanted the phone number or hours not directions. Second — search results are showing irrelevant places requiring multiple searches before finding the right one. Third — something broke in the search to navigation handoff flow. Test the flow end to end before assuming content quality is the problem.
+
+---
+
+### Gmail
+
+**Q12:**
+> "Gmail smart reply usage dropped 40% after an iOS update. Walk me through your investigation."
+
+**The key insight:**
+iOS update is your most probable cause immediately. Check if the iOS update changed how Gmail renders or interacts with the keyboard. Check if the smart reply UI is displaying correctly on the new iOS version. Check if the feature is broken specifically on new iOS devices or all iOS devices. This is almost certainly a compatibility issue not a product quality issue.
+
+---
+
+### Google Ads
+
+**Q13:**
+> "Advertiser spend on Google Search Ads dropped 15% quarter over quarter. How do you diagnose this?"
+
+**The key insight:**
+This is a B2B diagnosis. Advertisers are the user. Check three things in order. First — did we change auction mechanics, bidding algorithms, or ad placement? Second — did macroeconomic conditions change causing advertisers to reduce all marketing spend? Third — did a competitor — TikTok Ads, Amazon Ads, Meta — launch something that pulled budget away? The third is the most dangerous because it represents structural shift not temporary adjustment.
+
+---
+
+## Apple Products
+
+---
+
+### App Store
+
+**Q14:**
+> "App Store conversion rate — browse to install — dropped 25% after a redesign. Walk me through your investigation."
+
+**The key insight:**
+A redesign causing conversion drop is almost always a primacy effect. Users are disoriented by the new layout. Their established browse patterns don't work anymore. Check if the drop is concentrated in the first week post-launch — if it recovers in week two and three the redesign is fine and users are adapting. If it doesn't recover — the redesign has a genuine UX problem.
+
+---
+
+**Q15:**
+> "In-app purchase revenue dropped 20% across all App Store categories simultaneously. How do you investigate?"
+
+**The key insight:**
+A drop across ALL categories simultaneously is almost never a content quality problem. It's almost always a payment infrastructure problem. Check if Apple Pay, credit card processing, or the purchase confirmation flow broke. A category-specific drop is a content problem. A cross-category simultaneous drop is a payment problem.
+
+---
+
+### Apple Music
+
+**Q16:**
+> "Apple Music daily listening hours increased 15% but subscription renewal rate dropped 10%. How do you explain this?"
+
+**The key insight:**
+This is the classic engagement vs satisfaction divergence. Users are listening more but valuing it less. Most likely explanation — users are using Apple Music as background noise during work from home. Passive listening is inflating hours. When renewal comes up they evaluate whether they actively chose Apple Music or just left it playing. Passive habit is not the same as valued habit. The renewal rate reveals the truth that listening hours hide.
+
+---
+
+### Siri
+
+**Q17:**
+> "Siri daily invocations dropped 30% on HomePod specifically while iPhone Siri usage stayed flat. What do you investigate?"
+
+**The key insight:**
+Device-specific drops have device-specific causes. Check if a HomePod software update shipped recently. Check if a specific Siri capability that HomePod users rely on — music control, smart home commands, timer setting — broke or degraded. HomePod Siri usage is dominated by a small number of high-frequency use cases. Breaking any one of them explains a large drop.
+
+---
+
+### iCloud
+
+**Q18:**
+> "iCloud storage upgrade conversion rate dropped 35% in one month. How do you diagnose this?"
+
+**The key insight:**
+iCloud storage upgrade happens at a specific moment — when users hit their storage limit. A conversion drop means either fewer users are hitting the limit — unlikely to drop suddenly — or something changed in the upgrade flow itself. Check if the upgrade prompt changed. Check if pricing changed. Check if a competing free storage offer launched. The most likely cause is a change in the conversion moment itself not a change in user behavior.
+
+---
+
+## Instagram / Meta Products
+
+---
+
+### Instagram
+
+**Q19:**
+> "Instagram Stories views dropped 20% but Feed engagement stayed flat. Walk me through your investigation."
+
+**The key insight:**
+Surface-specific drops almost always have surface-specific causes. Check if Stories placement changed in the app — did the Stories bar move or become less prominent? Check if a competitor — Snapchat launched something, TikTok added a Stories equivalent — pulled Stories attention away. Check if Stories content quality dropped — did major creators shift their content to Reels? The Feed being flat rules out a general engagement problem. Something changed specifically about Stories.
+
+---
+
+**Q20:**
+> "Instagram new user D7 retention dropped 25% after a new onboarding flow launched. What do you do?"
+
+**The key insight:**
+New user retention dropping after onboarding change is a direct causal signal. The new onboarding flow is almost certainly the cause. The question is which part of the flow. Check completion rate at each step of the new onboarding. Find the step with highest abandonment. That step is where the problem lives. Consider reverting to the old flow while fixing the specific broken step.
+
+---
+
+### WhatsApp
+
+**Q21:**
+> "WhatsApp message send rate dropped 15% in Brazil specifically. Walk me through your diagnosis."
+
+**The key insight:**
+Single market drops require market-specific investigation. Check three things. First — did a local competitor launch or a local telco offer free SMS making WhatsApp less necessary? Second — did a regulatory or government action affect WhatsApp specifically in Brazil? Third — did an infrastructure or connectivity issue affect message delivery reliability in Brazil causing users to lose trust and switch? Brazil is WhatsApp's largest market. A Brazil-specific drop is a significant business event not a marginal variation.
+
+---
+
+## LinkedIn
+
+---
+
+**Q22:**
+> "LinkedIn job application rate dropped 20% week over week. How do you investigate?"
+
+**The key insight:**
+Job application rate is sensitive to two completely unrelated things — platform changes and macroeconomic conditions. A sudden drop in one week is almost always a platform change — something changed in the job search flow, job recommendation quality, or application UX. A gradual multi-week decline is more likely macroeconomic — fewer jobs posted, economic uncertainty reducing job seeking. Distinguish sudden cliff from gradual slope before diagnosing cause.
+
+---
+
+**Q23:**
+> "LinkedIn Premium conversion rate increased 25% but Premium churn rate also increased 20% three months later. What happened?"
+
+**The key insight:**
+This is the classic conversion-churn mismatch. Something drove aggressive conversion three months ago — a promotional offer, a paywall tightening, a viral moment — that brought in users who weren't genuinely ready to pay for Premium. They converted under pressure or impulse. Three months later when the novelty faded or the promotion ended — they churned. High conversion rate followed by high churn rate means you acquired the wrong users, not that you retained users poorly.
+
+---
+
+## Spotify
+
+---
+
+**Q24:**
+> "Spotify podcast listening hours increased 40% but music listening hours dropped 15% simultaneously. What does this mean and what do you do?"
+
+**The key insight:**
+This is a cannibalisation question not a failure question. Podcast growth is eating music time within the same app. The question is whether this is good or bad for Spotify's business. Music licensing costs Spotify significant royalties. Podcast content is cheaper to host and increasingly owned by Spotify. If podcast hours are substituting music hours — Spotify's gross margin might actually be improving even as music metric looks bad. Evaluate at the business model level not just the product metric level.
+
+---
+
+**Q25:**
+> "Spotify free to Premium conversion rate dropped 20% after the price increase. Walk me through your investigation."
+
+**The key insight:**
+A price increase causing conversion drop is expected and not necessarily a problem. The question is whether the revenue increase from higher prices offsets the volume decrease from lower conversion. Calculate the net revenue impact before treating this as a crisis. Also segment — did conversion drop equally across all markets or more severely in price-sensitive emerging markets? The answer changes what you do next.
+
+---
+
+## Uber
+
+---
+
+**Q26:**
+> "Uber ride completion rate dropped 15% on Friday and Saturday nights specifically. How do you diagnose this?"
+
+**The key insight:**
+Time-specific drops reveal demand-supply imbalances at specific moments. Friday and Saturday nights are peak demand moments. A completion rate drop means either driver supply is insufficient at peak — drivers can't cover demand — or cancellation rate is rising because wait times are too long making riders cancel. Check driver-online rate on Friday and Saturday nights vs weekday evenings. If driver supply is the issue — this is a supply side problem not a demand side problem.
+
+---
+
+**Q27:**
+> "Uber Eats order accuracy rate dropped 25% in one city. Walk me through your investigation."
+
+**The key insight:**
+Single city drops have local causes. Check if a large restaurant partner in that city had operational issues. Check if a new delivery partner onboarded in that city with lower accuracy. Check if there was a local event — festival, sporting event — that created unusual order volume overwhelming restaurant preparation capacity. City-specific accuracy drops are almost always operational not algorithmic.
+
+---
+
+## Airbnb
+
+---
+
+**Q28:**
+> "Airbnb host acceptance rate dropped 20% in summer months. How do you investigate?"
+
+**The key insight:**
+Seasonal patterns are the first thing to check for marketplace metrics. Summer is peak travel season. Hosts receive more requests than they can accommodate and become more selective. A drop in acceptance rate during peak season is expected behavior — hosts are choosing their best guests not declining due to dissatisfaction. Compare to the same period last year before treating this as a problem.
+
+---
+
+**Q29:**
+> "Airbnb search to booking conversion dropped 30% after a new pricing display feature launched. Walk me through your diagnosis."
+
+**The key insight:**
+New pricing display showing total cost including fees — cleaning fees, service fees — at the search results stage rather than at checkout is the most common cause of this specific drop. Users see the true total price earlier and self-select out. This is actually a good product change for user trust even though conversion drops. The question is whether the users who now don't book were going to churn anyway after seeing fees at checkout — and whether booking quality improves among users who do convert.
+
+---
+
+## The Four Principles Across Every Question
+
+**Principle 1 — Sudden cliff vs gradual slope**
+Sudden drops in one week — internal change. Gradual declines over months — behavioral shift or external pressure. Always determine which pattern before investigating cause.
+
+**Principle 2 — Global vs local**
+Global drops — infrastructure, algorithm, major external event. Local drops — market specific cause, operational issue, local competition. Never assume global when the data shows local.
+
+**Principle 3 — Cross-surface vs single-surface**
+Drop on all surfaces simultaneously — core product problem or infrastructure issue. Drop on one surface — surface-specific cause. Always check surface breakdown before diagnosing.
+
+**Principle 4 — The fear sentence**
+Every diagnosis should end with naming the specific fear for that product. Not just "we should investigate." The specific scenario that would make this drop existential rather than manageable.
+
+---
