@@ -1,34 +1,47 @@
-# Product Sense Mastery Course
 
-
-
-## The Course Map
-
-**Module 1 — Foundations**
-1. What is product sense, really?
-2. The interviewer's hidden rubric
-3. The anatomy of a great product
-
-**Module 2 — Frameworks**
-4. The Goal → Metric → Signal chain
-5. How to define success for any product
-6. The diagnosis framework (when metrics move)
-
-**Module 3 — Core Question Types**
-7. Metric deep-dives
-8. Product improvement questions
-9. Tradeoff questions
-10. Launch/no-launch decisions
-
-**Module 4 — The Data Science Layer**
-11. Connecting product intuition to data
-12. Experiment design in product context
-13. When NOT to run an A/B test
-
-**Module 5 — Company-Specific Thinking**
-14. How Google thinks about products
-15. How Apple thinks about products
-16. Calibrating your answers to the company
+# 📘 Product Sense Mastery Course
 
 ---
 
+# 🗺️ Course Roadmap
+
+## Module 1 — Foundations
+
+1. **What Is Product Sense, Really?**
+2. **The Interviewer's Hidden Rubric**
+3. **The Anatomy of a Great Product**
+
+---
+
+## Module 2 — Frameworks
+
+4. **The Goal → Metric → Signal Chain**
+5. **How to Define Success for Any Product**
+6. **The Diagnosis Framework (When Metrics Move)**
+
+---
+
+## Module 3 — Core Question Types
+
+7. **Metric Deep Dives**
+8. **Product Improvement Questions**
+9. **Tradeoff Questions**
+10. **Launch / No-Launch Decisions**
+
+---
+
+## Module 4 — The Data Science Layer
+
+11. **Connecting Product Intuition to Data**
+12. **Experiment Design in a Product Context**
+13. **When *Not* to Run an A/B Test**
+
+---
+
+## Module 5 — Company-Specific Thinking
+
+14. **How Google Thinks About Products**
+15. **How Apple Thinks About Products**
+16. **Calibrating Your Answers to the Company**
+
+---
