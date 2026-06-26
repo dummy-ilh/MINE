@@ -1,63 +1,5 @@
 ## Lesson 11: Connecting Product Intuition To Data Science
 
-Everything up to this point has been product thinking. Frameworks, user empathy, metric design, diagnosis, launch decisions.
-
-But you're not interviewing for a PM role.
-
-You're interviewing for a **product data scientist** role. And that distinction matters enormously.
-
-The difference between a PM and a product data scientist in an interview is this:
-
-> A PM says "we should measure this."
-> A product data scientist says "here's exactly how we measure it, why that method has these specific limitations, and here's what the data would need to show for me to be confident in the conclusion."
-
-This lesson is about adding that second layer to everything you've already learned.
-
----
-
-## What Product Data Science Actually Is
-
-Most candidates think product data science is:
-
-> Analytics + product sense
-
-That's incomplete. Real product data science sits at the intersection of four things:
-
-```
-Product Intuition
-— understanding users, goals, and product dynamics
-
-Statistical Rigor
-— knowing when data is telling you something true
-
-Causal Thinking
-— distinguishing correlation from causation
-
-Decision Science
-— translating data findings into product decisions
-```
-
-You can be strong at one or two of these and still fail. The role requires all four simultaneously.
-
----
-
-## The Gap Most Data Scientists Have
-
-Strong data scientists who fail product data science interviews almost always fail on the same dimension:
-
-> They can analyze data but they can't connect the analysis to a decision.
-
-They run beautiful analyses. They produce statistically rigorous results. Then they hand the output to a PM and say "here are the findings."
-
-That's a data analyst. Not a product data scientist.
-
-A product data scientist asks one additional question after every analysis:
-
-> **"So what should we do differently?"**
-
-And they answer it themselves. With reasoning. With confidence. With an understanding of the tradeoffs.
-
----
 
 ## The Four Connections You Must Be Able To Make
 
@@ -321,9 +263,7 @@ That's the shift happening. Your instincts are catching up with your vocabulary.
 
 ## Lesson 12: Experiment Design
 
-The "wow" is earned. You just demonstrated causal inference thinking that most candidates with statistics degrees fumble in interviews.
 
-Now we go deeper.
 
 ---
 
@@ -897,16 +837,3 @@ What we've been building in this course is the structure to express it clearly a
 
 ---
 
-## Where You Are
-
-```
-✅ Lessons 1-13 Complete
-
-Coming up:
-⬜ Lesson 14 — Google Specific Thinking
-⬜ Lesson 15 — Apple Specific Thinking
-⬜ Lesson 16 — Full Mock Interview
-```
-
-
----
