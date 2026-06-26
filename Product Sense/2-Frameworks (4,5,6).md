@@ -1,7 +1,5 @@
 ## Lesson 4: The Goal → Metric → Signal Chain
 
-This is the most important technical lesson in the entire course. Everything else sits on top of this.
-
 ---
 
 ## The Problem With How Most People Think About Metrics
