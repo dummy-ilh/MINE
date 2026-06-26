@@ -322,14 +322,239 @@ Here's how a strong candidate would open this answer:
 That answer in an interview gets you to the next round.
 
 ---
+## The Master Metric Hierarchy Table
 
-## What To Practice Before Lesson 5
+One table per major product category. Use these as starting points — adapt to the specific product in the question.
 
-Every time you use an app this week — ask yourself:
+---
 
-> "What is this app's real goal for me, and what metric would actually capture that — not just my engagement?"
+## Social / Feed Products
+*(Instagram, TikTok, Facebook, Threads)*
 
-Do it for 3 apps. It rewires how you see products.
+| Level | Metric | Why |
+|---|---|---|
+| North Star | Daily users who complete at least 3 meaningful interactions — like, comment, share, save | Captures habit AND active engagement not passive scrolling |
+| Primary | Session length, content completion rate, D1/D7 return rate, posts created per user | Explains north star from different angles |
+| Guardrail | User reported wellbeing score, uninstall rate, time on app regret score | Protects against dark patterns and compulsive usage |
+| Diagnostic | Scroll depth, tap through rate by content type, load time by network speed, skip rate by content format | Pulled when primary metrics move |
+
+**North Star logic:** 3 meaningful interactions captures intent. Passive scroll doesn't count. Active engagement does.
+
+---
+
+## Search Products
+*(Google Search, Apple Search, Bing)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | Successful Search Rate — % of queries where user intent appears satisfied with no reformulation and no immediate return | Measures actual value delivered not just clicks |
+| Primary | Long click rate, pogo-stick rate, zero click success rate, query reformulation rate | Each explains a different failure mode of search |
+| Guardrail | Latency — speed cannot increase, revenue per query, trust score | Speed is non-negotiable at Google. Revenue protects the business model |
+| Diagnostic | CTR by result position, reformulation rate by query type, abandonment rate by device | Pulled when SSR moves |
+
+**North Star logic:** SSR captures satisfaction behaviorally. No survey needed. User behavior tells you if they got what they needed.
+
+---
+
+## Video Streaming Products
+*(YouTube, Netflix, Apple TV+, Disney+)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | % of sessions where user completes at least one piece of content AND returns within 48 hours | Captures satisfaction AND habit formation together |
+| Primary | Content completion rate, session length, D7 retention, titles watched per month | Each explains the north star from a different dimension |
+| Guardrail | User reported satisfaction score, post-session regret score, subscription cancellation rate | Protects against binge patterns that feel bad and drive long term churn |
+| Diagnostic | Completion rate by content length, autoplay acceptance rate, browse-to-play conversion rate, time to first play | Pulled when primary metrics move |
+
+**North Star logic:** Return within 48 hours distinguishes one-time viewing from genuine habit. Completion distinguishes active watching from background noise.
+
+---
+
+## Music Streaming Products
+*(Spotify, Apple Music, YouTube Music)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | % of sessions where user completes at least one song AND saves or follows something new | Captures satisfaction AND discovery simultaneously |
+| Primary | Song completion rate, early skip rate, save rate, playlist creation rate, D7 retention | Each explains a dimension of the listening experience |
+| Guardrail | Skip rate on recommended tracks, session abandonment rate, subscription churn rate | Protects against recommendation quality degrading |
+| Diagnostic | Skip rate by content type, completion rate by session context, hint usage rate for discovery features | Pulled when primary metrics move |
+
+**North Star logic:** Save or follow is the strongest signal of genuine discovery. Passive listening without any active signal could be background noise.
+
+---
+
+## Navigation Products
+*(Google Maps, Apple Maps, Waze)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | % of navigation sessions completing to destination with ETA accuracy within 10 minutes | Captures the core promise — get there, on time, without anxiety |
+| Primary | Navigation completion rate, mid-route abandonment rate, reroute rate, ETA accuracy | Each explains a failure mode of navigation |
+| Guardrail | Navigation safety incidents, crash rate, wrong turn rate despite following Maps | Safety is a non-negotiable guardrail for navigation specifically |
+| Diagnostic | Reroute rate by region, abandonment rate by journey length, ETA accuracy by time of day and traffic conditions | Pulled when primary metrics move |
+
+**North Star logic:** ETA accuracy within 10 minutes is a specific, measurable promise. Completion rate alone doesn't capture whether the experience was anxiety-free.
+
+---
+
+## Messaging / Communication Products
+*(WhatsApp, iMessage, Gmail, Slack)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | % of users who send at least one message AND receive a reply within the same session | Captures two-sided communication success not just sending behavior |
+| Primary | Messages sent per user per day, reply rate, read rate, active conversation threads per user | Each explains engagement depth |
+| Guardrail | Accidental send rate, spam report rate, user reported privacy concern score | Communication products have high trust requirements — errors are severe |
+| Diagnostic | Reply latency, message thread length, attachment send rate, search usage rate | Pulled when primary metrics move |
+
+**North Star logic:** A message sent with no reply is a failed communication. Reply within session captures actual two-sided value.
+
+---
+
+## Marketplace Products
+*(Airbnb, Uber, Amazon, eBay)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | Completed transactions where both sides rate the experience 4 stars or above | Captures quality of match AND satisfaction on both sides simultaneously |
+| Primary | Search to transaction conversion rate, supply acceptance rate, transaction completion rate, repeat transaction rate | Explains the full funnel from both sides |
+| Guardrail | Dispute rate, safety incidents, supply side churn rate — hosts, drivers, sellers leaving | Marketplace fails if either side is underserved — supply churn is the earliest warning signal |
+| Diagnostic | Search to click rate by listing type, cancellation rate by segment, review response rate, time to match | Pulled when primary metrics move |
+
+**North Star logic:** Both sides rating 4+ stars captures mutual satisfaction. A transaction that completes but leaves one side unhappy is not a success — it's a future churn event.
+
+---
+
+## Ride Sharing Products
+*(Uber, Lyft, Grab)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | % of ride requests that complete with both rider and driver rating 4+ stars within 5 minutes of expected pickup | Captures reliability AND satisfaction AND speed together |
+| Primary | Request to match time, cancellation rate, driver acceptance rate, rider return rate within 7 days | Each explains a dimension of the reliability promise |
+| Guardrail | Safety incidents, driver earnings per hour — cannot decline, surge pricing frequency | Driver earnings are a supply side guardrail. If drivers earn less they leave. If they leave reliability collapses |
+| Diagnostic | Match time by area and time of day, cancellation rate by driver rating, surge frequency by market | Pulled when primary metrics move |
+
+**North Star logic:** 5 minute pickup window captures the reliability promise specifically. Satisfaction scores capture experience quality. Both together capture the full value delivered.
+
+---
+
+## Food Delivery Products
+*(Uber Eats, DoorDash, Zomato, Swiggy)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | % of orders delivered within estimated time where user reorders within 14 days | Captures reliability AND retention together |
+| Primary | Order to delivery time accuracy, order accuracy rate, reorder rate, restaurant selection conversion | Each explains a dimension of the delivery promise |
+| Guardrail | Wrong order rate, cold food complaint rate, dasher/driver earnings — cannot decline | Wrong orders are an immediate trust-destroying event that's hard to recover from |
+| Diagnostic | Delivery time accuracy by distance, restaurant preparation time variance, dasher availability by time of day | Pulled when primary metrics move |
+
+---
+
+## Professional Network Products
+*(LinkedIn)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | % of job seekers who receive at least one meaningful recruiter response within 30 days of first application | Captures actual value delivered — not just activity |
+| Primary | Application to response rate, time to first recruiter contact, connection acceptance rate, content engagement rate | Explains value from both job seeker and recruiter perspective |
+| Guardrail | Ghost rate — applications receiving zero response, spam application rate, recruiter churn rate | Ghost rate is the single most trust-destroying experience on LinkedIn. Cannot increase |
+| Diagnostic | Response rate by industry and role level, application completion rate, search to application conversion | Pulled when primary metrics move |
+
+**North Star logic:** Recruiter response is the first real signal the platform delivered value. Measuring applications sent is measuring activity not outcomes.
+
+---
+
+## E-Commerce Products
+*(Amazon, Shopify stores, Flipkart)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | % of visitors who complete a purchase AND return to purchase again within 90 days | Captures conversion AND loyalty together |
+| Primary | Search to purchase conversion rate, cart abandonment rate, return rate, average order value | Each explains a stage of the purchase funnel |
+| Guardrail | Return rate — high returns signal product-expectation mismatch, customer service contact rate, review score average | High return rate costs money AND signals the product didn't match the promise |
+| Diagnostic | Conversion rate by traffic source, cart abandonment by checkout step, search zero-result rate | Pulled when primary metrics move |
+
+---
+
+## Subscription Products
+*(Netflix, Spotify, iCloud, Microsoft 365)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | Monthly subscribers who actively use the product at least 3 times per week | Captures paying AND engaged — not just paying |
+| Primary | Monthly active rate among subscribers, feature adoption breadth, renewal rate, upgrade rate | Each explains subscription health from a different angle |
+| Guardrail | Involuntary churn rate — failed payments, voluntary churn rate, NPS among paying users | Involuntary churn is fixable. Voluntary churn is a product signal. Know which one is moving |
+| Diagnostic | Churn rate by tenure cohort, feature usage before churn, last active date before cancellation | Pulled when primary metrics move |
+
+**North Star logic:** Paying but not using is the most dangerous subscriber state. It predicts voluntary churn within one billing cycle. Active engagement is the only sustainable subscription.
+
+---
+
+## App Store / Platform Products
+*(Apple App Store, Google Play, Steam)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | % of app installs that result in at least 3 sessions within the first 7 days | Captures successful discovery AND onboarding together |
+| Primary | Install to first session rate, D1/D7/D30 retention after install, search to install conversion rate | Each explains the install funnel |
+| Guardrail | App crash rate, refund rate, review score below 3 stars rate | Crash rate and refund rate are immediate trust signals that damage platform reputation |
+| Diagnostic | Install source conversion by category, search zero-result rate, review response rate by developer | Pulled when primary metrics move |
+
+---
+
+## AI Assistant Products
+*(Siri, Gemini, ChatGPT, Alexa)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | % of queries where user accepts the response without reformulating or abandoning | Captures task completion behaviorally — user got what they needed |
+| Primary | Query completion rate, reformulation rate, follow-up query rate, feature breadth per user | Each explains a dimension of assistant usefulness |
+| Guardrail | Trust score — user reported confidence in responses, error rate on factual queries, sensitive topic handling rate | Trust is the entire value proposition of an assistant. One wrong answer in a high-stakes moment destroys habit |
+| Diagnostic | Completion rate by query type, abandonment rate by device, reformulation rate by topic category | Pulled when primary metrics move |
+
+**North Star logic:** Reformulation means the first answer wasn't good enough. Abandonment means the user gave up. Neither is acceptable for an assistant product.
+
+---
+
+## Health & Fitness Products
+*(Apple Health, Fitbit, Strava, MyFitnessPal)*
+
+| Level | Metric | Why |
+|---|---|---|
+| North Star | % of users who log at least one health behavior daily for 21 consecutive days | 21 days is the research-backed threshold for habit formation. Captures genuine behavior change not just app engagement |
+| Primary | Daily logging rate, goal completion rate, streak length, feature adoption across health dimensions | Each explains depth of engagement with health tracking |
+| Guardrail | User reported anxiety score — health tracking can create unhealthy obsession, app-induced stress incidents | Health products can cause harm. Anxiety and obsessive checking are real risks that guardrails must protect against |
+| Diagnostic | Logging rate by health dimension, drop-off point in streak, feature usage before churn | Pulled when primary metrics move |
+
+**North Star logic:** 21 days of consecutive logging is a specific, research-backed threshold. It distinguishes genuine habit adoption from trial usage.
+
+---
+
+## The Three Rules That Apply To Every Row
+
+**Rule 1 — North Star must capture both goal AND retention**
+A north star that only measures one dimension is incomplete. The best north stars combine quality of experience with evidence of return behavior.
+
+**Rule 2 — Guardrails must be the specific things your north star would sacrifice if left unchecked**
+Generic guardrails are useless. The guardrail has to be the exact thing that gets damaged when you optimise the primary metric too aggressively.
+
+**Rule 3 — Diagnostics are only pulled when primary metrics move**
+Don't monitor diagnostics daily. They're investigation tools not dashboard metrics. Knowing this distinction signals operational maturity.
+
+---
+
+## How To Use This In An Interview
+
+When asked to define success for any product:
+
+1. Identify the product category from this table
+2. Adapt the framework to the specific product — change the thresholds, the user type, the specific metrics
+3. Add the one word underneath — from the company table we built earlier
+4. Name your guardrail and explain WHY it's specifically the thing your north star would sacrifice
+
+The table gives you the skeleton. Your product knowledge fills in the flesh.
 
 ---
 
