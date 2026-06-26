@@ -52,6 +52,160 @@ That's the foundation everything else is built on.
 
 >"Instagram wants you to keep coming back every day. To do that, it needs to show you stuff you actually enjoy — videos, photos, memes, whatever keeps you scrolling. The more you enjoy it, the more you open it tomorrow. And every time you're scrolling, Instagram quietly slips in ads. Those ads work really well because you're already in a good mood, already engaged. So businesses pay Instagram a lot of money to reach you in that moment. That's the whole game — make you happy enough to return, and sell that attention to brands."
 ---
+## What Tech Companies Actually Want Their Users To Do
+
+---
+
+## The Framework For Every Row
+
+```
+Surface want → What they say publicly
+Real want → What actually drives the business
+Fear → What keeps the product team up at night
+One word → The thing underneath everything
+```
+
+---
+
+## Meta / Instagram & Family
+
+| Product | Surface Want | Real Want | Fear | One Word |
+|---|---|---|---|---|
+| Instagram | Users engage with content | Users build a daily emotional habit of opening Instagram first when bored, lonely, or curious | Generational abandonment — young users quietly drifting to TikTok without ever formally leaving | Habit |
+| Facebook | Users connect with friends and family | Users stay on platform long enough to see ads in a receptive emotional state | Irrelevance — becoming the platform parents use while kids go elsewhere | Relevance |
+| WhatsApp | Users message each other | Users make WhatsApp their default communication layer for everything — messages, calls, payments, business | Being replaced by iMessage, WeChat, or a regional competitor in key markets | Default |
+| Threads | Users post and discuss publicly | Users choose Threads over X/Twitter for real time public conversation | Never reaching the critical mass where the conversation is happening there and nowhere else | Momentum |
+| Reels | Users watch short video | Users discover Reels is as good as TikTok without leaving Meta's ecosystem | TikTok permanently owning the short video habit before Reels reaches parity | Parity |
+
+---
+
+## Google Products
+
+| Product | Surface Want | Real Want | Fear | One Word |
+|---|---|---|---|---|
+| Google Search | Users find information | Users trust Google as the default starting point for every question they have — before they even think of going anywhere else | Substitution — AI assistants, TikTok search, Reddit replacing Google as the first place people go | Default |
+| YouTube | Users watch videos | Users build a daily entertainment and learning habit that competes with Netflix, TikTok, and TV simultaneously | Passive resentment — users watching without enjoying, accumulating guilt that eventually drives them away | Satisfaction |
+| Google Maps | Users navigate | Users trust Maps for every location decision — not just navigation but discovery, planning, and local knowledge | Being reduced to a utility — used only for turn-by-turn while discovery goes to Yelp, TripAdvisor, or Instagram | Confidence |
+| Gmail | Users manage email | Users make Gmail the centre of their digital identity and productivity so switching becomes unthinkable | Users managing their most important communications through Apple Mail or Outlook and treating Gmail as a backup | Indispensability |
+| Google Chrome | Users browse the web | Users make Chrome the unthinking default browser that also captures login, payment, and browsing data across devices | Safari's ecosystem lock-in on Apple devices permanently capping Chrome's mobile share | Ecosystem |
+| Google Ads | Advertisers reach users | Advertisers believe Google delivers the highest quality attention at scale and keep increasing spend | Advertisers finding better ROI on TikTok, Amazon, or retail media networks and shifting budget away | Trust |
+| Google Drive | Users store files | Users make Drive the collaborative layer for all their work so the switching cost becomes impossibly high | Microsoft 365 remaining the default in enterprise and Google never breaking through at the organisational level | Collaboration |
+| Android | Users use Android phones | OEMs and users stay in the Android ecosystem keeping Google's services as the default layer on billions of devices | Apple's ecosystem lock-in pulling high-value users permanently toward iPhone and keeping them there | Ecosystem |
+| Google Meet | Users video call | Users choose Meet over Zoom and Teams for work communication because it integrates seamlessly with Calendar and Gmail | Zoom's brand dominance and Microsoft Teams' enterprise lock-in making Meet permanently third choice | Integration |
+| Gemini | Users interact with AI | Users make Gemini their default AI assistant across all devices replacing standalone ChatGPT usage | OpenAI and Anthropic building such strong AI habits that Google's AI products feel late and secondary | Relevance |
+
+---
+
+## Apple Products
+
+| Product | Surface Want | Real Want | Fear | One Word |
+|---|---|---|---|---|
+| iPhone | Users buy and keep iPhones | Users become so embedded in the Apple ecosystem through habits, data, and connected devices that switching to Android feels impossible | Android closing the experience gap to the point where the switching cost no longer justifies the premium price | Lock-in |
+| App Store | Developers build apps, users download them | Developers and users accept Apple's 30% cut and content rules because the platform quality and user trust justify the premium | Regulatory forced opening of the App Store destroying the controlled experience that justifies Apple's margin | Control |
+| Apple Music | Users stream music | Users choose Apple Music over Spotify because it integrates perfectly with every Apple device and their existing library | Spotify's discovery algorithm and social features being so superior that even loyal Apple users maintain Spotify as their primary music app | Integration |
+| Siri | Users ask Siri questions | Users trust Siri as the intelligent layer across all their Apple devices that anticipates needs and orchestrates the ecosystem invisibly | Users training a habit of opening ChatGPT or Gemini instead of Siri making Siri permanently feel like a backup assistant | Trust |
+| iCloud | Users store data | Users store so much of their most important data — photos, documents, messages, health — in iCloud that leaving Apple becomes emotionally and practically unthinkable | Users choosing Google Photos, Dropbox, or OneDrive for their most important data and using iCloud only for device backup | Dependency |
+| Apple Maps | Users navigate | Users choose Apple Maps over Google Maps by default because it's private, integrated, and good enough | Google Maps remaining so much better in discovery, business data, and international coverage that users actively override the Apple Maps default | Parity |
+| Apple Watch | Users track health and stay connected | Users build daily health habits around Apple Watch that make them feel the watch is essential to their wellbeing not just convenient | Samsung and Garmin serving health-serious users better with longer battery, more sensors, and better athletic tracking | Essentiality |
+| Apple TV+ | Users watch Apple originals | Users see Apple TV+ as worth paying for independently not just a bundle add-on — and tell their friends about Apple shows | Apple TV+ being permanently perceived as the smallest streamer that people forget to cancel rather than one they actively choose | Prestige |
+| Apple Health | Users track their health data | Users make iPhone the centre of their health identity — the device their doctor, their trainer, and their family reference for their wellbeing | Health data remaining siloed in the app with no clinical integration making Apple Health feel like a dashboard rather than a health platform | Authority |
+| FaceTime | Users video call Apple to Apple | Users choose FaceTime as their default video call for personal relationships because it's the most beautiful and private option available | iMessage and FaceTime being the primary reason Android users feel excluded from social groups — and regulatory pressure forcing interoperability destroying that exclusivity | Exclusivity |
+| Apple Intelligence | Users use on-device AI features | Users experience AI as a natural invisible layer across all their Apple devices that makes everything better without feeling like a separate product | Users not noticing Apple Intelligence is there — or worse noticing it and finding it less capable than ChatGPT — making the AI investment feel wasted | Invisibility |
+
+---
+
+## Top Tech Firms Beyond Google & Apple
+
+---
+
+## Microsoft
+
+| Product | Surface Want | Real Want | Fear | One Word |
+|---|---|---|---|---|
+| Microsoft 365 | Users use Office apps | Organisations renew enterprise contracts every year because switching costs are too high and the productivity suite is too embedded to replace | Google Workspace continuing to chip away at enterprise share especially with younger workforces who grew up on Google Docs | Renewal |
+| LinkedIn | Users connect professionally | Users make LinkedIn the default layer for their entire professional identity and career management so they return daily not just when job hunting | Users treating LinkedIn as a passive resume holder they update every few years rather than an active daily career platform | Career equity |
+| GitHub | Developers host code | Developers and organisations make GitHub the centre of their entire development workflow — not just code storage but CI/CD, project management, and AI assistance | GitLab or self-hosted alternatives winning enterprise accounts on security and control grounds | Workflow |
+| Azure | Enterprises run infrastructure | Enterprises standardise on Azure as their primary cloud making it structurally embedded in their operations | AWS maintaining its first-mover enterprise advantage and Google Cloud winning AI-native workloads leaving Azure as the default-by-Microsoft-relationship option | Default |
+| Copilot | Users use AI in Microsoft products | Users experience Copilot as the AI layer that makes every Microsoft product dramatically better creating a new reason to stay in the Microsoft ecosystem | ChatGPT and Claude being so much better as standalone products that users abandon Copilot and treat Microsoft's AI as a weak imitation | Integration |
+| Xbox | Users play games | Users make Xbox and Game Pass their primary gaming platform creating a subscription habit that generates recurring revenue regardless of hardware sales | PlayStation's exclusive game library continuing to pull the most engaged gamers away from Xbox permanently | Subscription |
+
+---
+
+## Amazon
+
+| Product | Surface Want | Real Want | Fear | One Word |
+|---|---|---|---|---|
+| Amazon.com | Users buy products | Users make Amazon.com their first and only shopping consideration — opening Amazon before they even think of going to a brand's website directly | Shopify enabling brands to build direct relationships with customers that bypass Amazon entirely — and TikTok Shop building a new shopping habit in a place Amazon doesn't control | Default |
+| Prime | Users subscribe | Users build so many Prime habits — shipping, video, music, photos, reading — that cancelling feels like losing multiple services simultaneously | Users realising they primarily use Prime for shipping and finding the annual cost hard to justify as Netflix, Spotify, and others provide better entertainment | Bundle |
+| AWS | Developers and enterprises run infrastructure | Organisations make AWS so structurally embedded in their architecture that switching would take years and cost more than staying | Azure winning enterprise accounts through Microsoft relationships and Google Cloud winning AI-native startups leaving AWS as the legacy default | Dependency |
+| Alexa | Users talk to Alexa | Users build voice-first home habits around Alexa that make the Echo family of devices feel essential to daily home management | Users treating Alexa as a timer and music player only — never reaching the commerce, smart home, and subscription behaviours that make Alexa strategically valuable | Habit |
+| Kindle | Users read on Kindle | Users build their entire reading life inside Amazon's ecosystem — buying, reading, annotating — making switching to another platform mean abandoning their library | Audiobooks and podcasts reducing reading time and Apple Books providing a more premium reading experience for iPhone users | Library |
+| Twitch | Users watch live streaming | Creators and viewers make Twitch the default home for live gaming and entertainment content creating a community that neither YouTube nor TikTok can replicate | YouTube Live and TikTok LIVE continuing to pull top creators away with better revenue share destroying the content flywheel that makes Twitch valuable | Community |
+
+---
+
+## Netflix
+
+| Product | Surface Want | Real Want | Fear | One Word |
+|---|---|---|---|---|
+| Netflix | Users watch shows and movies | Users build a weekly habit of returning to Netflix for must-watch content that they talk about with friends and colleagues | Being perceived as the streamer with the most content but the least must-watch — breadth without prestige — as HBO/Max, Apple TV+, and Disney+ invest in quality over quantity | Prestige |
+
+---
+
+## Spotify
+
+| Product | Surface Want | Real Want | Fear | One Word |
+|---|---|---|---|---|
+| Spotify | Users stream music | Users build such a personalised music identity inside Spotify — playlists, Wrapped, Discover Weekly — that their Spotify account feels like a piece of themselves they can't leave behind | Apple Music's ecosystem integration and YouTube Music's free tier with video making Spotify's value proposition feel like it requires active justification every month | Identity |
+
+---
+
+## TikTok
+
+| Product | Surface Want | Real Want | Fear | One Word |
+|---|---|---|---|---|
+| TikTok | Users watch short videos | Users build such a strong daily idle-moment habit that TikTok is the first app opened when bored, waiting, or procrastinating — making every idle moment an inventory unit | Regulatory bans, regulatory-forced divestiture, or Instagram Reels reaching algorithmic parity making TikTok's differentiation disappear | Habit |
+
+---
+
+## Uber
+
+| Product | Surface Want | Real Want | Fear | One Word |
+|---|---|---|---|---|
+| Uber | Users book rides | Users make Uber the unthinking default for any ground transportation need — so automatic that opening a competitor app never occurs to them | Driver supply thinning in key markets increasing wait times to the point where the reliability promise breaks and users try Lyft or local alternatives | Reliability |
+| Uber Eats | Users order food | Users build a weekly food delivery habit where Uber Eats is the first app opened when deciding not to cook | DoorDash's restaurant selection advantage in the US and local competitors in international markets making Uber Eats feel like the second choice | Default |
+
+---
+
+## Airbnb
+
+| Product | Surface Want | Real Want | Fear | One Word |
+|---|---|---|---|---|
+| Airbnb | Users book unique stays | Users build such positive memories from Airbnb stays that booking Airbnb feels like the start of a good trip — not just an accommodation transaction | A string of high-profile guest or host horror stories eroding the trust that makes strangers willing to sleep in each other's homes — the trust collapse that ends the marketplace | Trust |
+
+---
+
+## LinkedIn
+
+Already covered under Microsoft above. The standalone version:
+
+| Product | Surface Want | Real Want | Fear | One Word |
+|---|---|---|---|---|
+| LinkedIn | Users build professional networks | Users open LinkedIn daily — not just when job hunting — making it a living professional identity layer they actively maintain and derive daily value from | The gap between LinkedIn's potential as a daily professional platform and its reality as a place most people visit only when updating their resume or looking for a job | Activation |
+
+---
+
+## The Universal Pattern Across Every Company
+
+Look at every row. The same structure appears every time:
+
+```
+Surface want = the feature or behavior
+Real want = the habit or dependency that makes the business durable
+Fear = the specific scenario where the habit breaks or the dependency dissolves
+One word = the single thing the entire product is trying to protect
+```
+
 
 
 ## Lesson 2: The Interviewer's Hidden Rubric
