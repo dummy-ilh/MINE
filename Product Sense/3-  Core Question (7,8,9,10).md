@@ -1,27 +1,5 @@
 ## Lesson 7: Metric Deep Dives
 
-This is where interviews get dangerous.
-
-You give a good opening answer. You name a solid north star. You mention guardrails. The interviewer nods.
-
-Then they do this:
-
-> "Interesting. Why that metric specifically?"
-
-> "What are the limitations of that metric?"
-
-> "How would you actually calculate that?"
-
-> "What could make that metric misleading?"
-
-> "What would you do if that metric and this other metric moved in opposite directions?"
-
-This is the deep dive. Most candidates freeze here because they picked metrics they'd heard of — not metrics they actually understood.
-
-By the end of this lesson you'll be able to go four levels deep on any metric comfortably.
-
----
-
 ## The Four Levels of Metric Understanding
 
 Think of every metric as having four levels:
@@ -297,25 +275,6 @@ Give me:
 - Tensions — what does optimising it trade off against?
 
 Take your time. This is a hard one. Netflix is interesting because session length means something very different for them than for a social app.
-
-
-Good. You're thinking correctly about the core idea. Now let me show you how deep this rabbit hole goes for Netflix specifically.
-
----
-
-## Feedback
-
-**What you got right:**
-- Definition is directionally correct — time spent watching in a session
-- You identified that it doesn't capture quality — crucial insight
-- You sensed the attrition connection — that's sophisticated thinking
-
-**What needs sharpening:**
-
-You stayed at Level 1 and touched Level 3 briefly. The construction layer — Level 2 — was almost entirely missing. And that's actually where Netflix gets most interesting.
-
-Also your limitation was correct but not specific enough. "Doesn't identify lack of interest" is the right instinct but the real version of that insight is much more precise and much more impressive in an interview.
-
 ---
 
 ## All Four Levels For Netflix Session Length
@@ -451,21 +410,277 @@ Every single one has the same structure at Level 3:
 That's the universal limitation of every proxy metric. And naming it precisely — with a specific mechanism for how it happens on that specific product — is what separates candidates who studied metrics from candidates who understand them.
 
 ---
+## All Four Levels — Every Common Metric
 
-## Where You Are Now
+---
 
-You can now go four levels deep on the most common metrics. That's a significant capability.
+## The Table First — Which Metric To Lead With By Question Type
+
+Use this to decide which metric to name first in any interview answer:
+
+| Question Context | Lead Metric | Why Lead With This |
+|---|---|---|
+| Social / Feed product success | DAU with meaningful interaction threshold | Captures habit without passive inflation |
+| Search product success | Successful Search Rate | Directly measures intent satisfaction |
+| Streaming success | Content completion rate | Distinguishes active watching from background noise |
+| Music product success | Song save rate after recommendation | Strongest signal of genuine discovery |
+| Marketplace success | Transaction completion with bilateral satisfaction | Captures both sides simultaneously |
+| Subscription health | Active usage rate among paying subscribers | Paying but not using predicts churn |
+| Navigation success | ETA accuracy + completion rate combined | Captures the core promise specifically |
+| AI assistant success | Query acceptance rate without reformulation | Behavioral signal of task completion |
+| Onboarding success | Aha moment completion rate within first 7 days | Leading indicator of long term retention |
+| Retention question | D1 / D7 / D30 cohort retention curve | Shows habit formation trajectory |
+| Monetisation question | LTV / CAC ratio | Unit economics health in one number |
+| Experiment result question | Primary metric + guardrail metric simultaneously | Never name one without the other |
+| Metric drop diagnosis | Start with data integrity not the metric itself | Reality check before any metric analysis |
+| Product improvement | User pain point metric not engagement metric | Improvement should close a gap not inflate a number |
+
+---
+
+## Now The Deep Dives — Every Major Metric At All Four Levels
+
+---
+
+### 1. DAU — Daily Active Users
+
+| Level | Detail |
+|---|---|
+| **Definition** | Number of unique users who perform at least one qualifying action within a 24 hour period |
+| **Construction — Hidden Decisions** | What counts as qualifying? Opening app vs performing meaningful action. Session timeout threshold — if user is inactive 30 minutes does that end their daily activity? How do you handle multiple devices — does one user on iPhone and iPad count as one DAU or two? Timezone — which timezone defines the 24 hour window for a global user? |
+| **Limitations** | Treats a 2 second open identically to a 45 minute session. Can be inflated by aggressive push notifications. Hides compositional shift — DAU flat while entire user base turns over. Sensitive to day of week — never compare Monday to Sunday. Doesn't capture quality of engagement at all |
+| **Tensions** | DAU vs user wellbeing — dark patterns inflate DAU short term. DAU vs revenue per user — high DAU with low monetisation is a vanity metric. DAU vs long term retention — tactics that spike DAU suppress 90 day retention |
+
+**Lead with when:** Habit formation questions, social products, any question about whether users are returning
+
+---
+
+### 2. MAU — Monthly Active Users
+
+| Level | Detail |
+|---|---|
+| **Definition** | Unique users performing at least one qualifying action within a 30 day rolling window |
+| **Construction — Hidden Decisions** | Same qualifying action problem as DAU. Rolling 30 days vs calendar month — these give different numbers. How do you handle users who were active day 1 and day 30 but nowhere in between — they count as MAU but have almost no habit |
+| **Limitations** | Extremely forgiving — a user who opened the app once in 30 days counts the same as a daily user. DAU/MAU ratio is more useful than MAU alone — it measures stickiness. MAU growing while DAU/MAU ratio falls means you're adding low engagement users |
+| **Tensions** | MAU vs engagement depth — MAU growth campaigns bring in low quality users who inflate MAU and tank DAU/MAU ratio. MAU vs retention — monthly actives include resurrected users who may churn again immediately |
+
+**Lead with when:** Rarely lead with MAU alone. Always pair with DAU/MAU ratio. Use for broad reach questions or when comparing to competitors
+
+---
+
+### 3. DAU/MAU Ratio — Stickiness
+
+| Level | Detail |
+|---|---|
+| **Definition** | DAU divided by MAU — what fraction of monthly users return on any given day. Higher ratio means stickier daily habit |
+| **Construction — Hidden Decisions** | Both DAU and MAU carry their own hidden decisions. The ratio inherits all of them. A 0.5 ratio means the average monthly user visits 15 days per month. But that average hides a bimodal distribution — some users visit daily, most visit once |
+| **Limitations** | Average hides distribution. A product with 50% of users visiting daily and 50% visiting once has the same DAU/MAU as one where everyone visits every other day — completely different product health. Doesn't capture quality of visits. Sensitive to MAU definition |
+| **Tensions** | Stickiness vs breadth — products optimised for stickiness serve core users deeply and may neglect casual users. High stickiness with low MAU means you have devoted but few users |
+
+**Benchmarks to know:**
+- Facebook/Instagram: ~0.5-0.6
+- Twitter/X: ~0.25-0.35
+- Most apps struggle to reach 0.2
+
+**Lead with when:** Engagement depth questions, comparing product health across time periods
+
+---
+
+### 4. Retention Rate — D1/D7/D30
+
+| Level | Detail |
+|---|---|
+| **Definition** | % of users who return to the product on day 1, day 7, or day 30 after their first use. Each cohort defined by first use date |
+| **Construction — Hidden Decisions** | When does day zero start — first download, first login, or first meaningful action? Does the user need to be active on exactly day 7 or within a window around day 7? How do you handle users in different timezones — is day 1 calendar day or 24 hours? Cohort purity — do you include users who churned and resurrected? |
+| **Limitations** | Lagging indicator — D30 tells you about users who joined 30 days ago. By the time you see a problem it's already a month old. Doesn't capture frequency within the window — a user active once on day 30 looks identical to one active every day. Sensitive to cohort quality — a bad acquisition campaign tanks retention without the product changing at all |
+| **Tensions** | Retention vs growth — acquisition campaigns that prioritise volume over quality tank retention. The tension between growth team and retention team is one of the most common organisational conflicts in tech |
+
+**Benchmarks to know:**
+- World class D1: >60%
+- World class D7: >30%
+- World class D30: >15%
+- Most apps: D1 ~25%, D7 ~10%, D30 ~5%
+
+**Lead with when:** Any retention question, onboarding analysis, new user experience questions
+
+---
+
+### 5. Session Length
+
+| Level | Detail |
+|---|---|
+| **Definition** | Total time a user spends actively using the product from session start to session end or timeout |
+| **Construction — Hidden Decisions** | What defines session start — app open, first interaction, first content load? What defines session end — app close, background, inactivity timeout? What is the inactivity timeout threshold — 30 minutes? 60 minutes? This choice dramatically changes every session length number. Does autoplay content count — user finished an episode and Netflix started the next one automatically — is that one session or does it extend the session? What counts as active — background playing while user is in another app? |
+| **Limitations** | Doesn't distinguish active engagement from passive background consumption. Can be inflated by autoplay without genuine user choice. Doesn't capture satisfaction — long sessions can mean users can't find what they want and keep searching. Hides settling behavior — watching something mediocre because nothing better appeared. Varies enormously by content type — a 2 hour movie and a 2 minute TikTok can't be compared with the same session length metric |
+| **Tensions** | Session length vs satisfaction — the features that most reliably increase session length are often the ones that make users feel worst afterwards. Session length vs content diversity — optimising for session length pushes algorithm toward more of the same, creating content bubbles. Session length vs real world wellbeing — extremely long sessions may indicate loneliness or avoidance behavior, not product quality |
+
+**Netflix specific insight:** Netflix moved away from session length toward completion rate and post-watch retention as primary metrics because session length was being gamed by autoplay.
+
+**Lead with when:** Engagement depth questions, but always immediately qualify — "session length is interesting but I'd want to distinguish active engagement from passive background consumption"
+
+---
+
+### 6. Conversion Rate
+
+| Level | Detail |
+|---|---|
+| **Definition** | % of users who complete a desired action — typically free to paid, visitor to signup, or browse to purchase |
+| **Construction — Hidden Decisions** | The denominator is the critical hidden decision. All visitors? All users who saw the paywall? All users who started the checkout flow? Changing the denominator changes the rate dramatically without changing reality. Time window — conversion within 24 hours vs 30 days vs ever? How do you handle assisted conversions — user saw an ad, didn't convert, came back organically later |
+| **Limitations** | Point in time measure — doesn't capture users who convert months later after a long consideration cycle. Aggregates very different user journeys — impulse buyer and 6-month researcher both count as conversions. Can be improved by reducing friction in ways that attract low quality converters who churn immediately. High conversion rate with high churn rate is worse than lower conversion with lower churn |
+| **Tensions** | Conversion rate vs LTV — optimising conversion brings in more users but not necessarily better users. Conversion rate vs user experience — aggressive conversion tactics — popups, urgency, dark patterns — improve conversion short term and damage trust long term |
+
+**Lead with when:** Monetisation questions, paywall analysis, funnel optimisation questions
+
+---
+
+### 7. Churn Rate
+
+| Level | Detail |
+|---|---|
+| **Definition** | % of users or subscribers who stop using the product in a given time period |
+| **Construction — Hidden Decisions** | How do you define churned for engagement products — no activity in 30 days? 60 days? 90 days? For subscription products churn is cleaner — cancellation event. But voluntary vs involuntary churn must be separated — failed payment is different from active cancellation. Do you count users who churn and resurrect — net churn vs gross churn? |
+| **Limitations** | Backward looking — by the time you see churn it has already happened. Leading indicators of churn — declining session frequency, declining feature breadth, declining satisfaction scores — are more actionable. Averages across very different user segments — power user churning is catastrophic, casual user churning is expected. Hides resurrection — 10% churn with 5% resurrection is very different from 10% churn with 0% resurrection |
+| **Tensions** | Churn rate vs acquisition cost — high churn is tolerable if acquisition is cheap. Low churn matters more when acquisition is expensive. Voluntary churn vs involuntary churn — they have completely different causes and completely different fixes |
+
+**Lead with when:** Subscription health questions, retention analysis, post-launch monitoring questions
+
+---
+
+### 8. NPS — Net Promoter Score
+
+| Level | Detail |
+|---|---|
+| **Definition** | Survey based measure of loyalty. "How likely are you to recommend this product to a friend?" 0-10. Promoters 9-10. Passives 7-8. Detractors 0-6. NPS = % Promoters minus % Detractors |
+| **Construction — Hidden Decisions** | Who receives the survey — all users, active users, churned users? When — immediately after a positive interaction gives inflated NPS, random timing gives more accurate NPS. How often — survey fatigue affects response rates. Response rate itself is a signal — low response rate often means low engagement |
+| **Limitations** | Stated preference not observed behavior — what users say they'll do and what they do are different. Single number hides distribution — NPS of 40 could be very different compositions. Not comparable across industries or cultures — 40 is excellent for a bank, mediocre for a consumer app. Doesn't tell you why — NPS drops, you don't know if it's product, support, pricing, or external |
+| **Tensions** | NPS vs engagement metrics — high NPS with declining engagement means users love the product but use it less. Low NPS with high engagement means users are addicted but resentful. Neither is healthy |
+
+**Lead with when:** User satisfaction questions, guardrail metric for any feature that could damage trust, qualitative signal alongside behavioral metrics
+
+---
+
+### 9. LTV — Lifetime Value
+
+| Level | Detail |
+|---|---|
+| **Definition** | Total revenue a business expects to earn from a single customer over the entire duration of their relationship |
+| **Construction — Hidden Decisions** | Simple: avg revenue per user per month × avg months retained. Complex version accounts for: time value of money, variable revenue over time, reactivation probability, referral value. Which version you use changes the number significantly. Prediction horizon — LTV over 12 months vs 36 months vs lifetime are very different numbers |
+| **Limitations** | Prediction not fact — LTV requires assumptions about future behavior that are often wrong especially for new products. Averages across very different user segments — top 10% of users may have 10x the LTV of median user. Aggregate LTV hides this completely. Can justify bad decisions — high predicted LTV makes expensive acquisition look justified until predictions prove wrong |
+| **Tensions** | LTV vs CAC — the fundamental unit economics equation. LTV must exceed CAC for a business to be viable. But LTV is long term prediction and CAC is immediate cost. Companies regularly overspend on acquisition based on optimistic LTV predictions |
+
+**Lead with when:** Monetisation strategy questions, acquisition investment questions, subscription business questions
+
+---
+
+### 10. CAC — Customer Acquisition Cost
+
+| Level | Detail |
+|---|---|
+| **Definition** | Total cost to acquire one new paying customer. Total acquisition spend divided by new customers acquired in the same period |
+| **Construction — Hidden Decisions** | What counts in acquisition spend — just paid marketing? Or also sales team salaries, content creation, referral bonuses? What counts as a new customer — first signup or first payment? Time period matching — acquisition spend in month 1 often generates customers in month 2 and 3. Mismatched periods give misleading CAC |
+| **Limitations** | Average CAC hides channel quality — CAC from paid social might be $50 but those users churn in 30 days. CAC from referral might be $10 and those users have 3x the LTV. Blended CAC without channel breakdown is almost useless for decision making |
+| **Tensions** | CAC vs growth rate — lower CAC usually means slower growth. CAC vs LTV — the ratio matters more than either number alone. CAC vs payback period — how long until you recoup the acquisition cost? |
+
+**Lead with when:** Growth strategy questions, unit economics questions, acquisition channel questions
+
+---
+
+### 11. Completion Rate
+
+| Level | Detail |
+|---|---|
+| **Definition** | % of users who finish a piece of content, a flow, or a task from start to finish |
+| **Construction — Hidden Decisions** | What counts as completion — 90% watched? 95%? 100%? For a 2 hour movie these thresholds give very different numbers. Does autoplay completion count — user fell asleep and movie finished? How do you handle users who pause and return days later — same session or new? |
+| **Limitations** | Doesn't distinguish engaged completion from passive completion. Short content completes more easily than long content — always segment by content length. Can be inflated by autoplay. Doesn't capture emotional response — user completed the content but hated it |
+| **Tensions** | Completion rate vs discovery — optimising for completion pushes algorithm toward safe familiar content users will definitely finish. Discovery requires recommending unfamiliar content users might abandon. These are in direct tension |
+
+**Lead with when:** Content quality questions, recommendation system questions, onboarding flow questions
+
+---
+
+### 12. Bounce Rate
+
+| Level | Detail |
+|---|---|
+| **Definition** | % of sessions where user leaves after viewing only one page or taking no meaningful action |
+| **Construction — Hidden Decisions** | What counts as a bounce — leaving immediately vs leaving after reading? Time threshold — 10 seconds vs 60 seconds? Single page visit that answers the user's question completely — is that a bounce or a success? This is the fundamental ambiguity of bounce rate |
+| **Limitations** | High bounce rate can mean the page is terrible or that it answered the user's question perfectly. A dictionary definition page with 90% bounce rate might be performing perfectly — users got their answer and left. Context determines whether bounce is failure or success |
+| **Tensions** | Bounce rate vs engagement — reducing bounce rate by making it harder to leave is a dark pattern. Bounce rate vs task completion — the goal is task completion not time on site |
+
+**Lead with when:** Landing page analysis, onboarding drop-off questions, search result quality questions
+
+---
+
+### 13. CTR — Click Through Rate
+
+| Level | Detail |
+|---|---|
+| **Definition** | % of impressions that result in a click. Clicks divided by impressions |
+| **Construction — Hidden Decisions** | What counts as an impression — ad loaded in viewport vs ad anywhere on page? What counts as a click — any click vs intentional click? Accidental mobile clicks inflate CTR without intent. Time window for counting impression — immediate vs 24 hour view through |
+| **Limitations** | High CTR can mean great relevance OR misleading clickbait. Low CTR can mean poor relevance OR that the ad/result answered the question without needing a click. CTR without downstream conversion data is almost meaningless for quality assessment |
+| **Tensions** | CTR vs quality — optimising CTR drives toward sensational headlines and clickbait. CTR vs user satisfaction — high CTR with high bounce rate means you lured users but didn't deliver value |
+
+**Lead with when:** Rarely lead with CTR — always pair it with a downstream quality metric. Good for ad performance questions, recommendation click analysis
+
+---
+
+### 14. Activation Rate
+
+| Level | Detail |
+|---|---|
+| **Definition** | % of new users who complete a defined activation milestone — reaching the aha moment — within a specified time window |
+| **Construction — Hidden Decisions** | What is the activation milestone? This is the most important product decision hidden in this metric. For Spotify — first playlist created? For Airbnb — first booking completed? For LinkedIn — first connection made? The milestone definition determines everything. Time window — activation within 24 hours vs 7 days vs 30 days |
+| **Limitations** | Only as good as the activation milestone definition. If the milestone doesn't predict long term retention — the metric is misleading. Doesn't capture quality of activation — users can complete the milestone without genuinely experiencing the aha moment |
+| **Tensions** | Activation rate vs activation quality — making activation easier to complete increases rate but may not increase genuine aha moment experience. Short term activation vs long term retention — these sometimes conflict when quick activations don't drive durable habits |
+
+**Lead with when:** Onboarding questions, new user experience questions, growth questions
+
+---
+
+### 15. Referral Rate / Viral Coefficient
+
+| Level | Detail |
+|---|---|
+| **Definition** | Average number of new users each existing user generates through referrals. Viral coefficient above 1 means organic exponential growth |
+| **Construction — Hidden Decisions** | What counts as a referral — sharing a link vs actually inviting someone vs that person signing up? Attribution window — referral within 7 days of share? 30 days? How do you handle multi-touch — user saw three referrals before signing up |
+| **Limitations** | Viral coefficient above 1 is theoretically exponential growth but assumes constant referral behavior which never holds at scale. Referral quality often lower than organic — referred users may have lower intent and higher churn. Incentivised referrals — cash, credits — attract users who want the incentive not the product |
+| **Tensions** | Viral growth vs user quality — the fastest growing products via referral often have the worst retention because they optimised for sharing not for delivering value |
+
+**Lead with when:** Growth strategy questions, network effect questions, viral product analysis
+
+---
+
+## The Universal Four Level Template
+
+Apply this to any metric you're asked about:
 
 ```
-✅ Lessons 1-7 Complete
+Definition:
+"[Metric] measures [what] among [who] over [time period]"
 
-Coming up:
-⬜ Lesson 8 — Product Improvement Questions
-⬜ Lesson 9 — Tradeoff Questions  
-⬜ Lesson 10 — Launch Decisions
-⬜ Lesson 11 — Connecting Product to Data Science
-⬜ Lesson 12 — Experiment Design
+Construction:
+"The hidden decisions are: what counts as [X], 
+how do you handle [edge case], 
+and what time window defines [Y]"
+
+Limitations:
+"This metric lies when [specific scenario]. 
+Specifically it can improve while [real goal] gets worse because [mechanism]"
+
+Tensions:
+"Optimising this trades off against [specific other thing] 
+because [causal mechanism]. 
+The most dangerous tension is [the one most likely to cause real harm]"
 ```
+
+---
+
+## The One Sentence That Upgrades Any Metric Answer
+
+Add this after naming any metric in an interview:
+
+> "The limitation I'd always flag with [metric] is that it can improve while [real goal] gets worse — specifically when [mechanism]. That's why I'd pair it with [guardrail] which catches exactly that failure mode."
+
+That sentence structure — metric, limitation, mechanism, guardrail — is what separates a candidate who knows metric names from one who understands metrics.
 
 ---
 
