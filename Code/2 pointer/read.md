@@ -1,26 +1,5 @@
 # LeetCode Two Pointers — Easy: Problems + Python Solutions
 
-🔒 = Premium-locked. ⚠️ = Recent problem number, verify exact constraints on LeetCode before relying on edge cases.
-
----
-
-### 1. LC 26 — Remove Duplicates from Sorted Array
-Given a sorted array, remove duplicates in-place so each element appears once; return the new length.
-```python
-def removeDuplicates(nums):
-    if not nums:
-        return 0
-    slow = 0
-    for fast in range(1, len(nums)):  # important 
-        if nums[fast] != nums[slow]:
-            slow += 1
-            nums[slow] = nums[fast]  # should point to new slow position aka 1
-    return slow + 1
-```###  for removing a number    for fast in range(len(nums)):   if nums[fast] != val:
-```
-### 3. LC 28 — Find the Index of the First Occurrence in a String
-    n, m = len(haystack), len(needle);    for i in range(n - m + 1):     if haystack[i:i + m] == needle:
-```
 
 ### 4. LC 88 — Merge Sorted Array
 Merge `nums2` into `nums1` in-place; `nums1` has extra space at the end (size m+n).
@@ -98,22 +77,7 @@ def moveZeroes(nums):
             nums[slow], nums[fast] = nums[fast], nums[slow]
             slow += 1
 ```
-Reverse a character array in-place.
-def reverseString(s):l, r = 0, len(s) - 1;while l < r:s[l], s[r] = s[r], s[l] ;l += 1;        r -= 1
----
-# def isPalindrome(s):
-    l, r = 0, len(s) - 1
-    while l < r:
-        while l < r and not s[l].isalnum():
-            l += 1
-        while l < r and not s[r].isalnum():
-            r -= 1
-        if s[l].lower() != s[r].lower():
-            return False
-        l += 1
-        r -= 1
-    return True
----
+
 
 
 ### 15. LC 349 — Intersection of Two Arrays
@@ -241,26 +205,7 @@ def findTarget(root, k):
     return dfs(root)
 ```
 
-### 23. LC 680 — Valid Palindrome II
-Check if a string can become a palindrome after removing at most one character.
-```python
-def validPalindrome(s):
-    def is_pal(l, r):
-        while l < r:
-            if s[l] != s[r]:
-                return False
-            l += 1
-            r -= 1
-        return True
 
-    l, r = 0, len(s) - 1
-    while l < r:
-        if s[l] != s[r]:
-            return is_pal(l + 1, r) or is_pal(l, r - 1)
-        l += 1
-        r -= 1
-    return True
-```
 
 ### 24. LC 696 — Count Binary Substrings
 Count substrings with equal numbers of consecutive 0s and 1s.
@@ -548,18 +493,6 @@ def arithmeticTriplets(nums, diff):
     return count
 ```
 
-### 48. LC 2441 — Largest Positive Integer That Exists With Its Negative
-Find the largest k such that both k and -k exist in the array.
-```python
-def findMaxK(nums):
-    s = set(nums)
-    res = -1
-    for x in nums:
-        if x > 0 and -x in s:
-            res = max(res, x)
-    return res
-```
-
 ### 49. LC 2460 — Apply Operations to an Array
 Double adjacent equal pairs (zeroing the second), then push all zeros to the end.
 ```python
@@ -605,20 +538,6 @@ def captureForts(forts):
     return res
 ```
 
-### 53. LC 2562 — Find the Array Concatenation Value
-Repeatedly concatenate the first and last remaining numbers' digits and sum.
-```python
-def findTheArrayConcVal(nums):
-    l, r = 0, len(nums) - 1
-    total = 0
-    while l < r:
-        total += int(str(nums[l]) + str(nums[r]))
-        l += 1
-        r -= 1
-    if l == r:
-        total += nums[l]
-    return total
-```
 
 ### 54. LC 2570 — Merge Two 2D Arrays by Summing Values
 Merge two sorted [id, value] arrays, summing values when ids match.
@@ -700,19 +619,6 @@ def incremovableSubarrayCount(nums):
     return count
 ```
 
-### 59. LC 3194 ⚠️ — Minimum Average of Smallest and Largest Elements
-Repeatedly take the average of the current smallest and largest remaining elements; return the minimum such average.
-```python
-def minimumAverage(nums):
-    nums.sort()
-    l, r = 0, len(nums) - 1
-    res = float('inf')
-    while l < r:
-        res = min(res, (nums[l] + nums[r]) / 2)
-        l += 1
-        r -= 1
-    return res
-```
 
 ### 60. LC 3633 ⚠️ — Earliest Finish Time for Land and Water Rides I
 Find the earliest time you can finish one land ride followed by one water ride, or vice versa.
@@ -786,18 +692,6 @@ def reverseLettersOnly(s):
     return ''.join(chars)
 ```
 
-### 66. LC 3884 ⚠️ — First Matching Character From Both Ends
-Scan inward from both ends to find the first position where the two ends match.
-```python
-def firstMatchingChar(s):
-    l, r = 0, len(s) - 1
-    while l < r:
-        if s[l] == s[r]:
-            return l
-        l += 1
-        r -= 1
-    return -1
-```
 
 ### 67. LC 3936 ⚠️ — Minimum Swaps to Move Zeros to End
 Move all zeros to the end of the array, returning the minimum number of swaps used.
@@ -912,39 +806,141 @@ def middleNode(head):
 
 sorting nums is  nums.sort().. nothting else
 seen=set() add to set seen.add(data) -- len(seen)
+for i, j in enumerate(nums): bracket
 
-
-
+total += int(str(nums[l]) + str(nums[r])) #[7,52,2,4] =74
 
 Tempalte 1
+**345. Reverse Vowels** (swap vowels)
 
-# Reverse only the vowels in a string, keeping other characters fixed.
 ```python
 def reverseVowels(s):
-    vowels = set('aeiouAEIOU')
-    chars = list(s)  # importane
-    l, r = 0, len(chars) - 1
+    vowels = set('aeiouAEIOU'); chars = list(s); l, r = 0, len(chars)-1
     while l < r:
-        if chars[l] not in vowels:            l += 1
-        elif chars[r] not in vowels:            r -= 1
-        else:            chars[l], chars[r] = chars[r], chars[l]            l += 1            r -= 1
+        if chars[l] not in vowels: l += 1
+        elif chars[r] not in vowels: r -= 1
+        else: chars[l], chars[r] = chars[r], chars[l]; l += 1; r -= 1
     return ''.join(chars)
+```
 
+**917. Reverse Only Letters** (swap letters)
 
-### 30. LC 917 — Reverse Only Letters
-Reverse only the letter characters in a string, leaving others in place.
 ```python
 def reverseOnlyLetters(s):
+    chars = list(s); l, r = 0, len(chars)-1
+    while l < r:
+        if not chars[l].isalpha(): l += 1
+        elif not chars[r].isalpha(): r -= 1
+        else: chars[l], chars[r] = chars[r], chars[l]; l += 1; r -= 1
+    return ''.join(chars)
+```
+**344. Reverse String** (in-place)
+
+```python
+def reverseString(s):
+    l, r = 0, len(s)-1
+    while l < r:
+        s[l], s[r] = s[r], s[l]
+        l += 1; r -= 1
+```
+
+**125. Valid Palindrome** (skip non-alnum)
+
+```python
+def isPalindrome(s):
+    l, r = 0, len(s)-1
+    while l < r:
+        while l < r and not s[l].isalnum(): l += 1
+        while l < r and not s[r].isalnum(): r -= 1
+        if s[l].lower() != s[r].lower(): return False
+        l += 1; r -= 1
+    return True
+```
+
+
+def sortedSquares(nums): on rather than nlogn
+    n = len(nums)
+    res = [0] * n
+    l, r = 0, n - 1
+    for i in range(n - 1, -1, -1):
+        if abs(nums[l]) > abs(nums[r]):
+            res[i] = nums[l] * nums[l]
+            l += 1
+        else:
+            res[i] = nums[r] * nums[r]
+            r -= 1
+    return res
+
+
+    ### 23. LC 680 — Valid Palindrome II
+Check if a string can become a palindrome after removing at most one character.
+```python
+def validPalindrome(s):
+    def is_pal(l, r):
+        while l < r:
+            if s[l] != s[r]:
+                return False
+            l += 1
+            r -= 1
+        return True
+
+    l, r = 0, len(s) - 1
+    while l < r:
+        if s[l] != s[r]:
+            return is_pal(l + 1, r) or is_pal(l, r - 1)
+        l += 1
+        r -= 1
+    return True
+```
+
+
+### 55. LC 2697 — Lexicographically Smallest Palindrome
+Make a string a palindrome with minimum changes, choosing the lexicographically smallest result.
+```python
+def makeSmallestPalindrome(s):
     chars = list(s)
     l, r = 0, len(chars) - 1
     while l < r:
-        if not chars[l].isalpha():
-            l += 1
-        elif not chars[r].isalpha():
-            r -= 1
-        else:
-            chars[l], chars[r] = chars[r], chars[l]
-            l += 1
-            r -= 1
+        c = min(chars[l], chars[r])
+        chars[l] = chars[r] = c
+        l += 1
+        r -= 1
     return ''.join(chars)
+```
+
+### 56. LC 2824 — Count Pairs Whose Sum is Less than Target
+Count index pairs (i, j) where i < j and nums[i] + nums[j] < target.
+```python
+def countPairs(nums, target):
+    nums.sort()
+    l, r = 0, len(nums) - 1
+    count = 0
+    while l < r:
+        if nums[l] + nums[r] < target:
+            count += r - l
+            l += 1
+        else:
+            r -= 1
+    return count
+```
+
+
+Tempalte 2
+
+### 1. LC 26 — Remove Duplicates from Sorted Array
+Given a sorted array, remove duplicates in-place so each element appears once; return the new length.
+```python
+def removeDuplicates(nums):
+    if not nums:
+        return 0
+    slow = 0
+    for fast in range(1, len(nums)):  # important 
+        if nums[fast] != nums[slow]:
+            slow += 1
+            nums[slow] = nums[fast]  # should point to new slow position aka 1
+    return slow + 1
+```###  for removing a number    for fast in range(len(nums)):   if nums[fast] != val:
+```
+### 3. LC 28 — Find the Index of the First Occurrence in a String
+    n, m = len(haystack), len(needle);    for i in range(n - m + 1):     if haystack[i:i + m] == needle:
 ```
