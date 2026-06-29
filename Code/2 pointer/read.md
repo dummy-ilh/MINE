@@ -11,34 +11,15 @@ def removeDuplicates(nums):
     if not nums:
         return 0
     slow = 0
-    for fast in range(1, len(nums)):
+    for fast in range(1, len(nums)):  # important 
         if nums[fast] != nums[slow]:
             slow += 1
-            nums[slow] = nums[fast]
+            nums[slow] = nums[fast]  # should point to new slow position aka 1
     return slow + 1
+```###  for removing a number    for fast in range(len(nums)):   if nums[fast] != val:
 ```
-
-### 2. LC 27 — Remove Element
-Remove all occurrences of `val` in-place; return the new length.
-```python
-def removeElement(nums, val):
-    slow = 0
-    for fast in range(len(nums)):
-        if nums[fast] != val:
-            nums[slow] = nums[fast]
-            slow += 1
-    return slow
-```
-
 ### 3. LC 28 — Find the Index of the First Occurrence in a String
-Return the first index where `needle` appears in `haystack`, or -1.
-```python
-def strStr(haystack, needle):
-    n, m = len(haystack), len(needle)
-    for i in range(n - m + 1):
-        if haystack[i:i + m] == needle:
-            return i
-    return -1
+    n, m = len(haystack), len(needle);    for i in range(n - m + 1):     if haystack[i:i + m] == needle:
 ```
 
 ### 4. LC 88 — Merge Sorted Array
@@ -73,51 +54,6 @@ def isPalindrome(s):
     return True
 ```
 
-### 6. LC 141 — Linked List Cycle
-Detect if a linked list has a cycle.
-```python
-def hasCycle(head):
-    slow = fast = head
-    while fast and fast.next:
-        slow = slow.next
-        fast = fast.next.next
-        if slow == fast:
-            return True
-    return False
-```
-
-### 7. LC 160 — Intersection of Two Linked Lists
-Find the node where two linked lists intersect.
-```python
-def getIntersectionNode(headA, headB):
-    a, b = headA, headB
-    while a is not b:
-        a = a.next if a else headB
-        b = b.next if b else headA
-    return a
-```
-
-### 8. LC 170 🔒 — Two Sum III - Data Structure Design
-Design a class that supports adding numbers and checking if any pair sums to a target.
-```python
-class TwoSum:
-    def __init__(self):
-        self.counts = {}
-
-    def add(self, number):
-        self.counts[number] = self.counts.get(number, 0) + 1
-
-    def find(self, value):
-        for num in self.counts:
-            complement = value - num
-            if complement == num:
-                if self.counts[num] > 1:
-                    return True
-            elif complement in self.counts:
-                return True
-        return False
-```
-
 ### 9. LC 202 — Happy Number
 Repeatedly replace n with the sum of squares of its digits; return True if it reaches 1.
 ```python
@@ -136,30 +72,7 @@ def isHappy(n):
     return fast == 1
 ```
 
-### 10. LC 234 — Palindrome Linked List
-Check if a linked list reads the same forward and backward.
-```python
-def isPalindrome(head):
-    slow = fast = head
-    while fast and fast.next:
-        slow = slow.next
-        fast = fast.next.next
 
-    prev = None
-    while slow:
-        nxt = slow.next
-        slow.next = prev
-        prev = slow
-        slow = nxt
-
-    left, right = head, prev
-    while right:
-        if left.val != right.val:
-            return False
-        left = left.next
-        right = right.next
-    return True
-```
 
 ### 11. LC 246 🔒 — Strobogrammatic Number
 Check if a number looks the same when rotated 180 degrees.
@@ -185,17 +98,8 @@ def moveZeroes(nums):
             nums[slow], nums[fast] = nums[fast], nums[slow]
             slow += 1
 ```
+Reverse a character array in-place.def reverseString(s):l, r = 0, len(s) - 1;while l < r:s[l], s[r] = s[r], s[l] ;l += 1;        r -= 1
 
-### 13. LC 344 — Reverse String
-Reverse a character array in-place.
-```python
-def reverseString(s):
-    l, r = 0, len(s) - 1
-    while l < r:
-        s[l], s[r] = s[r], s[l]
-        l += 1
-        r -= 1
-```
 
 ### 14. LC 345 — Reverse Vowels of a String
 Reverse only the vowels in a string, keeping other characters fixed.
@@ -424,16 +328,6 @@ def backspaceCompare(s, t):
     return build(s) == build(t)
 ```
 
-### 28. LC 876 — Middle of the Linked List
-Return the middle node of a linked list.
-```python
-def middleNode(head):
-    slow = fast = head
-    while fast and fast.next:
-        slow = slow.next
-        fast = fast.next.next
-    return slow
-```
 
 ### 29. LC 905 — Sort Array By Parity
 Rearrange so all even numbers come before all odd numbers.
@@ -552,23 +446,6 @@ def duplicateZeros(arr):
         j -= 1
 ```
 
-### 36. LC 1099 🔒 — Two Sum Less Than K
-Find the maximum sum of two elements that is strictly less than k.
-```python
-def twoSumLessThanK(nums, k):
-    nums.sort()
-    l, r = 0, len(nums) - 1
-    best = -1
-    while l < r:
-        s = nums[l] + nums[r]
-        if s < k:
-            best = max(best, s)
-            l += 1
-        else:
-            r -= 1
-    return best
-```
-
 ### 37. LC 1332 — Remove Palindromic Subsequences
 String has only 'a' and 'b' — return min removals to delete the whole string as palindromic subsequences.
 ```python
@@ -635,16 +512,7 @@ def mergeAlternately(word1, word2):
     return ''.join(res)
 ```
 
-### 42. LC 1826 🔒 — Faulty Sensor
-Two sensor readings differ by exactly one skipped value; identify which sensor is faulty.
-```python
-def badSensor(sensor1, sensor2):
-    if sensor1[1:] == sensor2[:-1]:
-        return 1
-    if sensor2[1:] == sensor1[:-1]:
-        return 2
-    return -1
-```
+
 
 ### 43. LC 1961 — Check If String Is a Prefix of Array
 Check if `s` equals the concatenation of some prefix of the words array.
@@ -760,21 +628,6 @@ def captureForts(forts):
                 res = max(res, i - prev - 1)
             prev = i
     return res
-```
-
-### 52. LC 2540 — Minimum Common Value
-Find the smallest value common to two sorted arrays.
-```python
-def getCommon(nums1, nums2):
-    i = j = 0
-    while i < len(nums1) and j < len(nums2):
-        if nums1[i] == nums2[j]:
-            return nums1[i]
-        elif nums1[i] < nums2[j]:
-            i += 1
-        else:
-            j += 1
-    return -1
 ```
 
 ### 53. LC 2562 — Find the Array Concatenation Value
@@ -918,12 +771,6 @@ def reverseSubmatrix(grid, x, y, k):
     return grid
 ```
 
-### 62. LC 3667 🔒 ⚠️ — Sort Array By Absolute Value
-Sort the array by absolute value (stable on ties).
-```python
-def sortByAbsoluteValue(nums):
-    return sorted(nums, key=abs)
-```
 
 ### 63. LC 3750 ⚠️ — Minimum Number of Flips to Reverse Binary String
 Find the minimum number of bit flips needed to make a binary string equal to its own reverse.
@@ -1006,4 +853,83 @@ def limitOccurrences(nums, limit):
 
 ---
 
-**Note on the ⚠️ entries (3194+):** these are very recently added LeetCode problems. The pattern and core two-pointer idea should be right, but exact function signatures, edge cases, or return types might differ slightly from what LeetCode expects — pull up the actual problem page and adjust the signature before submitting.
+
+### 8. LC 170 🔒 — Two Sum III - Data Structure Design
+Design a class that supports adding numbers and checking if any pair sums to a target.
+```python
+class TwoSum:
+    def __init__(self):
+        self.counts = {}
+
+    def add(self, number):
+        self.counts[number] = self.counts.get(number, 0) + 1
+
+    def find(self, value):
+        for num in self.counts:
+            complement = value - num
+            if complement == num:
+                if self.counts[num] > 1:
+                    return True
+            elif complement in self.counts:
+                return True
+        return False
+```
+
+### 6. LC 141 — Linked List Cycle
+Detect if a linked list has a cycle.
+```python
+def hasCycle(head):
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        if slow == fast:
+            return True
+    return False
+```
+
+### 7. LC 160 — Intersection of Two Linked Lists
+Find the node where two linked lists intersect.
+```python
+def getIntersectionNode(headA, headB):
+    a, b = headA, headB
+    while a is not b:
+        a = a.next if a else headB
+        b = b.next if b else headA
+    return a
+```
+
+### 10. LC 234 — Palindrome Linked List
+Check if a linked list reads the same forward and backward.
+```python
+def isPalindrome(head):
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+
+    prev = None
+    while slow:
+        nxt = slow.next
+        slow.next = prev
+        prev = slow
+        slow = nxt
+
+    left, right = head, prev
+    while right:
+        if left.val != right.val:
+            return False
+        left = left.next
+        right = right.next
+    return True
+```
+### 28. LC 876 — Middle of the Linked List
+Return the middle node of a linked list.
+```python
+def middleNode(head):
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+    return slow
+```
