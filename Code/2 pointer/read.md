@@ -98,27 +98,23 @@ def moveZeroes(nums):
             nums[slow], nums[fast] = nums[fast], nums[slow]
             slow += 1
 ```
-Reverse a character array in-place.def reverseString(s):l, r = 0, len(s) - 1;while l < r:s[l], s[r] = s[r], s[l] ;l += 1;        r -= 1
-
-
-### 14. LC 345 — Reverse Vowels of a String
-Reverse only the vowels in a string, keeping other characters fixed.
-```python
-def reverseVowels(s):
-    vowels = set('aeiouAEIOU')
-    chars = list(s)
-    l, r = 0, len(chars) - 1
+Reverse a character array in-place.
+def reverseString(s):l, r = 0, len(s) - 1;while l < r:s[l], s[r] = s[r], s[l] ;l += 1;        r -= 1
+---
+# def isPalindrome(s):
+    l, r = 0, len(s) - 1
     while l < r:
-        if chars[l] not in vowels:
+        while l < r and not s[l].isalnum():
             l += 1
-        elif chars[r] not in vowels:
+        while l < r and not s[r].isalnum():
             r -= 1
-        else:
-            chars[l], chars[r] = chars[r], chars[l]
-            l += 1
-            r -= 1
-    return ''.join(chars)
-```
+        if s[l].lower() != s[r].lower():
+            return False
+        l += 1
+        r -= 1
+    return True
+---
+
 
 ### 15. LC 349 — Intersection of Two Arrays
 Return the unique elements common to both arrays.
@@ -343,22 +339,7 @@ def sortArrayByParity(nums):
     return nums
 ```
 
-### 30. LC 917 — Reverse Only Letters
-Reverse only the letter characters in a string, leaving others in place.
-```python
-def reverseOnlyLetters(s):
-    chars = list(s)
-    l, r = 0, len(chars) - 1
-    while l < r:
-        if not chars[l].isalpha():
-            l += 1
-        elif not chars[r].isalpha():
-            r -= 1
-        else:
-            chars[l], chars[r] = chars[r], chars[l]
-            l += 1
-            r -= 1
-    return ''.join(chars)
+
 ```
 
 ### 31. LC 922 — Sort Array By Parity II
@@ -500,15 +481,9 @@ def isPrefixOfWord(sentence, searchWord):
 Merge two strings by alternating characters.
 ```python
 def mergeAlternately(word1, word2):
-    i, j = 0, 0
-    res = []
-    while i < len(word1) or j < len(word2):
-        if i < len(word1):
-            res.append(word1[i])
-            i += 1
-        if j < len(word2):
-            res.append(word2[j])
-            j += 1
+    i, j = 0, 0;    res = [];    while i < len(word1) or j < len(word2):
+        if i < len(word1):            res.append(word1[i])            i += 1
+        if j < len(word2):            res.append(word2[j])            j += 1
     return ''.join(res)
 ```
 
@@ -932,4 +907,44 @@ def middleNode(head):
         slow = slow.next
         fast = fast.next.next
     return slow
+```
+
+
+sorting nums is  nums.sort().. nothting else
+seen=set() add to set seen.add(data) -- len(seen)
+
+
+
+
+Tempalte 1
+
+# Reverse only the vowels in a string, keeping other characters fixed.
+```python
+def reverseVowels(s):
+    vowels = set('aeiouAEIOU')
+    chars = list(s)  # importane
+    l, r = 0, len(chars) - 1
+    while l < r:
+        if chars[l] not in vowels:            l += 1
+        elif chars[r] not in vowels:            r -= 1
+        else:            chars[l], chars[r] = chars[r], chars[l]            l += 1            r -= 1
+    return ''.join(chars)
+
+
+### 30. LC 917 — Reverse Only Letters
+Reverse only the letter characters in a string, leaving others in place.
+```python
+def reverseOnlyLetters(s):
+    chars = list(s)
+    l, r = 0, len(chars) - 1
+    while l < r:
+        if not chars[l].isalpha():
+            l += 1
+        elif not chars[r].isalpha():
+            r -= 1
+        else:
+            chars[l], chars[r] = chars[r], chars[l]
+            l += 1
+            r -= 1
+    return ''.join(chars)
 ```
