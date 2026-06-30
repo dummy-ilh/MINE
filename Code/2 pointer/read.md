@@ -1,173 +1,8 @@
 # LeetCode Two Pointers — Easy: Problems + Python Solutions
 
 
-### 4. LC 88 — Merge Sorted Array
-Merge `nums2` into `nums1` in-place; `nums1` has extra space at the end (size m+n).
-```python
-def merge(nums1, m, nums2, n):
-    i, j, k = m - 1, n - 1, m + n - 1
-    while j >= 0:
-        if i >= 0 and nums1[i] > nums2[j]:
-            nums1[k] = nums1[i]
-            i -= 1
-        else:
-            nums1[k] = nums2[j]
-            j -= 1
-        k -= 1
-```
-
-### 5. LC 125 — Valid Palindrome
-Check if a string is a palindrome, ignoring non-alphanumeric chars and case.
-```python
-def isPalindrome(s):
-    l, r = 0, len(s) - 1
-    while l < r:
-        while l < r and not s[l].isalnum():
-            l += 1
-        while l < r and not s[r].isalnum():
-            r -= 1
-        if s[l].lower() != s[r].lower():
-            return False
-        l += 1
-        r -= 1
-    return True
-```
-
-### 9. LC 202 — Happy Number
-Repeatedly replace n with the sum of squares of its digits; return True if it reaches 1.
-```python
-def isHappy(n):
-    def next_num(x):
-        total = 0
-        while x:
-            x, d = divmod(x, 10)
-            total += d * d
-        return total
-
-    slow, fast = n, next_num(n)
-    while fast != 1 and slow != fast:
-        slow = next_num(slow)
-        fast = next_num(next_num(fast))
-    return fast == 1
-```
 
 
-
-### 11. LC 246 🔒 — Strobogrammatic Number
-Check if a number looks the same when rotated 180 degrees.
-```python
-def isStrobogrammatic(num):
-    mapping = {'0': '0', '1': '1', '6': '9', '8': '8', '9': '6'}
-    l, r = 0, len(num) - 1
-    while l <= r:
-        if num[l] not in mapping or mapping[num[l]] != num[r]:
-            return False
-        l += 1
-        r -= 1
-    return True
-```
-
-### 12. LC 283 — Move Zeroes
-Move all zeros to the end of the array in-place, keeping relative order of non-zeros.
-```python
-def moveZeroes(nums):
-    slow = 0
-    for fast in range(len(nums)):
-        if nums[fast] != 0:
-            nums[slow], nums[fast] = nums[fast], nums[slow]
-            slow += 1
-```
-
-
-
-### 15. LC 349 — Intersection of Two Arrays
-Return the unique elements common to both arrays.
-```python
-def intersection(nums1, nums2):
-    nums1.sort()
-    nums2.sort()
-    i = j = 0
-    res = []
-    while i < len(nums1) and j < len(nums2):
-        if nums1[i] == nums2[j]:
-            if not res or res[-1] != nums1[i]:
-                res.append(nums1[i])
-            i += 1
-            j += 1
-        elif nums1[i] < nums2[j]:
-            i += 1
-        else:
-            j += 1
-    return res
-```
-
-### 16. LC 350 — Intersection of Two Arrays II
-Return all common elements, with the correct count of duplicates.
-```python
-def intersect(nums1, nums2):
-    nums1.sort()
-    nums2.sort()
-    i = j = 0
-    res = []
-    while i < len(nums1) and j < len(nums2):
-        if nums1[i] == nums2[j]:
-            res.append(nums1[i])
-            i += 1
-            j += 1
-        elif nums1[i] < nums2[j]:
-            i += 1
-        else:
-            j += 1
-    return res
-```
-
-### 17. LC 392 — Is Subsequence
-Check whether `s` is a subsequence of `t`.
-```python
-def isSubsequence(s, t):
-    i = j = 0
-    while i < len(s) and j < len(t):
-        if s[i] == t[j]:
-            i += 1
-        j += 1
-    return i == len(s)
-```
-
-### 18. LC 408 🔒 — Valid Word Abbreviation
-Check if `abbr` is a valid abbreviation of `word` (digits represent skip counts).
-```python
-def validWordAbbreviation(word, abbr):
-    i = j = 0
-    while i < len(word) and j < len(abbr):
-        if abbr[j].isdigit():
-            if abbr[j] == '0':
-                return False
-            num = 0
-            while j < len(abbr) and abbr[j].isdigit():
-                num = num * 10 + int(abbr[j])
-                j += 1
-            i += num
-        else:
-            if word[i] != abbr[j]:
-                return False
-            i += 1
-            j += 1
-    return i == len(word) and j == len(abbr)
-```
-
-### 19. LC 455 — Assign Cookies
-Maximize the number of content children given greed factors and cookie sizes.
-```python
-def findContentChildren(g, s):
-    g.sort()
-    s.sort()
-    i = j = 0
-    while i < len(g) and j < len(s):
-        if s[j] >= g[i]:
-            i += 1
-        j += 1
-    return i
-```
 
 ### 20. LC 541 — Reverse String II
 Reverse the first k characters of every 2k-sized chunk.
@@ -723,7 +558,7 @@ def limitOccurrences(nums, limit):
 ---
 
 
-
+list(set(nums1) & set(nums2))
 sorting nums is  nums.sort().. nothting else
 seen=set() add to set seen.add(data) -- len(seen)
 for i, j in enumerate(nums): bracket
@@ -863,4 +698,128 @@ def removeDuplicates(nums):
 ```
 ### 3. LC 28 — Find the Index of the First Occurrence in a String
     n, m = len(haystack), len(needle);    for i in range(n - m + 1):     if haystack[i:i + m] == needle:
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Template 6 6. Two-pointer subsequence matching
+
+### 17. LC 392 — (i.e., "ace" is a subsequence of "abcde" while "aec" is not).Check whether `s` is a subsequence of `t`.
+```python
+def isSubsequence(s, t):
+    i = j = 0;
+    while i < len(s) and j < len(t):
+        if s[i] == t[j]:
+            i += 1
+        j += 1
+    return i == len(s)
+
+s = "ace"
+t = "abcde"
+
+i=0,j=0: a=a ✓ → i=1,j=1
+i=1,j=1: c≠b ✗ → j=2
+i=1,j=2: c=c ✓ → i=2,j=3
+i=2,j=3: e≠d ✗ → j=4
+i=2,j=4: e=e ✓ → i=3,j=5
+
+i == len(s) (3) → True ✅
+```
+
+19. LC 455 — Assign Cookies
+Maximize the number of content children given greed factors and cookie sizes.
+
+def findContentChildren(g, s):
+    g.sort()
+    s.sort()
+    i = j = 0
+    while i < len(g) and j < len(s):
+        if s[j] >= g[i]:
+            i += 1
+        j += 1
+    return i
+
+Each child i has a greed factor g[i], which is the minimum size of a cookie that the child will be content with; and each cookie j has a size s[j]. If s[j] >= g[i], we can assign the cookie j to the child i, and the child i will be content. Your goal is to maximize the number of your content children and output the maximum number.
+
+ 
+
+Example 1:
+
+Input: g = [1,2,3], s = [1,1]
+Output: 1
+Explanation: You have 3 children and 2 cookies. The greed factors of 3 children are 1, 2, 3.
+
+
+
+Check if a number looks the same when rotated 180 degrees.
+```python
+def isStrobogrammatic(num):
+    mapping = {'0': '0', '1': '1', '6': '9', '8': '8', '9': '6'}
+    l, r = 0, len(num) - 1
+    while l <= r:
+        if num[l] not in mapping or mapping[num[l]] != num[r]:
+            return False
+        l += 1
+        r -= 1
+    return True
+
+
+
+    
+### 4. LC 88 — Merge Sorted Array
+Merge `nums2` into `nums1` in-place; `nums1` has extra space at the end (size m+n).
+```python
+def merge(nums1, m, nums2, n):
+    i, j, k = m - 1, n - 1, m + n - 1
+    while j >= 0:
+        if i >= 0 and nums1[i] > nums2[j]:
+            nums1[k] = nums1[i]
+            i -= 1
+        else:
+            nums1[k] = nums2[j]
+            j -= 1
+        k -= 1
+```
+
+### 5. LC 125 — Valid Palindrome
+Check if a string is a palindrome, ignoring non-alphanumeric chars and case.
+```python
+def isPalindrome(s):
+    l, r = 0, len(s) - 1
+    while l < r:
+        while l < r and not s[l].isalnum():
+            l += 1
+        while l < r and not s[r].isalnum():
+            r -= 1
+        if s[l].lower() != s[r].lower():
+            return False
+        l += 1
+        r -= 1
+    return True
+```
+
+
+
+
+### 12. LC 283 — Move Zeroes
+Move all zeros to the end of the array in-place, keeping relative order of non-zeros.
+```python
+def moveZeroes(nums):
+    slow = 0
+    for fast in range(len(nums)):
+        if nums[fast] != 0:
+            nums[slow], nums[fast] = nums[fast], nums[slow]
+            slow += 1
 ```
