@@ -180,6 +180,7 @@ The "1.2x" multiplicative language only applies after you exponentiate — that'
 odds ratio = e^1.2 = 3.32
 Correct plain-English sentence: "Each 1-unit increase in this feature multiplies the customer's ODDS of the outcome by about 3.32x, holding other features constant."
 The mix-up to watch for (this is exactly the trap interviewers probe): "1.2" by itself is a log-odds shift (additive). "3.32x" is an odds multiplier (multiplicative). Never say "increases log-odds by 1.2x" — log-odds moves by addition, odds moves by multiplication. Keep those two verbs (add vs multiply) tied to their correct scale (log-odds vs odds) and you'll never mix this up again.
+
 Confirming Check Question 2 — and showing you the proof
 You said "No, it's log-odds" — correct. The statement was false because coefficients act on log-odds (constant effect), not probability (non-constant effect).
 Here's the "still need to see" proof — same coefficient, two different starting points, watch the probability move by a different amount each time:
@@ -189,34 +190,7 @@ def sigmoid(z):
     return 1 / (1 + np.exp(-z))
 
 w = 0.8  # same coefficient both times
-
-# Starting point 1: baseline z = -3 (low starting probability)
-z1_before = -3
-z1_after  = -3 + w
-p1_before = sigmoid(z1_before)
-p1_after  = sigmoid(z1_after)
-print(f"Low baseline:  p goes from {p1_before:.4f} to {p1_after:.4f}  (change = {p1_after-p1_before:.4f})")
-
-# Starting point 2: baseline z = 0 (middle of the S-curve)
-z2_before = 0
-z2_after  = 0 + w
-p2_before = sigmoid(z2_before)
-p2_after  = sigmoid(z2_after)
-print(f"Mid baseline:  p goes from {p2_before:.4f} to {p2_after:.4f}  (change = {p2_after-p2_before:.4f})")
-
-# Starting point 3: baseline z = 4 (high starting probability)
-z3_before = 4
-z3_after  = 4 + w
-p3_before = sigmoid(z3_before)
-p3_after  = sigmoid(z3_after)
-print(f"High baseline: p goes from {p3_before:.4f} to {p3_after:.4f}  (change = {p3_after-p3_before:.4f})")
-Output:
-Low baseline:  p goes from 0.0474 to 0.0940  (change = 0.0466)
-Mid baseline:  p goes from 0.5000 to 0.6900  (change = 0.1900)
-Fed baseline:  p goes from 0.9820 to 0.9909  (change = 0.0089)
-Same coefficient (0.8), same "step" added to z every time — but the change in probability is different every single time: +0.047 near the bottom, +0.190 in the middle, +0.009 near the top. This is the S-curve's steep-middle/flat-edges shape from Module 2, playing out directly. This is the proof: the coefficient's effect on log-odds is constant (always +0.8), but its effect on probability depends entirely on where you start. That's exactly why we don't say "increases probability by 0.8" — there's no single true answer to that; it depends on the baseline.
-
-
+---
 
 This is one of the most important concepts in logistic regression.
 
