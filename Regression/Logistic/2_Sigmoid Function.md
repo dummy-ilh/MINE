@@ -1,12 +1,3 @@
-Exactly right on both counts.
-
-1. Odds of 2.0 = the event is twice as likely to happen as not happen. ✓
-2. Odds is bounded at 0 on the low end (can never go negative), so it's only "half-unbounded" — that's precisely why we needed the log step to get a truly symmetric, unbounded number line. ✓
-
-You're solid on Module 1. Let's move to Module 2.
-
----
-
 # Module 2 — The Sigmoid Function (the "un-translator")
 
 ## 1. WHY
