@@ -1,9 +1,3 @@
-Good — that's the core of it, and you've got it. Let me tighten it slightly: it's not just "makes no sense," it's that linear regression has **no mechanism** to stop at 0 or 1. It just keeps extrapolating in a straight line forever, so *any* sufficiently large or small input will eventually break the [0,1] bound. That's the structural flaw we need to fix.
-
-Let me set up your running cheat sheet artifact now, then move into Module 1.That's your cheat sheet file — I'll append a new section after every module. Now let's move on.
-
----
-
 # Module 1 — Odds, Log-Odds, and the Logit
 
 ## 1. WHY
@@ -11,10 +5,6 @@ Let me set up your running cheat sheet artifact now, then move into Module 1.Tha
 We just established: we can't model probability directly with a straight line, because probability is trapped between 0 and 1, and a straight line refuses to stay trapped anywhere.
 
 So here's the trick statisticians came up with: **don't model probability directly. Model something else — something that CAN range from −∞ to ∞ — and then translate it back into a probability at the very end.**
-
-That "something else" is called **log-odds**. But to understand log-odds, we first need **odds**, because log-odds is just "odds, but log'd."
-
-If we skip this step, "link function" will stay a scary buzzword forever. So let's build it from the ground up.
 
 ## 2. INTUITION — What are "odds"?
 
@@ -155,7 +145,7 @@ Once we're in "straight-line world," we CAN do ordinary linear regression math (
 
 ## 8. INTERPRETATION
 
-In real terms: when you fit a logistic regression model, internally it's predicting **log-odds**, not probability directly. A coefficient in the model tells you "how much does the log-odds change when this feature increases by 1 unit" — which, as we'll see in Module 3, translates into a statement about odds ratios. This is exactly the piece that "trips up most candidates" per your curriculum — and now you have the foundation to understand it when we get there.
+In real terms: when you fit a logistic regression model, internally it's predicting **log-odds**, not probability directly. A coefficient in the model tells you "how much does the log-odds change when this feature increases by 1 unit" —
 
 ## 9. FAANG L5 ANGLE
 
@@ -187,7 +177,168 @@ for p in [0.01, 0.10, 0.25, 0.50, 0.75, 0.90, 0.99]:
 ## 11. CHECK — before Module 2
 
 1. If a feature's odds ratio is 2.0, what does that mean in plain English about the event happening?
-2. Why can't we stop at "odds" and skip taking the log — what specifically would still be broken if we tried to model raw odds with a straight line?
-
 Odds of 2.0 = the event is twice as likely to happen as not happen. ✓
+2. Why can't we stop at "odds" and skip taking the log — what specifically would still be broken if we tried to model raw odds with a straight line?
 Odds is bounded at 0 on the low end (can never go negative), so it's only "half-unbounded" — that's precisely why we needed the log step to get a truly symmetric, unbounded number line. ✓
+
+## Additional
+
+p: bounds [0, 1], why sigmoid enforces this
+
+Odds: p/(1-p), bounds [0, ∞), interpretation as "ratio of probabilities"
+
+Log-odds (logit): ln(p/(1-p)), bounds (-∞, ∞), why this is the natural parameter for Bernoulli
+
+Emphasize that linear layers output logits (unbounded), and sigmoid maps to probabilities
+
+
+
+
+
+
+
+
+
+
+
+Excellent! Let's break this down step-by-step, both mathematically and with a concrete example.
+
+---
+
+## 1. The Mathematical Derivation
+
+We start with the **log-odds** of probability \( p \):
+
+\[
+\text{log-odds}(p) = \ln\left(\frac{p}{1-p}\right)
+\]
+
+Now, the **log-odds** of the complement probability \( 1-p \) is:
+
+\[
+\text{log-odds}(1-p) = \ln\left(\frac{1-p}{p}\right)
+\]
+
+We want to show that:
+
+\[
+\ln\left(\frac{1-p}{p}\right) = -\ln\left(\frac{p}{1-p}\right)
+\]
+
+---
+
+### Step 1: Use the logarithm property \( \ln(1/x) = -\ln(x) \)
+
+Notice that:
+
+\[
+\frac{1-p}{p} = \frac{1}{\left(\frac{p}{1-p}\right)}
+\]
+
+So:
+
+\[
+\ln\left(\frac{1-p}{p}\right) = \ln\left(\frac{1}{\frac{p}{1-p}}\right)
+\]
+
+---
+
+### Step 2: Apply the log reciprocal rule
+
+\[
+\ln\left(\frac{1}{x}\right) = -\ln(x)
+\]
+
+Let \( x = \frac{p}{1-p} \). Then:
+
+\[
+\ln\left(\frac{1}{\frac{p}{1-p}}\right) = -\ln\left(\frac{p}{1-p}\right)
+\]
+
+---
+
+### Step 3: Conclusion
+
+\[
+\boxed{\ln\left(\frac{1-p}{p}\right) = -\ln\left(\frac{p}{1-p}\right)}
+\]
+
+Or, in log-odds notation:
+
+\[
+\text{log-odds}(1-p) = -\text{log-odds}(p)
+\]
+
+This is the **anti-symmetry** property.
+
+---
+
+## 2. Why this implies the sigmoid is symmetric around 0
+
+The **sigmoid function** is the inverse of the log-odds:
+
+\[
+p = \sigma(z) = \frac{1}{1 + e^{-z}}
+\]
+
+where \( z = \text{log-odds}(p) \).
+
+The anti-symmetry says:
+
+\[
+\text{log-odds}(1-p) = -z
+\]
+
+So if \( \sigma(z) = p \), then:
+
+\[
+\sigma(-z) = 1-p
+\]
+
+This means the sigmoid curve is symmetric about the point \( (0, 0.5) \).  
+Reflecting across the vertical axis \( z=0 \) gives \( p \to 1-p \).
+
+---
+
+## 3. Concrete Example
+
+Let’s take \( p = 0.75 \).
+
+### Compute log-odds of \( p \):
+
+\[
+\text{log-odds}(0.75) = \ln\left(\frac{0.75}{0.25}\right) = \ln(3) \approx 1.0986
+\]
+
+### Compute log-odds of \( 1-p = 0.25 \):
+
+\[
+\text{log-odds}(0.25) = \ln\left(\frac{0.25}{0.75}\right) = \ln\left(\frac{1}{3}\right) = -\ln(3) \approx -1.0986
+\]
+
+### Check the anti-symmetry:
+
+\[
+1.0986 = -(-1.0986) \quad \checkmark
+\]
+
+So:
+
+\[
+\ln\left(\frac{0.25}{0.75}\right) = -\ln\left(\frac{0.75}{0.25}\right)
+\]
+
+---
+
+### Sigmoid symmetry check:
+
+- \( z = 1.0986 \) gives \( \sigma(z) = 0.75 \)
+- \( z = -1.0986 \) gives \( \sigma(-z) = 0.25 = 1 - 0.75 \)
+
+So the sigmoid is indeed symmetric around 0.
+
+---
+
+## Final takeaway:
+
+The log-odds function is **anti-symmetric** because swapping \( p \) and \( 1-p \) flips the sign of the logarithm. This directly gives the sigmoid its rotational symmetry around \( (0, 0.5) \).
