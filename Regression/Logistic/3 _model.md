@@ -215,3 +215,219 @@ Low baseline:  p goes from 0.0474 to 0.0940  (change = 0.0466)
 Mid baseline:  p goes from 0.5000 to 0.6900  (change = 0.1900)
 Fed baseline:  p goes from 0.9820 to 0.9909  (change = 0.0089)
 Same coefficient (0.8), same "step" added to z every time — but the change in probability is different every single time: +0.047 near the bottom, +0.190 in the middle, +0.009 near the top. This is the S-curve's steep-middle/flat-edges shape from Module 2, playing out directly. This is the proof: the coefficient's effect on log-odds is constant (always +0.8), but its effect on probability depends entirely on where you start. That's exactly why we don't say "increases probability by 0.8" — there's no single true answer to that; it depends on the baseline.
+
+
+
+This is one of the most important concepts in logistic regression.
+
+The connection isn't something we're *assuming*—it's how **logistic regression is defined**.
+
+### Step 1: Start with the Odds
+
+If the probability of the positive class is `p`, then the odds are
+
+```text
+Odds = p / (1 - p)
+```
+
+Odds answer:
+
+> "How many times more likely is success than failure?"
+
+For example,
+
+```text
+p = 0.8
+
+Odds = 0.8 / 0.2 = 4
+```
+
+Meaning:
+
+> Success is **4 times as likely** as failure.
+
+---
+
+### Step 2: Take the Log
+
+Now take the natural logarithm of the odds:
+
+```text
+z = log(Odds)
+```
+
+or
+
+```text
+z = ln(p / (1 - p))
+```
+
+This quantity is called the **log-odds** or **logit**.
+
+**This is where `z` comes from.**
+
+It is **defined** to be the log-odds.
+
+---
+
+### Step 3: Why Introduce `z`?
+
+The problem is that probabilities are constrained:
+
+```text
+0 ≤ p ≤ 1
+```
+
+A linear model, however, can output any real number:
+
+```text
+-∞ to +∞
+```
+
+We need a bridge between these two worlds.
+
+```text
+Linear Model
+    │
+    ▼
+z = w₁x₁ + w₂x₂ + ... + b
+    │
+    │  (Interpret z as log-odds)
+    ▼
+log(p / (1-p)) = z
+    │
+    ▼
+Solve for p
+    │
+    ▼
+p = 1 / (1 + e^-z)
+```
+
+This is the entire idea behind logistic regression.
+
+---
+
+# The Connection Formula
+
+The relationship is
+
+```text
+z = ln(p / (1 - p))
+```
+
+This is called the **logit transformation**.
+
+The inverse is
+
+```text
+p = 1 / (1 + e^-z)
+```
+
+This is the **sigmoid function**.
+
+So they are inverse functions of each other.
+
+```text
+Probability (p)
+       │
+       ▼
+Logit
+
+z = ln(p / (1-p))
+
+       ▲
+       │
+Inverse (Sigmoid)
+
+p = 1 / (1 + e^-z)
+```
+
+---
+
+# Why Did We Choose Log-Odds?
+
+Suppose we want a linear model:
+
+```text
+z = wx + b
+```
+
+Since `z` can be any real number (`-∞` to `+∞`), we need a transformation of probability that also spans all real numbers.
+
+Let's see:
+
+| Probability `p` | Log-Odds `z` |
+| --------------: | -----------: |
+|               0 |           -∞ |
+|            0.01 |        -4.60 |
+|            0.10 |        -2.20 |
+|            0.50 |            0 |
+|            0.90 |         2.20 |
+|            0.99 |         4.60 |
+|               1 |           +∞ |
+
+Notice what happened:
+
+```text
+Probability
+
+0 ---------------------- 1
+```
+
+became
+
+```text
+Log-Odds
+
+-∞ ---------------------- +∞
+```
+
+The logit transformation converts a bounded probability into an unbounded value that a linear model can predict naturally.
+
+---
+
+# The Complete Pipeline
+
+```text
+Input Features (x)
+        │
+        ▼
+Linear Model
+
+z = wx + b
+
+        │
+        ▼
+Interpret z as Log-Odds
+
+z = ln(p / (1-p))
+
+        │
+        ▼
+Invert the Log-Odds
+
+p = 1 / (1 + e^-z)
+
+        │
+        ▼
+Predicted Probability
+```
+
+## The key insight
+
+We're **not discovering** that `z` equals the log-odds. We **define** it that way because it gives us exactly the transformation we need:
+
+* A linear model predicts any real number (`z ∈ (-∞, +∞)`).
+* Probabilities must lie in `[0, 1]`.
+* The **logit** maps probabilities to all real numbers:
+
+  ```text
+  z = ln(p / (1 - p))
+  ```
+* The **sigmoid** maps those real numbers back to probabilities:
+
+  ```text
+  p = 1 / (1 + e^-z)
+  ```
+
+This pair of inverse functions is what makes logistic regression possible. Once you define the linear model's output `z` as the **log-odds**, the sigmoid function follows naturally by solving the equation for `p`.
