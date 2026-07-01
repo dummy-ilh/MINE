@@ -111,10 +111,344 @@ for threshold in [0.3, 0.5, 0.7]:
 
 1. You're building a model to screen resumes for interview callbacks, where a "false negative" means a great candidate gets rejected, and a "false positive" means a mediocre candidate gets an interview slot (a relatively low-cost mistake). Would you raise or lower the classification threshold from 0.5, and why?
 2. Why is it geometrically true that logistic regression's decision boundary is always a straight line (or flat plane), rather than a curve — connect this back to the formula for z?
-
+---
 Good work on Check 1 — that's exactly right, and let's lock in the reasoning: since a false negative (rejecting a great candidate) is costly and a false positive (mediocre candidate gets an interview) is cheap, you'd lower the threshold. This catches more candidates as "call back" (fewer real false negatives), accepting the cost of interviewing a few more mediocre candidates. Correct.
+
+---
 Check 2 needs a bit more — let's nail it down precisely, since this is a common trap question.
 Completing Check 2 — Why the boundary is a straight line
 The key connection is this: z is always a linear combination of your features — no matter what the actual weights turn out to be, the formula z = b + w1*x1 + w2*x2 is structurally just "add up features multiplied by constants." There are no squared terms, no products of features, nothing curved baked into it — it's degree-1 math (like y = mx + c, just with more variables).
 The decision boundary is defined by the equation z = 0 (at the default threshold). Since z itself is a straight-line equation, setting it equal to a constant (0) gives you... another straight-line equation. Plotted on a graph of x1 vs x2, b + w1*x1 + w2*x2 = 0 traces out a straight line — the same way 2x + 3y = 6 is a straight line on a basic algebra graph, not a curve.
 The only way to get a curved boundary is to feed logistic regression features that are already curved — like manually adding x1² or x1×x2 as new input features. Then z becomes a linear combination of THOSE terms, and while z=0 is still "linear" in the new features, it traces a curve back in the original x1, x2 space. This is a real technique (polynomial feature engineering) and a common interview follow-up.
+
+
+
+# Decision Boundary in Logistic Regression — Made Simple
+
+This is a **critical concept** that trips up many people. Let's break it down visually and intuitively.
+
+---
+
+## 🎯 **The Core Idea — In One Sentence**
+
+> The **decision boundary** is the line (or curve) that separates **"predict class 0"** from **"predict class 1"** in the feature space.
+
+---
+
+## 🔑 **The Threshold Connection — Your Starting Point**
+
+You said you understand **threshold** — that's perfect because the decision boundary and threshold are **two sides of the same coin**:
+
+| Concept | What it is | Example |
+|---------|-----------|---------|
+| **Threshold** | A cutoff on the **probability** output | "Predict churn if p ≥ 0.5" |
+| **Decision Boundary** | The set of **feature values** where p = threshold | "The line where predicted probability = 0.5" |
+
+**Think of it this way:**
+- **Threshold** = "How sure do I need to be?" (a number between 0 and 1)
+- **Decision boundary** = "Where in feature-space does my prediction flip from 0 to 1?"
+
+---
+
+## 📐 **Step-by-Step Derivation (The Math)**
+
+Let's find exactly where the decision boundary lives.
+
+### Step 1: The logistic regression equation
+
+```
+z = b + w₁x₁ + w₂x₂ + ... + wₙxₙ
+p = sigmoid(z) = 1 / (1 + e^(-z))
+```
+
+### Step 2: The decision rule with threshold = 0.5
+
+We predict class 1 when:
+```
+p ≥ 0.5
+```
+
+### Step 3: What input z gives p = 0.5?
+
+Let's solve:
+```
+sigmoid(z) = 0.5
+1 / (1 + e^(-z)) = 0.5
+1 + e^(-z) = 2
+e^(-z) = 1
+-z = 0
+z = 0
+```
+
+**Key insight:** `p = 0.5` happens **exactly when z = 0**.
+
+### Step 4: So the decision boundary is where z = 0
+
+```
+b + w₁x₁ + w₂x₂ + ... + wₙxₙ = 0
+```
+
+This is the **equation of a hyperplane** (a line in 2D, a plane in 3D, etc.)
+
+---
+
+## 👁️ **Visual Examples — Build Intuition**
+
+### Example 1: 1 Feature (1D)
+
+**Data:** Churn based on complaints (x)
+
+```
+z = b + w·x
+Decision boundary: b + w·x = 0 → x = -b/w
+```
+
+**Visual:**
+```
+p(x) →
+1.0 |                    ████████████████
+    |                 ████
+0.5 |──────────────●───────────────
+    |           ████
+0.0 |████████████
+    └────────────────────────────→ x
+              x* = -b/w
+              (decision boundary)
+```
+
+- **Left of x*:** p < 0.5 → predict class 0
+- **Right of x*:** p ≥ 0.5 → predict class 1
+- **At x*:** p = 0.5 → tie (often predict class 1 by convention)
+
+**Example with numbers:**
+```
+b = -1, w = 0.5
+Decision boundary: -1 + 0.5·x = 0 → x = 2
+```
+- Customer with 1 complaint: z = -1 + 0.5(1) = -0.5 → p = 0.38 → predict "no churn"
+- Customer with 3 complaints: z = -1 + 0.5(3) = 0.5 → p = 0.62 → predict "churn"
+
+---
+
+### Example 2: 2 Features (2D) — Most Common for Visualization
+
+**Data:** Churn based on complaints (x₁) and calls to support (x₂)
+
+```
+z = b + w₁x₁ + w₂x₂
+Decision boundary: b + w₁x₁ + w₂x₂ = 0
+```
+
+**Rearrange to get slope-intercept form (if w₂ ≠ 0):**
+```
+w₂x₂ = -b - w₁x₁
+x₂ = (-b/w₂) + (-w₁/w₂)·x₁
+```
+
+This is a **straight line**!
+
+**Visual:**
+```
+x₂ (calls)
+    ↑
+    |    ● class 1 (churn)
+    |  ●
+    |    ●
+    |  ╲    ●
+    |   ╲ ●
+    |    ╲      ●
+    |     ╲  ●
+    |      ╲
+    |   ●   ╲      ●
+    | ●     ╲
+    |●      ╲    ●
+    |   ●    ╲
+    |        ╲ ●
+    |         ╲
+    |  ●       ╲
+    |           ╲
+    |●           ╲
+    └─────────────────────────→ x₁ (complaints)
+               Decision boundary: b + w₁x₁ + w₂x₂ = 0
+               (line separating churners from non-churners)
+```
+
+**Interpreting the line:**
+- Points **above** the line → z > 0 → p > 0.5 → predict class 1
+- Points **below** the line → z < 0 → p < 0.5 → predict class 0
+- Points **on** the line → z = 0 → p = 0.5 → tie
+
+---
+
+## 🧠 **The Most Important Insight**
+
+> **The decision boundary is ALWAYS linear for standard logistic regression.**
+
+Why? Because:
+- The boundary is defined by `z = 0`
+- `z` is a **linear combination** of the features
+- Setting a linear expression to 0 gives a line (or plane, or hyperplane)
+
+**This is why logistic regression is called a "linear" classifier** — even though it outputs probabilities, its decision boundary is straight!
+
+---
+
+## 🎨 **Changing the Threshold → Moving the Boundary**
+
+Here's where your understanding of thresholds really pays off!
+
+**Default threshold = 0.5:** Boundary where z = 0
+
+**If threshold = 0.7** (more conservative — only predict churn if very sure):
+
+```
+Decision rule: predict 1 if p ≥ 0.7
+sigmoid(z) = 0.7
+z = log(0.7/0.3) ≈ 0.847
+Boundary: b + w₁x₁ + w₂x₂ = 0.847
+```
+
+**Effect:** The boundary **shifts** to make it harder to predict class 1.
+
+**Visual:**
+```
+        threshold = 0.5        threshold = 0.7
+        (default)              (conservative)
+        
+        ╲                      ╲
+         ╲                      ╲
+          ╲         ●            ╲    ●
+           ╲    ●                ╲ ●
+            ╲                    ╲
+         ●   ╲                  ╲
+              ╲         ●        ╲
+           ●   ╲                 ╲
+                ╲ ●            ●  ╲
+              ●  ╲                ╲
+    ●           ╲                 ╲
+                ╲ ●               ╲
+                 ╲                ╲
+                 ← boundary        ← boundary shifted
+                   (p=0.5)           (p=0.7)
+```
+
+Notice: The boundary moves **away** from the class 0 region, making it harder to classify points as class 1.
+
+---
+
+## 🔥 **Real Business Example**
+
+**Problem:** Predict which customers will cancel their subscription (churn).
+
+**Features:**
+- `x₁` = months since last purchase
+- `x₂` = number of support tickets opened
+
+**Trained model:**
+```
+b = -2.5
+w₁ = 0.3
+w₂ = 0.8
+```
+
+**Decision boundary (threshold = 0.5):**
+```
+-2.5 + 0.3x₁ + 0.8x₂ = 0
+x₂ = (2.5 - 0.3x₁) / 0.8
+```
+
+**Interpretation:**
+- Customer A: last purchase 2 months ago, 1 support ticket
+  ```
+  z = -2.5 + 0.3(2) + 0.8(1) = -1.1 → p = 0.25 → predict "no churn"
+  ```
+- Customer B: last purchase 8 months ago, 4 support tickets
+  ```
+  z = -2.5 + 0.3(8) + 0.8(4) = 0.7 → p = 0.67 → predict "churn"
+  ```
+
+**Business meaning:** The decision boundary tells you the **combinations** of "time since purchase" and "support tickets" that predict churn. You could use this to identify at-risk customers (even those with high p but just below 0.5) for targeted retention campaigns.
+
+---
+
+## 🧪 **Interactive Intuition Builder**
+
+Try these thought experiments:
+
+1. **If `w₁` is very large** (complaints are very predictive):
+   - Decision boundary becomes almost vertical
+   - Even a few complaints push you across the boundary
+   - The feature is "dominant"
+
+2. **If `w₁` is very small** (complaints don't matter much):
+   - Decision boundary becomes almost horizontal
+   - Complaints have little effect on the prediction
+   - Other features dominate
+
+3. **If all weights are 0**:
+   - `z = b`
+   - Boundary: b = 0 → a flat line parallel to all axes
+   - All predictions are constant (if b=0, everyone gets p=0.5)
+
+---
+
+## ⚠️ **Common Misconceptions to Avoid**
+
+| Misconception | Reality |
+|---------------|---------|
+| "The decision boundary is curved" | **No** — standard logistic regression has a **linear** boundary |
+| "The boundary is the sigmoid curve" | **No** — the sigmoid is the **probability curve**; the boundary is where p=0.5 (one point on that curve) |
+| "Changing threshold changes the model" | **No** — it changes the **decision rule**, not the underlying weights |
+| "Decision boundary only exists in 2D" | **No** — it exists in any dimension; we just can't visualize it beyond 3D (call it a hyperplane) |
+
+---
+
+## 🔑 **Key Takeaways**
+
+1. **Decision boundary = where z = 0** (which is where p = 0.5)
+2. **Equation:** `b + w₁x₁ + w₂x₂ + ... = 0`
+3. **It's always linear** (straight line in 2D, plane in 3D, hyperplane in higher dimensions)
+4. **Threshold changes the boundary** — higher threshold shifts boundary toward class 1 region (harder to predict 1)
+5. **The weights control orientation** — large weights make that feature more influential on the boundary's position
+
+---
+
+## 🎯 **Check Your Understanding**
+
+1. **If you have 3 features, what shape is the decision boundary?**
+   *Answer: A plane in 3D space (hyperplane).*
+
+2. **If you increase the threshold from 0.5 to 0.8, what happens to the decision boundary?**
+   *Answer: It shifts so that a larger z is needed to predict class 1 — effectively making it harder to classify points as class 1.*
+
+3. **What happens to the decision boundary if you double all weights?**
+   *Answer: Nothing! Because b + w₁x₁ + ... = 0 is unchanged if you multiply everything by 2 — the probability changes, but the p=0.5 boundary stays the same.*
+
+---
+
+## 📝 **Final Visual Summary**
+
+```
+                    The Decision Boundary Story
+                    ===========================
+                    
+     Feature Space                Probability Space
+     (x₁, x₂, ...)                (z → p)
+     
+         ● class 1                   p
+         ● ●                         1.0 ──────────
+        ● ● ●                           ●  ●
+      ● ○ ○ ○   ○                     ● ●
+     ● ○ ○   ○ ○                    ●
+    ○ ○ ○   ○ ○                   0.5 ──●──────────
+   ○ ○ ○ ○ ○ ○                        ●
+    ○ ○ ○ ○ ○                        ●
+         ○ class 0                   ●
+                                    0.0 ──────────→ z
+                                    
+    Decision boundary           Threshold = 0.5
+    (line separating           at p=0.5 → z=0
+    ● from ○)
+```
+
+**The decision boundary is just a shadow** — it's the projection of the p=0.5 threshold back into feature-space. Once you see this, it all clicks! 🎯
