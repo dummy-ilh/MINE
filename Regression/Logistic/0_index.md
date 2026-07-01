@@ -17,15 +17,11 @@ This isn't a small cosmetic issue — it's a structural mismatch: you're using a
 
 ## 2. INTUITION
 
-Think of linear regression as a **ruler** — it measures things on an infinite scale, stretching in both directions forever.
-
-Classification problems don't need a ruler. They need something more like a **dimmer switch that's capped between fully off (0) and fully on (1)**. You want a tool whose output can *only* live between 0 and 1, no matter what garbage input values you throw at it.
 
 Logistic regression exists because we needed a way to say: *"Take the same kind of linear combination of inputs you'd use in linear regression, but force the output to always behave like a probability."*
 
 ## 3. SIMPLE FORMULA (no notation yet — just the numeric problem)
 
-Let's just show what goes wrong with actual numbers using linear regression on a classification problem.
 
 Say we're predicting whether someone churns (1) or stays (0), using **"number of complaints filed"** as the only feature.
 
@@ -49,7 +45,6 @@ Let's plug in different numbers of complaints and see what linear regression spi
 
 Look at rows 4 and 5. A "probability" of **1.60** means 160% chance of churning. A "probability" of **-0.20** means negative-20% chance. Both are mathematically meaningless. Probabilities **must** live strictly between 0 and 1.
 
-This isn't a rare edge case — with real data (especially with multiple features, or values outside your training range), linear regression **will** eventually produce impossible outputs. It has no built-in mechanism to stop itself at 0 or 1 — it just keeps going in a straight line forever.
 
 ## 5. INTERPRETATION
 
@@ -66,13 +61,11 @@ Strong answer hits three points:
 2. Errors (residuals) aren't normally distributed / homoscedastic for a 0/1 target → violates linear regression assumptions, so your statistical inference (p-values, confidence intervals) is invalid.
 3. The relationship between features and probability of an event is typically **not linear** near the extremes — real probabilities flatten out near 0 and 1 (diminishing returns), which a straight line can't capture but an S-shaped curve can.
 
-**Common trap:** Candidates say "linear regression doesn't work for classification" without explaining *why* — interviewers will push with "what specifically breaks?" and expect the bounded-output argument plus the S-curve argument, not just a vague gut feeling.
 
 **Follow-up they might ask:** *"Could you just clip the linear regression output to [0,1]?"* — Good answer: clipping is a band-aid; it doesn't fix the shape of the relationship, it just truncates it. You'd get a huge pileup of predictions exactly at 0 or 1, and the model still isn't optimized to produce well-calibrated probabilities in between. It's a hack, not a solution.
 
 ## 7. CHECK — before we move to Module 1
 
 1. In your own words: why is it specifically a problem that linear regression's output is unbounded, when we're trying to predict something like "probability of churn"?
-2. If I showed you a linear regression model predicting "probability of default" and it output **-0.05** for a very low-risk customer, what would you say is fundamentally going wrong under the hood (not just "it's negative")?
 
 it's not just "makes no sense," it's that linear regression has no mechanism to stop at 0 or 1. It just keeps extrapolating in a straight line forever, so any sufficiently large or small input will eventually break the [0,1] bound. That's the structural flaw we need to fix.
