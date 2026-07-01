@@ -415,22 +415,22 @@ $$
 
 So,
 
-$$
+$
 1.0986
 =
 -
 (-1.0986)
 \quad\checkmark
-$$
+$
 
 or equivalently,
 
-$$
+$
 \ln\left(\frac{0.25}{0.75}\right)
 =
 -
 \ln\left(\frac{0.75}{0.25}\right)
-$$
+$
 
 Exactly as predicted.
 
@@ -442,37 +442,36 @@ Now evaluate the sigmoid.
 
 For
 
-$$
+$
 z=1.0986
-$$
+$
 
-$$
+$
 \sigma(1.0986)
 =
 0.75
-$$
+$
 
 For
 
-$$
+$
 z=-1.0986
-$$
+$
 
-$$
+$
 \sigma(-1.0986)
 =
 0.25
 =
 1-0.75
-$$
+$
 
 So,
-
-$$
+$
 \sigma(-z)
 =
 1-\sigma(z)
-$$
+$
 
 which confirms the symmetry property.
 
@@ -482,20 +481,20 @@ which confirms the symmetry property.
 
 The log-odds function is **anti-symmetric** because exchanging `p` and `1-p` simply takes the reciprocal of the odds ratio, and taking the logarithm of a reciprocal flips the sign:
 
-$$
+$
 \ln\left(\frac{1}{x}\right)
 =
 -\ln(x)
-$$
+$
 
 Since the sigmoid is the inverse of the log-odds function, this immediately implies
 
-$$
+$
 \boxed{
 \sigma(-z)
 =
 1-\sigma(z)
 }
-$$
+$
 
 This is why the sigmoid curve is perfectly symmetric around the point **(0, 0.5)**.
