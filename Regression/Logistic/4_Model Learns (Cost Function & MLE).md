@@ -1,5 +1,4 @@
 
-
 # Module 4 — How the Model Learns (Cost Function & MLE)
 
 ## 1. WHY
