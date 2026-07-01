@@ -410,21 +410,6 @@ def makeSmallestPalindrome(s):
     return ''.join(chars)
 ```
 
-### 56. LC 2824 — Count Pairs Whose Sum is Less than Target
-Count index pairs (i, j) where i < j and nums[i] + nums[j] < target.
-```python
-def countPairs(nums, target):
-    nums.sort()
-    l, r = 0, len(nums) - 1
-    count = 0
-    while l < r:
-        if nums[l] + nums[r] < target:
-            count += r - l
-            l += 1
-        else:
-            r -= 1
-    return count
-```
 
 ### 57. LC 2903 — Find Indices With Index and Value Difference I
 Find indices i, j satisfying minimum index gap and value gap requirements.
@@ -565,89 +550,6 @@ for i, j in enumerate(nums): bracket
 
 total += int(str(nums[l]) + str(nums[r])) #[7,52,2,4] =74
 
-Tempalte 1
-**345. Reverse Vowels** (swap vowels)
-
-```python
-def reverseVowels(s):
-    vowels = set('aeiouAEIOU'); chars = list(s); l, r = 0, len(chars)-1
-    while l < r:
-        if chars[l] not in vowels: l += 1
-        elif chars[r] not in vowels: r -= 1
-        else: chars[l], chars[r] = chars[r], chars[l]; l += 1; r -= 1
-    return ''.join(chars)
-```
-
-**917. Reverse Only Letters** (swap letters)
-
-```python
-def reverseOnlyLetters(s):
-    chars = list(s); l, r = 0, len(chars)-1
-    while l < r:
-        if not chars[l].isalpha(): l += 1
-        elif not chars[r].isalpha(): r -= 1
-        else: chars[l], chars[r] = chars[r], chars[l]; l += 1; r -= 1
-    return ''.join(chars)
-```
-**344. Reverse String** (in-place)
-
-```python
-def reverseString(s):
-    l, r = 0, len(s)-1
-    while l < r:
-        s[l], s[r] = s[r], s[l]
-        l += 1; r -= 1
-```
-
-**125. Valid Palindrome** (skip non-alnum)
-
-```python
-def isPalindrome(s):
-    l, r = 0, len(s)-1
-    while l < r:
-        while l < r and not s[l].isalnum(): l += 1
-        while l < r and not s[r].isalnum(): r -= 1
-        if s[l].lower() != s[r].lower(): return False
-        l += 1; r -= 1
-    return True
-```
-
-
-def sortedSquares(nums): on rather than nlogn
-    n = len(nums)
-    res = [0] * n
-    l, r = 0, n - 1
-    for i in range(n - 1, -1, -1):
-        if abs(nums[l]) > abs(nums[r]):
-            res[i] = nums[l] * nums[l]
-            l += 1
-        else:
-            res[i] = nums[r] * nums[r]
-            r -= 1
-    return res
-
-
-    ### 23. LC 680 — Valid Palindrome II
-Check if a string can become a palindrome after removing at most one character.
-```python
-def validPalindrome(s):
-    def is_pal(l, r):
-        while l < r:
-            if s[l] != s[r]:
-                return False
-            l += 1
-            r -= 1
-        return True
-
-    l, r = 0, len(s) - 1
-    while l < r:
-        if s[l] != s[r]:
-            return is_pal(l + 1, r) or is_pal(l, r - 1)
-        l += 1
-        r -= 1
-    return True
-```
-
 
 ### 55. LC 2697 — Lexicographically Smallest Palindrome
 Make a string a palindrome with minimum changes, choosing the lexicographically smallest result.
@@ -662,23 +564,6 @@ def makeSmallestPalindrome(s):
         r -= 1
     return ''.join(chars)
 ```
-
-### 56. LC 2824 — Count Pairs Whose Sum is Less than Target
-Count index pairs (i, j) where i < j and nums[i] + nums[j] < target.
-```python
-def countPairs(nums, target):
-    nums.sort()
-    l, r = 0, len(nums) - 1
-    count = 0
-    while l < r:
-        if nums[l] + nums[r] < target:
-            count += r - l
-            l += 1
-        else:
-            r -= 1
-    return count
-```
-
 
 Tempalte 2
 
