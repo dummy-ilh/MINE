@@ -199,146 +199,303 @@ Emphasize that linear layers output logits (unbounded), and sigmoid maps to prob
 
 
 
-
-
 Excellent! Let's break this down step-by-step, both mathematically and with a concrete example.
 
 ---
 
-## 1. The Mathematical Derivation
+# 1. The Mathematical Derivation
 
-We start with the **log-odds** of probability \( p \):
+We start with the **log-odds** of probability `p`:
 
-\[
+$$
 \text{log-odds}(p) = \ln\left(\frac{p}{1-p}\right)
-\]
+$$
 
-Now, the **log-odds** of the complement probability \( 1-p \) is:
+Now, consider the **log-odds** of the complement probability `1 - p`:
 
-\[
+$$
 \text{log-odds}(1-p) = \ln\left(\frac{1-p}{p}\right)
-\]
+$$
 
-We want to show that:
+We want to prove:
 
-\[
-\ln\left(\frac{1-p}{p}\right) = -\ln\left(\frac{p}{1-p}\right)
-\]
+$$
+\ln\left(\frac{1-p}{p}\right)
+=
+-\ln\left(\frac{p}{1-p}\right)
+$$
 
 ---
 
-### Step 1: Use the logarithm property \( \ln(1/x) = -\ln(x) \)
+## Step 1: Rewrite the Fraction
 
 Notice that:
 
-\[
-\frac{1-p}{p} = \frac{1}{\left(\frac{p}{1-p}\right)}
-\]
+$$
+\frac{1-p}{p}
+=
+\frac{1}{\frac{p}{1-p}}
+$$
 
-So:
+So,
 
-\[
-\ln\left(\frac{1-p}{p}\right) = \ln\left(\frac{1}{\frac{p}{1-p}}\right)
-\]
-
----
-
-### Step 2: Apply the log reciprocal rule
-
-\[
-\ln\left(\frac{1}{x}\right) = -\ln(x)
-\]
-
-Let \( x = \frac{p}{1-p} \). Then:
-
-\[
-\ln\left(\frac{1}{\frac{p}{1-p}}\right) = -\ln\left(\frac{p}{1-p}\right)
-\]
+$$
+\ln\left(\frac{1-p}{p}\right)
+=
+\ln\left(\frac{1}{\frac{p}{1-p}}\right)
+$$
 
 ---
 
-### Step 3: Conclusion
+## Step 2: Apply the Logarithm Rule
 
-\[
-\boxed{\ln\left(\frac{1-p}{p}\right) = -\ln\left(\frac{p}{1-p}\right)}
-\]
+Recall the logarithm identity:
 
-Or, in log-odds notation:
+$$
+\ln\left(\frac{1}{x}\right)
+=
+-\ln(x)
+$$
 
-\[
-\text{log-odds}(1-p) = -\text{log-odds}(p)
-\]
+Let
 
-This is the **anti-symmetry** property.
+$$
+x=\frac{p}{1-p}
+$$
 
----
+Then,
 
-## 2. Why this implies the sigmoid is symmetric around 0
-
-The **sigmoid function** is the inverse of the log-odds:
-
-\[
-p = \sigma(z) = \frac{1}{1 + e^{-z}}
-\]
-
-where \( z = \text{log-odds}(p) \).
-
-The anti-symmetry says:
-
-\[
-\text{log-odds}(1-p) = -z
-\]
-
-So if \( \sigma(z) = p \), then:
-
-\[
-\sigma(-z) = 1-p
-\]
-
-This means the sigmoid curve is symmetric about the point \( (0, 0.5) \).  
-Reflecting across the vertical axis \( z=0 \) gives \( p \to 1-p \).
+$$
+\ln\left(\frac{1}{\frac{p}{1-p}}\right)
+=
+-\ln\left(\frac{p}{1-p}\right)
+$$
 
 ---
 
-## 3. Concrete Example
+## Step 3: Conclusion
 
-Let’s take \( p = 0.75 \).
+Therefore,
 
-### Compute log-odds of \( p \):
+$$
+\boxed{
+\ln\left(\frac{1-p}{p}\right)
+=
+-\ln\left(\frac{p}{1-p}\right)
+}
+$$
 
-\[
-\text{log-odds}(0.75) = \ln\left(\frac{0.75}{0.25}\right) = \ln(3) \approx 1.0986
-\]
+Or, in log-odds notation,
 
-### Compute log-odds of \( 1-p = 0.25 \):
+$$
+\boxed{
+\text{log-odds}(1-p)
+=
+-\text{log-odds}(p)
+}
+$$
 
-\[
-\text{log-odds}(0.25) = \ln\left(\frac{0.25}{0.75}\right) = \ln\left(\frac{1}{3}\right) = -\ln(3) \approx -1.0986
-\]
-
-### Check the anti-symmetry:
-
-\[
-1.0986 = -(-1.0986) \quad \checkmark
-\]
-
-So:
-
-\[
-\ln\left(\frac{0.25}{0.75}\right) = -\ln\left(\frac{0.75}{0.25}\right)
-\]
+This property is called **anti-symmetry**.
 
 ---
 
-### Sigmoid symmetry check:
+# 2. Why This Makes the Sigmoid Symmetric
 
-- \( z = 1.0986 \) gives \( \sigma(z) = 0.75 \)
-- \( z = -1.0986 \) gives \( \sigma(-z) = 0.25 = 1 - 0.75 \)
+The sigmoid function is the inverse of the log-odds function:
 
-So the sigmoid is indeed symmetric around 0.
+$$
+p
+=
+\sigma(z)
+=
+\frac{1}{1+e^{-z}}
+$$
+
+where
+
+$$
+z=\text{log-odds}(p)
+$$
+
+From the anti-symmetry result,
+
+$$
+\text{log-odds}(1-p)
+=
+-z
+$$
+
+Therefore,
+
+If
+
+$$
+\sigma(z)=p
+$$
+
+then
+
+$$
+\sigma(-z)=1-p
+$$
+
+This means the sigmoid curve has **rotational symmetry** about the point
+
+$$
+(0,\;0.5)
+$$
+
+Moving the same distance to the left or right of zero produces complementary probabilities.
 
 ---
 
-## Final takeaway:
+# 3. Concrete Example
 
-The log-odds function is **anti-symmetric** because swapping \( p \) and \( 1-p \) flips the sign of the logarithm. This directly gives the sigmoid its rotational symmetry around \( (0, 0.5) \).
+Let's choose
+
+$$
+p=0.75
+$$
+
+### Step 1: Compute the Log-Odds of 0.75
+
+$$
+\text{log-odds}(0.75)
+=
+\ln\left(\frac{0.75}{0.25}\right)
+=
+\ln(3)
+\approx
+1.0986
+$$
+
+---
+
+### Step 2: Compute the Log-Odds of 0.25
+
+Since
+
+$$
+1-p=0.25
+$$
+
+we get
+
+$$
+\text{log-odds}(0.25)
+=
+\ln\left(\frac{0.25}{0.75}\right)
+=
+\ln\left(\frac13\right)
+=
+-\ln(3)
+\approx
+-1.0986
+$$
+
+---
+
+### Step 3: Verify Anti-Symmetry
+
+We have
+
+$$
+\text{log-odds}(0.75)
+=
+1.0986
+$$
+
+and
+
+$$
+\text{log-odds}(0.25)
+=
+-1.0986
+$$
+
+So,
+
+$$
+1.0986
+=
+-
+(-1.0986)
+\quad\checkmark
+$$
+
+or equivalently,
+
+$$
+\ln\left(\frac{0.25}{0.75}\right)
+=
+-
+\ln\left(\frac{0.75}{0.25}\right)
+$$
+
+Exactly as predicted.
+
+---
+
+# 4. Verify Using the Sigmoid Function
+
+Now evaluate the sigmoid.
+
+For
+
+$$
+z=1.0986
+$$
+
+$$
+\sigma(1.0986)
+=
+0.75
+$$
+
+For
+
+$$
+z=-1.0986
+$$
+
+$$
+\sigma(-1.0986)
+=
+0.25
+=
+1-0.75
+$$
+
+So,
+
+$$
+\sigma(-z)
+=
+1-\sigma(z)
+$$
+
+which confirms the symmetry property.
+
+---
+
+# Key Insight
+
+The log-odds function is **anti-symmetric** because exchanging `p` and `1-p` simply takes the reciprocal of the odds ratio, and taking the logarithm of a reciprocal flips the sign:
+
+$$
+\ln\left(\frac{1}{x}\right)
+=
+-\ln(x)
+$$
+
+Since the sigmoid is the inverse of the log-odds function, this immediately implies
+
+$$
+\boxed{
+\sigma(-z)
+=
+1-\sigma(z)
+}
+$$
+
+This is why the sigmoid curve is perfectly symmetric around the point **(0, 0.5)**.
