@@ -151,3 +151,11 @@ print(f"L1 penalty: {l1_penalty:.3f}, new cost: {new_cost_l1:.3f}")
 2. If you set λ (penalty_strength) extremely high — like 1000 — what do you predict would happen to the model's weights, and what problem would this likely cause?
 
 Once you've got these, I'll append Module 7 to your cheat sheet and we'll move to **Module 8 — Evaluation Metrics Deep Dive** — precision, recall, F1, ROC-AUC vs PR-AUC, and calibration.
+
+
+Check 1 — confirmed
+Correct. Those 30 zeroed-out weights mean L1 has effectively performed feature selection for you — it decided those features contributed so little to reducing log-loss that they weren't worth the "cost" of a nonzero weight. In practice, you'd walk away from this model with a much shorter, more interpretable feature list (20 features instead of 50), and you could confidently drop the other 30 from your pipeline entirely — simpler data collection, faster inference, easier to explain to stakeholders.
+
+
+Check 2 — confirmed, one addition
+Correct — extremely high λ crushes all weights toward zero, and in the limit, if every weight is essentially 0, your model's prediction collapses to just the intercept b — meaning it predicts the same probability for every single customer, regardless of their features. That's the textbook definition of underfitting: the model has become so simple it ignores real, useful signal in the data, trading away genuine predictive power purely to satisfy the penalty term. This is the flip side of the overfitting problem regularization was meant to solve — too little regularization overfits, too much underfits, and the right λ sits somewhere in between (found via cross-validation, as mentioned in the FAANG angle above).
