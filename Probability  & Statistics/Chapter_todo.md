@@ -1,5 +1,4 @@
 1 Probability and counting 1
-2 Conditional probability 45
 3 Random variables and their distributions 103
 4 Expectation 149
 5 Continuous random variables 213
@@ -16,7 +15,6 @@ B R 601
 
 1 COminatorial ANlaysis
 2axioms of proablty
-3 conditioan probailty
 4 rv
 5 continous rv
 6 joint rv
