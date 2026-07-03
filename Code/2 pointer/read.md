@@ -1,8 +1,3 @@
-# LeetCode Two Pointers — Medium: Problems + Python Solutions
-
-🔒 = Premium-locked. ⚠️ = Tricky edge cases — verify against the actual problem page before submitting.
-
----
 
 ### 9. LC 75 — Sort Colors
 Sort an array of 0s, 1s, 2s in place (Dutch national flag).
@@ -39,19 +34,6 @@ def rotate(nums, k):
 ```
 
 
-### 26. LC 277 🔒 — Find the Celebrity
-Find the person everyone knows but who knows no one, using `knows(a, b)`.
-```python
-def findCelebrity(n):
-    candidate = 0
-    for i in range(1, n):
-        if knows(candidate, i):
-            candidate = i
-    for i in range(n):
-        if i != candidate and (knows(candidate, i) or not knows(i, candidate)):
-            return -1
-    return candidate
-```
 
 
 ### 29. LC 443 — String Compression
@@ -436,25 +418,6 @@ def shortestWay(source, target):
     return count
 ```
 
-### 64. LC 1229 🔒 — Meeting Scheduler
-Find the earliest common free slot of given duration between two schedules.
-```python
-def minAvailableDuration(slots1, slots2, duration):
-    slots1.sort()
-    slots2.sort()
-    i = j = 0
-    while i < len(slots1) and j < len(slots2):
-        start = max(slots1[i][0], slots2[j][0])
-        end = min(slots1[i][1], slots2[j][1])
-        if end - start >= duration:
-            return [start, start + duration]
-        if slots1[i][1] < slots2[j][1]:
-            i += 1
-        else:
-            j += 1
-    return []
-```
-
 
 
 
@@ -513,43 +476,6 @@ def findLengthOfShortestSubarray(arr):
     return res
 ```
 
-### 72. LC 1577 — Number of Ways Where Square of Number Is Equal to Product of Two Numbers
-Count triplets where one array's value squared equals the product of two values in the other.
-```python
-from collections import Counter
-
-def numTriplets(nums1, nums2):
-    def count_triplets(a, b):
-        squares = Counter(x * x for x in a)
-        res, n = 0, len(b)
-        for i in range(n):
-            for j in range(i + 1, n):
-                res += squares.get(b[i] * b[j], 0)
-        return res
-    return count_triplets(nums1, nums2) + count_triplets(nums2, nums1)
-```
-
-### 73. LC 1616 — Split Two Strings to Make Palindrome
-Check if splitting and swapping prefixes/suffixes of two strings can form a palindrome.
-```python
-def checkPalindromeFormation(a, b):
-    def is_pal(s, l, r):
-        while l < r:
-            if s[l] != s[r]:
-                return False
-            l += 1
-            r -= 1
-        return True
-
-    def check(a, b):
-        l, r = 0, len(a) - 1
-        while l < r and a[l] == b[r]:
-            l += 1
-            r -= 1
-        return is_pal(a, l, r) or is_pal(b, l, r)
-
-    return check(a, b) or check(b, a)
-```
 
 
 ### 76. LC 1679 — Max Number of K-Sum Pairs
@@ -595,54 +521,6 @@ def waysToSplit(nums):
 ```
 
 
-### 79. LC 1750 — Minimum Length of String After Deleting Similar Ends
-Repeatedly delete matching prefix/suffix blocks; return the final length.
-```python
-def minimumLength(s):
-    l, r = 0, len(s) - 1
-    while l < r and s[l] == s[r]:
-        c = s[l]
-        while l <= r and s[l] == c:
-            l += 1
-        while l <= r and s[r] == c:
-            r -= 1
-    return r - l + 1
-```
-
-### 80. LC 1754 — Largest Merge Of Two Strings
-Greedily merge two strings to form the lexicographically largest result.
-```python
-def largestMerge(word1, word2):
-    res, i, j = [], 0, 0
-    while i < len(word1) and j < len(word2):
-        if word1[i:] > word2[j:]:
-            res.append(word1[i])
-            i += 1
-        else:
-            res.append(word2[j])
-            j += 1
-    res.append(word1[i:])
-    res.append(word2[j:])
-    return ''.join(res)
-```
-
-### 81. LC 1764 — Form Array by Concatenating Subarrays of Another Array
-Check if `groups` can be found as non-overlapping, in-order subarrays of `nums`.
-```python
-def canChoose(groups, nums):
-    i = 0
-    for g in groups:
-        found = False
-        while i + len(g) <= len(nums):
-            if nums[i:i + len(g)] == g:
-                found = True
-                i += len(g)
-                break
-            i += 1
-        if not found:
-            return False
-    return True
-```
 
 ### 82. LC 1813 — Sentence Similarity III
 Check if one sentence can be formed by inserting a block of words into the other.
@@ -724,58 +602,6 @@ def rotateTheBox(box):
                 row[write] = '#'
                 write -= 1
     return [list(row) for row in zip(*box[::-1])]
-```
-
-### 86. LC 1868 🔒 — Product of Two Run-Length Encoded Arrays
-Multiply two run-length encoded arrays elementwise, returning the RLE result.
-```python
-def findRLEArray(encoded1, encoded2):
-    res, i, j = [], 0, 0
-    while i < len(encoded1) and j < len(encoded2):
-        val1, freq1 = encoded1[i]
-        val2, freq2 = encoded2[j]
-        product = val1 * val2
-        freq = min(freq1, freq2)
-        if res and res[-1][0] == product:
-            res[-1][1] += freq
-        else:
-            res.append([product, freq])
-        encoded1[i][1] -= freq
-        encoded2[j][1] -= freq
-        if encoded1[i][1] == 0:
-            i += 1
-        if encoded2[j][1] == 0:
-            j += 1
-    return res
-```
-
-### 87. LC 1877 — Minimize Maximum Pair Sum in Array
-Pair up elements to minimize the maximum pair sum.
-```python
-def minPairSum(nums):
-    nums.sort()
-    l, r, best = 0, len(nums) - 1, 0
-    while l < r:
-        best = max(best, nums[l] + nums[r])
-        l += 1
-        r -= 1
-    return best
-```
-
-### 88. LC 1885 🔒 — Count Pairs in Two Arrays
-Count pairs (i, j), i < j, where nums1[i]+nums1[j] > nums2[i]+nums2[j].
-```python
-def countPairs(nums1, nums2):
-    n = len(nums1)
-    diff = sorted(nums1[i] - nums2[i] for i in range(n))
-    l, r, count = 0, n - 1, 0
-    while l < r:
-        if diff[l] + diff[r] > 0:
-            count += r - l
-            r -= 1
-        else:
-            l += 1
-    return count
 ```
 
 ### 89. LC 1898 — Maximum Number of Removable Characters
