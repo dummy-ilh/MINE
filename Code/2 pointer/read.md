@@ -4,126 +4,6 @@
 
 ---
 
-### 1. LC 5 — Longest Palindromic Substring
-Find the longest palindromic substring in `s`.
-```python
-def longestPalindrome(s):
-    def expand(l, r):
-        while l >= 0 and r < len(s) and s[l] == s[r]:
-            l -= 1
-            r += 1
-        return s[l + 1:r]
-    res = ""
-    for i in range(len(s)):
-        odd = expand(i, i)
-        even = expand(i, i + 1)
-        res = max(res, odd, even, key=len)
-    return res
-```
-
-
-### 3. LC 15 — 3Sum
-Find all unique triplets that sum to zero.
-```python
-def threeSum(nums):
-    nums.sort()
-    n = len(nums)
-    res = []
-    for i in range(n):
-        if i > 0 and nums[i] == nums[i - 1]:
-            continue
-        l, r = i + 1, n - 1
-        while l < r:
-            s = nums[i] + nums[l] + nums[r]
-            if s == 0:
-                res.append([nums[i], nums[l], nums[r]])
-                l += 1
-                r -= 1
-                while l < r and nums[l] == nums[l - 1]:
-                    l += 1
-                while l < r and nums[r] == nums[r + 1]:
-                    r -= 1
-            elif s < 0:
-                l += 1
-            else:
-                r -= 1
-    return res
-```
-
-### 4. LC 16 — 3Sum Closest
-Find the triplet sum closest to a target.
-```python
-def threeSumClosest(nums, target):
-    nums.sort()
-    n = len(nums)
-    best = nums[0] + nums[1] + nums[2]
-    for i in range(n):
-        l, r = i + 1, n - 1
-        while l < r:
-            s = nums[i] + nums[l] + nums[r]
-            if abs(s - target) < abs(best - target):
-                best = s
-            if s < target:
-                l += 1
-            elif s > target:
-                r -= 1
-            else:
-                return s
-    return best
-```
-
-### 5. LC 18 — 4Sum
-Find all unique quadruplets that sum to a target.
-```python
-def fourSum(nums, target):
-    nums.sort()
-    n = len(nums)
-    res = []
-    for i in range(n):
-        if i > 0 and nums[i] == nums[i - 1]:
-            continue
-        for j in range(i + 1, n):
-            if j > i + 1 and nums[j] == nums[j - 1]:
-                continue
-            l, r = j + 1, n - 1
-            while l < r:
-                s = nums[i] + nums[j] + nums[l] + nums[r]
-                if s == target:
-                    res.append([nums[i], nums[j], nums[l], nums[r]])
-                    l += 1
-                    r -= 1
-                    while l < r and nums[l] == nums[l - 1]:
-                        l += 1
-                    while l < r and nums[r] == nums[r + 1]:
-                        r -= 1
-                elif s < target:
-                    l += 1
-                else:
-                    r -= 1
-    return res
-```
-
-### 7. LC 31 — Next Permutation
-Rearrange numbers into the next lexicographically greater permutation, in place.
-```python
-def nextPermutation(nums):
-    n = len(nums)
-    i = n - 2
-    while i >= 0 and nums[i] >= nums[i + 1]:
-        i -= 1
-    if i >= 0:
-        j = n - 1
-        while nums[j] <= nums[i]:
-            j -= 1
-        nums[i], nums[j] = nums[j], nums[i]
-    l, r = i + 1, n - 1
-    while l < r:
-        nums[l], nums[r] = nums[r], nums[l]
-        l += 1
-        r -= 1
-```
-
-
 ### 9. LC 75 — Sort Colors
 Sort an array of 0s, 1s, 2s in place (Dutch national flag).
 ```python
@@ -141,50 +21,6 @@ def sortColors(nums):
             high -= 1
 ```
 
-### 10. LC 80 — Remove Duplicates from Sorted Array II
-Remove duplicates in-place so each value appears at most twice.
-```python
-def removeDuplicates(nums):
-    slow = 0
-    for fast in range(len(nums)):
-        if slow < 2 or nums[fast] != nums[slow - 2]:
-            nums[slow] = nums[fast]
-            slow += 1
-    return slow
-```
-
-### 16. LC 151 — Reverse Words in a String
-Reverse the order of words in a sentence.
-```python
-def reverseWords(s):
-    return ' '.join(reversed(s.split()))
-```
-
-### 17. LC 161 🔒 — One Edit Distance
-Check if two strings differ by exactly one edit (insert, delete, or replace).
-```python
-def isOneEditDistance(s, t):
-    if abs(len(s) - len(t)) > 1:
-        return False
-    i = j = 0
-    edited = False
-    while i < len(s) and j < len(t):
-        if s[i] == t[j]:
-            i += 1
-            j += 1
-        else:
-            if edited:
-                return False
-            edited = True
-            if len(s) == len(t):
-                i += 1
-                j += 1
-            elif len(s) < len(t):
-                j += 1
-            else:
-                i += 1
-    return edited or i < len(s) or j < len(t)
-```
 
 ### 18. LC 165 — Compare Version Numbers
 Compare two version strings numerically, revision by revision.
@@ -1244,18 +1080,7 @@ def minimumRefill(plants, capacityA, capacityB):
     return refills
 ```
 
-### 95. LC 2109 — Adding Spaces to a String
-Insert spaces into a string at given sorted indices.
-```python
-def addSpaces(s, spaces):
-    res, j = [], 0
-    for i, c in enumerate(s):
-        if j < len(spaces) and spaces[j] == i:
-            res.append(' ')
-            j += 1
-        res.append(c)
-    return ''.join(res)
-```
+
 
 ### 96. LC 2110 — Number of Smooth Descent Periods of a Stock
 Count subarrays where each price is exactly 1 less than the previous.
@@ -1274,21 +1099,6 @@ def getDescentPeriods(prices):
     return res
 ```
 
-### 97. LC 2130 — Maximum Twin Sum of a Linked List
-Find the max sum of "twin" nodes (i-th from start + i-th from end) in an even-length list.
-```python
-def pairSum(head):
-    vals = []
-    while head:
-        vals.append(head.val)
-        head = head.next
-    l, r, best = 0, len(vals) - 1, 0
-    while l < r:
-        best = max(best, vals[l] + vals[r])
-        l += 1
-        r -= 1
-    return best
-```
 
 ### 98. LC 2149 — Rearrange Array Elements by Sign
 Rearrange so positive and negative numbers alternate, starting with positive.
@@ -1383,13 +1193,6 @@ def canChange(start, target):
     return True
 ```
 
-### 104. LC 2396 — Strictly Palindromic Number
-Check if n is a palindrome in every base from 2 to n-2 (trick: always False).
-```python
-def isStrictlyPalindromic(n):
-    return False
-```
-
 ### 105. LC 2406 — Divide Intervals Into Minimum Number of Groups
 Find the minimum groups needed so no two intervals in the same group overlap.
 ```python
@@ -1470,3 +1273,85 @@ words.sort(key=len)
         median = arr[(len(arr) - 1) // 2]
         arr.sort(key=lambda x: (-abs(x - median), -x))
         return arr[:k]
+
+
+
+### 1. LC 5 — Longest Palindromic Substring
+Find the longest palindromic substring in `s`.
+```python
+def longestPalindrome(s):
+    def expand(l, r):
+        while l >= 0 and r < len(s) and s[l] == s[r]:
+            l -= 1
+            r += 1
+        return s[l + 1:r]
+    res = ""
+    for i in range(len(s)):
+        odd = expand(i, i)
+        even = expand(i, i + 1)
+        res = max(res, odd, even, key=len)
+    return res
+```
+
+
+### 3. LC 15 — 3Sum
+Find all unique triplets that sum to zero.
+```python
+def threeSum(nums):
+    nums.sort()
+    n = len(nums)
+    res = []
+    for i in range(n):
+        if i > 0 and nums[i] == nums[i - 1]:
+            continue
+        l, r = i + 1, n - 1
+        while l < r:
+            s = nums[i] + nums[l] + nums[r]
+            if s == 0:
+                res.append([nums[i], nums[l], nums[r]])
+                l += 1
+                r -= 1
+                while l < r and nums[l] == nums[l - 1]:
+                    l += 1
+                while l < r and nums[r] == nums[r + 1]:
+                    r -= 1
+            elif s < 0:
+                l += 1
+            else:
+                r -= 1
+    return res
+```
+
+### 5. LC 18 — 4Sum
+Find all unique quadruplets that sum to a target.
+```python
+def fourSum(nums, target):
+    nums.sort()
+    n = len(nums)
+    res = []
+    for i in range(n):
+        if i > 0 and nums[i] == nums[i - 1]:
+            continue
+        for j in range(i + 1, n):
+            if j > i + 1 and nums[j] == nums[j - 1]:
+                continue
+            l, r = j + 1, n - 1
+            while l < r:
+                s = nums[i] + nums[j] + nums[l] + nums[r]
+                if s == target:
+                    res.append([nums[i], nums[j], nums[l], nums[r]])
+                    l += 1
+                    r -= 1
+                    while l < r and nums[l] == nums[l - 1]:
+                        l += 1
+                    while l < r and nums[r] == nums[r + 1]:
+                        r -= 1
+                elif s < target:
+                    l += 1
+                else:
+                    r -= 1
+    return res
+```
+Max 2 duplicates in place
+
+edit disctance
