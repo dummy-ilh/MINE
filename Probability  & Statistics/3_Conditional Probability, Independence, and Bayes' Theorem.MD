@@ -1,396 +1,620 @@
-# Random Variables — Complete Interview Guide (L5 Google/Apple)
+# Conditional Probability — Complete Interview Guide (L5 Google/Apple)
 
-**Reference texts** (same set as the conditional probability guide, so notation stays consistent):
-- Sheldon Ross, *A First Course in Probability* — Ch. 4 (discrete RVs), Ch. 5 (continuous RVs)
-- Blitzstein & Hwang, *Introduction to Probability* (Stat 110) — Ch. 3 (discrete RVs, distributions), Ch. 4 (expectation), Ch. 5 (continuous RVs)
-- DeGroot & Schervish, *Probability and Statistics* — Ch. 3–5
-- Casella & Berger, *Statistical Inference* — Ch. 2–4 (more rigorous, if you want the measure-theoretic underpinnings)
-
-This guide picks up exactly where the conditional-probability guide left off, and deliberately over-explains the *why* behind each definition — not just the formula — since that's what separates a memorized answer from one that survives follow-up questions in an interview.
+**Reference texts** (cite these if asked "where did you learn this" or want deeper study):
+- Sheldon Ross, *A First Course in Probability* (9th/10th ed.) — Ch. 3
+- Blitzstein & Hwang, *Introduction to Probability* (Harvard Stat 110) — Ch. 2
+- DeGroot & Schervish, *Probability and Statistics* (4th ed.) — Ch. 2
+- Casella & Berger, *Statistical Inference* — Ch. 1 (more rigorous, measure-flavored)
 
 ---
 
-## 1. What a Random Variable Actually Is
+## 1. Foundations
 
-### 1.1 The formal definition (and why it looks weird at first)
-A random variable (RV) is **a function that maps outcomes in the sample space to real numbers**: $X: S \to \mathbb{R}$.
+### 1.1 Definition
+For events $A$, $B$ with $P(B) > 0$:
 
-This trips people up because "variable" makes it sound like a number, but it's actually a *function*. The reason this matters: probability is defined on events (subsets of the sample space), but we want to talk about "the probability that the die roll is 4" — a random variable is exactly the bridge that lets us translate outcomes of an experiment into numbers we can compute with, and it's what lets $P(X=4)$ make sense as shorthand for $P(\{s \in S : X(s) = 4\})$.
+$$P(A \mid B) = \frac{P(A \cap B)}{P(B)}$$
 
-**Concrete example:** Roll two dice. The sample space $S$ has 36 outcomes like $(3,5)$. Define $X(s) = $ sum of the two dice. Then $X((3,5)) = 8$. $X$ is a function; $8$ is just one possible *value* $X$ can take. When we write "$P(X=8)$," we really mean "the probability of the *event* $\{s : X(s)=8\}$" — which is the set of all dice-pairs summing to 8.
+**Intuition (Ross's framing):** $B$ becomes the new sample space. You're asking "of the outcomes where $B$ happened, what fraction also had $A$ happen?"
 
-### 1.2 Discrete vs. Continuous
-- **Discrete RV**: takes a countable set of values (finite or countably infinite) — e.g., number of heads in 10 flips, number of customers arriving in an hour.
-- **Continuous RV**: takes an uncountable range of values (an interval of reals) — e.g., height, waiting time, temperature.
+This is a *definition*, not a derived fact — everything else (Bayes, chain rule, total probability) follows from it.
 
-**Why the distinction matters practically:** for a discrete RV, $P(X=x)$ can be a genuinely positive number. For a continuous RV, $P(X=x) = 0$ for every single point $x$ — probability only accumulates over an *interval*. This is not a technicality; it's why continuous RVs need a *density* rather than a probability mass, and it's a common interview trip-wire ("what's the probability a continuous RV equals exactly 2.5?" — the answer is always 0, and being able to explain *why* in one sentence signals real understanding, not just formula recall).
+### 1.2 Multiplication Rule (Chain Rule)
+Rearranging the definition:
 
----
+$$P(A \cap B) = P(A\mid B)\,P(B) = P(B \mid A)\,P(A)$$
 
-## 2. Discrete Random Variables
+Generalizes to $n$ events:
+$$P(A_1 \cap A_2 \cap \cdots \cap A_n) = P(A_1)\,P(A_2\mid A_1)\,P(A_3 \mid A_1 A_2) \cdots P(A_n \mid A_1 \cdots A_{n-1})$$
 
-### 2.1 Probability Mass Function (PMF)
-$$p_X(x) = P(X=x)$$
+This is the workhorse for sequential/"without replacement" problems.
 
-Must satisfy: $p_X(x) \ge 0$ for all $x$, and $\sum_x p_X(x) = 1$.
+### 1.3 Law of Total Probability (LOTP)
+If $B_1, \dots, B_n$ partition the sample space ($\bigcup B_i = \Omega$, mutually exclusive, $P(B_i)>0$):
 
-**Intuition:** the PMF is literally "how much probability mass is stacked on top of each possible value." Drawing it as a bar chart (spikes at each valid value) is usually the fastest way to build intuition before doing any algebra.
+$$P(A) = \sum_{i=1}^n P(A \mid B_i)\,P(B_i)$$
 
-### 2.2 Cumulative Distribution Function (CDF)
-$$F_X(x) = P(X \le x)$$
+**This is how you compute an "unconditional" probability when you naturally know things conditionally.** Extremely common in interviews — anytime a problem says "there are two types of X" or "with probability p it's a fair coin, else biased," LOTP is your first move.
 
-For a discrete RV, this is a step function: it jumps up by $p_X(x)$ at each value $x$ can take, and is flat in between. $F_X$ is non-decreasing, $\lim_{x\to-\infty}F_X(x)=0$, $\lim_{x\to\infty}F_X(x)=1$.
+### 1.4 Bayes' Theorem
+$$P(B_i \mid A) = \frac{P(A \mid B_i)\,P(B_i)}{\sum_j P(A \mid B_j)\,P(B_j)} = \frac{P(A\mid B_i)P(B_i)}{P(A)}$$
 
-**Why bother with the CDF if you already have the PMF?** Two reasons that come up constantly in interviews: (1) it's the only well-defined object for continuous RVs (no PMF exists there), so building CDF fluency now pays off directly in Section 3; (2) many real questions are phrased as "at least" / "at most" ($P(X\le 5)$, $P(X>10)$), which the CDF answers directly without re-summing the PMF each time.
+Vocabulary you should use fluently in an interview:
+- $P(B_i)$ = **prior**
+- $P(A \mid B_i)$ = **likelihood**
+- $P(B_i \mid A)$ = **posterior**
+- $P(A)$ = **evidence / normalizing constant** (computed via LOTP)
 
----
-
-## 3. Continuous Random Variables
-
-### 3.1 Probability Density Function (PDF)
-For a continuous RV, there's a function $f_X(x) \ge 0$ (the **density**) such that:
-$$P(a \le X \le b) = \int_a^b f_X(x)\,dx, \qquad \int_{-\infty}^{\infty} f_X(x)\,dx = 1$$
-
-**Critical intuition — the density is NOT a probability.** $f_X(x)$ can exceed 1 (e.g., a Uniform(0, 0.5) density is 2 everywhere on its support). What must integrate to 1 is the *area under the curve*, not the height. Interviewers sometimes probe this directly ("can a PDF value exceed 1?" — yes, absolutely, as long as the total area is still 1).
-
-### 3.2 CDF for continuous RVs
-$$F_X(x) = P(X\le x) = \int_{-\infty}^x f_X(t)\,dt \qquad\Longrightarrow\qquad f_X(x) = F_X'(x)$$
-
-The PDF is literally the derivative of the CDF. This relationship is the single most useful algebraic fact for continuous-RV problems: if you're ever given a CDF and asked for the density (or vice versa), differentiate or integrate — don't overthink it.
+**Interview tip:** When an interviewer asks a Bayes question, say the words "prior," "likelihood," "posterior" out loud. It signals fluency and helps you organize the algebra before you touch numbers.
 
 ---
 
-## 4. Expectation
+## 2. Independence
 
-### 4.1 Definition
-**Discrete:** $E[X] = \sum_x x\, p_X(x)$
-**Continuous:** $E[X] = \int_{-\infty}^{\infty} x\, f_X(x)\,dx$
+$A$ and $B$ are independent iff:
+$$P(A \cap B) = P(A)P(B) \iff P(A\mid B) = P(A) \iff P(B \mid A) = P(B)$$
 
-**Intuition (long-run average interpretation):** if you repeated the experiment many times and averaged the observed values of $X$, that average converges to $E[X]$ — this is the Law of Large Numbers, and it's why "expectation" and "long-run average" are used almost interchangeably in casual interview conversation, even though formally $E[X]$ is defined *before* any experiment is run.
+**Common trap:** Independence ≠ mutually exclusive. In fact, if $P(A), P(B) > 0$ and $A, B$ are mutually exclusive, they are *maximally dependent* (knowing one happened tells you the other definitely didn't).
 
-**Common trap — expectation is not "the most likely value."** For a fair die, $E[X] = 3.5$, a value the die can never actually show. Interviewers love asking "what does it mean for the expected value to not be achievable?" — the honest answer is that expectation is a weighted average, not a mode or a prediction of any single trial's outcome.
+### Conditional Independence
+$A \perp B \mid C$ means $P(A \cap B \mid C) = P(A\mid C)P(B \mid C)$.
 
-### 4.2 LOTUS (Law of the Unconscious Statistician)
-To find $E[g(X)]$ for some function $g$, you do **not** need to first find the distribution of $g(X)$ — you can compute it directly from the distribution of $X$:
-$$E[g(X)] = \sum_x g(x)\,p_X(x) \quad\text{or}\quad \int g(x)f_X(x)\,dx$$
-
-**Why this saves enormous work in interviews:** if asked for $E[X^2]$, you do *not* need to derive the distribution of $X^2$ first (which can be genuinely painful, especially if $g$ isn't monotonic). Just plug $g(x)=x^2$ directly into the sum/integral over $X$'s own distribution. This single fact eliminates most of the pain in variance calculations (see Section 5).
-
-### 4.3 Linearity of Expectation (the single most powerful tool in this whole guide)
-$$E[aX+b] = aE[X]+b \qquad E[X+Y] = E[X]+E[Y] \quad\text{(always — no independence required!)}$$
-
-**This is worth dwelling on, because it's the most under-appreciated fact in applied probability:** linearity of expectation holds *even when $X$ and $Y$ are dependent*. This is what makes the **indicator random variable trick** (Section 12) so powerful — you can decompose a horrendously complicated random variable into a sum of simple 0/1 indicators, and compute the expectation of the sum by just adding up each indicator's individual expectation, with zero regard for how they interact with each other.
+**Critical point:** $A \perp B$ does **not** imply $A \perp B \mid C$, and vice versa. This is the mathematical seed of **Simpson's Paradox** (Section 6) — a favorite "gotcha" at L5 interviews because it tests whether you actually understand conditioning or just plug into formulas.
 
 ---
 
-## 5. Variance and Standard Deviation
+## 3. Worked Numerical Examples
 
-### 5.1 Definition
-$$\text{Var}(X) = E[(X-E[X])^2] = E[X^2] - (E[X])^2$$
+### Example 1 — Basic conditional probability (2 dice)
+Roll two fair dice. Let $A$ = "sum is 8", $B$ = "first die shows 3". Find $P(A \mid B)$.
 
-**Why the second form is what you'll actually use 95% of the time:** the "$E[X^2]-(E[X])^2$" shortcut (sometimes called the computational formula) avoids ever needing to compute a distribution centered at the mean — just find $E[X]$ and $E[X^2]$ (via LOTUS with $g(x)=x^2$) and subtract the square. **Derive this once by hand** — expand $(X-\mu)^2 = X^2-2\mu X+\mu^2$, take expectation term by term using linearity, and you'll never forget where it comes from.
+$P(B) = 6/36$ (first die = 3, second die anything).
+$P(A \cap B)$: first die = 3 AND sum = 8 → second die = 5. Exactly 1 outcome out of 36.
 
-$$\text{SD}(X) = \sqrt{\text{Var}(X)}$$
+$$P(A\mid B) = \frac{1/36}{6/36} = \frac{1}{6}$$
 
-Standard deviation is in the *same units* as $X$ itself (variance is in squared units) — that's the practical reason SD, not variance, is what you report when communicating spread to a non-technical audience.
-
-### 5.2 Properties of Variance
-$$\text{Var}(aX+b) = a^2\text{Var}(X) \quad\text{(shifting doesn't change spread; scaling does, and it scales quadratically)}$$
-
-**Why variance is NOT linear like expectation (a favorite "explain the difference" interview question):** $E$ is linear because it's fundamentally a sum/integral (a linear operator). $\text{Var}$ involves *squaring* a deviation, and squaring is not a linear operation — so variance picks up cross-terms (covariance) whenever you add two RVs together:
-$$\text{Var}(X+Y) = \text{Var}(X)+\text{Var}(Y)+2\,\text{Cov}(X,Y)$$
-Only collapses to $\text{Var}(X)+\text{Var}(Y)$ when $X,Y$ are independent (or merely uncorrelated) — unlike linearity of $E$, which needs no such assumption. **Getting this distinction right, unprompted, is a strong positive signal in an interview.**
+Sanity check: given first die is 3, the second die is uniform on {1..6}, and we need it to be 5 → probability 1/6. Matches.
 
 ---
 
-## 6. Named Discrete Distributions (with full derivations, not just formulas)
+### Example 2 — Classic disease testing (Bayes)
+A disease has prevalence 1%. A test has 99% sensitivity ($P(\text{+}\mid \text{disease})=0.99$) and 95% specificity ($P(-\mid\text{no disease})=0.95$, so false positive rate = 5%). A random person tests positive. What's $P(\text{disease} \mid +)$?
 
-### 6.1 Bernoulli($p$)
-A single trial, success with probability $p$, failure with probability $1-p$. $X \in \{0,1\}$.
+**Setup with LOTP + Bayes:**
+- Prior: $P(D) = 0.01$, $P(D^c) = 0.99$
+- Likelihood: $P(+\mid D) = 0.99$, $P(+\mid D^c) = 0.05$
 
-$$E[X] = 0(1-p)+1(p) = p \qquad \text{Var}(X) = E[X^2]-(E[X])^2 = p - p^2 = p(1-p)$$
+$$P(+) = P(+\mid D)P(D) + P(+\mid D^c)P(D^c) = 0.99(0.01) + 0.05(0.99) = 0.0099 + 0.0495 = 0.0594$$
 
-(Since $X^2=X$ when $X\in\{0,1\}$, so $E[X^2]=E[X]=p$ — a small but genuinely useful shortcut worth remembering: **for any indicator/Bernoulli RV, $E[X^2]=E[X]$.**)
+$$P(D\mid +) = \frac{0.0099}{0.0594} \approx 0.1667 \;(\approx 16.7\%)$$
 
-### 6.2 Binomial($n,p$) — sum of $n$ i.i.d. Bernoullis
-$X$ = number of successes in $n$ independent trials, each with success probability $p$.
-
-$$P(X=k) = \binom{n}{k}p^k(1-p)^{n-k}, \quad k=0,1,\dots,n$$
-
-**Derive the mean the easy way, via linearity (not brute-force summation):** write $X = X_1+\cdots+X_n$ where each $X_i \sim \text{Bernoulli}(p)$ indicates success on trial $i$. Then
-$$E[X] = \sum_{i=1}^n E[X_i] = np$$
-This is dramatically easier than summing $\sum_k k\binom{n}{k}p^k(1-p)^{n-k}$ directly — **this is exactly the indicator-variable trick from Section 12, previewed here.** Similarly, because the trials are independent, variances add:
-$$\text{Var}(X) = \sum_{i=1}^n \text{Var}(X_i) = np(1-p)$$
-
-**Worked example:** flip a fair coin 20 times. Find $E[\text{heads}]$ and $\text{Var}(\text{heads})$.
-$E[X] = 20(0.5) = 10$. $\text{Var}(X) = 20(0.5)(0.5) = 5$, so $\text{SD}(X) = \sqrt5\approx 2.24$.
-
-### 6.3 Geometric($p$) — trials until first success
-$X$ = number of trials up to and including the first success (support: $1,2,3,\dots$).
-$$P(X=k) = (1-p)^{k-1}p$$
-
-**Mean, derived via a self-referential conditioning trick (structurally identical to the amoeba branching-process trick from the conditional probability guide):** condition on the first trial. If it's a success (prob $p$), $X=1$. If it's a failure (prob $1-p$), you've "wasted" one trial and are back to the exact same problem, so the *remaining* number of trials needed has the same distribution as $X$ itself:
-$$E[X] = p(1) + (1-p)(1+E[X]) \;\Rightarrow\; E[X] = 1+(1-p)E[X] \;\Rightarrow\; E[X] = \frac1p$$
-
-$$\text{Var}(X) = \frac{1-p}{p^2}$$
-
-**Intuition check:** if $p=1/6$ (rolling a die until you get a 6), $E[X]=6$ — makes sense, you expect to need about 6 rolls. **The "condition on the first step, and if you fail you're back to the start" self-similarity argument is one of the highest-value general problem-solving patterns in this entire guide** — it also solves the amoeba extinction problem, and shows up constantly in random-walk and Markov chain interview questions.
-
-**Memorylessness (a favorite theoretical-depth question):** $P(X>s+t \mid X>s) = P(X>t)$ — i.e., given you've already failed $s$ times, the additional number of trials needed has the *exact same distribution* as starting fresh. This is intuitive for coin flips (the coin has no memory) but is worth being able to prove: $P(X>n)=(1-p)^n$, so $P(X>s+t\mid X>s) = \frac{(1-p)^{s+t}}{(1-p)^s} = (1-p)^t = P(X>t)$. ✓ **The Geometric (and its continuous cousin, the Exponential — Section 7.2) are the *only* memoryless distributions**, which is itself a common interview fact to know and be able to justify.
-
-### 6.4 Negative Binomial($r,p$) — trials until the $r$-th success
-Generalizes Geometric: $X$ = number of trials until the $r$-th success.
-$$E[X] = \frac{r}{p}, \qquad \text{Var}(X) = \frac{r(1-p)}{p^2}$$
-(Immediate from linearity: $X$ is the sum of $r$ i.i.d. Geometric($p$) "gap" variables — one for each successive success — so mean and variance both just multiply by $r$.)
-
-### 6.5 Poisson($\lambda$) — counts of rare events over a fixed interval
-Models the number of events in a fixed interval (time, space, etc.) when events occur independently at a constant average rate $\lambda$.
-$$P(X=k) = \frac{e^{-\lambda}\lambda^k}{k!}, \quad k=0,1,2,\dots \qquad E[X]=\text{Var}(X)=\lambda$$
-
-**Why mean = variance is worth flagging explicitly:** it's an unusually clean and distinctive property — if you're ever handed real count data and asked "does a Poisson model seem reasonable here?", checking whether the sample mean and sample variance are roughly equal is literally the first diagnostic to run (in practice, real data is often *overdispersed*, i.e., variance > mean, which is a common flag that a Negative Binomial model fits better — a genuinely useful applied-statistics fact for a DS/analytics interview).
-
-**Poisson as a limit of Binomial (derive this — it's a classic "show me you understand where distributions come from" question):** if $n\to\infty$, $p\to0$, with $np=\lambda$ held fixed, $\text{Binomial}(n,p) \to \text{Poisson}(\lambda)$. Intuition: split a fixed time interval into a huge number of tiny sub-intervals, each with a tiny probability $p=\lambda/n$ of containing an event — in the limit, that's exactly the Poisson set-up. **This is why Poisson is the standard model for rare, independent events (website hits per second, defects per unit area, calls per minute) — it's literally what Binomial becomes when trials become infinitely frequent and individually infinitesimally likely.**
-
-### 6.6 Hypergeometric($N,K,n$) — sampling without replacement
-Draw $n$ items without replacement from a population of $N$, of which $K$ are "successes." $X$ = number of successes drawn.
-$$P(X=k) = \frac{\binom{K}{k}\binom{N-K}{n-k}}{\binom{N}{n}}, \qquad E[X] = n\cdot\frac{K}{N}$$
-
-**Compare directly to Binomial — this comparison is a very common interview prompt:** Binomial assumes sampling *with* replacement (or an infinite population), so each draw is independent with fixed success probability $p=K/N$; Hypergeometric handles sampling *without* replacement, where each draw changes the remaining composition, so draws are dependent — yet the **mean formula looks identical** ($n\cdot K/N$ for Hypergeometric vs. $np$ for Binomial, and they agree exactly when $p=K/N$) because of linearity of expectation again: even though individual draws are dependent, each individual draw still has *marginal* probability $K/N$ of being a success, so summing gives the same mean regardless of the dependence structure. **The variance, however, differs** — Hypergeometric variance is smaller than the corresponding Binomial variance (by a "finite population correction factor" $\frac{N-n}{N-1}$), because sampling without replacement reduces randomness compared to independent draws.
+**Interview point:** This is the base-rate fallacy demo. Most candidates guess ~90%+. The correct intuition: because the disease is rare, false positives from the huge healthy population outnumber true positives even with a "good" test. Always say this intuition out loud — it's exactly what interviewers are probing for.
 
 ---
 
-## 7. Named Continuous Distributions
+### Example 3 — Monty Hall (conditional probability under selection)
+3 doors, 1 car, 2 goats. You pick door 1. Host (who knows where the car is) opens a door with a goat, always different from your pick and never revealing the car. Should you switch?
 
-### 7.1 Uniform($a,b$)
-$$f_X(x) = \frac{1}{b-a} \text{ for } x\in[a,b], \qquad E[X]=\frac{a+b}{2}, \quad \text{Var}(X) = \frac{(b-a)^2}{12}$$
+**Bayesian solution.** Let $C_i$ = car behind door $i$. WLOG you pick door 1, host opens door 3.
 
-**Intuition:** flat density — every value in $[a,b]$ is "equally likely" in the density sense. The mean being the midpoint is obvious by symmetry; don't bother re-deriving it from the integral in an interview, just say "by symmetry."
+$$P(C_1) = P(C_2) = P(C_3) = 1/3$$
 
-### 7.2 Exponential($\lambda$)
-Models waiting time until an event, with constant hazard rate $\lambda$ (the continuous analog of Geometric).
-$$f_X(x) = \lambda e^{-\lambda x},\; x\ge0 \qquad F_X(x) = 1-e^{-\lambda x} \qquad E[X]=\frac1\lambda, \quad \text{Var}(X)=\frac1{\lambda^2}$$
+We want $P(C_1 \mid \text{host opens 3})$ vs $P(C_2 \mid \text{host opens 3})$.
 
-**Memorylessness (continuous version, same proof structure as Geometric):** $P(X>s+t\mid X>s)=P(X>t)$. Practical framing: if a lightbulb's lifetime is Exponential, the fact that it's already survived 5 years tells you *nothing* about how much longer it'll last — its "remaining lifetime" distribution is identical to a brand-new bulb's. This is often *unrealistic* for real components (which wear out, i.e., failure rate increases with age) — a good talking point if an interviewer asks "when would you NOT use an Exponential model?"
+- If car is at 1: host picks randomly between doors 2,3 → $P(\text{opens }3\mid C_1) = 1/2$
+- If car is at 2: host is forced to open 3 → $P(\text{opens }3\mid C_2) = 1$
+- If car is at 3: host can't open 3 → $P(\text{opens }3\mid C_3) = 0$
 
-**Relationship to Poisson (a very common pairing in interview questions):** if events arrive according to a Poisson process with rate $\lambda$ (i.e., counts in fixed intervals are Poisson($\lambda t$)), then the *waiting time between consecutive events* is Exponential($\lambda$). This Poisson-process ↔ Exponential-interarrival-time duality is worth knowing cold — it's the standard model for server request arrivals, customer arrivals in queueing theory, and radioactive decay.
+By Bayes:
+$$P(C_1\mid \text{opens }3) = \frac{(1/2)(1/3)}{(1/2)(1/3)+(1)(1/3)+0} = \frac{1/6}{1/2} = \frac{1}{3}$$
+$$P(C_2 \mid \text{opens }3) = \frac{(1)(1/3)}{1/2} = \frac{2}{3}$$
 
-### 7.3 Normal / Gaussian($\mu,\sigma^2$)
-$$f_X(x) = \frac{1}{\sigma\sqrt{2\pi}}e^{-(x-\mu)^2/(2\sigma^2)} \qquad E[X]=\mu,\quad \text{Var}(X)=\sigma^2$$
-
-**Why it shows up everywhere (Central Limit Theorem, one sentence version):** the sum (or average) of a large number of i.i.d. random variables, *regardless of their individual distribution*, tends toward a Normal distribution as the number of terms grows — this is why measurement errors, aggregated user behavior metrics, and sums of many small independent effects are so often modeled as Normal in practice, even when nothing about the individual components looks Normal at all. **If an interviewer asks "why do we assume normality so often," the CLT — not "because most things happen to be naturally Normal" — is the correct answer.**
-
-**Standardization:** $Z = \frac{X-\mu}{\sigma} \sim N(0,1)$. Every Normal probability question reduces to a Standard Normal table (or `norm.cdf` in practice) lookup after standardizing — this is the mechanical trick behind essentially all Normal-distribution interview arithmetic.
-
-### 7.4 Gamma($\alpha,\lambda$) — brief mention
-Generalizes Exponential: sum of $\alpha$ i.i.d. Exponential($\lambda$) RVs (for integer $\alpha$) — e.g., waiting time until the $\alpha$-th Poisson-process event, the continuous analog of Negative Binomial. $E[X]=\alpha/\lambda$, $\text{Var}(X)=\alpha/\lambda^2$. Rarely the star of an L5 interview question, but worth recognizing the Exponential→Gamma relationship the same way you recognize Geometric→Negative Binomial (same underlying pattern, discrete vs. continuous).
+**Switching wins 2/3 of the time.** The key subtlety (interviewers love probing this): the host's *behavior/constraint* (he must open a goat door, never your door) is what breaks symmetry. If the host opened doors randomly and *happened* to reveal a goat, the answer changes to 1/2 — because then the fact he revealed a goat is informative differently. Being able to articulate this distinction is what separates L5-level understanding from rote memorization.
 
 ---
 
-## 8. Joint Distributions
+### Example 4 — Sequential draws without replacement (multiplication rule)
+An urn has 5 red, 3 blue balls. Draw 3 without replacement. What's $P(\text{R, B, R in that order})$?
 
-### 8.1 Joint PMF / PDF, Marginals
-**Discrete:** $p_{X,Y}(x,y) = P(X=x, Y=y)$. Recover a **marginal** by summing out the other variable: $p_X(x) = \sum_y p_{X,Y}(x,y)$.
-**Continuous:** $f_{X,Y}(x,y)$ with $\iint f_{X,Y}(x,y)\,dx\,dy=1$; marginal $f_X(x) = \int f_{X,Y}(x,y)\,dy$.
-
-**Intuition for "summing/integrating out":** the marginal distribution of $X$ answers "what's the distribution of $X$ alone, ignoring what $Y$ did?" — you get it by adding up (or integrating over) every possible value $Y$ could have taken, for each fixed $x$. This is literally the continuous/multi-variable version of the Law of Total Probability from the conditional-probability guide (Section 1.3 there) — same idea, different notation.
-
-### 8.2 Conditional Distributions
-$$p_{Y\mid X}(y\mid x) = \frac{p_{X,Y}(x,y)}{p_X(x)} \qquad f_{Y\mid X}(y\mid x) = \frac{f_{X,Y}(x,y)}{f_X(x)}$$
-
-Exactly the same conditioning logic as Section 1.1 of the conditional-probability guide — just applied to densities/masses instead of raw event probabilities.
-
-### 8.3 Independence of Random Variables
-$X,Y$ independent iff $p_{X,Y}(x,y)=p_X(x)p_Y(y)$ for all $x,y$ (or the PDF analog) — equivalently, the joint factors into the product of marginals **everywhere**, not just on average.
-
-**Common trap — independence is a much stronger condition than "uncorrelated" (Section 9.3).**
+$$P(R_1)\,P(B_2\mid R_1)\,P(R_3 \mid R_1 B_2) = \frac{5}{8}\cdot\frac{3}{7}\cdot\frac{4}{6} = \frac{5\cdot3\cdot4}{8\cdot7\cdot6} = \frac{60}{336} = \frac{5}{28} \approx 0.1786$$
 
 ---
 
-## 9. Covariance and Correlation
+### Example 5 — Two-child problem (classic conditioning subtlety)
+A family has 2 children. 
 
-### 9.1 Covariance
-$$\text{Cov}(X,Y) = E[(X-E[X])(Y-E[Y])] = E[XY]-E[X]E[Y]$$
+**(a)** Given at least one is a boy, what's $P(\text{both boys})$?
+Sample space (equally likely): {BB, BG, GB, GG}. Condition on "at least one boy" → {BB, BG, GB}.
+$$P(\text{BB} \mid \text{at least one boy}) = 1/3$$
 
-**Intuition:** positive covariance means $X$ and $Y$ tend to be above/below their means *together*; negative means when one's above its mean, the other tends to be below. The second form ($E[XY]-E[X]E[Y]$) is what you actually compute in practice — same "expand and use linearity" derivation as the variance shortcut in Section 5.1.
+**(b)** Given the **older** child is a boy, what's $P(\text{both boys})$?
+Condition on older=boy → {BB, BG}.
+$$P(\text{BB}\mid \text{older is boy}) = 1/2$$
 
-### 9.2 Correlation
-$$\rho(X,Y) = \frac{\text{Cov}(X,Y)}{\sigma_X\sigma_Y} \in [-1,1]$$
-
-**Why we bother normalizing covariance into correlation:** covariance's magnitude depends on the units/scale of $X$ and $Y$ (e.g., covariance between height-in-cm and weight-in-kg is a different number than height-in-inches and weight-in-lbs, even though the underlying relationship is identical) — correlation is scale-invariant, always between $-1$ and $1$, which is what makes it interpretable and comparable across different variable pairs.
-
-### 9.3 Independence ⟹ Uncorrelated, but NOT the Reverse (a favorite theoretical-depth interview question)
-If $X\perp Y$, then $E[XY]=E[X]E[Y]$ (this follows directly from the factored joint density/mass under LOTUS), so $\text{Cov}(X,Y)=0$.
-
-**But the converse is false — classic counterexample to have ready:** let $X\sim\text{Uniform}(-1,1)$ and $Y=X^2$. Clearly $Y$ is a deterministic (maximally dependent!) function of $X$ — knowing $X$ tells you $Y$ exactly. Yet:
-$$\text{Cov}(X,Y) = E[XY]-E[X]E[Y] = E[X^3] - E[X]E[X^2]$$
-By symmetry of the Uniform($-1,1$) distribution around 0, $E[X]=0$ and $E[X^3]=0$ (odd functions integrate to zero over a symmetric interval), so $\text{Cov}(X,Y) = 0 - 0 = 0$.
-
-**$X$ and $Y$ are uncorrelated despite being perfectly (nonlinearly) dependent.** Correlation only measures *linear* association — this single example is one of the most efficient ways to demonstrate deep understanding in an interview, because it's short, concrete, and directly refutes the common misconception that "zero correlation means no relationship."
+**Why the interviewer asks this:** it demonstrates that *how* information arrives (which conditioning event, precisely) changes the answer — "at least one boy" is a weaker, differently-structured condition than "the specific older child is a boy." Precision about the conditioning event is the whole game in conditional probability.
 
 ---
 
-## 10. Law of Total Expectation & Law of Total Variance
+### Example 6 — A/B testing style problem (common at Google/Apple for applied roles)
+You have two ad variants. Variant A converts at 5%, Variant B at 7%. A user is randomly shown A or B with equal probability (50/50), and converts. What's the probability they were shown variant B?
 
-### 10.1 Law of Total Expectation ("Adam's Law")
-$$E[X] = E[E[X\mid Y]]$$
+$$P(B\mid \text{convert}) = \frac{P(\text{conv}\mid B)P(B)}{P(\text{conv}\mid A)P(A) + P(\text{conv}\mid B)P(B)} = \frac{0.07 \times 0.5}{0.05\times0.5 + 0.07\times0.5} = \frac{0.035}{0.06} = 0.5833$$
 
-**Reading this correctly:** $E[X\mid Y]$ is itself a random variable — a function of $Y$ (different values of $Y$ give different conditional expectations). Taking the expectation of *that* random variable, over the randomness in $Y$, recovers the plain unconditional $E[X]$. This is the RV-flavored version of the Law of Total Probability (conditional-probability guide, Section 1.3): instead of averaging *probabilities* over a partition, you're averaging *conditional expectations* over the distribution of a conditioning RV.
-
-**Worked example:** a store's daily revenue $X$ depends on which of 3 promotions ($Y\in\{1,2,3\}$, each equally likely) is running that day, with $E[X\mid Y=1]=500$, $E[X\mid Y=2]=800$, $E[X\mid Y=3]=650$.
-$$E[X] = \frac13(500)+\frac13(800)+\frac13(650) = \frac{1950}{3}=650$$
-This is literally LOTP with expectations substituted for probabilities — same mechanical pattern, same partition-and-weight logic.
-
-### 10.2 Law of Total Variance ("Eve's Law")
-$$\text{Var}(X) = E[\text{Var}(X\mid Y)] + \text{Var}(E[X\mid Y])$$
-
-**Intuition — this decomposes total variance into two genuinely distinct sources:**
-- $E[\text{Var}(X\mid Y)]$ = **"within-group" variance** — how much $X$ varies *inside* each fixed value of $Y$, averaged across groups.
-- $\text{Var}(E[X\mid Y])$ = **"between-group" variance** — how much the *group means themselves* vary as $Y$ changes.
-
-**Why this decomposition is genuinely important for applied/DS interviews:** it's the mathematical basis of ANOVA (analysis of variance) and of stratified-sampling variance-reduction techniques. If you're ever asked "why would segmenting/stratifying users reduce variance in an A/B test," Eve's Law is the precise answer: by conditioning on (i.e., stratifying by) a variable $Y$ that explains some of the between-group variance, you isolate and can control for that portion, reducing the *residual* variance you have to deal with statistically.
-
-**Worked example (continuing the store-revenue scenario):** suppose $\text{Var}(X\mid Y=1)=100$, $\text{Var}(X\mid Y=2)=150$, $\text{Var}(X\mid Y=3)=120$, and (from above) $E[X\mid Y=1]=500,\;E[X\mid Y=2]=800,\;E[X\mid Y=3]=650$, with $Y$ uniform over $\{1,2,3\}$.
-
-Within-group term: $E[\text{Var}(X\mid Y)] = \frac13(100+150+120) = \frac{370}{3}\approx123.3$
-
-Between-group term: need $\text{Var}(E[X\mid Y])$, treating $500,800,650$ as a random variable with mean $650$ (computed above):
-$$\text{Var}(E[X\mid Y]) = \frac13\left[(500-650)^2+(800-650)^2+(650-650)^2\right] = \frac13[22500+22500+0] = 15{,}000$$
-
-$$\text{Var}(X) = 123.3 + 15{,}000 \approx 15{,}123.3$$
-
-**Notice how completely dominated by the between-group term this is** — which correctly reflects the fact that in this example, which promotion runs matters vastly more to revenue variability than the natural day-to-day noise within a fixed promotion. This is exactly the kind of insight Eve's Law is built to surface.
+This exact structure (attribution / "which source produced this observed event") shows up constantly in applied-ML and analytics interviews — spam classification, fraud detection, funnel attribution.
 
 ---
 
-## 11. Standard Error & the Sample Mean
+### Example 7 — Naive Bayes flavor (spam filter), ties to ML interviews
+Word "free" appears in 40% of spam emails and 1% of non-spam. 20% of all email is spam. An email contains "free." $P(\text{spam}\mid\text{"free"})$?
 
-For $n$ i.i.d. observations $X_1,\dots,X_n$ with mean $\mu$ and variance $\sigma^2$, define $\bar X = \frac1n\sum X_i$.
+$$P(\text{free}) = 0.4(0.2) + 0.01(0.8) = 0.08 + 0.008 = 0.088$$
+$$P(\text{spam}\mid\text{free}) = \frac{0.08}{0.088} \approx 0.909$$
 
-$$E[\bar X] = \mu \qquad \text{Var}(\bar X) = \frac{\sigma^2}{n} \qquad \text{SE}(\bar X) = \frac{\sigma}{\sqrt n}$$
-
-**Derivation, using exactly the tools above:** $E[\bar X]=\frac1n\sum E[X_i]=\frac1n(n\mu)=\mu$ (linearity, no independence needed). $\text{Var}(\bar X) = \frac{1}{n^2}\sum\text{Var}(X_i) = \frac{1}{n^2}(n\sigma^2)=\frac{\sigma^2}{n}$ (variance of a sum needs independence to drop cross-covariance terms — this is exactly why the i.i.d. assumption matters here in a way it didn't for the mean).
-
-**Why $\sqrt n$ specifically (a very common "explain the intuition" follow-up):** variance of the sample mean shrinks proportionally to $1/n$, so standard deviation (the interpretable, same-units quantity) shrinks proportionally to $1/\sqrt n$ — meaning **you need to quadruple your sample size to halve your margin of error.** This single fact is the entire mathematical justification behind "collect more data to reduce noise" in A/B testing and experimentation — genuinely one of the most interview-relevant one-liners in all of applied statistics.
+This is literally the mechanism behind Naive Bayes classifiers — worth mentioning if the interview drifts toward ML fundamentals, since it shows you can connect probability theory to the models you'd actually build.
 
 ---
 
-## 12. The Indicator Random Variable Trick
+## 4. Odds Form of Bayes (fast mental math trick)
 
-**The single highest-leverage technique for solving "expected number of X" problems quickly, with zero need for combinatorics.**
+Instead of full normalization, use **odds**:
+$$\frac{P(D\mid +)}{P(D^c\mid +)} = \frac{P(+\mid D)}{P(+\mid D^c)} \times \frac{P(D)}{P(D^c)}$$
 
-**Recipe:** to find $E[\text{count of something}]$, write the count as a sum of indicator variables $I_1+I_2+\cdots+I_n$, where each $I_k \in \{0,1\}$ flags whether a specific sub-event happened. Then, by linearity of expectation (which needs **no independence assumption**):
-$$E\left[\sum_k I_k\right] = \sum_k E[I_k] = \sum_k P(I_k=1)$$
+Redo Example 2: prior odds $= 0.01/0.99 \approx 1/99$. Likelihood ratio $= 0.99/0.05 = 19.8$.
+Posterior odds $\approx 19.8/99 = 0.2$. So $P(D\mid+) = 0.2/1.2 = 1/6 \approx 16.7\%$. ✓ matches.
 
-### Worked Example — Matching Problem (hat-check / derangement classic)
-$n$ people randomly get back one of $n$ hats (a uniformly random permutation). Find the expected number of people who get their own hat back.
-
-Let $I_k = 1$ if person $k$ gets their own hat, else 0. By symmetry, $P(I_k=1) = 1/n$ for every person (each person's hat is equally likely to be any of the $n$ hats). So:
-$$E[\text{matches}] = \sum_{k=1}^n E[I_k] = \sum_{k=1}^n \frac1n = n\cdot\frac1n = 1$$
-
-**Regardless of $n$** — whether 5 people or 5 million — the expected number of correct matches is always exactly 1. This is a genuinely famous result specifically *because* it's so counterintuitive (you'd think more people means more matches) and *because* it's essentially impossible to derive quickly without the indicator trick (direct computation would require the full distribution of matches, involving derangement counts — dramatically messier). **This is one of the best examples to have fully memorized and ready to reproduce from scratch — it demonstrates the indicator trick, linearity of expectation without independence, and a symmetry argument, all in four lines.**
-
-### Worked Example — Expected Number of Fixed Points Isn't the Only Payoff — Variance Too (extension, shows depth)
-If additionally asked for $\text{Var}(\text{matches})$: this requires $\text{Cov}(I_j,I_k)$ for $j\ne k$, since the indicators are *not* independent (if person $j$ gets their hat, it changes the probability distribution over what person $k$ gets). $P(I_j=1,I_k=1) = \frac{1}{n(n-1)}$ (both match: fix two people's hats, the rest arbitrary), so $\text{Cov}(I_j,I_k) = \frac{1}{n(n-1)} - \frac1n\cdot\frac1n = \frac{1}{n^2(n-1)}$. Summing $\text{Var}(I_k)$ plus all pairwise covariances eventually gives $\text{Var}(\text{matches})=1$ as well (for $n\ge2$) — a nice bonus fact, but the mean-only version above is the one worth having cold.
+**Why this matters for interviews:** doing Bayes via odds is faster under time pressure and signals you know multiple ways to manipulate the same identity — good for whiteboard settings where mental arithmetic speed matters.
 
 ---
 
-## 13. Worked Numerical Examples (Mixed Practice)
+## 5. Common Pitfalls / "Gotchas" Interviewers Test
 
-### Example 1 — Basic expectation & variance from a PMF
-$X$ has PMF: $P(X=1)=0.2,\;P(X=2)=0.5,\;P(X=3)=0.3$.
-$$E[X] = 1(.2)+2(.5)+3(.3) = .2+1.0+.9 = 2.1$$
-$$E[X^2] = 1(.2)+4(.5)+9(.3) = .2+2.0+2.7=4.9$$
-$$\text{Var}(X) = 4.9-(2.1)^2 = 4.9-4.41=0.49 \;\Rightarrow\; \text{SD}(X)=0.7$$
+1. **Confusing $P(A\mid B)$ with $P(B\mid A)$** — the prosecutor's fallacy. E.g., "probability of the evidence given innocence" is not "probability of innocence given the evidence." This is exactly the base-rate structure in Example 2.
 
-### Example 2 — Poisson application
-A website receives an average of 3 support tickets per hour (Poisson). What's $P(\text{exactly 5 tickets in an hour})$? What's $P(\text{no tickets in 2 hours})$?
+2. **Forgetting the base rate** — treating a high sensitivity/specificity test as if it directly gives you the posterior.
 
-$$P(X=5) = \frac{e^{-3}3^5}{5!} = \frac{e^{-3}\cdot 243}{120} \approx 0.1008$$
+3. **Simpson's Paradox** — a treatment can look better than another *overall*, but worse in *every subgroup*, when subgroup sizes differ. Classic example (Ross, and also DeGroot): UC Berkeley admissions, aggregated across departments, appeared to favor men; but within nearly every individual department, women had equal or higher admit rates. The lurking variable was which departments each gender applied to (women disproportionately applied to more competitive departments).
+   Formally: it's possible that $P(A\mid B, C) < P(A\mid B^c, C)$ and $P(A\mid B, C^c) < P(A\mid B^c, C^c)$ but $P(A\mid B) > P(A\mid B^c)$.
+   **Interview signal:** always ask "conditioned on what?" before trusting an aggregate comparison.
 
-For 2 hours, $\lambda_2 = 6$ (rate scales linearly with the interval length — a core property of the Poisson process): $P(X=0) = e^{-6} \approx 0.00248$.
+4. **Assuming independence without justification** — always verify $P(A\cap B) = P(A)P(B)$ rather than assuming it because events "feel" unrelated.
 
-### Example 3 — Linearity of expectation without independence (dice)
-Roll a fair die twice. Let $X$ = first roll, $Y$ = second roll. Find $E[X+Y]$ **and** $E[XY]$.
+5. **Order of conditioning in sequential draws** — with/without replacement changes everything (Example 4).
 
-$E[X+Y] = E[X]+E[Y] = 3.5+3.5=7$ — trivial, holds regardless of independence.
-$E[XY]$: here the rolls **are** independent, so $E[XY]=E[X]E[Y] = 3.5\times3.5=12.25$. (Flag this explicitly: had $X,Y$ been dependent, you could *not* factor $E[XY]$ this way — you'd need the joint distribution.)
-
-### Example 4 — Continuous RV, CDF/PDF relationship
-$X$ has CDF $F_X(x) = 1-e^{-2x}$ for $x\ge0$. Find the PDF, $E[X]$, and $P(1<X<2)$.
-
-Differentiate: $f_X(x) = F_X'(x) = 2e^{-2x}$ — recognize this immediately as $\text{Exponential}(\lambda=2)$, so $E[X]=1/2$ by the known formula (no need to integrate from scratch).
-$$P(1<X<2) = F_X(2)-F_X(1) = (1-e^{-4})-(1-e^{-2}) = e^{-2}-e^{-4} \approx 0.1353-0.0183=0.1170$$
-
-### Example 5 — Joint distribution, covariance
-$X,Y$ have joint PMF: $P(0,0)=0.1,\;P(0,1)=0.2,\;P(1,0)=0.3,\;P(1,1)=0.4$.
-
-Marginals: $P(X=0)=0.3,\;P(X=1)=0.7$; $P(Y=0)=0.4,\;P(Y=1)=0.6$.
-$E[X]=0.7,\;E[Y]=0.6$. $E[XY] = 0(0)(0.1)+0(1)(0.2)+1(0)(0.3)+1(1)(0.4) = 0.4$.
-$$\text{Cov}(X,Y) = 0.4-(0.7)(0.6) = 0.4-0.42=-0.02$$
-
-Small negative covariance — $X$ and $Y$ are very close to independent but not exactly (check: if independent, $P(1,1)$ should equal $P(X=1)P(Y=1)=0.7\times0.6=0.42$, but it's actually $0.4$ — the tiny discrepancy is exactly what produces the small negative covariance).
-
-### Example 6 — Adam's Law application (two-stage randomness)
-Number of eggs a bird lays is Poisson($\lambda=6$). Each egg independently hatches with probability $p=0.5$. Find the expected number of chicks.
-
-Let $N$ = number of eggs, $X$ = number of chicks. Given $N=n$, $X\mid N=n \sim \text{Binomial}(n, 0.5)$, so $E[X\mid N]=0.5N$.
-$$E[X] = E[E[X\mid N]] = E[0.5N] = 0.5\,E[N] = 0.5(6)=3$$
-
-**This "random sum" pattern (a Binomial count with a random number of trials) is extremely common in applied interview questions** — e.g., expected number of purchases when the number of site visitors is itself random, expected number of conversions when the funnel size varies day to day. Adam's Law handles it in one line without ever computing the (messier) unconditional distribution of $X$ directly.
+6. **Ignoring how the conditioning event was generated** (Monty Hall) — the *mechanism* generating your observation matters, not just the raw fact observed.
 
 ---
 
-## 14. Cheat Sheet — Named Distributions at a Glance
+## 6. How L5 Interviews Usually Frame These Questions
 
-| Distribution | PMF/PDF | $E[X]$ | $\text{Var}(X)$ | Typical use case |
-|---|---|---|---|---|
-| Bernoulli($p$) | $p^x(1-p)^{1-x}$ | $p$ | $p(1-p)$ | single yes/no trial |
-| Binomial($n,p$) | $\binom nk p^k(1-p)^{n-k}$ | $np$ | $np(1-p)$ | # successes in $n$ i.i.d. trials |
-| Geometric($p$) | $(1-p)^{k-1}p$ | $1/p$ | $(1-p)/p^2$ | trials until 1st success |
-| Neg. Binomial($r,p$) | — | $r/p$ | $r(1-p)/p^2$ | trials until $r$-th success |
-| Poisson($\lambda$) | $e^{-\lambda}\lambda^k/k!$ | $\lambda$ | $\lambda$ | rare-event counts per interval |
-| Hypergeometric($N,K,n$) | $\binom Kk\binom{N-K}{n-k}/\binom Nn$ | $nK/N$ | (Binomial var. × correction) | sampling without replacement |
-| Uniform($a,b$) | $1/(b-a)$ | $(a+b)/2$ | $(b-a)^2/12$ | "equally likely" continuous range |
-| Exponential($\lambda$) | $\lambda e^{-\lambda x}$ | $1/\lambda$ | $1/\lambda^2$ | waiting time, memoryless |
-| Normal($\mu,\sigma^2$) | Gaussian bell curve | $\mu$ | $\sigma^2$ | CLT limit, measurement error |
-| Gamma($\alpha,\lambda$) | — | $\alpha/\lambda$ | $\alpha/\lambda^2$ | waiting time to $\alpha$-th event |
+- **Data Science / Analytics (Google, Apple):** funnel attribution, A/B test interpretation, fraud/anomaly detection base-rate questions, "what's wrong with this metric" (often a Simpson's Paradox trap).
+- **ML/Applied Science:** Naive Bayes derivations, calibration of classifiers (precision vs. recall framed as conditional probabilities: $P(\text{true}\mid\text{predicted true})$ = precision = a posterior, essentially a Bayes problem), confusion matrix reasoning.
+- **General SWE/Systems (Google especially):** classic brainteaser style — Monty Hall variants, dice/card problems, "two children" style traps, expected-value-under-conditioning questions.
 
-**Core formula recap:**
-
-| Concept | Formula |
-|---|---|
-| LOTUS | $E[g(X)] = \sum g(x)p(x)$ or $\int g(x)f(x)dx$ |
-| Linearity | $E[aX+bY+c]=aE[X]+bE[Y]+c$ (always) |
-| Variance shortcut | $\text{Var}(X)=E[X^2]-(E[X])^2$ |
-| Var. of a sum | $\text{Var}(X+Y)=\text{Var}(X)+\text{Var}(Y)+2\text{Cov}(X,Y)$ |
-| Covariance shortcut | $\text{Cov}(X,Y)=E[XY]-E[X]E[Y]$ |
-| Correlation | $\rho=\text{Cov}(X,Y)/(\sigma_X\sigma_Y)$ |
-| Adam's Law | $E[X]=E[E[X\mid Y]]$ |
-| Eve's Law | $\text{Var}(X)=E[\text{Var}(X\mid Y)]+\text{Var}(E[X\mid Y])$ |
-| Sample mean SE | $\text{SE}(\bar X)=\sigma/\sqrt n$ |
+**Meta-tip:** In all these interviews, verbalize your setup before computing: define events precisely, state what's given (prior/likelihood), then write the formula symbolically before plugging numbers. Interviewers are grading your *process*, not just the final number.
 
 ---
 
-## 15. Practice Problems
+## 7. Practice Problems (try these — answers below the line)
 
-1. $X\sim\text{Binomial}(10, 0.3)$. Find $E[X]$, $\text{Var}(X)$, and $P(X=3)$.
-2. A random variable $X$ has $E[X]=4$, $\text{Var}(X)=9$. Find $E[3X-2]$ and $\text{Var}(3X-2)$.
-3. Requests to a server arrive as a Poisson process at 10/minute. Find $P(\text{at least one request in the next 6 seconds})$. (Hint: convert rate to a 6-second window, then use the Exponential CDF or Poisson$(X=0)$ complement.)
-4. $n$ people at a party each independently, with probability $p$, decide to give the person to their right a high-five (arranged in a circle). Using indicator variables, find the expected number of high-fives.
+1. A bag has 2 fair coins and 1 two-headed coin. You pick one at random and flip it twice; both flips are heads. What's the probability you picked the two-headed coin?
+2. In a class, 60% of students are in engineering, 40% in liberal arts. 25% of engineering students and 10% of liberal arts students take a specific stats elective. If a random student is in the elective, what's the probability they're an engineering student?
+3. Three independent alarms each detect an intrusion with probability 0.9. Given at least one alarm triggered, what's the probability all three triggered? (Assume intrusion actually happened, alarms independent.)
 
 <details>
-<summary>Answers</summary>
+<summary>Answers (click to expand mentally / scroll)</summary>
 
-**1.** $E[X]=10(0.3)=3$. $\text{Var}(X)=10(0.3)(0.7)=2.1$. $P(X=3)=\binom{10}{3}(0.3)^3(0.7)^7 \approx 0.2668$.
+**1.** $P(\text{2-head}) = 1/3$. $P(HH\mid \text{fair}) = 1/4$, $P(HH\mid\text{2-head})=1$.
+$P(HH) = 1/3(1) + 2/3(1/4) = 1/3+1/6 = 1/2$.
+$P(\text{2-head}\mid HH) = \frac{1/3}{1/2} = 2/3$.
 
-**2.** $E[3X-2]=3(4)-2=10$. $\text{Var}(3X-2)=9\,\text{Var}(X)=9(9)=81$.
+**2.** $P(\text{elective}) = 0.6(0.25)+0.4(0.10) = 0.15+0.04=0.19$.
+$P(\text{eng}\mid\text{elective}) = 0.15/0.19 \approx 0.789$.
 
-**3.** Rate over 6 seconds: $\lambda = 10\times(6/60)=1$. $P(X=0)=e^{-1}\approx0.3679$, so $P(\ge1)=1-e^{-1}\approx0.6321$.
-
-**4.** Let $I_k=1$ if person $k$ high-fives their right neighbor. $P(I_k=1)=p$ for each of the $n$ people (each independently decides). $E[\text{total}] = \sum_{k=1}^n E[I_k] = np$ — same indicator-trick pattern as the hat-matching problem in Section 12, regardless of the circular arrangement or any dependence between neighbors' decisions.
+**3.** $P(\ge 1) = 1-0.1^3 = 0.999$. $P(\text{all 3}) = 0.9^3=0.729$.
+$P(\text{all 3}\mid \ge1) = 0.729/0.999 \approx 0.7297$.
 
 </details>
 
 ---
 
-*Next natural topics to build out in this same style, if useful: joint distributions of continuous RVs (bivariate Normal, transformations of RVs), moment generating functions, and the Central Limit Theorem with worked convergence examples.*
+## 8. One-Page Formula Cheat Sheet
+
+| Concept | Formula |
+|---|---|
+| Definition | $P(A\mid B) = P(A\cap B)/P(B)$ |
+| Multiplication | $P(A\cap B) = P(A\mid B)P(B)$ |
+| Chain rule ($n$ events) | $P(A_1\cdots A_n)=\prod_i P(A_i\mid A_1\cdots A_{i-1})$ |
+| Total probability | $P(A)=\sum_i P(A\mid B_i)P(B_i)$ |
+| Bayes | $P(B_i\mid A)=\dfrac{P(A\mid B_i)P(B_i)}{\sum_j P(A\mid B_j)P(B_j)}$ |
+| Odds-form Bayes | posterior odds = likelihood ratio × prior odds |
+| Independence | $P(A\cap B)=P(A)P(B)$ |
+| Conditional independence | $P(A\cap B\mid C)=P(A\mid C)P(B\mid C)$ |
+
+Study path suggestion: Ross Ch. 3 problems (especially the "self-test problems" at chapter end) are the closest in flavor to what shows up in tech interviews. Blitzstein's Stat 110 lecture notes/problem sets (freely available, Harvard) are excellent for the Bayes/LOTP intuition-building — his "Bayes' billiards" and story-proof style is very close to interview reasoning.
+
+---
+
+## 9. Additional Concepts & Examples (from Blitzstein & Hwang, *Introduction to Probability*, Stat 110)
+
+These supplement everything above — nothing above is removed, this extends the guide with material you flagged as useful.
+
+### 9.1 Two Cards (multiplication rule + naive definition, symmetry argument)
+
+A standard deck is shuffled. Two cards are drawn without replacement. $A$ = first card is a heart, $B$ = second card is red. Find $P(A\mid B)$ and $P(B\mid A)$.
+
+$$P(A\cap B) = \frac{13}{52}\cdot\frac{25}{51} = \frac{25}{204}$$
+
+($13$ ways to pick a heart first, then $25$ remaining red cards for the second.)
+
+$P(A) = 1/4$ (suits equally likely).
+
+$$P(B) = \frac{26}{52}\cdot\frac{51}{51} = \frac12$$
+
+**Symmetry shortcut for $P(B)$:** before doing the experiment, the second card is equally likely to be *any* card in the deck — so $P(B) = 26/52 = 1/2$ directly, no need to condition on the first draw.
+
+$$P(A\mid B) = \frac{25/204}{1/2} = \frac{25}{102}, \qquad P(B\mid A) = \frac{25/204}{1/4} = \frac{25}{51}$$
+
+**Key lesson:** $P(A\mid B) \ne P(B\mid A)$ — confusing the two is the **prosecutor's fallacy**. Always be deliberate about which event is "given" and which is being updated.
+
+### 9.2 Frequentist Interpretation of Conditioning
+Imagine repeating the experiment $n$ times. Let $n_A, n_B, n_{AB}$ be counts of $A$, $B$, $A\cap B$ across trials. Then
+
+$$P(A\mid B) \approx \frac{n_{AB}/n}{n_B/n} = \frac{n_{AB}}{n_B}$$
+
+i.e., **circle all trials where $B$ happened, then ask what fraction of those circled trials also had $A$**. This is the cleanest mental model to fall back on if you freeze on a formula mid-interview — just narrate this instead.
+
+### 9.3 The Two-Children Problem, done fully rigorously (Gardner's original phrasing)
+
+Assumptions needed (state these explicitly in an interview — it shows rigor): gender is binary, $P(\text{boy})=P(\text{girl})=1/2$ for each child, and the two children's genders are independent.
+
+**(a)** "The older child is a girl." Find $P(\text{both girls})$.
+$$P(\text{both girls}\mid \text{older is girl}) = \frac{1/4}{1/2} = \frac12$$
+
+**(b)** "At least one is a girl." Find $P(\text{both girls})$.
+$$P(\text{both girls}\mid \text{at least one girl}) = \frac{1/4}{3/4} = \frac13$$
+
+**Why these differ (the intuition interviewers want):** conditioning on "older is a girl" designates a *specific* child, leaving the other child's gender genuinely 50/50 — it knocks 2 of the 4 equally-likely outcomes {GG, GB, BG, BB} out (keeps GG, GB). Conditioning on "at least one girl" does **not** designate a specific child — it only removes BB, leaving 3 outcomes {GG, GB, BG}, of which only 1 is "both girls." By symmetry, $P(\text{both girls}\mid\text{younger is girl}) = 1/2$ as well — but there's no such symmetry between "older is a girl" and "at least one is a girl," because those are structurally different conditioning events.
+
+### 9.4 Random Child Is a Girl (sampling mechanism matters)
+
+You run into **one** of the two children at random (equally likely either child), and she's a girl. $P(\text{both girls})$?
+
+Let $G_1, G_2, G_3$ = elder is girl, younger is girl, the randomly-encountered child is a girl. $P(G_1)=P(G_2)=P(G_3)=1/2$, $P(G_1\cap G_2) = 1/4$.
+
+$$P(G_1\cap G_2 \mid G_3) = \frac{P(G_1\cap G_2\cap G_3)}{P(G_3)} = \frac{P(G_1\cap G_2)}{P(G_3)} = \frac{1/4}{1/2} = \frac12$$
+
+(since $G_1 \cap G_2 \subseteq G_3$: if both children are girls, the randomly-met child is certainly a girl).
+
+**Critical takeaway — this is a statistics interview favorite:** the answer here (1/2) differs from the "at least one girl" answer (1/3) even though both start with "we know one child is a girl." The difference is entirely about **how the information was sampled**. "At least one is a girl" is a fact about the *pair*; "the specific child I randomly encountered is a girl" designates one child, like the "older is a girl" case. **Always ask "how was this observation generated?" before conditioning** — this is the single most important meta-skill in applied conditional-probability reasoning (funnel data, survivorship bias, selection bias all reduce to this).
+
+### 9.5 A Girl Born in Winter (extreme illustration of "how specific is the conditioning event?")
+
+Family has 2 children. Given **at least one is a girl born in winter** (seasons equally likely, independent of gender), find $P(\text{both girls})$.
+
+$P(\text{a specific child is a winter girl}) = 1/2 \times 1/4 = 1/8$.
+
+Denominator: $P(\text{at least one winter girl}) = 1-(7/8)^2 = 15/64$.
+
+Numerator: "both girls AND at least one winter girl" = "both girls AND at least one winter child" (since if both are girls, "winter child" = "winter girl"):
+$$P(\text{both girls}, \ge 1 \text{ winter child}) = \frac14\left(1-\left(\frac34\right)^2\right) = \frac14\cdot\frac{7}{16} = \frac{7}{64}$$
+
+$$P(\text{both girls}\mid \ge1\text{ winter girl}) = \frac{7/64}{15/64} = \frac{7}{15} \approx 0.4667$$
+
+**This sits between 1/3 (the "at least one girl" example) and 1/2 (the "specific child is a girl" example).** Adding the seemingly-irrelevant "born in winter" detail makes the conditioning event closer to identifying a *specific* child, nudging the answer toward 1/2. Push this to the limit — "at least one is a girl born on March 31 at 8:20pm" — and the answer approaches 1/2 exactly, because that description essentially pins down one particular child. **This is the cleanest possible demonstration that the informativeness/specificity of the conditioning event, not just its truth value, determines the posterior.**
+
+### 9.6 Odds — Formal Definition and Odds-Form Bayes (restated precisely)
+
+$$\text{odds}(A) = \frac{P(A)}{P(A^c)}, \qquad P(A) = \frac{\text{odds}(A)}{1+\text{odds}(A)}$$
+
+**Odds form of Bayes' rule:**
+$$\frac{P(A\mid B)}{P(A^c\mid B)} = \frac{P(B\mid A)}{P(B\mid A^c)}\cdot\frac{P(A)}{P(A^c)}$$
+
+i.e. **posterior odds = likelihood ratio × prior odds.** (This matches Section 4 above — here is the fully formal statement with proof-ready notation.)
+
+### 9.7 Random Coin (fair vs. biased) — full Bayes + LOTP with extra conditioning
+
+One fair coin, one biased coin ($P(H)=3/4$). Pick one at random, flip 3 times, get HHH. Find $P(\text{fair}\mid HHH)$.
+
+Let $F$ = fair coin chosen, $A$ = three Heads observed.
+$$P(F\mid A) = \frac{P(A\mid F)P(F)}{P(A\mid F)P(F) + P(A\mid F^c)P(F^c)} = \frac{(1/2)^3(1/2)}{(1/2)^3(1/2) + (3/4)^3(1/2)} \approx 0.23$$
+
+**Follow-up — LOTP with extra conditioning (this pattern shows up constantly in sequential-prediction interview questions):** given HHH already observed, what's $P(\text{4th flip is Heads})$?
+
+We don't know which coin we have, but conditioning on $F$ makes it easy:
+$$P(H_4\mid A) = P(H_4\mid F,A)P(F\mid A) + P(H_4\mid F^c,A)P(F^c\mid A) = \tfrac12(0.23) + \tfrac34(0.77) \approx 0.69$$
+
+**Pattern to remember:** whenever direct computation of $P(\text{event}\mid \text{data})$ is hard, but computation is easy *conditional on some latent variable* (which coin, which population, which regime), condition on that latent variable, compute both pieces, then weight by the *posterior* probability of the latent variable (not the prior!) using LOTP with extra conditioning:
+$$P(X\mid \text{data}) = \sum_i P(X \mid Z=i, \text{data})\, P(Z=i \mid \text{data})$$
+
+### 9.8 "Conditionitis" — Disease Testing with Symmetric 95%/95% Accuracy
+
+(A cleaner numeric variant of Example 2 above — same phenomenon, different exact numbers, worth having both in your back pocket.) Prevalence 1%, $P(T\mid D) = 0.95$ (sensitivity), $P(T^c\mid D^c)=0.95$ (specificity), so $P(T\mid D^c) = 0.05$.
+
+$$P(D\mid T) = \frac{0.95(0.01)}{0.95(0.01) + 0.05(0.99)} = \frac{0.0095}{0.0095+0.0495} \approx 0.16$$
+
+**Intuition via a population of 10,000 (great way to explain this on a whiteboard without any algebra):** 100 people have the disease → 95 test positive, 5 negative. 9,900 don't have it → 495 false-positives, 9,405 true-negatives. So among all positives ($95+495=590$), only $95/590 \approx 16\%$ actually have the disease. **This "natural frequencies" framing (Gigerenzer & Hoffrage) is often the fastest way to convince a non-technical interviewer/stakeholder — worth having ready as a plain-English explanation, not just the formula.**
+
+### 9.9 Independence — Full Formal Treatment
+
+**Two events:** $A\perp B \iff P(A\cap B)=P(A)P(B) \iff P(A\mid B)=P(A) \iff P(B\mid A)=P(B)$ (given positive probabilities). Independence is symmetric.
+
+**Disjointness vs. independence (restated formally):** if $A,B$ disjoint with $P(A),P(B)>0$, then $P(A\cap B)=0 \ne P(A)P(B)$, so disjoint events with positive probability are **never** independent — knowing $A$ happened tells you for certain $B$ did not.
+
+**Proposition:** if $A\perp B$, then $A\perp B^c$, $A^c\perp B$, and $A^c\perp B^c$ also hold. (Proof: $P(B^c\mid A) = 1-P(B\mid A) = 1-P(B) = P(B^c)$ when $P(A)>0$; independence "propagates" to complements.)
+
+**Three events — independence requires ALL FOUR conditions:**
+$$P(A\cap B)=P(A)P(B),\;\; P(A\cap C)=P(A)P(C),\;\; P(B\cap C)=P(B)P(C),\;\; P(A\cap B\cap C)=P(A)P(B)P(C)$$
+If only the first three hold, that's called **pairwise independence** — a strictly weaker condition.
+
+**Pairwise independence does NOT imply full independence — classic counterexample (memorize this one, it's a favorite theoretical-depth question):**
+Two independent fair coin tosses. $A$ = first is Heads, $B$ = second is Heads, $C$ = both tosses match. Check: $P(A)=P(B)=P(C)=1/2$. $P(A\cap B) = 1/4 = P(A)P(B)$ ✓. $P(A\cap C)$: need first=H and both match → HH only → $1/4 = P(A)P(C)$ ✓. Similarly $B,C$ pairwise independent ✓. But
+$$P(A\cap B\cap C) = P(HH) = \frac14 \ne P(A)P(B)P(C) = \frac18$$
+So $A,B,C$ are **pairwise independent but not mutually independent** — knowing $A$ and $B$ together fully determines $C$, even though knowing just $A$ or just $B$ alone tells you nothing about $C$.
+
+*(Converse also fails: $P(A\cap B\cap C)=P(A)P(B)P(C)$ does not imply pairwise independence — trivially true if any single event has probability 0.)*
+
+### 9.10 Conditional Independence — Where Most People Get Tripped Up
+
+**Definition:** $A,B$ conditionally independent given $E$ iff $P(A\cap B\mid E) = P(A\mid E)P(B\mid E)$.
+
+**Three distinct failure modes to keep straight (all real, all interview-relevant):**
+
+**(i) Conditionally independent given $E$, but NOT given $E^c$.**
+*Good/bad classes example:* $G$ = class is "good," $W$ = student works hard, $A$ = student gets an A. In good classes, hard work strongly predicts an A ($W,A$ dependent given $G$). In bad classes, grades are assigned randomly regardless of effort ($W \perp A \mid G^c$). So conditional independence can hold given $G^c$ but fail given $G$ — there's no reason independence given one conditioning event should transfer to its complement.
+
+**(ii) Conditionally independent given $E$, but NOT unconditionally independent.**
+*Random coin, revisited:* $F$ = fair coin chosen. Given $F$, all flips are independent (each $P(H)=1/2$); given $F^c$, all flips are independent (each $P(H)=3/4$). But **unconditionally**, flip 1 and flip 2 are *not* independent — observing many Heads on flip 1 raises your belief that you hold the biased coin, which shifts your prediction for flip 2. **This is exactly the mechanism behind hierarchical/mixture models, and why "the data conditional on the model parameter is i.i.d., but the raw data isn't" is a standard phrase in Bayesian ML** — directly relevant if the interview drifts toward ML systems design.
+
+**(iii) Unconditionally independent, but NOT conditionally independent given $E$.**
+*Alice and Bob calls example:* $A$ = Alice calls Friday, $B$ = Bob calls Friday, independent unconditionally, each with positive probability. Let $C$ = exactly one call received Friday. Then given $C$, the call is from Alice **iff** it's not from Bob — so $A$ and $B$ become perfectly (negatively) dependent given $C$: $P(B\mid A,C)=0$ even though $P(B\mid C)>0$. **This is explosively important**: conditioning on a *collider* (an event caused by both $A$ and $B$) can manufacture dependence between variables that were originally unrelated — this is the formal seed of **"explaining away"** in Bayesian networks / causal inference, a concept that comes up a lot in applied-ML and causal-inference-flavored interviews.
+
+**Worked numerical version — crying baby (ties (i)-(iii) together with actual algebra):**
+Baby cries iff hungry ($H$) or tired ($T$) or both. $P(H)=h$, $P(T)=t$, $H\perp T$ unconditionally. Let $C$ = crying.
+
+$$P(C) = P(H\cup T) = h+t-ht = c \quad\text{(inclusion-exclusion, using independence for } P(H\cap T)=ht\text{)}$$
+
+By Bayes:
+$$P(H\mid C) = \frac{P(C\mid H)P(H)}{P(C)} = \frac hc,\qquad P(T\mid C) = \frac tc$$
+
+$$P(H\cap T\mid C) = \frac{P(C\mid H\cap T)P(H\cap T)}{P(C)} = \frac{ht}{c}$$
+
+Check conditional independence given $C$: is $\dfrac{ht}{c} \stackrel{?}{=} \dfrac hc\cdot\dfrac tc = \dfrac{ht}{c^2}$? Since $0<c<1$, $\dfrac{1}{c} < \dfrac{1}{c^2}$, so $P(H\cap T\mid C) < P(H\mid C)P(T\mid C)$. **So $H$ and $T$ are NOT conditionally independent given $C$** — they're *negatively* associated given crying.
+
+**Intuition:** if the baby is crying but you learn she is **not** hungry, she must be tired (since crying requires hungry OR tired) — so learning $H^c$ given $C$ makes $T$ *more* likely. That's the signature of **"explaining away"**: two independent causes of a common observed effect become negatively correlated once you condition on the effect having occurred. This exact pattern is the theoretical basis for why, e.g., two independent risk factors for a diagnosis can appear (spuriously) to trade off against each other once you condition on diagnosis-positive patients only — a subtle form of selection bias worth flagging in any analytics interview involving conditioned/filtered cohorts.
+
+
+---
+
+## 10. Branching Processes, Legal Fallacies, and Simpson's Paradox in Full (Blitzstein & Hwang)
+
+### 10.1 Branching Process — Amoeba Extinction (self-referential conditioning)
+
+A single amoeba: each minute, with probability 1/3 each, it dies, stays the same, or splits into two amoebas; all descendants behave identically and independently. Find $P(\text{population eventually dies out})$.
+
+**Setup:** condition on the outcome of the *first* step. Let $D$ = eventual extinction, $B_i$ = "splits into $i$ amoebas after minute 1," $i=0,1,2$.
+
+- $P(D\mid B_0) = 1$ (already extinct)
+- $P(D\mid B_1) = P(D)$ (back to the exact same problem — self-similarity)
+- $P(D\mid B_2) = P(D)^2$ (need **both** independent lineages to separately die out)
+
+By LOTP:
+$$P(D) = 1\cdot\tfrac13 + P(D)\cdot\tfrac13 + P(D)^2\cdot\tfrac13$$
+
+Multiply by 3: $3P(D) = 1 + P(D) + P(D)^2 \Rightarrow P(D)^2 - 2P(D) + 1 = 0 \Rightarrow (P(D)-1)^2=0 \Rightarrow P(D)=1$.
+
+**The population dies out with probability 1**, even though it could in principle grow forever. Counterintuitive, and a great worked example of the technique: **when a problem is self-similar (splitting creates independent copies of the original problem), set up an equation in $P(D)$ itself using LOTP, rather than trying to compute an infinite sum directly.** This exact pattern (branching processes) underlies population genetics, epidemic modeling, and — very relevant to Google/Apple ML interviews — the theory behind random forests' tree-growth analysis and certain queueing/load-balancing models.
+
+### 10.2 The Prosecutor's Fallacy — Sally Clark Case (real, consequential misuse of conditional probability)
+
+In the Sally Clark UK murder trial (1998), two of her infant sons died shortly after birth. An expert witness testified that the probability of a single SIDS death was about 1/8500, so the probability of two SIDS deaths in one family was roughly $(1/8500)^2 \approx 1$ in 73 million — and concluded this was the probability of Clark's innocence.
+
+**Two separate errors:**
+
+1. **Independence was wrongly assumed.** Squaring $1/8500$ requires SIDS deaths within a family to be independent — false if there are shared genetic or environmental risk factors that elevate risk for *all* children in that family.
+
+2. **The core prosecutor's fallacy:** the witness conflated $P(\text{evidence}\mid\text{innocence})$ (low) with $P(\text{innocence}\mid\text{evidence})$ (what actually matters). By Bayes:
+$$P(\text{innocence}\mid\text{evidence}) = \frac{P(\text{evidence}\mid\text{innocence})\,P(\text{innocence})}{P(\text{evidence}\mid\text{innocence})P(\text{innocence}) + P(\text{evidence}\mid\text{guilt})P(\text{guilt})}$$
+Double SIDS deaths are rare — but double **infanticide** is far rarer still, i.e. $P(\text{innocence})$ (the prior) is extremely high. If the guilt term in the denominator is negligible relative to the innocence term, $P(\text{innocence}\mid\text{evidence})$ stays close to 1 despite the small numerator. The expert's number captured only the likelihood, never the prior.
+
+Clark was convicted and served over three years before the conviction was overturned; the case triggered review of many other prosecutions built on the same faulty statistical reasoning.
+
+**Interview-relevance:** this is the single cleanest real-world cautionary tale for "don't skip the prior" — extremely quotable if an interviewer asks "why do people get Bayes' theorem wrong in practice?"
+
+### 10.3 The Defense Attorney's Fallacy — Failing to Condition on All the Evidence
+
+A murdered woman's husband is on trial; evidence shows a history of domestic abuse. The defense argues this evidence is irrelevant, citing that only 1 in 10,000 men who abuse their wives go on to murder them — i.e. $P(\text{guilt}\mid\text{abuse}) = P(G\mid A) = 1/10{,}000$.
+
+**The flaw:** we already know the wife was murdered — $P(G\mid A)$ is the wrong conditional probability. We need $P(G\mid A, M)$ where $M$ = "wife was murdered."
+
+Given assumptions: $P(A\mid G,M) = 0.5$ (half of husbands who murder their wives had abused them), $P(G\mid M) = 0.2$ (1 in 5 murdered wives were killed by their husband), $P(A\mid G^c, M) = 0.1$ (base rate of abuse, applying to husbands who didn't do it).
+
+$$P(G\mid A,M) = \frac{P(A\mid G,M)P(G\mid M)}{P(A\mid G,M)P(G\mid M) + P(A\mid G^c,M)P(G^c\mid M)} = \frac{0.5\times0.2}{0.5\times0.2+0.1\times0.8} = \frac{0.10}{0.18} = \frac59 \approx 0.556$$
+
+So conditioning on the murder having happened, prior history of abuse raises the probability of guilt from a base rate of $P(G\mid M)=0.2$ all the way to $\approx 0.56$ — over 5,000× larger than the misleading $1/10{,}000$ figure, because that figure never conditioned on the murder actually occurring.
+
+**Interview-relevance:** this is the mirror-image mistake to the prosecutor's fallacy, and a great one to bring up if asked "what's a common Bayesian reasoning mistake in industry?" — analogous to computing $P(\text{fraud}\mid\text{risk factor})$ using population base rates instead of conditioning on the fact that you're already looking at a flagged/reviewed case (a very common real mistake in trust & safety / fraud analytics work at Google/Apple-scale companies).
+
+### 10.4 Simpson's Paradox — Full Worked Numerical Example (Doctors)
+
+Two surgeons, Dr. Hibbert and Dr. Nick, each perform heart surgery and Band-Aid removal:
+
+| | Heart Success | Heart Fail | Band-Aid Success | Band-Aid Fail |
+|---|---|---|---|---|
+| **Hibbert** | 70 | 20 | 10 | 0 |
+| **Nick** | 2 | 8 | 81 | 9 |
+
+- Heart surgery success rate: Hibbert $70/90 \approx 77.8\%$ vs Nick $2/10=20\%$ — **Hibbert better**
+- Band-Aid success rate: Hibbert $10/10=100\%$ vs Nick $81/90=90\%$ — **Hibbert better**
+- **Aggregate** success rate: Hibbert $80/100=80\%$ vs Nick $83/100=83\%$ — **Nick better overall!**
+
+**Formal definition of the paradox:** for events $A$ (success), $B$ (Nick is surgeon), $C$ (heart surgery):
+$$P(A\mid B,C) < P(A\mid B^c,C) \quad\text{and}\quad P(A\mid B,C^c) < P(A\mid B^c,C^c)$$
+$$\text{but} \quad P(A\mid B) > P(A\mid B^c)$$
+
+**Mechanism via LOTP:**
+$$P(A\mid B) = P(A\mid C,B)P(C\mid B) + P(A\mid C^c,B)P(C^c\mid B) = \tfrac{2}{10}(0.1) + \tfrac{81}{90}(0.9) = 0.83$$
+$$P(A\mid B^c) = P(A\mid C,B^c)P(C\mid B^c) + P(A\mid C^c,B^c)P(C^c\mid B^c) = \tfrac{70}{90}(0.9) + \tfrac{10}{10}(0.1) = 0.80$$
+
+Both are weighted averages of the same two per-surgery-type success rates — but the **weights differ**: Nick does heart surgery only 10% of the time ($P(C\mid B)=0.1$) while Hibbert does it 90% of the time ($P(C\mid B^c)=0.9$). Since heart surgery is inherently riskier, Hibbert's aggregate rate is dragged down purely by case-mix, not skill.
+
+**Real-world instances (name the confounder in an interview to show you really get it):**
+- **UC Berkeley admissions (1970s):** aggregate data suggested bias against women; within almost every department, women were admitted at equal or higher rates than men. The confound: women disproportionately applied to more competitive/lower-acceptance-rate departments.
+- **Baseball batting averages:** a player can have a higher average than a rival in both halves of a season yet a lower average overall, if at-bat counts differ sharply between halves.
+- **Smoking mortality (Cochran):** within every age group, cigarette smokers had higher mortality than cigar smokers, but aggregated mortality was lower for cigarette smokers — because cigarette smokers were on average younger, and age is the confound.
+
+**Interview-relevance — this is probably the single most commonly cited "gotcha" concept for analytics/DS interviews at Google, Meta, and Apple**, because it directly models real production mistakes: comparing two product variants, ML models, or ad campaigns in aggregate without controlling for a confound (traffic source, user segment, cohort) that differs in mix between the two groups. **Always ask "could the subgroup composition differ between what I'm comparing?" before trusting an aggregate A/B test or model-comparison result.**
+
+---
+
+## 11. Real Conditional-Probability Interview Questions Asked at Google, Apple & Peer Companies
+
+Sourced from public interview-question aggregators (Glassdoor, Exponent, DataLemur/Nick Singh's "Ace the Data Science Interview," StrataScratch, Interview Query) and community write-ups. Company attributions reflect what's publicly reported by candidates; treat them as representative of the *style and difficulty* you'll face rather than guaranteed-verbatim questions, since interview banks get reused and re-attributed across companies over time.
+
+**1. (Google) Seven-game series.** Two teams play a best-of-7 series; each team has a 50% chance of winning any individual game (no draws). What's the probability the series goes the full 7 games?
+*Approach:* the series reaches game 7 iff after 6 games each team has exactly 3 wins — this is a conditioning/binomial-counting question dressed up as a probability question: $P(\text{3 wins in 6 games}) = \binom{6}{3}(0.5)^6 = \frac{20}{64} = 0.3125$.
+
+**2. (Reported at Facebook/Meta, very close in spirit to what Google/Apple ask) Coin fairness test.** You have a fair coin and a two-tailed (unfair) coin. You pick one uniformly at random, flip it 5 times, and observe tails all 5 times. What's the probability you picked the unfair coin?
+*Approach:* textbook Bayes. $P(\text{unfair}\mid TTTTT) = \dfrac{1\times 0.5}{1\times 0.5 + (0.5)^5\times 0.5} = \dfrac{0.5}{0.5+0.015625} \approx 0.9697$. This is structurally identical to the Random Coin example in Section 9.7 above — recognize the pattern.
+
+**3. (Lyft, frequently recycled at other companies incl. Google-adjacent DS interviews) HH vs. TH race.** You and a friend flip a coin repeatedly. You win if HH appears before TH; your friend wins if TH appears before HH. Find your win probability.
+*Approach:* condition on the first flip. If first flip is T, then TH is now "waiting" for just one more H, and effectively TH will appear before HH almost certainly once a T has occurred (a classic Markov-chain-via-conditioning problem) — the surprising final answer is $P(\text{you win}) = 1/4$, much worse than the naive 50/50 guess. This is a great one to practice because most candidates badly misjudge the intuition (it exploits the fact that once a T shows up, TH is "locked in" ahead of HH).
+
+**4. (Classic, shows up across Google/Amazon/quant interviews under different wrappers) Monty Hall variants.** Beyond the basic 3-door version (Section 3, Example 3), interviewers sometimes twist it: host doesn't know where the car is and opens a random door that happens to reveal a goat (answer becomes 1/2, not 2/3); or there are more doors/more revealed goats. **Always identify exactly what the host's strategy/knowledge is before answering** — that's the crux of every variant.
+
+**5. (Two dice, standard warm-up at Google and most quant/DS phone screens) Given the first die shows 3, what's the probability the sum is 8?** (Worked in Section 3, Example 1 above — $1/6$.) Frequently the very first "can this candidate handle a conditional probability definition at all" filter question.
+
+**6. (Google — probability/estimation style) Archery / relative performance question.** Two players with identical skill (each hits target with probability 0.5) have fired a different, close number of shots (e.g., 201 vs. 200 arrows). What's the probability the player with one more shot has strictly more hits than the other? *Approach:* by symmetry on the first 200 shots each, this reduces to whether the extra shot's single flip breaks a tie in the leader's favor — answer works out to $1/2$. Tests whether you can find symmetry shortcuts instead of brute-force computing.
+
+**7. (General DS-interview staple, tests LOTP+Bayes fluency, close cousin of the "conditionitis" problem) Sequential test / rare-event Bayes problems.** A rare disease/fraud/defect with a known base rate, plus a test/flag with known sensitivity and specificity — compute the posterior. This exact template (Sections 9.8 and Example 2) is, by far, the most repeated conditional-probability interview question across Google, Apple, Meta, and quant shops, because it's the cleanest test of whether a candidate reflexively reaches for the prior or falls for the base-rate fallacy.
+
+**8. (Apple-specific flavor, per public interview guides) Applied/experimentation framing rather than pure brainteasers.** Public write-ups (Interview Query, Exponent, DataInterview) consistently describe Apple's DS loop as leaning toward **applied statistics: A/B testing, experiment design, causal inference, and how you'd reason about a metric under confounding** — rather than isolated math-puzzle-style conditional probability questions. In that context, **Simpson's Paradox (Section 10.4) is exactly the concept most likely to appear**, e.g. framed as "we launched a feature, engagement went up in every user segment but down overall — what happened?" Practicing how to *articulate* the confounding-variable explanation out loud is more valuable prep for Apple than memorizing more brainteasers.
+
+**9. (Common "hint-giving" Monty-Hall-style variant, shows up in DS interview compilations) Multi-box hint problem.** With several boxes and a party who *knows* where a prize is and gives you a truthful "not in this box" hint after you've committed to a guess, compute the posterior probability the prize is in a specific remaining box. Same core lesson as Monty Hall: the *hint-giver's knowledge and constraints* are what make the hint informative — treat it as a Bayes problem where the likelihood of the specific hint given each hypothesis is the key computation, exactly like Section 3 Example 3.
+
+**Meta-takeaway for your prep:** across Google, Apple, and peers, the actual distribution of conditional-probability questions clusters around four recurring templates — **(a) rare-event Bayes/base-rate problems, (b) Monty-Hall-style "informative revealing" problems, (c) sequential/race-condition coin or game problems solved by conditioning on the first step, and (d) Simpson's-Paradox-style aggregation traps.** If you can solve one clean example of each from scratch, on a blank page, while narrating prior/likelihood/posterior out loud, you're prepared for the large majority of what actually gets asked.
+
+
+---
+
+## 12. More Worked Examples (Sheldon Ross, *A First Course in Probability*)
+
+### 12.1 Celine's Course Choice (simple LOTP application)
+
+Celine estimates $P(A\mid \text{French}) = 1/2$, $P(A\mid\text{chemistry}) = 2/3$. She flips a fair coin to choose. Find $P(\text{chemistry AND gets an A})$.
+
+Let $C$ = chooses chemistry, $A$ = gets an A.
+$$P(C\cap A) = P(C)\,P(A\mid C) = \frac12\cdot\frac23 = \frac13$$
+
+**Note the phrasing:** this asks for a *joint* probability $P(C\cap A)$, not $P(A\mid C)$ — a good reminder to read the question precisely before reaching for a formula. Straightforward application of the multiplication rule (Section 1.2), included here mainly as a clean warm-up rep.
+
+### 12.2 Multiple-Choice Guessing (Bayes with a clean closed form)
+
+A student either knows the answer (probability $p$) or guesses (probability $1-p$), and a guess is correct with probability $1/m$ ($m$ = number of choices). Given the student answered correctly, what's the probability they actually knew it?
+
+Let $K$ = knew the answer, $C$ = answered correctly.
+$$P(K\mid C) = \frac{P(C\mid K)P(K)}{P(C\mid K)P(K) + P(C\mid K^c)P(K^c)} = \frac{p}{p + \frac1m(1-p)} = \frac{mp}{1+(m-1)p}$$
+
+**Plug in $m=5, p=1/2$:** $P(K\mid C) = \dfrac{5(0.5)}{1+4(0.5)} = \dfrac{2.5}{3} = \dfrac56 \approx 0.833$.
+
+**Why this is a great one to have memorized as a closed form:** it's the general template behind any "did the model actually detect signal, or did it get lucky by chance" question — e.g. in an ML context, distinguishing whether a classifier's correct prediction reflects real learned signal versus a high base rate of lucky guesses. The formula $\frac{mp}{1+(m-1)p}$ is worth deriving once by hand so you can rebuild it live rather than memorize it.
+
+### 12.3 Flashlight Types (3-way partition, LOTP + Bayes together)
+
+Bin has type 1 (20% of stock, 70% chance of lasting 100+ hrs), type 2 (30% of stock, 40% chance), type 3 (50% of stock, 30% chance).
+
+**(a) Unconditional probability of lasting 100+ hours** — condition on type via LOTP:
+$$P(A) = (.7)(.2)+(.4)(.3)+(.3)(.5) = .14+.12+.15 = .41$$
+
+**(b) Given it lasted 100+ hours, which type was it?** — Bayes, using the same numerator terms computed above:
+$$P(F_1\mid A) = \frac{.14}{.41}=\frac{14}{41}\approx.341,\quad P(F_2\mid A)=\frac{12}{41}\approx.293,\quad P(F_3\mid A)=\frac{15}{41}\approx.366$$
+
+Sanity check: these three posteriors sum to 1 ✓. **Notice the shift**: type 1 was only 20% of stock but jumps to 34.1% of the posterior because it's disproportionately likely to survive — while type 3 drops from 50% prior share to 36.6% posterior share despite still being the modal type, because it's the least reliable. **This "three-or-more-way Bayes" pattern (compute all LOTP terms once, then divide each by the same denominator) is exactly how you'd do multi-class Bayesian classification / Naive Bayes by hand — good to practice beyond the two-outcome disease-test template.**
+
+### 12.4 DNA Forensic Match (a genuinely hard, multi-layered Bayes problem — great for testing depth in a longer interview)
+
+A crime scene DNA sample matches on 5 strands; an innocent person matches by chance with probability $10^{-5}$, independently. Of 1,000,000 town residents, 10,000 are ex-convicts with DNA on file. The DA assumes each ex-convict is $c$ times as likely to be guilty as each of the other 990,000 residents (prior odds ratio $c$). Checking the database, exactly one person — A.J. Jones — matches. Find $P(\text{A.J. guilty}\mid\text{unique match})$.
+
+**Setup:** with $\alpha$ = prior guilt probability per ex-convict, $\beta$ = prior guilt probability per non-convict, $\alpha = c\beta$, and probabilities summing to 1 across all 1,000,000 residents:
+$$10{,}000\alpha + 990{,}000\beta = 1 \;\Rightarrow\; \beta = \frac{1}{10{,}000c+990{,}000},\quad \alpha = \frac{c}{10{,}000c+990{,}000}$$
+
+Let $G$ = A.J. guilty, $M$ = A.J. is the *unique* match among the 10,000 on file.
+
+- $P(M\mid G) = (1-10^{-5})^{9999}$ — A.J. matches automatically (he's guilty), and none of the other 9999 ex-convicts (innocent) can also match.
+- $P(M\mid G^c)$ requires: A.J. (innocent) matches by chance ($10^{-5}$), **and** all other 9999 ex-convicts are innocent, **and** none of them match either:
+$$P(M\mid G^c) = 10^{-5}\cdot\underbrace{\frac{1-10{,}000\alpha}{1-\alpha}}_{P(\text{all others innocent}\mid \text{A.J. innocent})}\cdot(1-10^{-5})^{9999}$$
+
+Combining via Bayes and simplifying (using $P(G)=\alpha$) collapses to the clean closed form:
+$$P(G\mid M) = \frac{\alpha}{\alpha + 10^{-5}(1-10{,}000\alpha)} = \frac{1}{0.9 + 10^{-5}/\alpha}$$
+
+**Plugging in different prior beliefs about $c$ (how much more suspicious an ex-convict is a priori):**
+
+| DA's prior belief $c$ | $\alpha$ | $P(G\mid M)$ |
+|---|---|---|
+| $c=100$ (ex-convict 100× more likely a priori) | $1/19{,}900$ | $\approx 0.910$ |
+| $c=10$ | $1/109{,}000$ | $\approx 0.503$ |
+| $c=1$ (no prior suspicion — uniform over all 1M residents) | $10^{-6}$ | $\approx 0.092$ |
+
+**Why this example is worth the effort to work through fully:** it's a real, high-stakes illustration of how **the final posterior can swing from ~9% to ~91% guilt purely based on a subjective prior assumption ($c$)**, even with the *exact same DNA evidence*. This is precisely the kind of "the math is right, but the answer depends entirely on an assumption nobody agreed on" issue that comes up constantly in applied Bayesian modeling, risk scoring, and fraud detection at scale — a strong example to cite if an interviewer probes "what are the limitations of a Bayesian approach in production?"
+
+---
+
+## 13. Tree-Diagram Method for Bayes' Theorem
+
+A probability tree is often the fastest way to *derive* — and to explain out loud on a whiteboard — a Bayes computation without getting lost in the formula. **Method:** draw branches for the prior partition first, then sub-branches for the conditioning event under each; multiply along each root-to-leaf path to get joint probabilities; sum the leaves matching your evidence to get $P(\text{evidence})$; divide the specific leaf(s) you want by that sum.
+
+### 13.1 Disease Testing via Tree (prevalence 1%, sensitivity 99%, specificity 95%)
+
+```
+                         START
+                 ┌────────────┴────────────┐
+            D (0.01)                   Dᶜ (0.99)
+         ┌────┴────┐                ┌────┴────┐
+     + (0.99)   − (0.01)         + (0.05)   − (0.95)
+       │            │               │            │
+  0.01×0.99     0.01×0.01      0.99×0.05     0.99×0.95
+   = 0.0099      = 0.0001       = 0.0495      = 0.9405
+```
+
+Leaves matching "tested positive": $0.0099$ (top-left) and $0.0495$ (bottom-left). Sum = $P(+) = 0.0594$.
+
+$$P(D\mid +) = \frac{0.0099}{0.0594} \approx 0.1667$$
+
+**Why the tree is more effective on a whiteboard than the formula:** the interviewer can *see* both routes to a positive test — the tiny true-positive branch and the much fatter false-positive branch — which visually communicates the base-rate fallacy far faster than the algebra does. Multiply along the branches, then just look at the ratio of the branch you care about to the sum of all matching branches.
+
+### 13.2 Monty Hall via Tree (you pick door 1; host opens a goat door, never door 1, never the car)
+
+**Level 1 — where's the car (prior, all equal):**
+
+```
+                                START
+              ┌───────────────────┼───────────────────┐
+        Car@1 (1/3)          Car@2 (1/3)          Car@3 (1/3)
+```
+
+**Level 2 — which door does the host open** (host must avoid door 1 and the car door):
+
+```
+Car@1 (1/3)                    Car@2 (1/3)              Car@3 (1/3)
+  ┌────┴────┐                       │                        │
+opens 2   opens 3               opens 3                   opens 2
+ (1/2)     (1/2)                 (1)                        (1)
+  │          │                    │                          │
+1/3×1/2   1/3×1/2              1/3×1                       1/3×1
+ =1/6      =1/6                 =1/3                        =1/3
+```
+
+(When the car is at 1, the host has a genuine free choice between doors 2 and 3, so each gets weight 1/2. When the car is at 2, the host is *forced* to open 3 — the only remaining goat door not door 1. Symmetric logic when the car is at 3.)
+
+**Now condition on the observed evidence "host opened door 3"** — pick out only the leaves under "opens 3":
+
+| Path | Leaf probability |
+|---|---|
+| Car@1 → opens 3 | $1/6$ |
+| Car@2 → opens 3 | $1/3$ |
+| Car@3 → opens 3 | (impossible — host can't open the car door) |
+
+Sum of matching leaves: $1/6+1/3 = 1/2 = P(\text{host opens door 3})$.
+
+$$P(\text{Car@1}\mid\text{opens }3) = \frac{1/6}{1/2}=\frac13 \qquad P(\text{Car@2}\mid\text{opens }3)=\frac{1/3}{1/2}=\frac23$$
+
+**Switching (moving to door 2) wins with probability 2/3; staying (door 1) wins with probability 1/3** — same answer as the algebraic Bayes derivation in Section 3, Example 3, but the tree makes the *asymmetric branching* (host has a free 50/50 choice only when you're already right, and zero choice otherwise) visually obvious, which is exactly the fact that breaks the naive "50/50 after one door is removed" intuition. **This is the single best way to explain Monty Hall live in an interview**: draw the tree, show that the "Car@2" branch has no competing branch to split its probability with (host is forced), while the "Car@1" branch has to split 1/3 in half — so the surviving door-2 leaf ends up twice as large as the surviving door-1 leaf.
