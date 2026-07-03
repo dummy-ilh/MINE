@@ -234,44 +234,6 @@ def rotate(nums, k):
     reverse(k, n - 1)
 ```
 
-### 22. LC 244 🔒 — Shortest Word Distance II
-Design a class returning shortest distance between two words across many queries.
-```python
-class WordDistance:
-    def __init__(self, wordsDict):
-        self.locations = {}
-        for i, w in enumerate(wordsDict):
-            self.locations.setdefault(w, []).append(i)
-
-    def shortest(self, word1, word2):
-        loc1, loc2 = self.locations[word1], self.locations[word2]
-        i, j, best = 0, 0, float('inf')
-        while i < len(loc1) and j < len(loc2):
-            best = min(best, abs(loc1[i] - loc2[j]))
-            if loc1[i] < loc2[j]:
-                i += 1
-            else:
-                j += 1
-        return best
-```
-
-### 23. LC 251 🔒 — Flatten 2D Vector
-Design an iterator that flattens a 2D vector.
-```python
-class Vector2D:
-    def __init__(self, vec):
-        self.data = [x for row in vec for x in row]
-        self.index = 0
-
-    def next(self):
-        val = self.data[self.index]
-        self.index += 1
-        return val
-
-    def hasNext(self):
-        return self.index < len(self.data)
-```
-
 ### 24. LC 253 🔒 — Meeting Rooms II
 Find the minimum number of meeting rooms needed.
 ```python
@@ -322,22 +284,6 @@ def findCelebrity(n):
     return candidate
 ```
 
-### 27. LC 287 — Find the Duplicate Number
-Find the duplicate in an array of n+1 integers in range [1, n], O(1) space.
-```python
-def findDuplicate(nums):
-    slow = fast = nums[0]
-    while True:
-        slow = nums[slow]
-        fast = nums[nums[fast]]
-        if slow == fast:
-            break
-    slow2 = nums[0]
-    while slow2 != slow:
-        slow2 = nums[slow2]
-        slow = nums[slow]
-    return slow
-```
 
 ### 28. LC 360 🔒 — Sort Transformed Array
 Given a sorted array and quadratic coefficients, return the transformed values sorted.
@@ -408,22 +354,6 @@ def circularArrayLoop(nums):
                     return True
                 break
     return False
-```
-
-### 31. LC 475 — Heaters
-Find the minimum heater radius to warm all houses.
-```python
-import bisect
-
-def findRadius(houses, heaters):
-    heaters.sort()
-    res = 0
-    for h in houses:
-        idx = bisect.bisect_left(heaters, h)
-        left = heaters[idx - 1] if idx > 0 else float('-inf')
-        right = heaters[idx] if idx < len(heaters) else float('inf')
-        res = max(res, min(h - left, right - h))
-    return res
 ```
 
 ### 32. LC 481 — Magical String
@@ -565,41 +495,6 @@ def triangleNumber(nums):
     return count
 ```
 
-### 40. LC 633 — Sum of Square Numbers
-Check if c can be expressed as the sum of two squares.
-```python
-import math
-
-def judgeSquareSum(c):
-    l, r = 0, int(math.sqrt(c))
-    while l <= r:
-        s = l * l + r * r
-        if s == c:
-            return True
-        elif s < c:
-            l += 1
-        else:
-            r -= 1
-    return False
-```
-
-### 41. LC 647 — Palindromic Substrings
-Count all palindromic substrings.
-```python
-def countSubstrings(s):
-    n = len(s)
-    count = 0
-    def expand(l, r):
-        nonlocal count
-        while l >= 0 and r < n and s[l] == s[r]:
-            count += 1
-            l -= 1
-            r += 1
-    for i in range(n):
-        expand(i, i)
-        expand(i, i + 1)
-    return count
-```
 
 ### 42. LC 658 — Find K Closest Elements
 Find the k closest elements to x in a sorted array.
@@ -613,40 +508,6 @@ def findClosestElements(arr, k, x):
         else:
             r = mid
     return arr[l:l + k]
-```
-
-### 43. LC 723 🔒 — Candy Crush
-Simulate crushing groups of 3+ same-value candies until stable.
-```python
-def candyCrush(board):
-    rows, cols = len(board), len(board[0])
-    changed = True
-    while changed:
-        changed = False
-        crush = set()
-        for r in range(rows):
-            for c in range(cols - 2):
-                v = abs(board[r][c])
-                if v and v == abs(board[r][c + 1]) == abs(board[r][c + 2]):
-                    crush.update([(r, c), (r, c + 1), (r, c + 2)])
-        for c in range(cols):
-            for r in range(rows - 2):
-                v = abs(board[r][c])
-                if v and v == abs(board[r + 1][c]) == abs(board[r + 2][c]):
-                    crush.update([(r, c), (r + 1, c), (r + 2, c)])
-        if crush:
-            changed = True
-            for r, c in crush:
-                board[r][c] = -abs(board[r][c])
-            for c in range(cols):
-                write = rows - 1
-                for r in range(rows - 1, -1, -1):
-                    if board[r][c] > 0:
-                        board[write][c] = board[r][c]
-                        write -= 1
-                for r in range(write, -1, -1):
-                    board[r][c] = 0
-    return board
 ```
 
 ### 44. LC 763 — Partition Labels
@@ -664,25 +525,7 @@ def partitionLabels(s):
     return res
 ```
 
-### 45. LC 777 🔒 ⚠️ — Swap Adjacent in LR String
-Check if `start` can become `end` using L/R adjacent swap rules.
-```python
-def canTransform(start, end):
-    if len(start) != len(end):
-        return False
-    s = [(c, i) for i, c in enumerate(start) if c != 'X']
-    e = [(c, i) for i, c in enumerate(end) if c != 'X']
-    if len(s) != len(e):
-        return False
-    for (c1, i1), (c2, i2) in zip(s, e):
-        if c1 != c2:
-            return False
-        if c1 == 'L' and i1 < i2:
-            return False
-        if c1 == 'R' and i1 > i2:
-            return False
-    return True
-```
+
 
 ### 46. LC 786 🔒 ⚠️ — K-th Smallest Prime Fraction
 Find the kth smallest fraction `arr[i]/arr[j]` for i < j.
@@ -751,28 +594,6 @@ def expressiveWords(s, words):
     return count
 ```
 
-### 49. LC 825 ⚠️ — Friends Of Appropriate Ages
-Count friend requests under the age-appropriateness rule.
-```python
-def numFriendRequests(ages):
-    count = [0] * 121
-    for age in ages:
-        count[age] += 1
-    prefix = [0] * 122
-    for i in range(1, 121):
-        prefix[i + 1] = prefix[i] + count[i]
-    res = 0
-    for ageA in range(1, 121):
-        if count[ageA] == 0:
-            continue
-        lower = ageA // 2 + 7
-        if lower >= ageA:
-            continue
-        cnt = prefix[ageA + 1] - prefix[lower + 1]
-        res += cnt * count[ageA] - count[ageA]
-    return res
-```
-
 ### 50. LC 826 — Most Profit Assigning Work
 Assign workers to jobs (within their ability) to maximize total profit.
 ```python
@@ -788,31 +609,6 @@ def maxProfitAssignment(difficulty, profit, worker):
     return total
 ```
 
-### 51. LC 838 — Push Dominoes
-Simulate dominoes falling left/right or staying upright.
-```python
-def pushDominoes(dominoes):
-    s = list(dominoes)
-    n = len(s)
-    prev, prev_char = -1, 'L'
-    for i in range(n + 1):
-        if i == n or s[i] != '.':
-            curr_char = s[i] if i < n else 'R'
-            if prev_char == 'L' and curr_char == 'L':
-                for k in range(prev + 1, i):
-                    s[k] = 'L'
-            elif prev_char == 'R' and curr_char == 'R':
-                for k in range(prev + 1, i):
-                    s[k] = 'R'
-            elif prev_char == 'R' and curr_char == 'L':
-                lo, hi = prev + 1, i - 1
-                while lo < hi:
-                    s[lo], s[hi] = 'R', 'L'
-                    lo += 1
-                    hi -= 1
-            prev, prev_char = i, curr_char
-    return ''.join(s)
-```
 
 ### 52. LC 845 — Longest Mountain in Array
 Find the length of the longest "mountain" subarray (strictly up then strictly down).
@@ -1800,3 +1596,27 @@ or
             right -=1
 
         return " ".join(word) 
+
+Given a non-negative integer c, decide whether there're two integers a and b such that a2 + b2 = c.
+
+Example 1:
+
+Input: c = 5
+Output: true
+Explanation: 1 * 1 + 2 * 2 = 5
+
+Check if c can be expressed as the sum of two squares.
+```python
+import math
+
+def judgeSquareSum(c):
+    l, r = 0, int(math.sqrt(c))
+    while l <= r:
+        s = l * l + r * r
+        if s == c:
+            return True
+        elif s < c:
+            l += 1
+        else:
+            r -= 1
+    return False
