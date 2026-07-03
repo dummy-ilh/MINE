@@ -1,4 +1,4 @@
-# Conditional Probability —
+# Conditional Probability — Complete Interview Guide (L5 Google/Apple)
 
 **Reference texts** (cite these if asked "where did you learn this" or want deeper study):
 - Sheldon Ross, *A First Course in Probability* (9th/10th ed.) — Ch. 3
@@ -19,6 +19,10 @@ $$P(A \mid B) = \frac{P(A \cap B)}{P(B)}$$
 
 This is a *definition*, not a derived fact — everything else (Bayes, chain rule, total probability) follows from it.
 
+
+"How does the probability of an event change when we have extra information?".
+
+
 ### 1.2 Multiplication Rule (Chain Rule)
 Rearranging the definition:
 
@@ -33,9 +37,9 @@ This is the workhorse for sequential/"without replacement" problems.
 If $B_1, \dots, B_n$ partition the sample space ($\bigcup B_i = \Omega$, mutually exclusive, $P(B_i)>0$):
 
 $$P(A) = \sum_{i=1}^n P(A \mid B_i)\,P(B_i)$$
-
+[
 **This is how you compute an "unconditional" probability when you naturally know things conditionally.** Extremely common in interviews — anytime a problem says "there are two types of X" or "with probability p it's a fair coin, else biased," LOTP is your first move.
-
+![](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT-f89ImFsaysYE-AhYZWRjYMQ1Q9ulWDzmC_KA5q_tow&s=10)
 ### 1.4 Bayes' Theorem
 $$P(B_i \mid A) = \frac{P(A \mid B_i)\,P(B_i)}{\sum_j P(A \mid B_j)\,P(B_j)} = \frac{P(A\mid B_i)P(B_i)}{P(A)}$$
 
