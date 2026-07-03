@@ -1,1308 +1,396 @@
-# 3: Conditional Probability, Independence, and Bayes' Theorem
+# Random Variables — Complete Interview Guide (L5 Google/Apple)
 
+**Reference texts** (same set as the conditional probability guide, so notation stays consistent):
+- Sheldon Ross, *A First Course in Probability* — Ch. 4 (discrete RVs), Ch. 5 (continuous RVs)
+- Blitzstein & Hwang, *Introduction to Probability* (Stat 110) — Ch. 3 (discrete RVs, distributions), Ch. 4 (expectation), Ch. 5 (continuous RVs)
+- DeGroot & Schervish, *Probability and Statistics* — Ch. 3–5
+- Casella & Berger, *Statistical Inference* — Ch. 2–4 (more rigorous, if you want the measure-theoretic underpinnings)
 
----
-
-## Table of Contents
-
-1. [Learning Goals](#1-learning-goals)
-2. [Conditional Probability](#2-conditional-probability)
-3. [The Multiplication Rule](#3-the-multiplication-rule)
-4. [Law of Total Probability](#4-law-of-total-probability)
-5. [Using Trees to Organize Computations](#5-using-trees-to-organize-computations)
-6. [Independence](#6-independence)
-7. [Bayes' Theorem](#7-bayes-theorem)
-8. [The Base Rate Fallacy](#8-the-base-rate-fallacy)
-9. [In-Class Concept Questions — Full Solutions](#9-in-class-concept-questions--full-solutions)
-10. [In-Class Board Problems — Full Solutions](#10-in-class-board-problems--full-solutions)
-11. [Common Mistakes Reference](#11-common-mistakes-reference)
-12. [Quick Summary & Formula Sheet](#12-quick-summary--formula-sheet)
-
----
-
-## 1. Learning Goals
-
-By the end of this class you should be able to:
-
-1. **Define** conditional probability and independence of events precisely.
-2. **Compute** conditional probability directly from the definition.
-3. **Apply** the multiplication rule to find the probability of an intersection.
-4. **Use** the law of total probability to decompose complex probability calculations.
-5. **Check** whether two events are independent.
-6. **Apply** Bayes' formula to invert conditional probabilities.
-7. **Organize** conditional probability computations using probability trees and tables.
-8. **Understand** the base rate fallacy and why it matters in data science and medicine.
-
----
-
-## 2. Conditional Probability
-
-### 2.1 Concept Overview
-
-Conditional probability answers the question:
-
-> *"How does the probability of an event change when we have extra information?"*
-
-In everyday reasoning, new information restricts what we consider possible. Conditional probability formalizes this by **shrinking the sample space** to only those outcomes consistent with the new information.
-
----
-
-### 2.2 Intuition
-
-Imagine flipping a fair coin 3 times. You know the sample space is:
-
-$$\Omega = \{HHH, HHT, HTH, HTT, THH, THT, TTH, TTT\}$$
-
-**Without extra information:** $P(\text{3 heads}) = 1/8$ (1 favourable out of 8 equally likely outcomes).
-
-**With extra information** — suppose someone tells you the first toss was Heads. The set of possible outcomes shrinks to:
-
-$$\Omega' = \{HHH, HHT, HTH, HTT\}$$
-
-Now there is only 1 outcome with 3 heads out of 4 remaining: $P(\text{3 heads} \mid \text{first is H}) = 1/4$.
-
-> **Key Intuition:** Conditioning on $B$ means we *restrict our universe* to the event $B$ and ask what fraction of $B$ is covered by $A$.
-
----
-
-### 2.3 Formal Definition
-
-> **Definition (Conditional Probability):** For events $A$ and $B$ with $P(B) \neq 0$, the **conditional probability of $A$ given $B$** is:
->
-> $$\boxed{P(A \mid B) = \frac{P(A \cap B)}{P(B)}}$$
-
-**Reading:** "$P(A \mid B)$" is read as "the probability of $A$ given $B$" or "the probability of $A$ conditioned on $B$."
-
-**Geometric interpretation:** Think of $P(A)$ as the proportion of the entire sample space area taken up by event $A$. Then $P(A \mid B)$ is the proportion of the area of $B$ that is covered by $A$ — i.e., $P(A \cap B) / P(B)$.
-
----
-
-### 2.4 Key Formulas
-
-$$P(A \mid B) = \frac{P(A \cap B)}{P(B)}, \quad P(B) \neq 0$$
-
-$$P(B \mid A) = \frac{P(A \cap B)}{P(A)}, \quad P(A) \neq 0$$
-
-> **Warning:** $P(A \mid B) \neq P(B \mid A)$ in general. These are two fundamentally different quantities. Confusing them is one of the most common and consequential errors in probability and statistics.
-
----
-
-### 2.5 Worked Examples
-
----
-
-#### Example 1 — Coin Tossing (Basic Conditional Probability)
-
-**Problem:** Toss a fair coin 3 times.  
-(a) What is $P(\text{3 heads})$?  
-(b) Given that the first toss is heads, what is $P(\text{3 heads} \mid \text{first toss is heads})$?
-
-**Step 1: Identify the sample space.**
-
-$$\Omega = \{HHH, HHT, HTH, HTT, THH, THT, TTH, TTT\}, \quad |\Omega| = 8$$
-
-All outcomes are equally likely since the coin is fair.
-
-**Step 2: Define events.**
-
-$$A = \{\text{3 heads}\} = \{HHH\}, \quad |A| = 1$$
-$$B = \{\text{first toss is heads}\} = \{HHH, HHT, HTH, HTT\}, \quad |B| = 4$$
-
-**Step 3: Answer part (a).**
-
-$$P(A) = \frac{|A|}{|\Omega|} = \frac{1}{8}$$
-
-**Step 4: Answer part (b) — find $P(A \mid B)$.**
-
-First find $A \cap B$: outcomes that are in both $A$ and $B$.
-
-$$A \cap B = \{HHH\}, \quad |A \cap B| = 1$$
-
-Apply the definition:
-
-$$P(A \mid B) = \frac{P(A \cap B)}{P(B)} = \frac{1/8}{4/8} = \frac{1/8}{1/2} = \frac{1}{4}$$
-
-**Final Answer:** $P(\text{3 heads} \mid \text{first is heads}) = 1/4$
-
-**Interpretation:** Knowing the first toss was heads doubled our probability of getting 3 heads (from $1/8$ to $1/4$). This makes intuitive sense — we already have one head guaranteed, so now we just need 2 more heads from 2 remaining tosses.
-
----
-
-#### Example 2 — Drawing Cards (Conditional Probability by Counting)
-
-**Problem:** Draw two cards from a standard deck (52 cards, without replacement).  
-Define: $S_1$ = "first card is a spade", $S_2$ = "second card is a spade".  
-Find $P(S_2 \mid S_1)$.
-
-**Step 1: Find $P(S_1)$.**
-
-There are 52 equally probable ways to draw the first card. 13 of them are spades.
-
-$$P(S_1) = \frac{13}{52} = \frac{1}{4}$$
-
-**Step 2: Find $P(S_1 \cap S_2)$.**
-
-Count ordered pairs (first card, second card) where both are spades:
-- Ways to pick a spade first: 13
-- Ways to pick a spade second (given one spade already removed): 12
-- Total ordered pairs of any two cards: $52 \times 51$
-
-$$P(S_1 \cap S_2) = \frac{13 \times 12}{52 \times 51} = \frac{156}{2652} = \frac{3}{51}$$
-
-**Step 3: Apply the conditional probability formula.**
-
-$$P(S_2 \mid S_1) = \frac{P(S_1 \cap S_2)}{P(S_1)} = \frac{3/51}{1/4} = \frac{3}{51} \times 4 = \frac{12}{51}$$
-
-**Sanity check (direct reasoning):** If the first card was a spade, 51 cards remain, of which 12 are spades. So $P(S_2 \mid S_1) = 12/51$. ✓
-
-**Final Answer:** $P(S_2 \mid S_1) = \dfrac{12}{51} \approx 0.235$
-
-**Aside — Why is $P(S_2) = 1/4$?**  
-Even though the first card affects the second, if we don't condition on the first card, by symmetry every card in the deck is equally likely to be the second card drawn. So $P(S_2) = 13/52 = 1/4$. This is a subtle but important point: unconditionally, the position of the draw doesn't matter.
-
-**Think:** What is $P(S_2 \mid S_1^c)$? (When the first card is NOT a spade.)  
-*Answer:* If $S_1^c$ occurred, 51 cards remain and 13 of them are spades, so $P(S_2 \mid S_1^c) = 13/51$.
-
----
-
-## 3. The Multiplication Rule
-
-### 3.1 Concept Overview
-
-The **multiplication rule** is simply a rearrangement of the conditional probability definition. It lets us compute the probability of a joint event $A \cap B$ by breaking it into a sequence of steps.
-
----
-
-### 3.2 Formal Definition
-
-> **Multiplication Rule:**
->
-> $$\boxed{P(A \cap B) = P(A \mid B) \cdot P(B)}$$
->
-> Equivalently:
->
-> $$P(A \cap B) = P(B \mid A) \cdot P(A)$$
-
-**Why it matters:** When computing $P(A \cap B)$ directly is hard, we can instead compute $P(B)$ (marginal probability of the first event) and $P(A \mid B)$ (conditional probability of the second given the first). This is exactly how probability trees work.
-
----
-
-### 3.3 Extension to Three Events
-
-$$P(A \cap B \cap C) = P(A) \cdot P(B \mid A) \cdot P(C \mid A \cap B)$$
-
-This extends naturally to any number of events and is the mathematical foundation for reading probabilities along tree branches.
-
----
-
-### 3.4 Worked Example
-
-#### Example 3 — Verifying the Multiplication Rule
-
-**Problem:** From the card example above, verify that $P(S_2 \mid S_1) \cdot P(S_1) = P(S_1 \cap S_2)$.
-
-From Example 2: $P(S_2 \mid S_1) = 12/51$, $P(S_1) = 1/4$, $P(S_1 \cap S_2) = 3/51$.
-
-$$P(S_2 \mid S_1) \cdot P(S_1) = \frac{12}{51} \cdot \frac{1}{4} = \frac{12}{204} = \frac{3}{51} = P(S_1 \cap S_2) \checkmark$$
-
----
-
-## 4. Law of Total Probability
-
-### 4.1 Concept Overview
-
-The law of total probability lets us compute $P(A)$ when the sample space can be naturally divided into mutually exclusive, exhaustive cases. It is the engine that powers probability trees.
-
----
-
-### 4.2 Intuition
-
-Suppose you want to find the probability of event $A$, but $A$ can happen in several different "scenarios" $B_1, B_2, B_3$ (which together cover all possibilities and don't overlap). Then:
-
-$$P(A) = \sum_i P(A \mid B_i) \cdot P(B_i)$$
-
-This is a **weighted average** of conditional probabilities, where each weight is the probability of being in that scenario.
-
-> **Key Intuition:** If you don't know which "branch" you're on, sum up the contributions from all branches weighted by how likely each branch is.
-
----
-
-### 4.3 Formal Definition
-
-> **Law of Total Probability:** Let $B_1, B_2, \ldots, B_n$ be a **partition** of the sample space $\Omega$ (i.e., they are mutually disjoint and $B_1 \cup B_2 \cup \cdots \cup B_n = \Omega$). Then for any event $A$:
->
-> $$\boxed{P(A) = \sum_{i=1}^{n} P(A \mid B_i) \cdot P(B_i)}$$
-
-**For two events ($B$ and $B^c$):**
-
-$$P(A) = P(A \mid B) \cdot P(B) + P(A \mid B^c) \cdot P(B^c)$$
-
-**For three events:**
-
-$$P(A) = P(A \mid B_1) P(B_1) + P(A \mid B_2) P(B_2) + P(A \mid B_3) P(B_3)$$
-
----
-
-### 4.4 Worked Examples
-
----
-
-#### Example 4 — Red Balls from Urn (Simple Version)
-
-**Problem:** An urn contains **5 red** and **2 green** balls. Two balls are drawn one after the other (without replacement). What is the probability the second ball is red?
-
-**Step 1: Set up the partition.**
-
-Let $R_1$ = "first ball is red", $G_1$ = "first ball is green". These partition $\Omega$ since either the first is red or green.
-
-$$P(R_1) = \frac{5}{7}, \qquad P(G_1) = \frac{2}{7}$$
-
-**Step 2: Find conditional probabilities for the second draw.**
-
-- *If first was red* (5 red remain out of 6 total): $P(R_2 \mid R_1) = 4/6$
-- *If first was green* (5 red remain out of 6 total): $P(R_2 \mid G_1) = 5/6$
-
-**Step 3: Apply the law of total probability.**
-
-$$P(R_2) = P(R_2 \mid R_1) \cdot P(R_1) + P(R_2 \mid G_1) \cdot P(G_1)$$
-
-$$= \frac{4}{6} \cdot \frac{5}{7} + \frac{5}{6} \cdot \frac{2}{7} = \frac{20}{42} + \frac{10}{42} = \frac{30}{42} = \frac{5}{7}$$
-
-**Final Answer:** $P(R_2) = 5/7$
-
-**Interpretation:** Interestingly, $P(R_2) = P(R_1) = 5/7$. By symmetry, without any conditioning, each position in the draw sequence has the same probability for any given colour. The second draw is just as likely to be red as the first.
-
----
-
-#### Example 5 — Urn with Ball Replacement Rule (More Complex)
-
-**Problem:** Urn has **5 red** and **2 green** balls. A ball is drawn. If it's **green**, a red ball is added. If it's **red**, a green ball is added. (The original ball is removed.) Then a second ball is drawn. What is $P(R_2)$?
-
-**Step 1: Identify the two scenarios.**
-
-$$P(R_1) = \frac{5}{7}, \qquad P(G_1) = \frac{2}{7}$$
-
-**Step 2: Find the urn composition after each scenario, then compute conditional probabilities.**
-
-- *Scenario 1 — Red drawn first:* Remove the red, add a green. Urn now has 4 red + 3 green = 7 balls.
-  $$P(R_2 \mid R_1) = \frac{4}{7}$$
-
-- *Scenario 2 — Green drawn first:* Remove the green, add a red. Urn now has 6 red + 1 green = 7 balls.
-  $$P(R_2 \mid G_1) = \frac{6}{7}$$
-
-**Step 3: Apply the law of total probability.**
-
-$$P(R_2) = P(R_2 \mid R_1) \cdot P(R_1) + P(R_2 \mid G_1) \cdot P(G_1)$$
-
-$$= \frac{4}{7} \cdot \frac{5}{7} + \frac{6}{7} \cdot \frac{2}{7} = \frac{20}{49} + \frac{12}{49} = \frac{32}{49}$$
-
-**Final Answer:** $P(R_2) = 32/49 \approx 0.653$
-
-**Why this differs from Example 4:** The replacement rule makes red balls more likely to persist (a green first draw increases red count), which inflates $P(R_2)$ above $5/7 \approx 0.714$... actually $32/49 \approx 0.653 < 5/7$. The rule swaps colours, so drawing red initially decreases red balls and drawing green increases them — a counteracting effect that brings $P(R_2)$ close to but slightly below $5/7$.
-
----
-
-## 5. Using Trees to Organize Computations
-
-### 5.1 Concept Overview
-
-A **probability tree** is a diagram that organizes sequential random processes. Each branch represents an outcome, and the probability is written on the branch. Trees make the law of total probability visual and systematic.
-
----
-
-### 5.2 How to Read a Probability Tree
-
-- **Root node** (level 0): Starting point (no information yet).
-- **Level 1 nodes**: Outcomes of the first event. Branch probabilities are **marginal** (unconditional) probabilities.
-- **Level 2 nodes**: Outcomes of the second event given the first. Branch probabilities are **conditional** probabilities.
-- **Leaf node probability** = product of all branch probabilities along the path (by the multiplication rule).
-- **Total probability of an outcome** = sum of leaf probabilities corresponding to that outcome.
-
----
-
-### 5.3 Tree for Example 5 (Urn with Replacement Rule)
-
-```
-                    ●  (root)
-                 /      \
-             5/7           2/7
-             /               \
-           R₁                 G₁
-          /  \               /   \
-        4/7  3/7           6/7   1/7
-        /      \           /       \
-      (R₂)    (G₂)      (R₂)     (G₂)
-    P=20/49  P=15/49  P=12/49   P=2/49
-```
-
-**Leaf probabilities (using multiplication rule):**
-- $P(R_1 \cap R_2) = \frac{5}{7} \times \frac{4}{7} = \frac{20}{49}$
-- $P(R_1 \cap G_2) = \frac{5}{7} \times \frac{3}{7} = \frac{15}{49}$
-- $P(G_1 \cap R_2) = \frac{2}{7} \times \frac{6}{7} = \frac{12}{49}$
-- $P(G_1 \cap G_2) = \frac{2}{7} \times \frac{1}{7} = \frac{2}{49}$
-
-**Verify:** $20/49 + 15/49 + 12/49 + 2/49 = 49/49 = 1$ ✓
-
-**Law of Total Probability from the tree:** Add all leaf probabilities leading to $R_2$:
-
-$$P(R_2) = \frac{20}{49} + \frac{12}{49} = \frac{32}{49}$$
-
----
-
-### 5.4 Shorthand vs. Precise Trees
-
-In the shorthand tree, a leaf node labeled "$R_2$" under a path through $G_1$ actually represents the joint event $G_1 \cap R_2$. The shorthand is compact; the precise version labels everything explicitly. Always remember the shorthand convention when reading trees.
-
----
-
-### 5.5 Three-Level Trees
-
-For events with three stages (e.g., $A_i$, $B_j$, $C_k$), the tree extends to three levels. Branch probabilities at level 3 are conditional on both the level 1 and level 2 outcomes:
-
-- Level 1 branch from root to $A_i$: $P(A_i)$
-- Level 2 branch from $A_i$ to $B_j$: $P(B_j \mid A_i)$
-- Level 3 branch from $A_i \cap B_j$ to $C_k$: $P(C_k \mid A_i \cap B_j)$
-
-Leaf probability $= P(A_i) \cdot P(B_j \mid A_i) \cdot P(C_k \mid A_i \cap B_j) = P(A_i \cap B_j \cap C_k)$
-
----
-
-## 6. Independence
-
-### 6.1 Concept Overview
-
-Two events are **independent** if knowing that one occurred gives you **no information** about whether the other occurred. The probability of one event is unchanged by knowledge of the other.
-
----
-
-### 6.2 Intuition
-
-> **Key Intuition:** If I tell you event $B$ happened, and you shrug and say "so what, that doesn't change my prediction for $A$" — then $A$ and $B$ are independent.
-
-Examples of where independence can fail:
-- Tossing a coin dipped in honey: the second toss outcome may be affected by the stickiness caused by the first.
-- Survey respondents who all heard the same rumor from one source are not independent sources of evidence.
-
----
+This guide picks up exactly where the conditional-probability guide left off, and deliberately over-explains the *why* behind each definition — not just the formula — since that's what separates a memorized answer from one that survives follow-up questions in an interview.
 
-### 6.3 Formal Definition
-
-> **Informal:** $A$ is independent of $B$ if $P(A \mid B) = P(A)$.
->
-> **Formal Definition (Independence):** Events $A$ and $B$ are **independent** if:
->
-> $$\boxed{P(A \cap B) = P(A) \cdot P(B)}$$
-
-**Why the formal definition is preferred:**
-- It's **symmetric**: $A$ independent of $B$ $\Leftrightarrow$ $B$ independent of $A$.
-- It works even when $P(B) = 0$ (where the conditional probability is undefined).
-- It directly generalises to multiple events.
-
-**Equivalences (when probabilities are nonzero):**
-
-| Condition | Equivalent independence check |
-|---|---|
-| $P(B) \neq 0$ | $A$ and $B$ independent $\Leftrightarrow$ $P(A \mid B) = P(A)$ |
-| $P(A) \neq 0$ | $A$ and $B$ independent $\Leftrightarrow$ $P(B \mid A) = P(B)$ |
-| Always | $A$ and $B$ independent $\Leftrightarrow$ $P(A \cap B) = P(A)P(B)$ |
-
----
-
-### 6.4 Worked Examples
-
----
-
-#### Example 6 — Two Coin Tosses
-
-**Problem:** Toss a fair coin twice. Let $H_1$ = "heads on first toss", $H_2$ = "heads on second toss". Are they independent?
-
-**Step 1: Find probabilities.**
-
-$$P(H_1) = \frac{1}{2}, \qquad P(H_2) = \frac{1}{2}$$
-
-$$P(H_1 \cap H_2) = P(\text{HH}) = \frac{1}{4}$$
-
-**Step 2: Check the independence condition.**
-
-$$P(H_1) \cdot P(H_2) = \frac{1}{2} \cdot \frac{1}{2} = \frac{1}{4} = P(H_1 \cap H_2) \checkmark$$
-
-**Conclusion:** $H_1$ and $H_2$ are **independent**.
-
----
-
-#### Example 7 — Are Two Heads and a Specific First Toss Independent?
-
-**Problem:** Toss a fair coin 3 times. Let $H_1$ = "heads on first toss" and $A$ = "exactly two heads total". Are $H_1$ and $A$ independent?
-
-**Step 1: List the sample space and events.**
-
-$$\Omega = \{HHH, HHT, HTH, HTT, THH, THT, TTH, TTT\}$$
-
-$$H_1 = \{HHH, HHT, HTH, HTT\}$$
-$$A = \{HHT, HTH, THH\}, \quad P(A) = 3/8$$
-
-**Step 2: Find $P(A \mid H_1)$.**
-
-$A \cap H_1 = \{HHT, HTH\}$ (outcomes in both events), so $|A \cap H_1| = 2$.
-
-$$P(A \mid H_1) = \frac{|A \cap H_1|}{|H_1|} = \frac{2}{4} = \frac{1}{2}$$
-
-**Step 3: Compare.**
-
-$$P(A \mid H_1) = \frac{1}{2} \neq \frac{3}{8} = P(A)$$
-
-**Conclusion:** $H_1$ and $A$ are **not independent**. Knowing the first toss was heads increases the probability of getting exactly 2 heads total (from 3/8 to 1/2).
-
----
-
-#### Example 8 — Cards: Ace, Hearts, Red
-
-**Problem:** Draw one card from a standard deck. Define:  
-$A$ = "the card is an ace", $H$ = "the card is a heart", $R$ = "the card is red".
-
-**Part (a): Are $A$ and $H$ independent?**
-
-$$P(A) = \frac{4}{52} = \frac{1}{13}, \qquad P(A \mid H) = \frac{1}{13} \quad \text{(1 ace of hearts out of 13 hearts)}$$
-
-Since $P(A) = P(A \mid H)$, events $A$ and $H$ are **independent**.
-
-**Part (b): Are $A$ and $R$ independent?**
-
-$$P(A \mid R) = \frac{2}{26} = \frac{1}{13} = P(A)$$
-
-(2 red aces out of 26 red cards). Since they are equal, $A$ and $R$ are **independent**.
-
-**Part (c): Are $H$ and $R$ independent?**
-
-$$P(H) = \frac{13}{52} = \frac{1}{4}, \qquad P(H \mid R) = \frac{13}{26} = \frac{1}{2}$$
-
-Since $P(H) \neq P(H \mid R)$, $H$ and $R$ are **not independent**.
-
-**Intuition:** If you know the card is red, it can only be hearts or diamonds — so the probability it's hearts jumps from 1/4 to 1/2. Colour and suit are not independent because suit *determines* colour.
-
----
-
-### 6.5 A Paradox of Independence
-
-An event $A$ with $P(A) = 0$ is independent of itself, since:
-
-$$P(A \cap A) = P(A) = 0 = 0 \cdot 0 = P(A) \cdot P(A)$$
-
-This seems paradoxical because knowing $A$ occurred certainly tells you $A$ occurred! The resolution: since $P(A) = 0$, the statement "$A$ occurred" is effectively impossible and thus vacuous — we never actually get information from it.
-
-**Think:** For what other value of $P(A)$ is $A$ independent of itself?  
-*Answer:* $P(A) = 1$. If $P(A) = 1$, then $P(A \cap A) = P(A) = 1 = 1 \times 1$.
-
----
-
-## 7. Bayes' Theorem
-
-### 7.1 Concept Overview
-
-Bayes' theorem is one of the most important results in all of probability and statistics. It tells you how to **invert conditional probabilities**: if you know $P(A \mid B)$ but want $P(B \mid A)$, Bayes' rule gives you the answer.
-
-In machine learning and statistics, this is the heart of **Bayesian inference**: updating beliefs about a hypothesis given observed data.
-
----
-
-### 7.2 Intuition
-
-> **Key Intuition:** We observe effect $A$ and want to reason backward to cause $B$. Bayes' theorem converts forward-direction conditional probabilities (probability of effect given cause) into backward-direction conditional probabilities (probability of cause given effect).
-
----
-
-### 7.3 Formal Statement
-
-> **Bayes' Theorem (Bayes' Rule / Bayes' Formula):** For events $A$ and $B$ with $P(A) \neq 0$:
->
-> $$\boxed{P(B \mid A) = \frac{P(A \mid B) \cdot P(B)}{P(A)}}$$
-
----
-
-### 7.4 Derivation
-
-The proof is elegant and uses only the definition of conditional probability.
-
-**Step 1:** From the definition of conditional probability:
-
-$$P(B \mid A) \cdot P(A) = P(A \cap B)$$
-
-**Step 2:** Also from the definition of conditional probability (in the other direction):
-
-$$P(A \mid B) \cdot P(B) = P(A \cap B)$$
-
-**Step 3:** Since $A \cap B = B \cap A$ (intersection is symmetric):
-
-$$P(B \mid A) \cdot P(A) = P(A \mid B) \cdot P(B)$$
-
-**Step 4:** Divide both sides by $P(A)$:
-
-$$P(B \mid A) = \frac{P(A \mid B) \cdot P(B)}{P(A)} \qquad \square$$
-
 ---
 
-### 7.5 Bayes' Theorem with Total Probability
+## 1. What a Random Variable Actually Is
 
-In practice, $P(A)$ in the denominator is rarely given directly. We compute it using the law of total probability. When $B$ and $B^c$ partition the sample space:
+### 1.1 The formal definition (and why it looks weird at first)
+A random variable (RV) is **a function that maps outcomes in the sample space to real numbers**: $X: S \to \mathbb{R}$.
 
-$$P(B \mid A) = \frac{P(A \mid B) \cdot P(B)}{P(A \mid B) \cdot P(B) + P(A \mid B^c) \cdot P(B^c)}$$
+This trips people up because "variable" makes it sound like a number, but it's actually a *function*. The reason this matters: probability is defined on events (subsets of the sample space), but we want to talk about "the probability that the die roll is 4" — a random variable is exactly the bridge that lets us translate outcomes of an experiment into numbers we can compute with, and it's what lets $P(X=4)$ make sense as shorthand for $P(\{s \in S : X(s) = 4\})$.
 
-**More generally** (with partition $B_1, \ldots, B_n$):
+**Concrete example:** Roll two dice. The sample space $S$ has 36 outcomes like $(3,5)$. Define $X(s) = $ sum of the two dice. Then $X((3,5)) = 8$. $X$ is a function; $8$ is just one possible *value* $X$ can take. When we write "$P(X=8)$," we really mean "the probability of the *event* $\{s : X(s)=8\}$" — which is the set of all dice-pairs summing to 8.
 
-$$P(B_i \mid A) = \frac{P(A \mid B_i) \cdot P(B_i)}{\displaystyle\sum_{j=1}^{n} P(A \mid B_j) \cdot P(B_j)}$$
+### 1.2 Discrete vs. Continuous
+- **Discrete RV**: takes a countable set of values (finite or countably infinite) — e.g., number of heads in 10 flips, number of customers arriving in an hour.
+- **Continuous RV**: takes an uncountable range of values (an interval of reals) — e.g., height, waiting time, temperature.
 
----
+**Why the distinction matters practically:** for a discrete RV, $P(X=x)$ can be a genuinely positive number. For a continuous RV, $P(X=x) = 0$ for every single point $x$ — probability only accumulates over an *interval*. This is not a technicality; it's why continuous RVs need a *density* rather than a probability mass, and it's a common interview trip-wire ("what's the probability a continuous RV equals exactly 2.5?" — the answer is always 0, and being able to explain *why* in one sentence signals real understanding, not just formula recall).
 
-### 7.6 Worked Examples
-
 ---
-
-#### Example 9 — Coin Tosses: Inverting Conditional Probability
 
-**Problem:** Toss a coin 5 times. Let $H_1$ = "first toss is heads" and $H_A$ = "all 5 tosses are heads".
+## 2. Discrete Random Variables
 
-First, directly: $P(H_1 \mid H_A) = 1$ (if all 5 are heads, certainly the first is heads).
+### 2.1 Probability Mass Function (PMF)
+$$p_X(x) = P(X=x)$$
 
-Now verify using Bayes' theorem.
+Must satisfy: $p_X(x) \ge 0$ for all $x$, and $\sum_x p_X(x) = 1$.
 
-**Step 1: Identify all terms.**
+**Intuition:** the PMF is literally "how much probability mass is stacked on top of each possible value." Drawing it as a bar chart (spikes at each valid value) is usually the fastest way to build intuition before doing any algebra.
 
-$$P(H_A \mid H_1) = \frac{1}{2^4} = \frac{1}{16} \quad \text{(need 4 more heads after first)}$$
+### 2.2 Cumulative Distribution Function (CDF)
+$$F_X(x) = P(X \le x)$$
 
-$$P(H_1) = \frac{1}{2}, \qquad P(H_A) = \frac{1}{2^5} = \frac{1}{32}$$
+For a discrete RV, this is a step function: it jumps up by $p_X(x)$ at each value $x$ can take, and is flat in between. $F_X$ is non-decreasing, $\lim_{x\to-\infty}F_X(x)=0$, $\lim_{x\to\infty}F_X(x)=1$.
 
-**Step 2: Apply Bayes' theorem.**
+**Why bother with the CDF if you already have the PMF?** Two reasons that come up constantly in interviews: (1) it's the only well-defined object for continuous RVs (no PMF exists there), so building CDF fluency now pays off directly in Section 3; (2) many real questions are phrased as "at least" / "at most" ($P(X\le 5)$, $P(X>10)$), which the CDF answers directly without re-summing the PMF each time.
 
-$$P(H_1 \mid H_A) = \frac{P(H_A \mid H_1) \cdot P(H_1)}{P(H_A)} = \frac{(1/16) \cdot (1/2)}{1/32} = \frac{1/32}{1/32} = 1 \checkmark$$
-
-**Interpretation:** Bayes' rule confirmed the direct reasoning. This simple example illustrates the mechanics without the complication of the total probability denominator.
-
----
-
-## 8. The Base Rate Fallacy
-
-### 8.1 Concept Overview
-
-The base rate fallacy is one of the most important and practically consequential insights from probability. It explains why highly accurate tests can have surprisingly low predictive power when the condition being tested is rare.
-
-> **The trap:** People instinctively use the accuracy of the test ($P(\text{positive} \mid \text{disease})$) as a proxy for what they actually want ($P(\text{disease} \mid \text{positive})$). These can be very different numbers.
-
 ---
-
-### 8.2 The Core Insight
 
-$$
-\underbrace{P(\text{test accurate})}_{\text{≈ 95% overall accuracy}}
-\neq
-\underbrace{P(\text{disease} \mid \text{positive test})}_{\text{posterior probability}}
-$$
+## 3. Continuous Random Variables
 
-When a disease is rare, there are vastly more healthy people than sick people. Even a small false positive rate will generate **many false positives** (because it's applied to a huge population of healthy people), drowning out the true positives.
+### 3.1 Probability Density Function (PDF)
+For a continuous RV, there's a function $f_X(x) \ge 0$ (the **density**) such that:
+$$P(a \le X \le b) = \int_a^b f_X(x)\,dx, \qquad \int_{-\infty}^{\infty} f_X(x)\,dx = 1$$
 
----
+**Critical intuition — the density is NOT a probability.** $f_X(x)$ can exceed 1 (e.g., a Uniform(0, 0.5) density is 2 everywhere on its support). What must integrate to 1 is the *area under the curve*, not the height. Interviewers sometimes probe this directly ("can a PDF value exceed 1?" — yes, absolutely, as long as the total area is still 1).
 
-### 8.3 Worked Example — Disease Screening (Example 11)
+### 3.2 CDF for continuous RVs
+$$F_X(x) = P(X\le x) = \int_{-\infty}^x f_X(t)\,dt \qquad\Longrightarrow\qquad f_X(x) = F_X'(x)$$
 
-**Problem:** Consider a routine screening test for a disease.
-- **Base rate** (disease prevalence): $P(D^+) = 0.005$ (0.5%)
-- **False positive rate:** $P(T^+ \mid D^-) = 0.05$ (5%)
-- **False negative rate:** $P(T^- \mid D^+) = 0.10$ (10%)
+The PDF is literally the derivative of the CDF. This relationship is the single most useful algebraic fact for continuous-RV problems: if you're ever given a CDF and asked for the density (or vice versa), differentiate or integrate — don't overthink it.
 
-You test positive. What is the probability you actually have the disease, $P(D^+ \mid T^+)$?
-
 ---
-
-**Method 1: Using Bayes' Theorem**
 
-**Step 1: Set up all known probabilities.**
+## 4. Expectation
 
-| Quantity | Value |
-|---|---|
-| $P(D^+)$ | 0.005 |
-| $P(D^-)$ | 0.995 |
-| $P(T^+ \mid D^+)$ = true positive rate | $1 - 0.10 = 0.90$ |
-| $P(T^- \mid D^+)$ = false negative rate | 0.10 |
-| $P(T^+ \mid D^-)$ = false positive rate | 0.05 |
-| $P(T^- \mid D^-)$ = true negative rate | $1 - 0.05 = 0.95$ |
+### 4.1 Definition
+**Discrete:** $E[X] = \sum_x x\, p_X(x)$
+**Continuous:** $E[X] = \int_{-\infty}^{\infty} x\, f_X(x)\,dx$
 
-**Step 2: Compute $P(T^+)$ using the law of total probability.**
+**Intuition (long-run average interpretation):** if you repeated the experiment many times and averaged the observed values of $X$, that average converges to $E[X]$ — this is the Law of Large Numbers, and it's why "expectation" and "long-run average" are used almost interchangeably in casual interview conversation, even though formally $E[X]$ is defined *before* any experiment is run.
 
-$$P(T^+) = P(T^+ \mid D^+) \cdot P(D^+) + P(T^+ \mid D^-) \cdot P(D^-)$$
+**Common trap — expectation is not "the most likely value."** For a fair die, $E[X] = 3.5$, a value the die can never actually show. Interviewers love asking "what does it mean for the expected value to not be achievable?" — the honest answer is that expectation is a weighted average, not a mode or a prediction of any single trial's outcome.
 
-$$= (0.90)(0.005) + (0.05)(0.995)$$
+### 4.2 LOTUS (Law of the Unconscious Statistician)
+To find $E[g(X)]$ for some function $g$, you do **not** need to first find the distribution of $g(X)$ — you can compute it directly from the distribution of $X$:
+$$E[g(X)] = \sum_x g(x)\,p_X(x) \quad\text{or}\quad \int g(x)f_X(x)\,dx$$
 
-$$= 0.0045 + 0.04975 = 0.05425$$
+**Why this saves enormous work in interviews:** if asked for $E[X^2]$, you do *not* need to derive the distribution of $X^2$ first (which can be genuinely painful, especially if $g$ isn't monotonic). Just plug $g(x)=x^2$ directly into the sum/integral over $X$'s own distribution. This single fact eliminates most of the pain in variance calculations (see Section 5).
 
-**Step 3: Apply Bayes' theorem.**
+### 4.3 Linearity of Expectation (the single most powerful tool in this whole guide)
+$$E[aX+b] = aE[X]+b \qquad E[X+Y] = E[X]+E[Y] \quad\text{(always — no independence required!)}$$
 
-$$P(D^+ \mid T^+) = \frac{P(T^+ \mid D^+) \cdot P(D^+)}{P(T^+)} = \frac{0.90 \times 0.005}{0.05425} = \frac{0.0045}{0.05425} \approx 0.083$$
+**This is worth dwelling on, because it's the most under-appreciated fact in applied probability:** linearity of expectation holds *even when $X$ and $Y$ are dependent*. This is what makes the **indicator random variable trick** (Section 12) so powerful — you can decompose a horrendously complicated random variable into a sum of simple 0/1 indicators, and compute the expectation of the sum by just adding up each indicator's individual expectation, with zero regard for how they interact with each other.
 
-**Final Answer:** $P(D^+ \mid T^+) \approx 8.3\%$
-
-> **Shocking insight:** Even though the test is 90% accurate for sick people and 95% accurate for healthy people, a positive test result only means you have an 8.3% chance of being sick!
-
----
-
-**Method 2: Probability Tree**
-
-```
-                        ●
-                    /       \
-               0.995          0.005
-              /                   \
-            D⁻                    D⁺
-           /  \                  /   \
-        0.05  0.95            0.90   0.10
-        /       \             /         \
-      T⁺        T⁻          T⁺          T⁻
-  P=0.04975  P=0.94525  P=0.0045    P=0.0005
-```
-
-Leaf probabilities for $T^+$ are 0.04975 (from healthy) and 0.0045 (from sick).
-
-$$P(D^+ \mid T^+) = \frac{0.0045}{0.04975 + 0.0045} = \frac{0.0045}{0.05425} \approx 8.3\%$$
-
 ---
-
-**Method 3: Table (Most Intuitive)**
-
-Scale to **10,000 people**:
-
-| | $D^+$ (Sick) | $D^-$ (Healthy) | Total |
-|---|---|---|---|
-| $T^+$ (Positive) | 45 | 498 | **543** |
-| $T^-$ (Negative) | 5 | 9,452 | 9,457 |
-| **Total** | 50 | 9,950 | 10,000 |
 
-**Construction:**
-- Total sick: $10000 \times 0.005 = 50$
-- Total healthy: $10000 \times 0.995 = 9950$
-- True positives: $50 \times 0.90 = 45$
-- False negatives: $50 \times 0.10 = 5$
-- False positives: $9950 \times 0.05 = 498$ (rounded from 497.5)
-- True negatives: $9950 \times 0.95 = 9452$ (rounded)
+## 5. Variance and Standard Deviation
 
-$$P(D^+ \mid T^+) = \frac{45}{543} \approx 8.3\%$$
+### 5.1 Definition
+$$\text{Var}(X) = E[(X-E[X])^2] = E[X^2] - (E[X])^2$$
 
-**Why is this the most intuitive?** You can see directly: out of 543 positive tests, only 45 come from actually sick people. The other 498 are false alarms from healthy people.
+**Why the second form is what you'll actually use 95% of the time:** the "$E[X^2]-(E[X])^2$" shortcut (sometimes called the computational formula) avoids ever needing to compute a distribution centered at the mean — just find $E[X]$ and $E[X^2]$ (via LOTUS with $g(x)=x^2$) and subtract the square. **Derive this once by hand** — expand $(X-\mu)^2 = X^2-2\mu X+\mu^2$, take expectation term by term using linearity, and you'll never forget where it comes from.
 
----
-
-### 8.4 Summary Comparison
-
-| What the test claims | What Bayes' theorem says |
-|---|---|
-| 95% of tests are accurate | Only ~8% of positive tests identify sick people |
-| P(positive \| sick) = 90% | P(sick \| positive) ≈ 8.3% |
+$$\text{SD}(X) = \sqrt{\text{Var}(X)}$$
 
-This table captures the essence of the base rate fallacy.
+Standard deviation is in the *same units* as $X$ itself (variance is in squared units) — that's the practical reason SD, not variance, is what you report when communicating spread to a non-technical audience.
 
----
+### 5.2 Properties of Variance
+$$\text{Var}(aX+b) = a^2\text{Var}(X) \quad\text{(shifting doesn't change spread; scaling does, and it scales quadratically)}$$
 
-### 8.5 Why This Matters in Real Life
+**Why variance is NOT linear like expectation (a favorite "explain the difference" interview question):** $E$ is linear because it's fundamentally a sum/integral (a linear operator). $\text{Var}$ involves *squaring* a deviation, and squaring is not a linear operation — so variance picks up cross-terms (covariance) whenever you add two RVs together:
+$$\text{Var}(X+Y) = \text{Var}(X)+\text{Var}(Y)+2\,\text{Cov}(X,Y)$$
+Only collapses to $\text{Var}(X)+\text{Var}(Y)$ when $X,Y$ are independent (or merely uncorrelated) — unlike linearity of $E$, which needs no such assumption. **Getting this distinction right, unprompted, is a strong positive signal in an interview.**
 
-- **Medical testing:** Low-prevalence disease screening will generate many false positives even with accurate tests. Always ask your doctor about the base rate and the predictive value of a positive test.
-- **Spam filtering:** A rare pattern triggering a spam filter might not actually be spam.
-- **Security screening:** Rare terrorist profiles mean that even accurate screening generates many false positives.
-- **Machine learning:** Class imbalance in training data leads to similar issues. A model that says "everyone is healthy" achieves 99.5% accuracy when 0.5% of people are sick.
-
 ---
-
-## 9. In-Class Concept Questions — Full Solutions
-
-### Concept Question 1 — Coin Toss and Conditional Probability
-
-**Problem:** Toss a coin 4 times. Let $A$ = "at least three heads" and $B$ = "first toss is tails".
-
-**(1) What is $P(A \mid B)$?**  
-Options: (a) 1/16, (b) 1/8, (c) 1/4, (d) 1/5
-
-**(2) What is $P(B \mid A)$?**  
-Options: (a) 1/16, (b) 1/8, (c) 1/4, (d) 1/5
-
-**Solution:**
-
-**Step 1: List all outcomes with at least 3 heads (event $A$).**
 
-At least 3 heads means exactly 3 or exactly 4 heads:
-- Exactly 4 heads: HHHH (1 outcome)
-- Exactly 3 heads: HHHT, HHTH, HTHH, THHH (4 outcomes)
+## 6. Named Discrete Distributions (with full derivations, not just formulas)
 
-$$|A| = 5$$
+### 6.1 Bernoulli($p$)
+A single trial, success with probability $p$, failure with probability $1-p$. $X \in \{0,1\}$.
 
-**Step 2: List all outcomes where first toss is tails (event $B$).**
+$$E[X] = 0(1-p)+1(p) = p \qquad \text{Var}(X) = E[X^2]-(E[X])^2 = p - p^2 = p(1-p)$$
 
-First toss is T, remaining 3 tosses are arbitrary: $2^3 = 8$ outcomes.
+(Since $X^2=X$ when $X\in\{0,1\}$, so $E[X^2]=E[X]=p$ — a small but genuinely useful shortcut worth remembering: **for any indicator/Bernoulli RV, $E[X^2]=E[X]$.**)
 
-$$|B| = 8$$
+### 6.2 Binomial($n,p$) — sum of $n$ i.i.d. Bernoullis
+$X$ = number of successes in $n$ independent trials, each with success probability $p$.
 
-**Step 3: Find $A \cap B$ — at least 3 heads AND first toss is tails.**
+$$P(X=k) = \binom{n}{k}p^k(1-p)^{n-k}, \quad k=0,1,\dots,n$$
 
-If the first toss is tails, we need at least 3 heads from the remaining 3 tosses. The only way to get at least 3 heads total is if the last 3 are all heads: **THHH** (1 outcome).
+**Derive the mean the easy way, via linearity (not brute-force summation):** write $X = X_1+\cdots+X_n$ where each $X_i \sim \text{Bernoulli}(p)$ indicates success on trial $i$. Then
+$$E[X] = \sum_{i=1}^n E[X_i] = np$$
+This is dramatically easier than summing $\sum_k k\binom{n}{k}p^k(1-p)^{n-k}$ directly — **this is exactly the indicator-variable trick from Section 12, previewed here.** Similarly, because the trials are independent, variances add:
+$$\text{Var}(X) = \sum_{i=1}^n \text{Var}(X_i) = np(1-p)$$
 
-$$|A \cap B| = 1$$
+**Worked example:** flip a fair coin 20 times. Find $E[\text{heads}]$ and $\text{Var}(\text{heads})$.
+$E[X] = 20(0.5) = 10$. $\text{Var}(X) = 20(0.5)(0.5) = 5$, so $\text{SD}(X) = \sqrt5\approx 2.24$.
 
-**Step 4: Compute $P(A \mid B)$.**
+### 6.3 Geometric($p$) — trials until first success
+$X$ = number of trials up to and including the first success (support: $1,2,3,\dots$).
+$$P(X=k) = (1-p)^{k-1}p$$
 
-$$P(A \mid B) = \frac{P(A \cap B)}{P(B)} = \frac{|A \cap B|/16}{|B|/16} = \frac{|A \cap B|}{|B|} = \frac{1}{8}$$
+**Mean, derived via a self-referential conditioning trick (structurally identical to the amoeba branching-process trick from the conditional probability guide):** condition on the first trial. If it's a success (prob $p$), $X=1$. If it's a failure (prob $1-p$), you've "wasted" one trial and are back to the exact same problem, so the *remaining* number of trials needed has the same distribution as $X$ itself:
+$$E[X] = p(1) + (1-p)(1+E[X]) \;\Rightarrow\; E[X] = 1+(1-p)E[X] \;\Rightarrow\; E[X] = \frac1p$$
 
-**Answer to (1): (b) 1/8**
+$$\text{Var}(X) = \frac{1-p}{p^2}$$
 
-**Step 5: Compute $P(B \mid A)$.**
+**Intuition check:** if $p=1/6$ (rolling a die until you get a 6), $E[X]=6$ — makes sense, you expect to need about 6 rolls. **The "condition on the first step, and if you fail you're back to the start" self-similarity argument is one of the highest-value general problem-solving patterns in this entire guide** — it also solves the amoeba extinction problem, and shows up constantly in random-walk and Markov chain interview questions.
 
-$$P(B \mid A) = \frac{P(A \cap B)}{P(A)} = \frac{|A \cap B|}{|A|} = \frac{1}{5}$$
+**Memorylessness (a favorite theoretical-depth question):** $P(X>s+t \mid X>s) = P(X>t)$ — i.e., given you've already failed $s$ times, the additional number of trials needed has the *exact same distribution* as starting fresh. This is intuitive for coin flips (the coin has no memory) but is worth being able to prove: $P(X>n)=(1-p)^n$, so $P(X>s+t\mid X>s) = \frac{(1-p)^{s+t}}{(1-p)^s} = (1-p)^t = P(X>t)$. ✓ **The Geometric (and its continuous cousin, the Exponential — Section 7.2) are the *only* memoryless distributions**, which is itself a common interview fact to know and be able to justify.
 
-**Answer to (2): (d) 1/5**
+### 6.4 Negative Binomial($r,p$) — trials until the $r$-th success
+Generalizes Geometric: $X$ = number of trials until the $r$-th success.
+$$E[X] = \frac{r}{p}, \qquad \text{Var}(X) = \frac{r(1-p)}{p^2}$$
+(Immediate from linearity: $X$ is the sum of $r$ i.i.d. Geometric($p$) "gap" variables — one for each successive success — so mean and variance both just multiply by $r$.)
 
-**Interpretation:**
-- $P(A \mid B) = 1/8$: Given the first toss was tails, the chance of at least 3 heads is small — only THHH works.
-- $P(B \mid A) = 1/5$: Given we got at least 3 heads, only 1 of the 5 qualifying outcomes (THHH) has the first toss as tails.
+### 6.5 Poisson($\lambda$) — counts of rare events over a fixed interval
+Models the number of events in a fixed interval (time, space, etc.) when events occur independently at a constant average rate $\lambda$.
+$$P(X=k) = \frac{e^{-\lambda}\lambda^k}{k!}, \quad k=0,1,2,\dots \qquad E[X]=\text{Var}(X)=\lambda$$
 
-Notice: $P(A \mid B) = 1/8 \neq 1/5 = P(B \mid A)$ — a clear illustration that conditional probability is not symmetric.
+**Why mean = variance is worth flagging explicitly:** it's an unusually clean and distinctive property — if you're ever handed real count data and asked "does a Poisson model seem reasonable here?", checking whether the sample mean and sample variance are roughly equal is literally the first diagnostic to run (in practice, real data is often *overdispersed*, i.e., variance > mean, which is a common flag that a Negative Binomial model fits better — a genuinely useful applied-statistics fact for a DS/analytics interview).
 
----
-
-### Concept Questions 2–5 — Probability Trees
-
-These questions use the following three-level probability tree:
-
-```
-                        x
-                    /       \
-                  A₁          A₂
-                y              ...
-             /     \
-           B₁       B₂
-                   z
-                 /    \
-               C₁      C₂
-               ●
-```
-
-The circled node is $C_1$ under the path $A_1 \to B_2$.
-
----
-
-**Concept Question 2:** The probability $x$ represents:  
-(a) $P(A_1)$ (b) $P(A_1 \mid B_2)$ (c) $P(B_2 \mid A_1)$ (d) $P(C_1 \mid B_2 \cap A_1)$
-
-**Answer: (a) $P(A_1)$**
-
-**Reasoning:** $x$ is the branch probability from the **root node** to $A_1$. Root-to-level-1 branches always carry unconditional (marginal) probabilities.
-
----
-
-**Concept Question 3:** The probability $y$ represents:  
-(a) $P(B_2)$ (b) $P(A_1 \mid B_2)$ (c) $P(B_2 \mid A_1)$ (d) $P(C_1 \mid B_2 \cap A_1)$
-
-**Answer: (c) $P(B_2 \mid A_1)$**
-
-**Reasoning:** $y$ is the branch from $A_1$ to $B_2$ at level 2. Level 2 branches carry probabilities conditioned on the level 1 outcome — you're already at $A_1$ and branching to $B_2$.
-
----
+**Poisson as a limit of Binomial (derive this — it's a classic "show me you understand where distributions come from" question):** if $n\to\infty$, $p\to0$, with $np=\lambda$ held fixed, $\text{Binomial}(n,p) \to \text{Poisson}(\lambda)$. Intuition: split a fixed time interval into a huge number of tiny sub-intervals, each with a tiny probability $p=\lambda/n$ of containing an event — in the limit, that's exactly the Poisson set-up. **This is why Poisson is the standard model for rare, independent events (website hits per second, defects per unit area, calls per minute) — it's literally what Binomial becomes when trials become infinitely frequent and individually infinitesimally likely.**
 
-**Concept Question 4:** The probability $z$ represents:  
-(a) $P(C_1)$ (b) $P(B_2 \mid C_1)$ (c) $P(C_1 \mid B_2)$ (d) $P(C_1 \mid B_2 \cap A_1)$
+### 6.6 Hypergeometric($N,K,n$) — sampling without replacement
+Draw $n$ items without replacement from a population of $N$, of which $K$ are "successes." $X$ = number of successes drawn.
+$$P(X=k) = \frac{\binom{K}{k}\binom{N-K}{n-k}}{\binom{N}{n}}, \qquad E[X] = n\cdot\frac{K}{N}$$
 
-**Answer: (d) $P(C_1 \mid B_2 \cap A_1)$**
+**Compare directly to Binomial — this comparison is a very common interview prompt:** Binomial assumes sampling *with* replacement (or an infinite population), so each draw is independent with fixed success probability $p=K/N$; Hypergeometric handles sampling *without* replacement, where each draw changes the remaining composition, so draws are dependent — yet the **mean formula looks identical** ($n\cdot K/N$ for Hypergeometric vs. $np$ for Binomial, and they agree exactly when $p=K/N$) because of linearity of expectation again: even though individual draws are dependent, each individual draw still has *marginal* probability $K/N$ of being a success, so summing gives the same mean regardless of the dependence structure. **The variance, however, differs** — Hypergeometric variance is smaller than the corresponding Binomial variance (by a "finite population correction factor" $\frac{N-n}{N-1}$), because sampling without replacement reduces randomness compared to independent draws.
 
-**Reasoning:** $z$ is the branch at level 3 from the node reached via $A_1 \to B_2$ to $C_1$. The condition includes all ancestors on the path: $A_1$ and $B_2$.
-
 ---
 
-**Concept Question 5:** The circled node represents the event:  
-(a) $C_1$ (b) $B_2 \cap C_1$ (c) $A_1 \cap B_2 \cap C_1$ (d) $C_1 \mid B_2 \cap A_1$
+## 7. Named Continuous Distributions
 
-**Answer: (c) $A_1 \cap B_2 \cap C_1$**
+### 7.1 Uniform($a,b$)
+$$f_X(x) = \frac{1}{b-a} \text{ for } x\in[a,b], \qquad E[X]=\frac{a+b}{2}, \quad \text{Var}(X) = \frac{(b-a)^2}{12}$$
 
-**Reasoning:** A leaf node at the end of a path represents the **joint event** of all outcomes along the path. The path goes through $A_1$, then $B_2$, then $C_1$, so the leaf represents $A_1 \cap B_2 \cap C_1$.
+**Intuition:** flat density — every value in $[a,b]$ is "equally likely" in the density sense. The mean being the midpoint is obvious by symmetry; don't bother re-deriving it from the integral in an interview, just say "by symmetry."
 
-> **Key rule:** A node in a tree represents the joint event of its entire ancestral path, not just the label at that node.
+### 7.2 Exponential($\lambda$)
+Models waiting time until an event, with constant hazard rate $\lambda$ (the continuous analog of Geometric).
+$$f_X(x) = \lambda e^{-\lambda x},\; x\ge0 \qquad F_X(x) = 1-e^{-\lambda x} \qquad E[X]=\frac1\lambda, \quad \text{Var}(X)=\frac1{\lambda^2}$$
 
----
+**Memorylessness (continuous version, same proof structure as Geometric):** $P(X>s+t\mid X>s)=P(X>t)$. Practical framing: if a lightbulb's lifetime is Exponential, the fact that it's already survived 5 years tells you *nothing* about how much longer it'll last — its "remaining lifetime" distribution is identical to a brand-new bulb's. This is often *unrealistic* for real components (which wear out, i.e., failure rate increases with age) — a good talking point if an interviewer asks "when would you NOT use an Exponential model?"
 
-## 10. In-Class Board Problems — Full Solutions
+**Relationship to Poisson (a very common pairing in interview questions):** if events arrive according to a Poisson process with rate $\lambda$ (i.e., counts in fixed intervals are Poisson($\lambda t$)), then the *waiting time between consecutive events* is Exponential($\lambda$). This Poisson-process ↔ Exponential-interarrival-time duality is worth knowing cold — it's the standard model for server request arrivals, customer arrivals in queueing theory, and radioactive decay.
 
-### Problem 1 — The Monty Hall Problem
+### 7.3 Normal / Gaussian($\mu,\sigma^2$)
+$$f_X(x) = \frac{1}{\sigma\sqrt{2\pi}}e^{-(x-\mu)^2/(2\sigma^2)} \qquad E[X]=\mu,\quad \text{Var}(X)=\sigma^2$$
 
-**Setup:**
-- 3 doors: 1 hides a car, 2 hide goats.
-- Contestant chooses a door.
-- Monty (who knows where the car is) opens a **different** door revealing a goat.
-- Contestant may switch to the remaining unopened door or stay.
+**Why it shows up everywhere (Central Limit Theorem, one sentence version):** the sum (or average) of a large number of i.i.d. random variables, *regardless of their individual distribution*, tends toward a Normal distribution as the number of terms grows — this is why measurement errors, aggregated user behavior metrics, and sums of many small independent effects are so often modeled as Normal in practice, even when nothing about the individual components looks Normal at all. **If an interviewer asks "why do we assume normality so often," the CLT — not "because most things happen to be naturally Normal" — is the correct answer.**
 
-**Question:** What is the best strategy?  
-(a) Switch, (b) Don't switch, (c) It doesn't matter.
+**Standardization:** $Z = \frac{X-\mu}{\sigma} \sim N(0,1)$. Every Normal probability question reduces to a Standard Normal table (or `norm.cdf` in practice) lookup after standardizing — this is the mechanical trick behind essentially all Normal-distribution interview arithmetic.
 
-**Answer: (a) Switch. Switching gives probability 2/3 of winning the car.**
+### 7.4 Gamma($\alpha,\lambda$) — brief mention
+Generalizes Exponential: sum of $\alpha$ i.i.d. Exponential($\lambda$) RVs (for integer $\alpha$) — e.g., waiting time until the $\alpha$-th Poisson-process event, the continuous analog of Negative Binomial. $E[X]=\alpha/\lambda$, $\text{Var}(X)=\alpha/\lambda^2$. Rarely the star of an L5 interview question, but worth recognizing the Exponential→Gamma relationship the same way you recognize Geometric→Negative Binomial (same underlying pattern, discrete vs. continuous).
 
 ---
-
-**Full Solution with Probability Tree:**
 
-The key is to organise the process into a sequence:
-1. Contestant chooses a door (which is either a car door or a goat door).
-2. Monty reveals a goat.
-3. Contestant switches.
+## 8. Joint Distributions
 
-**After Monty reveals a goat, the switching strategy is:**
-- If the contestant initially chose the **car** ($C_1$, probability 1/3): switching leads to a goat. **Loss.**
-- If the contestant initially chose a **goat** ($G_1$, probability 2/3): the other goat is revealed, switching leads to the car. **Win.**
+### 8.1 Joint PMF / PDF, Marginals
+**Discrete:** $p_{X,Y}(x,y) = P(X=x, Y=y)$. Recover a **marginal** by summing out the other variable: $p_X(x) = \sum_y p_{X,Y}(x,y)$.
+**Continuous:** $f_{X,Y}(x,y)$ with $\iint f_{X,Y}(x,y)\,dx\,dy=1$; marginal $f_X(x) = \int f_{X,Y}(x,y)\,dy$.
 
-```
-                    ●
-                1/3   2/3
-               /           \
-             C₁              G₁
-        (chose car)      (chose goat)
-            |  0              |  1
-            |                 |
-           G₂               C₂
-        (switch→goat)   (switch→car)
-```
+**Intuition for "summing/integrating out":** the marginal distribution of $X$ answers "what's the distribution of $X$ alone, ignoring what $Y$ did?" — you get it by adding up (or integrating over) every possible value $Y$ could have taken, for each fixed $x$. This is literally the continuous/multi-variable version of the Law of Total Probability from the conditional-probability guide (Section 1.3 there) — same idea, different notation.
 
-**Probability of winning when switching:**
+### 8.2 Conditional Distributions
+$$p_{Y\mid X}(y\mid x) = \frac{p_{X,Y}(x,y)}{p_X(x)} \qquad f_{Y\mid X}(y\mid x) = \frac{f_{X,Y}(x,y)}{f_X(x)}$$
 
-$$P_{\text{switch}}(C_2) = P_{\text{switch}}(C_2 \mid C_1) \cdot P(C_1) + P_{\text{switch}}(C_2 \mid G_1) \cdot P(G_1)$$
+Exactly the same conditioning logic as Section 1.1 of the conditional-probability guide — just applied to densities/masses instead of raw event probabilities.
 
-$$= 0 \cdot \frac{1}{3} + 1 \cdot \frac{2}{3} = \frac{2}{3}$$
+### 8.3 Independence of Random Variables
+$X,Y$ independent iff $p_{X,Y}(x,y)=p_X(x)p_Y(y)$ for all $x,y$ (or the PDF analog) — equivalently, the joint factors into the product of marginals **everywhere**, not just on average.
 
-**Conclusion:** Always switch. Switching wins the car with probability 2/3; staying wins with probability 1/3.
+**Common trap — independence is a much stronger condition than "uncorrelated" (Section 9.3).**
 
 ---
 
-**Why this surprises people:**
+## 9. Covariance and Correlation
 
-The intuition that "two doors remain, so it's 50-50" is wrong because Monty's action is not random — he always reveals a goat, and his choice carries information about where the car is.
+### 9.1 Covariance
+$$\text{Cov}(X,Y) = E[(X-E[X])(Y-E[Y])] = E[XY]-E[X]E[Y]$$
 
-More specifically: when you first pick, you have a 1/3 chance of being right. That doesn't change. The probability 2/3 that the car is behind one of the other two doors gets "concentrated" onto the single remaining door after Monty opens one.
+**Intuition:** positive covariance means $X$ and $Y$ tend to be above/below their means *together*; negative means when one's above its mean, the other tends to be below. The second form ($E[XY]-E[X]E[Y]$) is what you actually compute in practice — same "expand and use linearity" derivation as the variance shortcut in Section 5.1.
 
----
+### 9.2 Correlation
+$$\rho(X,Y) = \frac{\text{Cov}(X,Y)}{\sigma_X\sigma_Y} \in [-1,1]$$
 
-### Problem 2 — Independence of Dice Events
+**Why we bother normalizing covariance into correlation:** covariance's magnitude depends on the units/scale of $X$ and $Y$ (e.g., covariance between height-in-cm and weight-in-kg is a different number than height-in-inches and weight-in-lbs, even though the underlying relationship is identical) — correlation is scale-invariant, always between $-1$ and $1$, which is what makes it interpretable and comparable across different variable pairs.
 
-**Problem:** Roll two dice. Consider:
-- $A$ = "first die is 3"
-- $B$ = "sum is 6"
-- $C$ = "sum is 7"
+### 9.3 Independence ⟹ Uncorrelated, but NOT the Reverse (a favorite theoretical-depth interview question)
+If $X\perp Y$, then $E[XY]=E[X]E[Y]$ (this follows directly from the factored joint density/mass under LOTUS), so $\text{Cov}(X,Y)=0$.
 
-Is $A$ independent of: (a) $B$ and $C$, (b) $B$ alone, (c) $C$ alone, (d) neither?
+**But the converse is false — classic counterexample to have ready:** let $X\sim\text{Uniform}(-1,1)$ and $Y=X^2$. Clearly $Y$ is a deterministic (maximally dependent!) function of $X$ — knowing $X$ tells you $Y$ exactly. Yet:
+$$\text{Cov}(X,Y) = E[XY]-E[X]E[Y] = E[X^3] - E[X]E[X^2]$$
+By symmetry of the Uniform($-1,1$) distribution around 0, $E[X]=0$ and $E[X^3]=0$ (odd functions integrate to zero over a symmetric interval), so $\text{Cov}(X,Y) = 0 - 0 = 0$.
 
-**Answer: (c) $C$ alone.**
+**$X$ and $Y$ are uncorrelated despite being perfectly (nonlinearly) dependent.** Correlation only measures *linear* association — this single example is one of the most efficient ways to demonstrate deep understanding in an interview, because it's short, concrete, and directly refutes the common misconception that "zero correlation means no relationship."
 
 ---
-
-**Full Solution:**
-
-**Step 1: Find $P(A)$.**
 
-The first die is 3 with probability $1/6$.
+## 10. Law of Total Expectation & Law of Total Variance
 
-$$P(A) = \frac{1}{6}$$
+### 10.1 Law of Total Expectation ("Adam's Law")
+$$E[X] = E[E[X\mid Y]]$$
 
-**Step 2: Check $A$ and $B$ (sum is 6).**
+**Reading this correctly:** $E[X\mid Y]$ is itself a random variable — a function of $Y$ (different values of $Y$ give different conditional expectations). Taking the expectation of *that* random variable, over the randomness in $Y$, recovers the plain unconditional $E[X]$. This is the RV-flavored version of the Law of Total Probability (conditional-probability guide, Section 1.3): instead of averaging *probabilities* over a partition, you're averaging *conditional expectations* over the distribution of a conditioning RV.
 
-The ways to roll a sum of 6 are: (1,5), (2,4), (3,3), (4,2), (5,1) → 5 outcomes.
+**Worked example:** a store's daily revenue $X$ depends on which of 3 promotions ($Y\in\{1,2,3\}$, each equally likely) is running that day, with $E[X\mid Y=1]=500$, $E[X\mid Y=2]=800$, $E[X\mid Y=3]=650$.
+$$E[X] = \frac13(500)+\frac13(800)+\frac13(650) = \frac{1950}{3}=650$$
+This is literally LOTP with expectations substituted for probabilities — same mechanical pattern, same partition-and-weight logic.
 
-$$P(B) = \frac{5}{36}$$
+### 10.2 Law of Total Variance ("Eve's Law")
+$$\text{Var}(X) = E[\text{Var}(X\mid Y)] + \text{Var}(E[X\mid Y])$$
 
-$A \cap B$ = "first die is 3 AND sum is 6" → only (3,3).
+**Intuition — this decomposes total variance into two genuinely distinct sources:**
+- $E[\text{Var}(X\mid Y)]$ = **"within-group" variance** — how much $X$ varies *inside* each fixed value of $Y$, averaged across groups.
+- $\text{Var}(E[X\mid Y])$ = **"between-group" variance** — how much the *group means themselves* vary as $Y$ changes.
 
-$$P(A \cap B) = \frac{1}{36}$$
+**Why this decomposition is genuinely important for applied/DS interviews:** it's the mathematical basis of ANOVA (analysis of variance) and of stratified-sampling variance-reduction techniques. If you're ever asked "why would segmenting/stratifying users reduce variance in an A/B test," Eve's Law is the precise answer: by conditioning on (i.e., stratifying by) a variable $Y$ that explains some of the between-group variance, you isolate and can control for that portion, reducing the *residual* variance you have to deal with statistically.
 
-Check independence: $P(A) \cdot P(B) = \frac{1}{6} \cdot \frac{5}{36} = \frac{5}{216} \neq \frac{1}{36} = \frac{6}{216}$
+**Worked example (continuing the store-revenue scenario):** suppose $\text{Var}(X\mid Y=1)=100$, $\text{Var}(X\mid Y=2)=150$, $\text{Var}(X\mid Y=3)=120$, and (from above) $E[X\mid Y=1]=500,\;E[X\mid Y=2]=800,\;E[X\mid Y=3]=650$, with $Y$ uniform over $\{1,2,3\}$.
 
-Or equivalently: $P(A \mid B) = \frac{1/36}{5/36} = \frac{1}{5} \neq \frac{1}{6} = P(A)$.
+Within-group term: $E[\text{Var}(X\mid Y)] = \frac13(100+150+120) = \frac{370}{3}\approx123.3$
 
-**$A$ and $B$ are NOT independent.** Knowing $B$ occurred means the first die can only be 1, 2, 3, 4, or 5 (since a 6 can't sum to 6 with a positive die), changing the probability of $A$.
+Between-group term: need $\text{Var}(E[X\mid Y])$, treating $500,800,650$ as a random variable with mean $650$ (computed above):
+$$\text{Var}(E[X\mid Y]) = \frac13\left[(500-650)^2+(800-650)^2+(650-650)^2\right] = \frac13[22500+22500+0] = 15{,}000$$
 
-**Step 3: Check $A$ and $C$ (sum is 7).**
+$$\text{Var}(X) = 123.3 + 15{,}000 \approx 15{,}123.3$$
 
-The ways to roll a sum of 7 are: (1,6), (2,5), (3,4), (4,3), (5,2), (6,1) → 6 outcomes.
+**Notice how completely dominated by the between-group term this is** — which correctly reflects the fact that in this example, which promotion runs matters vastly more to revenue variability than the natural day-to-day noise within a fixed promotion. This is exactly the kind of insight Eve's Law is built to surface.
 
-$$P(C) = \frac{6}{36} = \frac{1}{6}$$
-
-$A \cap C$ = "first die is 3 AND sum is 7" → only (3,4).
-
-$$P(A \cap C) = \frac{1}{36}$$
-
-Check: $P(A) \cdot P(C) = \frac{1}{6} \cdot \frac{1}{6} = \frac{1}{36} = P(A \cap C)$ ✓
-
-Or: $P(A \mid C) = \frac{1/36}{6/36} = \frac{1}{6} = P(A)$ ✓
-
-**$A$ and $C$ ARE independent.**
-
-**Why?** For any value of the first die (1–6), there is exactly one value of the second die that makes the sum 7. So knowing the sum is 7 tells us *nothing* about the first die — all values remain equally likely at 1/6. The sum of 7 is "democratic" across all first-die values.
-
-**Why does knowing $B$ (sum = 6) change things?** Because rolling a 6 on the first die makes sum = 6 impossible (you'd need 0 on the second die). So $B$ excludes the value 6 from the first die, making the remaining 5 values each have probability 1/5 instead of 1/6.
-
----
-
-### Problem 3 — Evil Squirrels (Base Rate Fallacy in Action)
-
-**Problem:** MIT has 1,000,000 squirrels, 100 of which are "pure evil." An "Evil Squirrel Alarm" has:
-- 99% true positive rate: $P(\text{alarm} \mid \text{evil}) = 0.99$
-- 1% false positive rate: $P(\text{alarm} \mid \text{nice}) = 0.01$
-
-**(a)** If a squirrel sets off the alarm, what is $P(\text{evil} \mid \text{alarm})$?  
-**(b)** Should MIT employ the system?
-
 ---
-
-**Solution:**
-
-**Step 1: Identify the base rates.**
-
-$$P(\text{evil}) = \frac{100}{1{,}000{,}000} = 0.0001, \qquad P(\text{nice}) = 0.9999$$
-
-**Step 2: Apply Bayes' theorem.**
 
-$$P(\text{evil} \mid \text{alarm}) = \frac{P(\text{alarm} \mid \text{evil}) \cdot P(\text{evil})}{P(\text{alarm} \mid \text{evil}) \cdot P(\text{evil}) + P(\text{alarm} \mid \text{nice}) \cdot P(\text{nice})}$$
+## 11. Standard Error & the Sample Mean
 
-$$= \frac{(0.99)(0.0001)}{(0.99)(0.0001) + (0.01)(0.9999)}$$
+For $n$ i.i.d. observations $X_1,\dots,X_n$ with mean $\mu$ and variance $\sigma^2$, define $\bar X = \frac1n\sum X_i$.
 
-$$= \frac{0.000099}{0.000099 + 0.009999} = \frac{0.000099}{0.010098} \approx 0.0098 \approx 1\%$$
+$$E[\bar X] = \mu \qquad \text{Var}(\bar X) = \frac{\sigma^2}{n} \qquad \text{SE}(\bar X) = \frac{\sigma}{\sqrt n}$$
 
-**Final Answer (a):** $P(\text{evil} \mid \text{alarm}) \approx 1\%$
+**Derivation, using exactly the tools above:** $E[\bar X]=\frac1n\sum E[X_i]=\frac1n(n\mu)=\mu$ (linearity, no independence needed). $\text{Var}(\bar X) = \frac{1}{n^2}\sum\text{Var}(X_i) = \frac{1}{n^2}(n\sigma^2)=\frac{\sigma^2}{n}$ (variance of a sum needs independence to drop cross-covariance terms — this is exactly why the i.i.d. assumption matters here in a way it didn't for the mean).
 
----
-
-**Table Method (most transparent):**
-
-| | Evil | Nice | Total |
-|---|---|---|---|
-| Alarm goes off | 99 | 9,999 | **10,098** |
-| Alarm silent | 1 | 989,901 | 989,902 |
-| **Total** | 100 | 999,900 | 1,000,000 |
+**Why $\sqrt n$ specifically (a very common "explain the intuition" follow-up):** variance of the sample mean shrinks proportionally to $1/n$, so standard deviation (the interpretable, same-units quantity) shrinks proportionally to $1/\sqrt n$ — meaning **you need to quadruple your sample size to halve your margin of error.** This single fact is the entire mathematical justification behind "collect more data to reduce noise" in A/B testing and experimentation — genuinely one of the most interview-relevant one-liners in all of applied statistics.
 
-- Evil + alarm: $100 \times 0.99 = 99$
-- Nice + alarm: $999{,}900 \times 0.01 = 9{,}999$
-
-$$P(\text{evil} \mid \text{alarm}) = \frac{99}{10{,}098} \approx 0.0098 \approx 1\%$$
-
 ---
-
-**Answer (b): No. MIT should not employ the system.**
 
-The alarm would be virtually useless. For every 1 truly evil squirrel correctly flagged, approximately **99 innocent squirrels** would also trigger the alarm. The false positive rate is 99 times the true positive rate — the alarm is more trouble than it's worth.
+## 12. The Indicator Random Variable Trick
 
-**Key lesson (comparison):**
+**The single highest-leverage technique for solving "expected number of X" problems quickly, with zero need for combinatorics.**
 
-| Metric | Value |
-|---|---|
-| Accuracy of alarm on a random squirrel | $\approx 99\%$ |
-| Probability that an alarm indicates evil | $\approx 1\%$ |
+**Recipe:** to find $E[\text{count of something}]$, write the count as a sum of indicator variables $I_1+I_2+\cdots+I_n$, where each $I_k \in \{0,1\}$ flags whether a specific sub-event happened. Then, by linearity of expectation (which needs **no independence assumption**):
+$$E\left[\sum_k I_k\right] = \sum_k E[I_k] = \sum_k P(I_k=1)$$
 
-These look completely contradictory. The resolution is the base rate: evil squirrels are so rare (1 in 10,000) that even a 1% false positive rate generates a flood of false alarms.
+### Worked Example — Matching Problem (hat-check / derangement classic)
+$n$ people randomly get back one of $n$ hats (a uniformly random permutation). Find the expected number of people who get their own hat back.
 
----
+Let $I_k = 1$ if person $k$ gets their own hat, else 0. By symmetry, $P(I_k=1) = 1/n$ for every person (each person's hat is equally likely to be any of the $n$ hats). So:
+$$E[\text{matches}] = \sum_{k=1}^n E[I_k] = \sum_{k=1}^n \frac1n = n\cdot\frac1n = 1$$
 
-### Problem 4 — The Dice Game (Bayes Applied)
+**Regardless of $n$** — whether 5 people or 5 million — the expected number of correct matches is always exactly 1. This is a genuinely famous result specifically *because* it's so counterintuitive (you'd think more people means more matches) and *because* it's essentially impossible to derive quickly without the indicator trick (direct computation would require the full distribution of matches, involving derangement counts — dramatically messier). **This is one of the best examples to have fully memorized and ready to reproduce from scratch — it demonstrates the indicator trick, linearity of expectation without independence, and a symmetry argument, all in four lines.**
 
-**Problem:**
-1. The Randomizer secretly holds either a 6-sided die or an 8-sided die in each fist.
-2. The Roller picks a fist (each with probability 1/2) and rolls the die in secret.
-3. The result is reported to the table.
+### Worked Example — Expected Number of Fixed Points Isn't the Only Payoff — Variance Too (extension, shows depth)
+If additionally asked for $\text{Var}(\text{matches})$: this requires $\text{Cov}(I_j,I_k)$ for $j\ne k$, since the indicators are *not* independent (if person $j$ gets their hat, it changes the probability distribution over what person $k$ gets). $P(I_j=1,I_k=1) = \frac{1}{n(n-1)}$ (both match: fix two people's hats, the rest arbitrary), so $\text{Cov}(I_j,I_k) = \frac{1}{n(n-1)} - \frac1n\cdot\frac1n = \frac{1}{n^2(n-1)}$. Summing $\text{Var}(I_k)$ plus all pairwise covariances eventually gives $\text{Var}(\text{matches})=1$ as well (for $n\ge2$) — a nice bonus fact, but the mean-only version above is the one worth having cold.
 
-**Question:** Given the reported number, what is the probability the 6-sided die was chosen?
-
 ---
-
-**Solution:**
-
-Let $D_6$ = "6-sided die chosen", $D_8$ = "8-sided die chosen".
-
-$$P(D_6) = P(D_8) = \frac{1}{2}$$
-
-**Case 1: Roll is a number $k \in \{1, 2, 3, 4, 5, 6\}$**
-
-$$P(\text{roll } k \mid D_6) = \frac{1}{6}, \qquad P(\text{roll } k \mid D_8) = \frac{1}{8}$$
-
-Apply Bayes' theorem:
-
-$$P(D_6 \mid \text{roll } k) = \frac{P(\text{roll } k \mid D_6) \cdot P(D_6)}{P(\text{roll } k)}$$
-
-The denominator (law of total probability):
-
-$$P(\text{roll } k) = \frac{1}{6} \cdot \frac{1}{2} + \frac{1}{8} \cdot \frac{1}{2} = \frac{1}{12} + \frac{1}{16} = \frac{4}{48} + \frac{3}{48} = \frac{7}{48}$$
-
-Therefore:
 
-$$P(D_6 \mid \text{roll } k) = \frac{(1/6)(1/2)}{7/48} = \frac{1/12}{7/48} = \frac{1}{12} \cdot \frac{48}{7} = \frac{4}{7}$$
+## 13. Worked Numerical Examples (Mixed Practice)
 
-**Case 2: Roll is 7 or 8**
+### Example 1 — Basic expectation & variance from a PMF
+$X$ has PMF: $P(X=1)=0.2,\;P(X=2)=0.5,\;P(X=3)=0.3$.
+$$E[X] = 1(.2)+2(.5)+3(.3) = .2+1.0+.9 = 2.1$$
+$$E[X^2] = 1(.2)+4(.5)+9(.3) = .2+2.0+2.7=4.9$$
+$$\text{Var}(X) = 4.9-(2.1)^2 = 4.9-4.41=0.49 \;\Rightarrow\; \text{SD}(X)=0.7$$
 
-The 6-sided die cannot produce 7 or 8:
+### Example 2 — Poisson application
+A website receives an average of 3 support tickets per hour (Poisson). What's $P(\text{exactly 5 tickets in an hour})$? What's $P(\text{no tickets in 2 hours})$?
 
-$$P(\text{roll 7} \mid D_6) = 0 \implies P(D_6 \mid \text{roll 7}) = 0$$
+$$P(X=5) = \frac{e^{-3}3^5}{5!} = \frac{e^{-3}\cdot 243}{120} \approx 0.1008$$
 
-**Summary:**
+For 2 hours, $\lambda_2 = 6$ (rate scales linearly with the interval length — a core property of the Poisson process): $P(X=0) = e^{-6} \approx 0.00248$.
 
-| Reported Roll | $P(D_6 \mid \text{roll})$ | $P(D_8 \mid \text{roll})$ |
-|---|---|---|
-| 1 through 6 | $4/7 \approx 57.1\%$ | $3/7 \approx 42.9\%$ |
-| 7 or 8 | $0\%$ | $100\%$ |
+### Example 3 — Linearity of expectation without independence (dice)
+Roll a fair die twice. Let $X$ = first roll, $Y$ = second roll. Find $E[X+Y]$ **and** $E[XY]$.
 
-**Interpretation:** If a low number (1–6) is rolled, the 6-sided die is more likely to have been chosen (4/7 vs. 3/7), because the 6-sided die produces each number with probability 1/6, which is higher than the 8-sided die's 1/8 for the same outcomes. If 7 or 8 is rolled, only the 8-sided die could have produced it, so we're certain it's the 8-sided die.
+$E[X+Y] = E[X]+E[Y] = 3.5+3.5=7$ — trivial, holds regardless of independence.
+$E[XY]$: here the rolls **are** independent, so $E[XY]=E[X]E[Y] = 3.5\times3.5=12.25$. (Flag this explicitly: had $X,Y$ been dependent, you could *not* factor $E[XY]$ this way — you'd need the joint distribution.)
 
-**Worked numerical detail for roll = 4:**
+### Example 4 — Continuous RV, CDF/PDF relationship
+$X$ has CDF $F_X(x) = 1-e^{-2x}$ for $x\ge0$. Find the PDF, $E[X]$, and $P(1<X<2)$.
 
-$$P(D_6 \mid \text{roll 4}) = \frac{(1/6)(1/2)}{(1/6)(1/2) + (1/8)(1/2)} = \frac{1/12}{1/12 + 1/16} = \frac{1/12}{7/48} = \frac{4}{7}$$
+Differentiate: $f_X(x) = F_X'(x) = 2e^{-2x}$ — recognize this immediately as $\text{Exponential}(\lambda=2)$, so $E[X]=1/2$ by the known formula (no need to integrate from scratch).
+$$P(1<X<2) = F_X(2)-F_X(1) = (1-e^{-4})-(1-e^{-2}) = e^{-2}-e^{-4} \approx 0.1353-0.0183=0.1170$$
 
-The same calculation applies for any roll of 1–6 — the specific number doesn't matter, only whether it's reachable by both dice.
+### Example 5 — Joint distribution, covariance
+$X,Y$ have joint PMF: $P(0,0)=0.1,\;P(0,1)=0.2,\;P(1,0)=0.3,\;P(1,1)=0.4$.
 
----
-
-### Bonus — In-Class Example: Urn Game
-
-**Problem:** Game with 5 orange and 2 blue balls in an urn. A random ball is selected and **replaced by a ball of the other color** (as in Example 5 from the prep notes). Then a second ball is drawn.
-
-1. What is the probability the second ball is orange?
-2. What is $P(\text{first was orange} \mid \text{second is orange})$?
-
-**Solution:**
-
-Let $O_1, B_1, O_2, B_2$ denote the obvious events.
+Marginals: $P(X=0)=0.3,\;P(X=1)=0.7$; $P(Y=0)=0.4,\;P(Y=1)=0.6$.
+$E[X]=0.7,\;E[Y]=0.6$. $E[XY] = 0(0)(0.1)+0(1)(0.2)+1(0)(0.3)+1(1)(0.4) = 0.4$.
+$$\text{Cov}(X,Y) = 0.4-(0.7)(0.6) = 0.4-0.42=-0.02$$
 
-**Part 1:** $P(O_2)$ using law of total probability.
+Small negative covariance — $X$ and $Y$ are very close to independent but not exactly (check: if independent, $P(1,1)$ should equal $P(X=1)P(Y=1)=0.7\times0.6=0.42$, but it's actually $0.4$ — the tiny discrepancy is exactly what produces the small negative covariance).
 
-$$P(O_1) = 5/7, \quad P(B_1) = 2/7$$
+### Example 6 — Adam's Law application (two-stage randomness)
+Number of eggs a bird lays is Poisson($\lambda=6$). Each egg independently hatches with probability $p=0.5$. Find the expected number of chicks.
 
-After drawing orange: 4 orange + 3 blue remain (6 orange removed, 1 blue added):
-$$P(O_2 \mid O_1) = 4/7$$
+Let $N$ = number of eggs, $X$ = number of chicks. Given $N=n$, $X\mid N=n \sim \text{Binomial}(n, 0.5)$, so $E[X\mid N]=0.5N$.
+$$E[X] = E[E[X\mid N]] = E[0.5N] = 0.5\,E[N] = 0.5(6)=3$$
 
-After drawing blue: 6 orange + 1 blue remain:
-$$P(O_2 \mid B_1) = 6/7$$
+**This "random sum" pattern (a Binomial count with a random number of trials) is extremely common in applied interview questions** — e.g., expected number of purchases when the number of site visitors is itself random, expected number of conversions when the funnel size varies day to day. Adam's Law handles it in one line without ever computing the (messier) unconditional distribution of $X$ directly.
 
-$$P(O_2) = \frac{5}{7} \cdot \frac{4}{7} + \frac{2}{7} \cdot \frac{6}{7} = \frac{20}{49} + \frac{12}{49} = \frac{32}{49}$$
-
-**Part 2:** $P(O_1 \mid O_2)$ using Bayes' theorem.
-
-$$P(O_1 \mid O_2) = \frac{P(O_2 \mid O_1) \cdot P(O_1)}{P(O_2)} = \frac{(4/7)(5/7)}{32/49} = \frac{20/49}{32/49} = \frac{20}{32} = \frac{5}{8}$$
-
-**Answers:** $P(O_2) = 32/49 \approx 65.3\%$; $P(O_1 \mid O_2) = 5/8 = 62.5\%$.
-
 ---
 
-## 11. Common Mistakes Reference
-
-| Mistake | Why it's wrong | Correct approach |
-|---|---|---|
-| Confusing $P(A \mid B)$ with $P(B \mid A)$ | These are completely different quantities (base rate fallacy) | Always identify clearly which event is being conditioned on |
-| Using $P(A \mid B) = P(B \mid A)$ | Only equal in special cases where $P(A) = P(B)$ | Use Bayes' theorem to convert between them |
-| Thinking "independent" means "mutually exclusive" | Independent events can both occur; mutually exclusive events cannot | $P(A \cap B) = P(A)P(B)$ for independence; $P(A \cap B) = 0$ for mutual exclusivity |
-| Forgetting the base rate | Makes the denominator of Bayes' theorem wrong | Always include $P(B)$ or compute $P(A)$ via total probability |
-| Multiplying non-independent probabilities directly | $P(A \cap B) \neq P(A) \cdot P(B)$ when events are dependent | Use the multiplication rule: $P(A \cap B) = P(A \mid B) P(B)$ |
-| Misreading tree branches as unconditional probabilities | Level 2+ branches are conditional on parent node | Level 1: unconditional; Level 2+: conditional on the path |
-| Assuming a leaf node represents just one event label | Leaf represents the joint event of the entire path | The leaf after path $A_1 \to B_2 \to C_1$ represents $A_1 \cap B_2 \cap C_1$ |
-| Thinking "accurate test" means "positive = disease" | A test can be very accurate yet most positives are false | Account for prevalence (base rate) in computing predictive value |
-
----
+## 14. Cheat Sheet — Named Distributions at a Glance
 
-## 12. Quick Summary & Formula Sheet
+| Distribution | PMF/PDF | $E[X]$ | $\text{Var}(X)$ | Typical use case |
+|---|---|---|---|---|
+| Bernoulli($p$) | $p^x(1-p)^{1-x}$ | $p$ | $p(1-p)$ | single yes/no trial |
+| Binomial($n,p$) | $\binom nk p^k(1-p)^{n-k}$ | $np$ | $np(1-p)$ | # successes in $n$ i.i.d. trials |
+| Geometric($p$) | $(1-p)^{k-1}p$ | $1/p$ | $(1-p)/p^2$ | trials until 1st success |
+| Neg. Binomial($r,p$) | — | $r/p$ | $r(1-p)/p^2$ | trials until $r$-th success |
+| Poisson($\lambda$) | $e^{-\lambda}\lambda^k/k!$ | $\lambda$ | $\lambda$ | rare-event counts per interval |
+| Hypergeometric($N,K,n$) | $\binom Kk\binom{N-K}{n-k}/\binom Nn$ | $nK/N$ | (Binomial var. × correction) | sampling without replacement |
+| Uniform($a,b$) | $1/(b-a)$ | $(a+b)/2$ | $(b-a)^2/12$ | "equally likely" continuous range |
+| Exponential($\lambda$) | $\lambda e^{-\lambda x}$ | $1/\lambda$ | $1/\lambda^2$ | waiting time, memoryless |
+| Normal($\mu,\sigma^2$) | Gaussian bell curve | $\mu$ | $\sigma^2$ | CLT limit, measurement error |
+| Gamma($\alpha,\lambda$) | — | $\alpha/\lambda$ | $\alpha/\lambda^2$ | waiting time to $\alpha$-th event |
 
-### Core Definitions
+**Core formula recap:**
 
 | Concept | Formula |
 |---|---|
-| Conditional probability | $P(A \mid B) = \dfrac{P(A \cap B)}{P(B)}$ |
-| Multiplication rule | $P(A \cap B) = P(A \mid B) \cdot P(B)$ |
-| Law of total probability | $P(A) = \sum_i P(A \mid B_i) P(B_i)$ |
-| Independence (formal) | $P(A \cap B) = P(A) \cdot P(B)$ |
-| Independence (conditional form) | $P(A \mid B) = P(A)$ |
-| Bayes' theorem | $P(B \mid A) = \dfrac{P(A \mid B) \cdot P(B)}{P(A)}$ |
-| Bayes' + total probability | $P(B \mid A) = \dfrac{P(A \mid B) P(B)}{P(A \mid B) P(B) + P(A \mid B^c) P(B^c)}$ |
-
-### Key Insights
-
-- **Conditional probability restricts the sample space** to the conditioning event.
-- **The multiplication rule** lets you compute $P(A \cap B)$ as a sequential product of probabilities.
-- **Probability trees** make the law of total probability visual: branch probabilities multiply (multiplication rule), and leaves over the same outcome sum (total probability).
-- **Independence** means one event gives no information about the other. Test it with $P(A \cap B) \stackrel{?}{=} P(A) P(B)$.
-- **Bayes' theorem inverts** conditional probabilities: it converts $P(\text{effect} \mid \text{cause})$ into $P(\text{cause} \mid \text{effect})$.
-- **The base rate fallacy**: $P(\text{positive test is correct}) \neq P(\text{test is accurate})$ — they can be very different when the condition is rare.
-
-### Reading Probability Trees
-
-| Tree element | What it represents |
-|---|---|
-| Root node | Start; no information |
-| Level 1 branch probability | $P(\text{outcome}_i)$ — unconditional |
-| Level 2 branch probability from node $X$ | $P(\text{outcome}_j \mid X)$ — conditional on parent |
-| Level 3 branch from $X \to Y$ | $P(\text{outcome}_k \mid X \cap Y)$ — conditional on full path |
-| Leaf node probability | Product of all branch probabilities on path = joint probability |
-| $P(\text{event})$ from tree | Sum of all leaf probabilities corresponding to that event |
+| LOTUS | $E[g(X)] = \sum g(x)p(x)$ or $\int g(x)f(x)dx$ |
+| Linearity | $E[aX+bY+c]=aE[X]+bE[Y]+c$ (always) |
+| Variance shortcut | $\text{Var}(X)=E[X^2]-(E[X])^2$ |
+| Var. of a sum | $\text{Var}(X+Y)=\text{Var}(X)+\text{Var}(Y)+2\text{Cov}(X,Y)$ |
+| Covariance shortcut | $\text{Cov}(X,Y)=E[XY]-E[X]E[Y]$ |
+| Correlation | $\rho=\text{Cov}(X,Y)/(\sigma_X\sigma_Y)$ |
+| Adam's Law | $E[X]=E[E[X\mid Y]]$ |
+| Eve's Law | $\text{Var}(X)=E[\text{Var}(X\mid Y)]+\text{Var}(E[X\mid Y])$ |
+| Sample mean SE | $\text{SE}(\bar X)=\sigma/\sqrt n$ |
 
 ---
 
+## 15. Practice Problems
 
-![MIT 3.1](/images/MIT-3.1.PNG)
+1. $X\sim\text{Binomial}(10, 0.3)$. Find $E[X]$, $\text{Var}(X)$, and $P(X=3)$.
+2. A random variable $X$ has $E[X]=4$, $\text{Var}(X)=9$. Find $E[3X-2]$ and $\text{Var}(3X-2)$.
+3. Requests to a server arrive as a Poisson process at 10/minute. Find $P(\text{at least one request in the next 6 seconds})$. (Hint: convert rate to a 6-second window, then use the Exponential CDF or Poisson$(X=0)$ complement.)
+4. $n$ people at a party each independently, with probability $p$, decide to give the person to their right a high-five (arranged in a circle). Using indicator variables, find the expected number of high-fives.
 
-![MIT 3.2](/images/MIT-3.2.PNG)
+<details>
+<summary>Answers</summary>
 
+**1.** $E[X]=10(0.3)=3$. $\text{Var}(X)=10(0.3)(0.7)=2.1$. $P(X=3)=\binom{10}{3}(0.3)^3(0.7)^7 \approx 0.2668$.
 
+**2.** $E[3X-2]=3(4)-2=10$. $\text{Var}(3X-2)=9\,\text{Var}(X)=9(9)=81$.
 
-## 🔴 Tier 1 — Almost Certain to Appear (Bayes + Base Rate)
+**3.** Rate over 6 seconds: $\lambda = 10\times(6/60)=1$. $P(X=0)=e^{-1}\approx0.3679$, so $P(\ge1)=1-e^{-1}\approx0.6321$.
 
----
+**4.** Let $I_k=1$ if person $k$ high-fives their right neighbor. $P(I_k=1)=p$ for each of the $n$ people (each independently decides). $E[\text{total}] = \sum_{k=1}^n E[I_k] = np$ — same indicator-trick pattern as the hat-matching problem in Section 12, regardless of the circular arrangement or any dependence between neighbors' decisions.
 
-### Q1. The Classic Disease Test
-**Asked at: Google, Meta, Amazon, Netflix DS s**
-
-> "A disease affects 1% of the population. A test has a 90% true positive rate and a 5% false positive rate. You test positive — what is the probability you actually have the disease?"
-
-**Framework to answer:**
-
-Step 1 — State Bayes' formula out loud:
-$$P(\text{disease} \mid +) = \frac{P(+ \mid \text{disease}) \cdot P(\text{disease})}{P(+)}$$
-
-Step 2 — Compute the denominator using total probability:
-$$P(+) = (0.90)(0.01) + (0.05)(0.99) = 0.009 + 0.0495 = 0.0585$$
-
-Step 3 — Plug in:
-$$P(\text{disease} \mid +) = \frac{0.009}{0.0585} \approx 15.4\%$$
-
-Step 4 — **Interpret** (ers love this): "Despite a 90% accurate test, only ~15% of positives truly have the disease because the base rate is so low. Most positives are false alarms from the healthy majority."
-
-**Common follow-up:** "How does the answer change if prevalence rises to 10%?" (Answer: jumps to ~67% — the base rate dominates the result.)
+</details>
 
 ---
 
-### Q2. Spam Filter / Content Moderation
-**Asked at: Meta, Google (ML roles)**
-
-> "Your spam classifier has 99% precision and 95% recall. Only 0.1% of all emails are spam. A flagged email — is it actually spam?"
-
-This is structurally identical to the disease test. Map the variables:
-- $P(\text{spam}) = 0.001$
-- $P(\text{flagged} \mid \text{spam}) = 0.95$ (recall)
-- $P(\text{flagged} \mid \text{not spam}) = 1 - \text{precision} = 0.01$
-
-$$P(\text{spam} \mid \text{flagged}) = \frac{(0.95)(0.001)}{(0.95)(0.001) + (0.01)(0.999)} \approx 8.7\%$$
-
-**Why FAANG asks this:** It's about model evaluation in production — a model with great offline metrics can still be unreliable when the positive class is rare. This tests whether you understand class imbalance.
-
----
-
-## 🟠 Tier 2 — High Frequency (Conditional Probability + Independence)
-
----
-
-### Q3. The Monty Hall / Three-Door Problem
-**Asked at: Google (brain teasers round), Amazon, hedge fund roles**
-
-> "You pick door 1. The host opens door 3 revealing a goat. Do you switch?"
-
-**Answer template:**
-
-"Always switch. I'll prove it with a probability tree.
-
-- $P(\text{car behind door 1}) = 1/3$. If so, switching loses.
-- $P(\text{car behind door 2 or 3}) = 2/3$. When the host opens the goat door, the full 2/3 probability concentrates on the remaining door.
-
-$$P(\text{win by switching}) = 0 \times \frac{1}{3} + 1 \times \frac{2}{3} = \frac{2}{3}$$
-
-The key insight is that Monty's action is not random — he has information. His choice leaks information that updates the remaining door's probability."
-
-**Common trap ers set:** "But now there are only 2 doors, so it must be 50-50?" — Explain that the 50-50 reasoning only holds when the host opens a door uniformly at random (not when they knowingly reveal a goat).
-
----
-
-### Q4. Coin Toss Conditioning
-**Asked at: Google, quantitative research roles**
-
-> "I flip a fair coin 3 times. Given that at least one flip is heads, what is the probability all three are heads?"
-
-This is $P(\text{HHH} \mid \text{at least one H})$.
-
-$$P(\text{HHH} \mid \text{at least 1H}) = \frac{P(\text{HHH} \cap \text{at least 1H})}{P(\text{at least 1H})} = \frac{1/8}{7/8} = \frac{1}{7}$$
-
-**Contrast:** If instead you're told "the first flip was heads," the answer is $P(\text{HHH} \mid H_1) = 1/4$. The condition matters enormously — conditioning on "at least one heads" is a much weaker condition that applies to 7 of 8 outcomes, not 4.
-
----
-
-### Q5. Are These Events Independent? (Die Roll)
-**Asked at: Meta, Amazon DS phone screens**
-
-> "Roll two dice. Are 'first die is 3' and 'sum is 7' independent? What about 'sum is 6'?"
-
-**Answer:** Independent of sum-7, not of sum-6. Here's why:
-
-For sum = 7: every value of the first die (1–6) pairs with exactly one second-die value to make 7. So knowing "sum is 7" gives no information about the first die. $P(\text{first is 3} \mid \text{sum is 7}) = 1/6 = P(\text{first is 3})$.
-
-For sum = 6: the first die can't be 6 (needs a 0 on die 2), so the condition shrinks the first die's range. $P(\text{first is 3} \mid \text{sum is 6}) = 1/5 \neq 1/6$.
-
-**The er is testing:** Whether you can verify independence rigorously vs. just guessing intuitively.
-
----
-
-### Q6. Two-Stage Urn / Balls Problem
-**Asked at: Amazon, Apple, Netflix**
-
-> "Bag A has 3 red and 7 blue balls. Bag B has 6 red and 4 blue. You pick a bag at random and draw one ball. It's red. Which bag did it come from?"
-
-Use Bayes with total probability:
-
-$$P(A \mid \text{red}) = \frac{P(\text{red} \mid A) \cdot P(A)}{P(\text{red})} = \frac{(0.3)(0.5)}{(0.3)(0.5) + (0.6)(0.5)} = \frac{0.15}{0.45} = \frac{1}{3}$$
-
-Answer: 1/3 chance it came from bag A, 2/3 from bag B. Drawing a red ball is better explained by bag B (higher red density).
-
----
-
-## 🟡 Tier 3 — Conceptual / Behavioural Variants
-
----
-
-### Q7. A/B Test with Prior Knowledge (Meta / Netflix)
-
-> "Your A/B test shows the new feature lifts conversion by 5% with p=0.04. But historically only 10% of features actually improve metrics. Should you ship it?"
-
-This is a base rate fallacy problem in disguise.
-
-- Prior: $P(\text{feature works}) = 0.10$
-- $P(\text{p<0.05} \mid \text{feature works}) = 0.80$ (power)
-- $P(\text{p<0.05} \mid \text{feature doesn't work}) = 0.05$ (false positive rate = significance level)
-
-$$P(\text{feature works} \mid \text{p<0.05}) = \frac{(0.80)(0.10)}{(0.80)(0.10) + (0.05)(0.90)} = \frac{0.08}{0.125} = 64\%$$
-
-**Answer:** "Even with a statistically significant result, there's only a 64% chance the feature actually works, because most tested features don't improve metrics. I'd want to replicate the test or increase the prior by targeting features with stronger theoretical backing."
-
----
-
-### Q8. The Rare Alert Problem (Amazon / Apple — fraud detection)
-
-> "Your fraud model has 1% false positive rate and 99% true positive rate. 0.01% of transactions are fraudulent. An alert fires — is this fraud?"
-
-$$P(\text{fraud} \mid \text{alert}) = \frac{(0.99)(0.0001)}{(0.99)(0.0001) + (0.01)(0.9999)} \approx \frac{0.000099}{0.010098} \approx 0.98\%$$
-
-Despite 99% sensitivity, fewer than 1% of alerts are real fraud. The extreme rarity of fraud (1 in 10,000 transactions) overwhelms even an excellent detector.
-
-**What the er is really asking:** "Do you understand why precision matters more than recall when positives are rare?"
-
----
-
-## How to Structure Any Bayes Answer in an 
-
-Use this 4-step verbal template every time:
-
-**1. Define events clearly** — "Let $D$ be the event the person has the disease, $T^+$ be testing positive."
-
-**2. State what you know vs. what you want** — "I know the false positive and true positive rates. I want $P(D \mid T^+)$, which requires inverting with Bayes."
-
-**3. Compute the denominator via total probability** — "The total probability of testing positive is..."
-
-**4. Interpret the result** — always say something about the base rate and what it means practically.
-
-> ers give full marks for correct interpretation even if arithmetic is slightly off. They give low marks for correct arithmetic with no interpretation.
-
----
-
-## Quick Reference: Formula Card for s
-
-| Formula | When to use |
-|---|---|
-| $P(A\mid B) = P(A\cap B)/P(B)$ | Any conditional prob question |
-| $P(A\cap B) = P(A\mid B)\cdot P(B)$ | Computing joint probabilities in a tree |
-| $P(A) = \sum_i P(A\mid B_i)P(B_i)$ | Finding denominator in Bayes |
-| $P(B\mid A) = \frac{P(A\mid B)P(B)}{P(A)}$ | Inverting — the core Bayes formula |
-| $P(A\cap B) = P(A)\cdot P(B)$ | **Only** if events are independent |
+*Next natural topics to build out in this same style, if useful: joint distributions of continuous RVs (bivariate Normal, transformations of RVs), moment generating functions, and the Central Limit Theorem with worked convergence examples.*
