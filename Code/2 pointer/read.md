@@ -768,37 +768,7 @@ def intervalIntersection(firstList, secondList):
     return res
 ```
 
-### 60. LC 1023 — Camelcase Matching
-Check which queries match a pattern (each uppercase letter must appear in order; lowercase can be inserted freely).
-```python
-def camelMatch(queries, pattern):
-    def matches(q):
-        i = 0
-        for c in q:
-            if i < len(pattern) and c == pattern[i]:
-                i += 1
-            elif c.isupper():
-                return False
-        return i == len(pattern)
-    return [matches(q) for q in queries]
-```
 
-### 61. LC 1048 — Longest String Chain
-Find the longest chain of words where each is the previous plus one character.
-```python
-def longestStrChain(words):
-    words.sort(key=len)
-    dp = {}
-    best = 1
-    for word in words:
-        dp[word] = 1
-        for i in range(len(word)):
-            pred = word[:i] + word[i + 1:]
-            if pred in dp:
-                dp[word] = max(dp[word], dp[pred] + 1)
-        best = max(best, dp[word])
-    return best
-```
 
 ### 62. LC 1055 🔒 ⚠️ — Shortest Way to Form String
 Find the minimum number of subsequences of `source` needed to form `target`.
@@ -815,30 +785,6 @@ def shortestWay(source, target):
             return -1
         count += 1
     return count
-```
-
-### 63. LC 1214 🔒 — Two Sum BSTs
-Check if a node from each of two BSTs sums to a target.
-```python
-def twoSumBSTs(root1, root2, target):
-    def inorder(node, arr):
-        if node:
-            inorder(node.left, arr)
-            arr.append(node.val)
-            inorder(node.right, arr)
-    list1, list2 = [], []
-    inorder(root1, list1)
-    inorder(root2, list2)
-    l, r = 0, len(list2) - 1
-    while l < len(list1) and r >= 0:
-        s = list1[l] + list2[r]
-        if s == target:
-            return True
-        elif s < target:
-            l += 1
-        else:
-            r -= 1
-    return False
 ```
 
 ### 64. LC 1229 🔒 — Meeting Scheduler
@@ -860,43 +806,8 @@ def minAvailableDuration(slots1, slots2, duration):
     return []
 ```
 
-### 65. LC 1237 — Find Positive Integer Solution for a Given Equation
-Find all (x, y) pairs satisfying a monotonic custom function equal to z.
-```python
-def findSolution(customfunction, z):
-    res = []
-    x, y = 1, 1000
-    while x <= 1000 and y >= 1:
-        val = customfunction.f(x, y)
-        if val == z:
-            res.append([x, y])
-            x += 1
-            y -= 1
-        elif val < z:
-            x += 1
-        else:
-            y -= 1
-    return res
-```
 
-### 66. LC 1265 🔒 — Print Immutable Linked List in Reverse
-Print an immutable linked list's values in reverse order using only its limited API.
-```python
-def printLinkedListInReverse(head):
-    if head:
-        printLinkedListInReverse(head.getNext())
-        head.printValue()
-```
 
-### 67. LC 1471 — The k Strongest Values in an Array
-Return the k "strongest" values, defined by distance from the median (ties favor larger value).
-```python
-def getStrongest(arr, k):
-    arr.sort()
-    median = arr[(len(arr) - 1) // 2]
-    arr.sort(key=lambda x: (-abs(x - median), -x))
-    return arr[:k]
-```
 
 ### 68. LC 1498 — Number of Subsequences That Satisfy the Given Sum Condition
 Count subsequences where min + max <= target, mod 1e9+7.
@@ -928,27 +839,6 @@ def rangeSum(nums, n, left, right):
             sums.append(total)
     sums.sort()
     return sum(sums[left - 1:right]) % MOD
-```
-
-### 70. LC 1570 🔒 — Dot Product of Two Sparse Vectors
-Design a class for fast dot products of sparse vectors.
-```python
-class SparseVector:
-    def __init__(self, nums):
-        self.pairs = [(i, v) for i, v in enumerate(nums) if v != 0]
-
-    def dotProduct(self, vec):
-        i, j, result = 0, 0, 0
-        while i < len(self.pairs) and j < len(vec.pairs):
-            if self.pairs[i][0] == vec.pairs[j][0]:
-                result += self.pairs[i][1] * vec.pairs[j][1]
-                i += 1
-                j += 1
-            elif self.pairs[i][0] < vec.pairs[j][0]:
-                i += 1
-            else:
-                j += 1
-        return result
 ```
 
 ### 71. LC 1574 ⚠️ — Shortest Subarray to be Removed to Make Array Sorted
@@ -1012,40 +902,6 @@ def checkPalindromeFormation(a, b):
     return check(a, b) or check(b, a)
 ```
 
-### 74. LC 1634 🔒 — Add Two Polynomials Represented as Linked Lists
-Add two polynomials represented as sorted linked lists of (coefficient, power).
-```python
-def addPoly(poly1, poly2):
-    dummy = curr = PolyNode()
-    p1, p2 = poly1, poly2
-    while p1 and p2:
-        if p1.power > p2.power:
-            curr.next = PolyNode(p1.coefficient, p1.power)
-            p1 = p1.next
-        elif p1.power < p2.power:
-            curr.next = PolyNode(p2.coefficient, p2.power)
-            p2 = p2.next
-        else:
-            coeff = p1.coefficient + p2.coefficient
-            if coeff != 0:
-                curr.next = PolyNode(coeff, p1.power)
-            p1, p2 = p1.next, p2.next
-        if curr.next:
-            curr = curr.next
-    curr.next = p1 or p2
-    return dummy.next
-```
-
-### 75. LC 1650 🔒 — Lowest Common Ancestor of a Binary Tree III
-Find LCA of two nodes that have a `.parent` pointer (no root given).
-```python
-def lowestCommonAncestor(p, q):
-    a, b = p, q
-    while a != b:
-        a = a.parent if a.parent else q
-        b = b.parent if b.parent else p
-    return a
-```
 
 ### 76. LC 1679 — Max Number of K-Sum Pairs
 Find the max number of disjoint pairs summing to k.
@@ -1089,21 +945,6 @@ def waysToSplit(nums):
     return res % MOD
 ```
 
-### 78. LC 1721 — Swapping Nodes in a Linked List
-Swap the kth node from the start with the kth node from the end.
-```python
-def swapNodes(head, k):
-    first = head
-    for _ in range(k - 1):
-        first = first.next
-    second = head
-    curr = first
-    while curr.next:
-        curr = curr.next
-        second = second.next
-    first.val, second.val = second.val, first.val
-    return head
-```
 
 ### 79. LC 1750 — Minimum Length of String After Deleting Similar Ends
 Repeatedly delete matching prefix/suffix blocks; return the final length.
@@ -1620,3 +1461,12 @@ def judgeSquareSum(c):
         else:
             r -= 1
     return False
+
+
+words.sort(key=len)
+
+
+        arr.sort()
+        median = arr[(len(arr) - 1) // 2]
+        arr.sort(key=lambda x: (-abs(x - median), -x))
+        return arr[:k]
