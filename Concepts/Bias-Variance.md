@@ -327,12 +327,3 @@ This is a legitimate **talking point/narrative structure** for a system-design-s
 
 ---
 
-## 14. Why Interviewers Ask This At All (brief, stripped of the hype)
-
-Cut through the cheerleading tone of the source — the actual substantive reasons an L5 interview leans on bias-variance:
-
-1. **It's a shared diagnostic vocabulary** across PM/eng/research — useful for cross-functional alignment, which is a real L5 expectation.
-2. **It forces prioritization under constraints** — "we have limited eng-months, is this a data problem or an architecture problem" is a genuine resource-allocation skill being tested.
-3. **It reveals whether you conflate correlated-but-distinct failure modes** — data drift, pipeline bugs, and true bias/variance all *look* similar in a metrics dashboard; separating them is the actual job.
-
-I'd treat the "Rorschach test" / "own the room" framing in the source as motivational filler rather than content to repeat verbatim — the substance above is what actually holds up if an interviewer pushes back.
