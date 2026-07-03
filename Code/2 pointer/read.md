@@ -22,38 +22,6 @@ def sortColors(nums):
 ```
 
 
-### 18. LC 165 — Compare Version Numbers
-Compare two version strings numerically, revision by revision.
-```python
-def compareVersion(version1, version2):
-    v1, v2 = version1.split('.'), version2.split('.')
-    n = max(len(v1), len(v2))
-    for i in range(n):
-        x1 = int(v1[i]) if i < len(v1) else 0
-        x2 = int(v2[i]) if i < len(v2) else 0
-        if x1 != x2:
-            return 1 if x1 > x2 else -1
-    return 0
-```
-
-
-### 20. LC 186 🔒 — Reverse Words in a String II
-Reverse word order of a char array in-place.
-```python
-def reverseWords(s):
-    s.reverse()
-    n = len(s)
-    start = 0
-    for i in range(n + 1):
-        if i == n or s[i] == ' ':
-            l, r = start, i - 1
-            while l < r:
-                s[l], s[r] = s[r], s[l]
-                l += 1
-                r -= 1
-            start = i + 1
-```
-
 ### 21. LC 189 — Rotate Array
 Rotate an array to the right by k steps, in place.
 ```python
@@ -70,41 +38,6 @@ def rotate(nums, k):
     reverse(k, n - 1)
 ```
 
-### 24. LC 253 🔒 — Meeting Rooms II
-Find the minimum number of meeting rooms needed.
-```python
-def minMeetingRooms(intervals):
-    starts = sorted(i[0] for i in intervals)
-    ends = sorted(i[1] for i in intervals)
-    i = j = rooms = max_rooms = 0
-    while i < len(starts):
-        if starts[i] < ends[j]:
-            rooms += 1
-            i += 1
-            max_rooms = max(max_rooms, rooms)
-        else:
-            rooms -= 1
-            j += 1
-    return max_rooms
-```
-
-### 25. LC 259 🔒 — 3Sum Smaller
-Count triplets whose sum is less than a target.
-```python
-def threeSumSmaller(nums, target):
-    nums.sort()
-    n = len(nums)
-    count = 0
-    for i in range(n):
-        l, r = i + 1, n - 1
-        while l < r:
-            if nums[i] + nums[l] + nums[r] < target:
-                count += r - l
-                l += 1
-            else:
-                r -= 1
-    return count
-```
 
 ### 26. LC 277 🔒 — Find the Celebrity
 Find the person everyone knows but who knows no one, using `knows(a, b)`.
@@ -120,37 +53,6 @@ def findCelebrity(n):
     return candidate
 ```
 
-
-### 28. LC 360 🔒 — Sort Transformed Array
-Given a sorted array and quadratic coefficients, return the transformed values sorted.
-```python
-def sortTransformedArray(nums, a, b, c):
-    def f(x):
-        return a * x * x + b * x + c
-    n = len(nums)
-    res = [0] * n
-    l, r = 0, n - 1
-    idx = n - 1 if a >= 0 else 0
-    while l <= r:
-        fl, fr = f(nums[l]), f(nums[r])
-        if a >= 0:
-            if fl > fr:
-                res[idx] = fl
-                l += 1
-            else:
-                res[idx] = fr
-                r -= 1
-            idx -= 1
-        else:
-            if fl < fr:
-                res[idx] = fl
-                l += 1
-            else:
-                res[idx] = fr
-                r -= 1
-            idx += 1
-    return res
-```
 
 ### 29. LC 443 — String Compression
 Compress a char array in-place using counts for repeated chars.
@@ -171,40 +73,6 @@ def compress(chars):
                 chars[write] = digit
                 write += 1
     return write
-```
-
-### 30. LC 457 — Circular Array Loop
-Detect a cycle in a circular array where movement direction must stay consistent.
-```python
-def circularArrayLoop(nums):
-    n = len(nums)
-    def next_idx(i):
-        return (i + nums[i]) % n
-    for i in range(n):
-        slow, fast = i, i
-        while nums[slow] * nums[next_idx(fast)] > 0 and nums[slow] * nums[next_idx(next_idx(fast))] > 0:
-            slow = next_idx(slow)
-            fast = next_idx(next_idx(fast))
-            if slow == fast:
-                if slow != next_idx(slow):
-                    return True
-                break
-    return False
-```
-
-### 32. LC 481 — Magical String
-Count occurrences of '1' in the first n characters of the self-describing magical string.
-```python
-def magicalString(n):
-    if n == 0:
-        return 0
-    s = [1, 2, 2]
-    i = 2
-    while len(s) < n:
-        next_val = 3 - s[-1]
-        s += [next_val] * s[i]
-        i += 1
-    return s[:n].count(1)
 ```
 
 ### 33. LC 522 — Longest Uncommon Subsequence II
@@ -257,24 +125,7 @@ def findPairs(nums, k):
     return count
 ```
 
-### 36. LC 556 — Next Greater Element III
-Find the smallest integer greater than n using the same digits.
-```python
-def nextGreaterElement(n):
-    digits = list(str(n))
-    i = len(digits) - 2
-    while i >= 0 and digits[i] >= digits[i + 1]:
-        i -= 1
-    if i < 0:
-        return -1
-    j = len(digits) - 1
-    while digits[j] <= digits[i]:
-        j -= 1
-    digits[i], digits[j] = digits[j], digits[i]
-    digits[i + 1:] = reversed(digits[i + 1:])
-    result = int(''.join(digits))
-    return result if result <= 2**31 - 1 else -1
-```
+
 
 ### 37. LC 567 — Permutation in String
 Check if s2 contains a permutation of s1 as a substring.
@@ -332,19 +183,6 @@ def triangleNumber(nums):
 ```
 
 
-### 42. LC 658 — Find K Closest Elements
-Find the k closest elements to x in a sorted array.
-```python
-def findClosestElements(arr, k, x):
-    l, r = 0, len(arr) - k
-    while l < r:
-        mid = (l + r) // 2
-        if x - arr[mid] > arr[mid + k] - x:
-            l = mid + 1
-        else:
-            r = mid
-    return arr[l:l + k]
-```
 
 ### 44. LC 763 — Partition Labels
 Partition a string into the max number of parts so each letter appears in only one part.
@@ -361,31 +199,6 @@ def partitionLabels(s):
     return res
 ```
 
-
-
-### 46. LC 786 🔒 ⚠️ — K-th Smallest Prime Fraction
-Find the kth smallest fraction `arr[i]/arr[j]` for i < j.
-```python
-def kthSmallestPrimeFraction(arr, k):
-    n = len(arr)
-    l, r = 0.0, 1.0
-    while True:
-        mid = (l + r) / 2
-        count, j = 0, 1
-        best = (0, 1)
-        for i in range(n):
-            while j < n and arr[i] >= mid * arr[j]:
-                j += 1
-            count += n - j
-            if j < n and arr[i] * best[1] > best[0] * arr[j]:
-                best = (arr[i], arr[j])
-        if count == k:
-            return [best[0], best[1]]
-        elif count < k:
-            l = mid
-        else:
-            r = mid
-```
 
 ### 47. LC 795 — Number of Subarrays with Bounded Maximum
 Count subarrays where the max element is within [left, right].
