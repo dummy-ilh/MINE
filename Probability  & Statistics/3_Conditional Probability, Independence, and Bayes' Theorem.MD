@@ -1,4 +1,4 @@
-# Conditional Probability — Complete Interview Guide (L5 Google/Apple)
+# Conditional Probability —
 
 **Reference texts** (cite these if asked "where did you learn this" or want deeper study):
 - Sheldon Ross, *A First Course in Probability* (9th/10th ed.) — Ch. 3
