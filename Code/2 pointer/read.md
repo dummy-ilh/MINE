@@ -21,20 +21,6 @@ def longestPalindrome(s):
     return res
 ```
 
-### 2. LC 11 — Container With Most Water
-Find two lines that, with the x-axis, form the container holding the most water.
-```python
-def maxArea(height):
-    l, r = 0, len(height) - 1
-    best = 0
-    while l < r:
-        best = max(best, (r - l) * min(height[l], height[r]))
-        if height[l] < height[r]:
-            l += 1
-        else:
-            r -= 1
-    return best
-```
 
 ### 3. LC 15 — 3Sum
 Find all unique triplets that sum to zero.
@@ -117,21 +103,6 @@ def fourSum(nums, target):
     return res
 ```
 
-### 6. LC 19 — Remove Nth Node From End of List
-Remove the nth node from the end of a linked list in one pass.
-```python
-def removeNthFromEnd(head, n):
-    dummy = ListNode(0, head)
-    slow = fast = dummy
-    for _ in range(n):
-        fast = fast.next
-    while fast.next:
-        fast = fast.next
-        slow = slow.next
-    slow.next = slow.next.next
-    return dummy.next
-```
-
 ### 7. LC 31 — Next Permutation
 Rearrange numbers into the next lexicographically greater permutation, in place.
 ```python
@@ -152,29 +123,6 @@ def nextPermutation(nums):
         r -= 1
 ```
 
-### 8. LC 61 — Rotate List
-Rotate a linked list to the right by k places.
-```python
-def rotateRight(head, k):
-    if not head:
-        return head
-    n = 1
-    tail = head
-    while tail.next:
-        tail = tail.next
-        n += 1
-    k %= n
-    if k == 0:
-        return head
-    tail.next = head
-    steps = n - k
-    new_tail = head
-    for _ in range(steps - 1):
-        new_tail = new_tail.next
-    new_head = new_tail.next
-    new_tail.next = None
-    return new_head
-```
 
 ### 9. LC 75 — Sort Colors
 Sort an array of 0s, 1s, 2s in place (Dutch national flag).
@@ -203,110 +151,6 @@ def removeDuplicates(nums):
             nums[slow] = nums[fast]
             slow += 1
     return slow
-```
-
-### 11. LC 82 — Remove Duplicates from Sorted List II
-Remove all nodes with duplicate values from a sorted linked list.
-```python
-def deleteDuplicates(head):
-    dummy = ListNode(0, head)
-    prev, curr = dummy, head
-    while curr:
-        if curr.next and curr.val == curr.next.val:
-            while curr.next and curr.val == curr.next.val:
-                curr = curr.next
-            prev.next = curr.next
-        else:
-            prev = curr
-        curr = curr.next
-    return dummy.next
-```
-
-### 12. LC 86 — Partition List
-Partition a linked list so all nodes < x come before nodes >= x.
-```python
-def partition(head, x):
-    before = before_head = ListNode(0)
-    after = after_head = ListNode(0)
-    while head:
-        if head.val < x:
-            before.next = head
-            before = before.next
-        else:
-            after.next = head
-            after = after.next
-        head = head.next
-    after.next = None
-    before.next = after_head.next
-    return before_head.next
-```
-
-### 13. LC 142 — Linked List Cycle II
-Find the node where a cycle begins (or None).
-```python
-def detectCycle(head):
-    slow = fast = head
-    while fast and fast.next:
-        slow = slow.next
-        fast = fast.next.next
-        if slow == fast:
-            ptr = head
-            while ptr != slow:
-                ptr = ptr.next
-                slow = slow.next
-            return ptr
-    return None
-```
-
-### 14. LC 143 — Reorder List
-Reorder a linked list into L0→Ln→L1→Ln-1→...
-```python
-def reorderList(head):
-    slow = fast = head
-    while fast and fast.next:
-        slow = slow.next
-        fast = fast.next.next
-    second = slow.next
-    slow.next = None
-    prev = None
-    while second:
-        nxt = second.next
-        second.next = prev
-        prev = second
-        second = nxt
-    first, second = head, prev
-    while second:
-        t1, t2 = first.next, second.next
-        first.next = second
-        second.next = t1
-        first, second = t1, t2
-```
-
-### 15. LC 148 — Sort List
-Sort a linked list in O(n log n) using merge sort.
-```python
-def sortList(head):
-    if not head or not head.next:
-        return head
-    slow, fast = head, head.next
-    while fast and fast.next:
-        slow = slow.next
-        fast = fast.next.next
-    mid = slow.next
-    slow.next = None
-    left = sortList(head)
-    right = sortList(mid)
-
-    dummy = ListNode()
-    tail = dummy
-    while left and right:
-        if left.val <= right.val:
-            tail.next, left = left, left.next
-        else:
-            tail.next, right = right, right.next
-        tail = tail.next
-    tail.next = left or right
-    return dummy.next
 ```
 
 ### 16. LC 151 — Reverse Words in a String
@@ -356,21 +200,6 @@ def compareVersion(version1, version2):
     return 0
 ```
 
-### 19. LC 167 — Two Sum II - Input Array Is Sorted
-Find indices of two numbers in a sorted array that sum to a target.
-```python
-def twoSum(numbers, target):
-    l, r = 0, len(numbers) - 1
-    while l < r:
-        s = numbers[l] + numbers[r]
-        if s == target:
-            return [l + 1, r + 1]
-        elif s < target:
-            l += 1
-        else:
-            r -= 1
-    return []
-```
 
 ### 20. LC 186 🔒 — Reverse Words in a String II
 Reverse word order of a char array in-place.
@@ -1942,4 +1771,32 @@ def minGroups(intervals):
 
 ---
 
-**On the ⚠️ entries:** these (777, 786, 825, 1055, 1574, 1712, 1850, 1989, 2332) have subtle edge cases — multi-character runs, off-by-one boundaries, or simulation details that are easy to get slightly wrong. Treat the code as a strong starting point, but trace through the examples on the actual problem page before trusting it fully.
+### Container With Most Water
+``
+def maxArea(height):
+    l, r = 0, len(height) - 1;    best = 0
+    while l < r:
+        best = max(best, (r - l) * min(height[l], height[r]))
+        if height[l] < height[r]:            l += 1
+        else:            r -= 1
+```
+
+Reverse the order of words in a sentence.
+```python
+def reverseWords(s):
+    return ' '.join(reversed(s.split()))
+
+        words = s.split()        res = []
+or
+        for i in range(len(words) - 1, -1, -1):
+            res.append(words[i])
+            if i != 0:        res.append(" ")
+
+        return "".join(res)
+or
+        while left < right:
+            word[left], word[right] = word[right], word[left]
+            left += 1
+            right -=1
+
+        return " ".join(word) 
