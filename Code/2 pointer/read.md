@@ -34,29 +34,6 @@ def rotate(nums, k):
 ```
 
 
-
-
-### 29. LC 443 — String Compression
-Compress a char array in-place using counts for repeated chars.
-```python
-def compress(chars):
-    write = read = 0
-    n = len(chars)
-    while read < n:
-        char = chars[read]
-        count = 0
-        while read < n and chars[read] == char:
-            read += 1
-            count += 1
-        chars[write] = char
-        write += 1
-        if count > 1:
-            for digit in str(count):
-                chars[write] = digit
-                write += 1
-    return write
-```
-
 ### 33. LC 522 — Longest Uncommon Subsequence II
 Find the longest string that isn't a subsequence of any other string in the array.
 ```python
@@ -70,21 +47,6 @@ def findLUSlength(strs):
         if all(i == j or not is_subsequence(strs[i], strs[j]) for j in range(n)):
             res = max(res, len(strs[i]))
     return res
-```
-
-### 34. LC 524 — Longest Word in Dictionary through Deleting
-Find the longest dictionary word formable by deleting characters from `s`.
-```python
-def findLongestWord(s, dictionary):
-    def is_subsequence(word):
-        it = iter(s)
-        return all(c in it for c in word)
-    best = ""
-    for word in dictionary:
-        if is_subsequence(word):
-            if len(word) > len(best) or (len(word) == len(best) and word < best):
-                best = word
-    return best
 ```
 
 ### 35. LC 532 — K-diff Pairs in an Array
@@ -146,25 +108,6 @@ def findUnsortedSubarray(nums):
     return r - l + 1 if l < r else 0
 ```
 
-### 39. LC 611 — Valid Triangle Number
-Count triplets that can form a valid triangle.
-```python
-def triangleNumber(nums):
-    nums.sort()
-    n = len(nums)
-    count = 0
-    for k in range(n - 1, 1, -1):
-        l, r = 0, k - 1
-        while l < r:
-            if nums[l] + nums[r] > nums[k]:
-                count += r - l
-                r -= 1
-            else:
-                l += 1
-    return count
-```
-
-
 
 ### 44. LC 763 — Partition Labels
 Partition a string into the max number of parts so each letter appears in only one part.
@@ -195,36 +138,6 @@ def numSubarrayBoundedMax(nums, left, right):
     return count(right) - count(left - 1)
 ```
 
-### 48. LC 809 — Expressive Words
-Count words that can stretch into a given target string via repeated chars (3+ rule).
-```python
-def expressiveWords(s, words):
-    def get_groups(string):
-        groups, i, n = [], 0, len(string)
-        while i < n:
-            j = i
-            while j < n and string[j] == string[i]:
-                j += 1
-            groups.append((string[i], j - i))
-            i = j
-        return groups
-
-    s_groups = get_groups(s)
-    count = 0
-    for word in words:
-        w_groups = get_groups(word)
-        if len(w_groups) != len(s_groups):
-            continue
-        ok = True
-        for (c1, n1), (c2, n2) in zip(s_groups, w_groups):
-            if c1 != c2 or n1 < n2 or (n1 != n2 and n1 < 3):
-                ok = False
-                break
-        if ok:
-            count += 1
-    return count
-```
-
 ### 50. LC 826 — Most Profit Assigning Work
 Assign workers to jobs (within their ability) to maximize total profit.
 ```python
@@ -241,130 +154,6 @@ def maxProfitAssignment(difficulty, profit, worker):
 ```
 
 
-### 52. LC 845 — Longest Mountain in Array
-Find the length of the longest "mountain" subarray (strictly up then strictly down).
-```python
-def longestMountain(arr):
-    n = len(arr)
-    best, i = 0, 1
-    while i < n - 1:
-        if arr[i - 1] < arr[i] > arr[i + 1]:
-            l = i - 1
-            while l > 0 and arr[l - 1] < arr[l]:
-                l -= 1
-            r = i + 1
-            while r < n - 1 and arr[r] > arr[r + 1]:
-                r += 1
-            best = max(best, r - l + 1)
-            i = r
-        else:
-            i += 1
-    return best
-```
-
-### 53. LC 870 — Advantage Shuffle
-Rearrange nums1 to maximize the count of elements that beat the corresponding nums2 element.
-```python
-def advantageCount(nums1, nums2):
-    sorted1 = sorted(nums1)
-    sorted2_idx = sorted(range(len(nums2)), key=lambda i: nums2[i])
-    res = [0] * len(nums1)
-    l, r = 0, len(sorted1) - 1
-    for idx in reversed(sorted2_idx):
-        if sorted1[r] > nums2[idx]:
-            res[idx] = sorted1[r]
-            r -= 1
-        else:
-            res[idx] = sorted1[l]
-            l += 1
-    return res
-```
-
-### 54. LC 881 — Boats to Save People
-Find the minimum boats needed, each carrying at most 2 people within a weight limit.
-```python
-def numRescueBoats(people, limit):
-    people.sort()
-    l, r, boats = 0, len(people) - 1, 0
-    while l <= r:
-        if people[l] + people[r] <= limit:
-            l += 1
-        r -= 1
-        boats += 1
-    return boats
-```
-
-### 55. LC 923 — 3Sum With Multiplicity
-Count triplets (with repeats allowed) summing to a target, mod 1e9+7.
-```python
-def threeSumMulti(arr, target):
-    MOD = 10**9 + 7
-    arr.sort()
-    n = len(arr)
-    res = 0
-    for i in range(n):
-        l, r = i + 1, n - 1
-        t = target - arr[i]
-        while l < r:
-            if arr[l] + arr[r] < t:
-                l += 1
-            elif arr[l] + arr[r] > t:
-                r -= 1
-            elif arr[l] != arr[r]:
-                lc = rc = 1
-                while l + 1 < r and arr[l] == arr[l + 1]:
-                    lc += 1
-                    l += 1
-                while r - 1 > l and arr[r] == arr[r - 1]:
-                    rc += 1
-                    r -= 1
-                res += lc * rc
-                l += 1
-                r -= 1
-            else:
-                count = r - l + 1
-                res += count * (count - 1) // 2
-                break
-    return res % MOD
-```
-
-### 56. LC 948 — Bag of Tokens
-Maximize score by trading tokens for power (gain score) or score for power (lose score, gain power).
-```python
-def bagOfTokensScore(tokens, power):
-    tokens.sort()
-    l, r = 0, len(tokens) - 1
-    score = best = 0
-    while l <= r:
-        if power >= tokens[l]:
-            power -= tokens[l]
-            score += 1
-            best = max(best, score)
-            l += 1
-        elif score > 0:
-            power += tokens[r]
-            score -= 1
-            r -= 1
-        else:
-            break
-    return best
-```
-
-### 57. LC 962 — Maximum Width Ramp
-Find the max width j-i such that nums[i] <= nums[j] and i < j.
-```python
-def maxWidthRamp(nums):
-    stack = []
-    best = 0
-    for i, v in enumerate(nums):
-        if not stack or nums[stack[-1]] > v:
-            stack.append(i)
-        else:
-            while stack and nums[stack[-1]] <= v:
-                best = max(best, i - stack[-1])
-                stack.pop()
-    return best
-```
 
 ### 58. LC 969 — Pancake Sorting
 Sort an array using only "pancake flip" prefix-reversal operations.
