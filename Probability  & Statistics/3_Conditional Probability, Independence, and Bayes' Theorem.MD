@@ -1,4 +1,4 @@
-# Conditional Probability — Complete Interview Guide (L5 Google/Apple)
+# Conditional Probability
 
 **Reference texts** (cite these if asked "where did you learn this" or want deeper study):
 - Sheldon Ross, *A First Course in Probability* (9th/10th ed.) — Ch. 3
@@ -23,6 +23,15 @@ This is a *definition*, not a derived fact — everything else (Bayes, chain rul
 "How does the probability of an event change when we have extra information?".
 
 
+Ω = H H H , H H T , H T H , H T T , T H H , T H T , T T H , T T T
+
+Without extra information: P ( 3 heads ) = 1 / 8 (1 favourable out of 8 equally likely outcomes).
+With extra information — suppose someone tells you the first toss was Heads. The set of possible outcomes shrinks to:
+
+Ω ′ = H H H , H H T , H T H , H T T
+Now there is only 1 outcome with 3 heads out of 4 remaining: P ( 3 heads ∣ first is H ) = 1 / 4 .
+
+
 ### 1.2 Multiplication Rule (Chain Rule)
 Rearranging the definition:
 
@@ -39,8 +48,16 @@ If $B_1, \dots, B_n$ partition the sample space ($\bigcup B_i = \Omega$, mutuall
 $$P(A) = \sum_{i=1}^n P(A \mid B_i)\,P(B_i)$$
 [
 **This is how you compute an "unconditional" probability when you naturally know things conditionally.** Extremely common in interviews — anytime a problem says "there are two types of X" or "with probability p it's a fair coin, else biased," LOTP is your first move.
+
+.
+
 ![](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT-f89ImFsaysYE-AhYZWRjYMQ1Q9ulWDzmC_KA5q_tow&s=10)
+.
 ### 1.4 Bayes' Theorem
+
+Bayes' Theorem is a rule for calculating the probability of an event (or hypothesis) given new evidence by combining prior belief with the likelihood of the evidence.
+
+
 $$P(B_i \mid A) = \frac{P(A \mid B_i)\,P(B_i)}{\sum_j P(A \mid B_j)\,P(B_j)} = \frac{P(A\mid B_i)P(B_i)}{P(A)}$$
 
 Vocabulary you should use fluently in an interview:
@@ -51,6 +68,7 @@ Vocabulary you should use fluently in an interview:
 
 **Interview tip:** When an interviewer asks a Bayes question, say the words "prior," "likelihood," "posterior" out loud. It signals fluency and helps you organize the algebra before you touch numbers.
 
+Bayes' Theorem updates the probability of a hypothesis after observing new evidence.
 ---
 
 ## 2. Independence
