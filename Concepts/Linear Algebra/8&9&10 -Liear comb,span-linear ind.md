@@ -1,22 +1,4 @@
-This refined instructions doc matches exactly what we've been doing — I'll keep following it chapter by chapter. Here are the answers to Chapter 7, then straight into Linear Combinations.
 
-**Conceptual Q1:** Why isn't matrix multiplication commutative?
-Because each matrix represents a transformation, and *order matters* when you chain transformations — rotating then stretching generally lands you somewhere different than stretching then rotating. Also, dimensionally, $AB$ and $BA$ often aren't even both defined (their shapes may not match in reverse order), so commutativity isn't just "usually false," it's often not even a valid comparison.
-
-**Conceptual Q2:** Shape requirements for $y = Wx + b$
-If $x$ has dimension $n$ (n features in), and the layer outputs $m$ values, then $W$ must be $m \times n$ (so $Wx$ produces an $m$-dimensional vector), and $b$ must also be $m$-dimensional so it can be added to $Wx$ entrywise.
-
-**Numerical Q1:** $Ax$ for $A=\begin{bmatrix}1&2\\3&4\end{bmatrix}$, $x=\begin{bmatrix}1\\1\end{bmatrix}$
-$$Ax = \begin{bmatrix} 1(1)+2(1) \\ 3(1)+4(1) \end{bmatrix} = \begin{bmatrix} 3 \\ 7 \end{bmatrix}$$
-
-**Numerical Q2:** $A$ is $2\times3$, $B$ is $3\times5$
-$AB$ has shape $2\times5$ (inner dimensions 3 match; outer dimensions 2 and 5 survive).
-$BA$ is **not** computable — $B$ has 5 columns, $A$ has 2 rows; $5 \neq 2$, so the inner dimensions don't match.
-
-**Interview question:** Layer 1 weight shape $(64,128)$, layer 2 weight shape $(64,32)$, convention $(output, input)$ — what's wrong?
-Layer 1 outputs a 64-dimensional vector (its output size is 64). Layer 2 expects an input of size 32 (its second dimension, input size, is 32). But layer 1's output (64-dim) doesn't match layer 2's expected input (32-dim) — there's a shape mismatch between consecutive layers. The fix: layer 2's weight matrix should be $(output2, 64)$ — its input size must equal layer 1's output size (64), not 32. E.g., if you want layer 2 to output 32 values, it should be shaped $(32, 64)$.
-
----
 
 ## Chapter 8: Linear Combinations
 
@@ -49,8 +31,6 @@ $$w = c_1v_1 + c_2v_2 + \dots + c_kv_k$$
 - $v_1, v_2, \dots, v_k$ — a set of given vectors
 - $c_1, c_2, \dots, c_k$ — scalar **coefficients**, one per vector, which can be any real numbers (including 0 or negative)
 - $w$ — the resulting vector, called "a linear combination of $v_1, \dots, v_k$"
-
-This is nothing new mathematically — it's just Chapter 2's addition and scalar multiplication used together, repeatedly. Note also: matrix-vector multiplication (Chapter 7) can be reframed exactly this way — $Ax$ is really a linear combination of $A$'s **columns**, weighted by the entries of $x$. This is often called the "column picture" of matrix multiplication, and it's an insight interviewers love testing.
 
 ### 6. Geometric interpretation
 
@@ -86,7 +66,6 @@ A linear combination combines a set of vectors by scaling each one and adding th
 **Interview-style question:**
 "You're told a certain output vector cannot be produced as any linear combination of a neural network layer's weight columns, no matter what input you provide. What does this tell you about the layer's capacity to represent that output, and what concept (coming up next) would formally describe this limitation?"
 
-Good — this final version aligns with everything we've built so far (just adds the "don't reveal answers unless asked" default, though you've been explicitly asking each time, so I'll keep answering when you say "answer and next"). Here are Chapter 8's answers, then straight into Span and Basis.
 
 **Conceptual Q1:** Why is $Ax$ a linear combination of $A$'s columns?
 Matrix-vector multiplication can be rewritten as: $Ax = x_1 \cdot (\text{column 1 of }A) + x_2 \cdot (\text{column 2 of }A) + \dots$. The **columns of $A$** are the vectors being combined, and the **entries of $x$** are the coefficients scaling each column.
@@ -263,3 +242,294 @@ A set of vectors is linearly independent if the only way to combine them into th
 **Interview-style question:**
 "During training, you notice two neurons in the same hidden layer have nearly identical weight vectors (differing only by a tiny scaling factor). Using the concept of linear independence, explain why this might indicate wasted model capacity, and what you might do about it."
 
+
+
+
+# Linear Combinations, Span, Basis, and Independence - Concise Summary
+
+## Linear Combinations
+
+A **linear combination** of vectors is a sum of scaled vectors:
+
+$$c_1v_1 + c_2v_2 + ... + c_kv_k$$
+
+where each $c_i$ is a scalar.
+
+**Example**: `3(1,0) + 2(0,1) = (3,2)` is a linear combination of basis vectors.
+
+---
+
+## Span
+
+The **span** of a set of vectors is the set of all possible linear combinations.
+
+**Geometric interpretation**:
+- One vector: span = line through origin
+- Two non-parallel vectors in ℝ²: span = entire plane
+- Two vectors in ℝ³: span = plane through origin
+- n linearly independent vectors in ℝⁿ: span = entire ℝⁿ
+
+**Key insight**: Span answers "what space can we reach?"
+
+---
+
+## Linear Independence
+
+A set of vectors is **linearly independent** if no vector can be written as a linear combination of the others.
+
+**Formal definition**: $c_1v_1 + c_2v_2 + ... + c_kv_k = 0$ implies **all** $c_i = 0$.
+
+**Geometric tests**:
+- Two vectors: independent if not scalar multiples (not collinear)
+- Three vectors: independent if not coplanar
+- In general: independent if you can't remove one without losing "coverage"
+
+**Dependent example**: `(1,2)`, `(2,4)`, `(3,6)` all lie on same line → dependent.
+
+---
+
+## Basis
+
+A **basis** is a set of vectors that is:
+1. **Linearly independent**
+2. **Spans** the entire space
+
+**Standard basis in ℝⁿ**:
+- ℝ²: `e₁ = (1,0)`, `e₂ = (0,1)`
+- ℝ³: `e₁ = (1,0,0)`, `e₂ = (0,1,0)`, `e₃ = (0,0,1)`
+
+**Key properties**:
+- Every vector has a **unique** representation in a given basis
+- All bases for a space have the same number of vectors (the dimension)
+
+---
+
+## Dimension
+
+The **dimension** of a vector space = number of vectors in any basis.
+
+**For matrices**:
+- Column space dimension = rank
+- Nullspace dimension = n - rank
+
+---
+
+## Why for AI/ML
+
+- **Feature engineering**: Choose basis/features that span the right space
+- **Dimensionality reduction**: PCA finds new basis (principal components)
+- **Neural network capacity**: Weight matrices create linear combinations
+- **Regularization**: Penalizes certain linear combinations
+- **Embeddings**: Words as linear combinations of latent features
+
+---
+
+## Common Pitfalls
+
+- **❌** Thinking "span" = "all vectors in the set"
+- **❌** Assuming any set of n vectors in ℝⁿ is a basis (need independence!)
+- **❌** Forgetting that dependent vectors "waste" dimensions
+- **❌** Confusing basis with orthogonal basis (basis = independent, not necessarily perpendicular)
+
+---
+
+## Conceptual Questions Answered
+
+**1. If `v₁ = (1,0)` and `v₂ = (2,0)`, what is their span? Are they independent?**
+
+**Span**: All vectors `(c, 0)` where c is any scalar = the x-axis (line through origin).
+
+**Independence**: **No** - `v₂ = 2v₁`, so they're scalar multiples. Only one direction covered.
+
+**Geometric**: Both lie on same line → can't reach y-axis no matter how you combine them.
+
+---
+
+**2. What does it mean for a set of vectors to "span" a space? Give an example of vectors that span ℝ².**
+
+**Spanning**: Every vector in the space can be written as a linear combination of the set.
+
+**Example spanning ℝ²**: `(1,0)` and `(0,1)`
+- Any `(x,y)` = `x(1,0) + y(0,1)`
+
+**Counterexample**: `(1,0)` alone does NOT span ℝ² (can't reach `(0,1)`).
+
+---
+
+**3. Is it possible for a set of 3 vectors in ℝ³ to be linearly dependent? If so, what does that mean geometrically?**
+
+**Yes** - three vectors are dependent if they lie in the same plane through origin (coplanar).
+
+**Geometric meaning**: You only need 2 of the 3 to reach any point in the plane. The third is a linear combination of the other two.
+
+**Example**: `(1,0,0)`, `(0,1,0)`, `(1,1,0)` are dependent (third = first + second). All lie in xy-plane.
+
+---
+
+## Numerical Practice Answered
+
+**1. Is `v₁ = (1,0)`, `v₂ = (0,1)` a basis for ℝ²? Why?**
+
+**Yes** because:
+- **Independent**: `c₁(1,0) + c₂(0,1) = (0,0)` → `(c₁, c₂) = (0,0)` → c₁ = c₂ = 0 ✓
+- **Spans ℝ²**: Any `(x,y) = x(1,0) + y(0,1)` ✓
+
+Two independent vectors in ℝ² = basis.
+
+---
+
+**2. Write `v = (3,5)` as a linear combination of `(1,0)` and `(0,1)`**
+
+`(3,5) = 3(1,0) + 5(0,1)`
+
+Coefficients: c₁ = 3, c₂ = 5.
+
+---
+
+**3. Are `(1,2,3)`, `(2,4,6)`, `(0,1,1)` linearly independent?**
+
+**Check**: `(2,4,6) = 2(1,2,3)` → these are dependent!
+
+Since the second vector is a scalar multiple of the first, the set is dependent regardless of the third vector.
+
+**Test**: c₁(1,2,3) + c₂(2,4,6) + c₃(0,1,1) = (0,0,0)
+- Pick c₁ = 2, c₂ = -1, c₃ = 0 → `2(1,2,3) + (-1)(2,4,6) = (0,0,0)` ✓
+- Non-zero coefficients exist → dependent.
+
+---
+
+## Interview-Style Answer
+
+**"Your team uses a neural network with a 500-dimensional embedding layer. A colleague suggests that since you only have 200 distinct words, the embedding vectors must be linearly dependent and you're wasting dimensions. Are they correct? Why or why not?"**
+
+### The Short Answer
+
+**They're likely wrong** - embedding dimension and vocabulary size are different concepts.
+
+### The Detailed Explanation
+
+**What they're missing**: Even with 200 words, you can choose embedding vectors that are linearly independent in ℝ⁵⁰⁰.
+
+**Key points**:
+
+1. **Dimension ≠ vocabulary size**: You can have 200 independent vectors in 500-dimensional space (they just live in a 200-dimensional subspace).
+
+2. **Each word gets its own vector**: The vectors are not inherently dependent just because there are fewer words than dimensions.
+
+3. **Training determines dependence**: The optimizer will find some relationship, but with 500D and 200 words, there's room for all to be independent.
+
+4. **Even if dependent, that's not "wasted"**: Independence is just one property. Word embeddings encode semantic relationships - similar words are close together.
+
+**The real question**: Is 500D necessary for 200 words?
+- Yes if you need rich semantic representations
+- No if you're overparameterizing (could use 200D)
+- It depends on the task and data
+
+**Common misconception**: Thinking "number of vectors" = "dimension needed for independence." You can have arbitrary many independent vectors in a fixed dimension.
+
+### Interview Follow-up
+
+**"When would the colleague be right?"**
+
+If embedding matrix has shape `(vocab_size, dim)` with rank < vocab_size (i.e., some words are linear combinations of others). This happens if:
+- Embedding initialization has linear dependencies
+- Training collapses similar words
+
+**Why it matters**: Low effective rank = less representational capacity.
+
+---
+
+## Additional Linear Algebra Interview Questions
+
+### Q: What is the relationship between linear independence and solving linear systems?
+
+**Independent columns** = unique solution (if any) to `Ax = b`.
+**Dependent columns** = infinite solutions or no solution.
+
+**Example**: `x + y = 1` and `2x + 2y = 2` (dependent equations) → infinite solutions.
+
+---
+
+### Q: How do you check if a set of vectors is linearly independent in practice?
+
+**Method 1**: Form matrix with vectors as columns, compute determinant (if square) or rank.
+- Full rank → independent
+- Rank < number of vectors → dependent
+
+**Method 2**: Solve `c₁v₁ + ... + cₖvₖ = 0` for c_i.
+- Only all-zero solution → independent
+- Non-zero solution → dependent
+
+**In code**: Use `np.linalg.matrix_rank()` - if rank == number of vectors, they're independent.
+
+---
+
+### Q: Why is PCA finding a basis important?
+
+PCA finds new basis vectors (principal components) that:
+1. Capture maximum variance
+2. Are orthogonal (perpendicular)
+3. Are ordered by importance
+
+**Why it matters**: You can represent data with fewer dimensions by projecting onto top k principal components.
+
+---
+
+### Q: What's the difference between a basis and an orthogonal basis?
+
+**Basis**: Independent + spans space (vectors can be at any angles).
+
+**Orthogonal basis**: Basis where vectors are perpendicular (dot product = 0).
+
+**Orthonormal basis**: Orthogonal + all vectors have length 1.
+
+**Why orthonormal matters**: 
+- Normalization is simple (just dot product)
+- Projection is trivial: `proj_v(u) = (u·v)v`
+- PCA gives orthonormal basis
+
+---
+
+### Q: In linear regression, why is feature independence important?
+
+**Multicollinearity** = features are linearly dependent (correlated).
+
+**Problems**:
+- Unstable coefficient estimates
+- Hard to interpret individual feature importance
+- Can cause numerical issues in matrix inversion
+
+**Fix**: Use PCA, remove redundant features, or use regularization.
+
+---
+
+### Q: What is the "basis" of a neural network's representation?
+
+**Different meanings**:
+
+1. **Input basis**: Standard basis features (raw pixels, word counts)
+2. **Hidden basis**: Activation vectors that span the representation space
+3. **Concept basis**: Interpretable features discovered by model
+
+**In autoencoders**: Learned basis represents data more efficiently.
+
+---
+
+### Q: If two embeddings are linearly independent, does that mean they're dissimilar?
+
+**Not necessarily** - independence doesn't imply dissimilarity.
+
+**Example**: `(1,0.1)` and `(0.1,1)` are nearly independent but semantically similar.
+
+**What independence tells you**: They capture different "directions" in the feature space. Similarity requires additional metrics like cosine similarity or Euclidean distance.
+
+---
+
+### Q: Why do transformers use 768+ dimensions if many embeddings might be dependent?
+
+**Key insight**: Even if dimensions aren't linearly independent, they can still be useful!
+- **Independence isn't everything**: Redundancy helps with robustness
+- **Semantic richness**: More dimensions allow fine-grained distinctions
+- **Optimization**: Higher dimensions can help gradient flow
+
+**Practical reality**: Most embeddings in large models are effectively rank-deficient (low effective rank) but still valuable.
