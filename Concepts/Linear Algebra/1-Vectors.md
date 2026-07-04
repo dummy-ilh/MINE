@@ -1,141 +1,77 @@
-## Major algorithms actually relevant for Data Scientist roles
+# Chapter 1: Vectors
 
-These are different from generic SWE DSA — they're the algorithms that show up because of what a DS *does*: sampling, working with distributions, feature engineering at scale, and basic ML mechanics. Here's the full list, grouped by why it matters.
+## 1. What problem does this concept solve?
 
----
+Imagine you want to describe something that has both a **size** and a **direction** — wind blowing at 20 km/h toward the northeast, or a customer's preferences across 300 different product features. A plain number (like "20" or "5 stars") can't capture that. You need an object that bundles multiple related numbers together and treats them as one thing.
 
-### 1. Sampling algorithms (very high yield — comes up constantly)
+That's what a vector is for: a single mathematical object that represents a point, a direction, a quantity, or a list of features — all at once.
 
-**Reservoir Sampling** — sample k items from a stream of unknown/huge size, uniform probability
-```python
-import random
-def reservoir_sample(stream, k):
-    result = []
-    for i, item in enumerate(stream):
-        if i < k:
-            result.append(item)
-        else:
-            j = random.randint(0, i)
-            if j < k:
-                result[j] = item
-    return result
-```
-Why it matters: "sample from a massive log file without loading it all into memory" is a direct DS interview question.
+## 2. Intuition (real-world analogy)
 
-**Weighted random sampling**
-```python
-np.random.choice(items, size=n, p=probabilities, replace=False)
-```
+Think of giving someone directions: "walk 4 blocks east, then 3 blocks north." That instruction has two pieces of information, but it's really *one* instruction — one movement. A vector is exactly that: a bundle of numbers describing one movement, one point, or one "thing," where the order and grouping matter.
 
-**Stratified sampling** (preserve group proportions)
-```python
-df.groupby("group", group_keys=False).apply(lambda x: x.sample(frac=0.1))
-```
+In AI/ML, a vector is usually a **list of features** describing something: a house (size, bedrooms, age, price), a word (its meaning encoded as 300 numbers), or an image pixel (red, green, blue intensity).
 
-**Bootstrap resampling** (for confidence intervals without assuming a distribution)
-```python
-def bootstrap_ci(data, n_iterations=1000, ci=95):
-    means = [np.mean(np.random.choice(data, size=len(data), replace=True)) for _ in range(n_iterations)]
-    lower = np.percentile(means, (100-ci)/2)
-    upper = np.percentile(means, 100 - (100-ci)/2)
-    return lower, upper
-```
+## 3. Small numerical example
 
-**Rejection sampling / inverse transform sampling** — generate samples from a custom distribution using only `uniform()`.
+The vector in the diagram above is:
 
----
+$$v = (4, 3)$$
 
-### 2. Hashing-based algorithms (for scale problems)
+This means: starting at the origin, move 4 units right and 3 units up. That single arrow *is* the vector — not the starting point, not the ending point, but the *displacement* between them.
 
-**Count-distinct at scale** — HyperLogLog concept (probabilistic cardinality estimation). You won't implement it from scratch, but you should be able to explain: instead of storing a full set to count uniques, hash each item and track the longest run of leading zeros in the hash — this approximates cardinality in O(1) space. Comes up as "how would you count unique users across a billion rows without enough memory."
+Another example, in 3D: $u = (2, -1, 5)$ — go 2 right, 1 back, 5 up.
 
-**MinHash** — estimate Jaccard similarity between two large sets without storing them fully. Relevant for de-duplication / similarity-at-scale questions.
+## 4. Visual explanation
 
-**Bloom filter** — probabilistic "have I seen this before" check with false positives but no false negatives, O(1) space per check regardless of set size.
+The diagram above shows exactly this: the arrow from the origin to (4, 3), with dashed lines showing how the vector "breaks down" into its horizontal piece (4) and vertical piece (3). This breakdown is the key visual intuition you'll reuse constantly — vectors are made of independent components along each axis.
 
----
+## 5. Mathematical formulation, symbol by symbol
 
-### 3. Tree-based algorithms (need to know mechanics, not just call sklearn)
+$$v = \begin{bmatrix} 4 \\ 3 \end{bmatrix}$$
 
-**Decision tree split logic (Gini/Entropy)**
-```python
-def gini(y):
-    classes, counts = np.unique(y, return_counts=True)
-    probs = counts / len(y)
-    return 1 - np.sum(probs**2)
+- $v$ — the name we give the vector (bold or arrow-topped in textbooks: **v** or $\vec{v}$)
+- The numbers inside the brackets are called **components** or **coordinates**
+- The **dimension** of a vector is how many components it has. $(4,3)$ is 2-dimensional. A word embedding might be 300-dimensional — same idea, just more numbers, impossible to draw but easy to reason about algebraically.
+- We write $v \in \mathbb{R}^2$ to mean "$v$ is a vector living in 2-dimensional real space." $\mathbb{R}^n$ just means "the space of all possible $n$-number lists."
 
-def information_gain(y, y_left, y_right):
-    p = len(y_left) / len(y)
-    return gini(y) - (p * gini(y_left) + (1-p) * gini(y_right))
-```
-Interviewers ask you to reason through "why does entropy/gini prefer this split" — know the formula cold.
+## 6. Geometric interpretation
+
+A vector has **two equally valid interpretations**, and interview questions love testing whether you know both:
+
+1. **A point** in space — the location (4, 3).
+2. **An arrow / displacement** — a direction and length, which can be drawn starting anywhere (not just the origin) and still represent the "same" vector, as long as the direction and length match.
+
+Both views are useful: "point" view is natural for data (a row in a spreadsheet), "arrow" view is natural for movement, forces, and gradients.
+
+## 7. Why it matters for AI/ML
+
+- Every data point fed into a model — an image, a sentence, a user profile — is first converted into a vector of numbers. This is the **entire foundation** of ML: models don't understand images or words, they understand vectors.
+- **Word embeddings**: the word "king" becomes a vector like $(0.2, -1.4, 0.7, \dots)$, and vectors that are close together represent similar meanings.
+- **Model weights** in a neural network layer are also just vectors (and matrices, which are collections of vectors — coming next chapter).
+- **Gradients** (used in gradient descent to train models) are vectors — they point in the direction of steepest increase of a function.
+
+## 8. Common interview questions and pitfalls
+
+- **Pitfall**: confusing a vector with a point. A vector has no fixed location — $(4,3)$ starting at the origin and $(4,3)$ starting at $(10,10)$ (ending at $(14,13)$) represent the *same vector*, just drawn in different places.
+- **Pitfall**: thinking dimension means "size" in the everyday sense. A 300-dimensional vector isn't "big," it just has 300 independent numbers.
+- **Interview flavor**: "What's the difference between a vector and a scalar?" (Answer: a scalar is a single number with magnitude only; a vector has both magnitude and direction — or in ML terms, a scalar is one feature, a vector is a collection of features.)
+
+## 9. Summary
+
+A vector is an ordered list of numbers that represents a point, a direction, or a set of features as a single mathematical object. It can be viewed geometrically as an arrow (direction + length) or as a point in space, and this dual view is what makes vectors the basic building block of literally every ML model — every input, weight, and gradient is a vector.
 
 ---
 
-### 4. Dimensionality reduction — PCA from scratch (classic "implement from scratch" ask)
-```python
-def pca(X, n_components):
-    X_centered = X - X.mean(axis=0)
-    cov = np.cov(X_centered.T)
-    eigvals, eigvecs = np.linalg.eigh(cov)
-    idx = np.argsort(eigvals)[::-1][:n_components]
-    return X_centered @ eigvecs[:, idx]
-```
+**Conceptual questions:**
+1. If two arrows have the same length and direction but start at different points, are they the same vector? Why?
+2. Why do we say an image with 784 pixels can be represented as a "vector in $\mathbb{R}^{784}$"?
 
----
+**Numerical practice:**
+1. Draw (mentally or on paper) the vector $(-2, 5)$. Which direction does it point?
+2. What is the dimension of the vector $(1, 0, -3, 4)$?
 
-### 5. Naive Bayes (from scratch — common)
-```python
-def naive_bayes_predict(X_train, y_train, x_query):
-    classes = np.unique(y_train)
-    posteriors = {}
-    for c in classes:
-        X_c = X_train[y_train == c]
-        prior = len(X_c) / len(X_train)
-        likelihood = np.prod([
-            np.exp(-((x_query[i] - X_c[:,i].mean())**2) / (2*X_c[:,i].var())) /
-            np.sqrt(2*np.pi*X_c[:,i].var())
-            for i in range(len(x_query))
-        ])
-        posteriors[c] = prior * likelihood
-    return max(posteriors, key=posteriors.get)
-```
+**Interview-style question (Google/Apple flavor):**
+"You're told two data points are represented as vectors in $\mathbb{R}^{50}$. What does that tell you about how those data points were generated or featurized, and what does it *not* tell you about their similarity?"
 
----
-
-### 6. A/B testing math-as-algorithm (statistics that gets coded up live)
-
-**Sample ratio mismatch check** — chi-square test to verify traffic split is as expected:
-```python
-from scipy.stats import chisquare
-observed = [4980, 5020]      # actual counts in A vs B
-expected = [5000, 5000]       # expected 50/50 split
-stat, p_value = chisquare(observed, expected)
-```
-
-**Sample size calculator for A/B tests**
-```python
-from statsmodels.stats.power import NormalIndPower
-analysis = NormalIndPower()
-n = analysis.solve_power(effect_size=0.2, alpha=0.05, power=0.8)
-```
-
-**Difference-in-differences** (increasingly asked per recent reports) — conceptually: `(treatment_after - treatment_before) - (control_after - control_before)`, coded as simple group-mean arithmetic, but you should be able to explain why it removes time-invariant confounders.
-
----
-
-### 7. Graph-lite algorithms that show up in DS (less common, but real)
-
-- **Connected components** for clustering/de-duplication of records (e.g. "these 3 user records are actually the same person" — union-find).
-- **PageRank-style iterative algorithm** for ranking (if asked to reason about recommendation ranking systems).
-
----
-
-### Priority order to actually study, given what you're targeting
-1. Reservoir sampling + bootstrap CI (near-certain to come up)
-2. Pandas groupby/rank/window patterns (already covered above)
-3. Gini/entropy split logic + PCA from scratch (common whiteboard asks)
-4. A/B test sanity check code (chi-square, sample size) — ties directly to the causal inference shift mentioned in recent reports
-5. Bloom filter / HyperLogLog — know the *concept* verbally, rarely asked to code fully
-
-Want worked practice problems for reservoir sampling or bootstrap CI specifically, since those are the highest-yield ones?
+Take your time — let me know your answers, or just say "next" when you're ready to move to **Vector Operations** (addition, scalar multiplication), which builds directly on what we just covered.
