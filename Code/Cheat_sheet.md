@@ -95,9 +95,66 @@ d.get("z", 0)           # returns 0 if key missing (no KeyError)
 "a" in d                # True/False membership check — O(1)
 del d["a"]
 d.keys(); d.values(); d.items()
-
 for k, v in d.items():
     print(k, v)
+#create
+d = {"name": "Alice", "age": 25, "score": 90}
+d = dict(name="Alice", age=25)  # alternate way
+d["city"] = "Delhi"        # add new key
+#add update
+d["age"] = 26              # update existing key
+d.update({"age": 26, "city": "Delhi"})  # update multiple
+#search
+d["name"]            # direct access (KeyError if missing)
+d.get("name")        # safe access → returns None if missing
+d.get("xyz", "N/A")  # default value if key not found
+"age" in d           # check if key exists → True/False
+del d["age"]          # delete by key
+d.pop("age")          # delete + returns value
+d.pop("age", None)    # safe pop (no error if missing)
+d.popitem()           # removes last inserted key-value pair
+d.clear()             # empty the whole dict
+#Loop
+for key in d:
+    print(key, d[key])
+
+for key, val in d.items():   # best way
+    print(key, val)
+
+for key in d.keys():   print(key)
+for val in d.values(): print(val)
+d = {"b": 3, "a": 1, "c": 2}
+
+# Sort by value → ascending
+sorted_d = dict(sorted(d.items(), key=lambda x: x[1]))
+# {'a': 1, 'c': 2, 'b': 3}
+
+# Sort by value → descending
+sorted_d = dict(sorted(d.items(), key=lambda x: x[1], reverse=True))
+# {'b': 3, 'c': 2, 'a': 1}
+
+# Sort by key
+sorted_d = dict(sorted(d.items()))
+d = {"a": 10, "b": 3, "c": 7, "d": 1}
+
+# Keep only values > 5
+filtered = {k: v for k, v in d.items() if v > 5}
+# {'a': 10, 'c': 7}
+
+# Keep only specific keys
+keys_to_keep = ["a", "c"]
+filtered = {k: v for k, v in d.items() if k in keys_to_keep}
+len(d)              # number of keys
+d.copy()            # shallow copy
+
+# Merge two dicts (Python 3.9+)
+d3 = d1 | d2
+
+# Merge older way
+d3 = {**d1, **d2}
+
+# Set default (adds key only if not present)
+d.setdefault("age", 0)
 ```
 
 ### `collections.defaultdict` — auto-initializes missing keys
