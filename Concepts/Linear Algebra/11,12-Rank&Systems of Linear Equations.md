@@ -1,4 +1,3 @@
-Got it — this is the finalized version of the instructions, and it matches exactly how we've been working. I'll keep going chapter by chapter, holding off on answers unless you ask for them, and building the full topic list through matrix calculus. Since you said "next" without asking for answers, let's move straight to Rank — feel free to come back to Chapter 10's questions anytime.
 
 ## Chapter 11: Rank
 
