@@ -328,9 +328,8 @@ Cosine similarity measures the angle between two vectors by dividing their dot p
 **Interview-style question:**
 "Two product embeddings have a cosine similarity of 0.99 but a large Euclidean distance between them. Explain how this is possible, and which metric you'd trust more for a 'find similar products' feature — and why."
 
-# Angles and Cosine Similarity - Concise Summary
 
-## Definition
+## Summary
 
 **Cosine similarity** measures the angle between two vectors, independent of their lengths:
 
