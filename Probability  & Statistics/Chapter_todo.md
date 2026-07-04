@@ -14,7 +14,6 @@ A Math 581
 B R 601
 
 1 COminatorial ANlaysis
-2axioms of proablty
 4 rv
 5 continous rv
 6 joint rv
