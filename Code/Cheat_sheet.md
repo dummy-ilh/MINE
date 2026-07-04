@@ -411,16 +411,290 @@ bisect.insort(arr, 4)         # insert 4 keeping arr sorted
 
 ---
 
-### Quick cheat-sheet of "when to use what"
+## Checking frequency dicts
 
-| Problem smells like... | Use |
+```python
+freq = {}
+for ch in "aabbbc":
+    freq[ch] = freq.get(ch, 0) + 1     # safe increment, no KeyError
+
+# checking
+"a" in freq          # True — key exists
+freq["a"]             # 2 — get count (KeyError if missing)
+freq.get("z")         # None if missing
+freq.get("z", 0)      # 0 if missing — safest for counting logic
+
+# checking if two freq dicts are identical (anagram check)
+freq1 == freq2        # dicts support direct equality comparison
+
+# checking if all counts satisfy a condition
+all(v % 2 == 0 for v in freq.values())     # e.g. "can form palindrome" check
+
+# find the max/min frequency key
+max(freq, key=freq.get)     # key with highest count
+min(freq, key=freq.get)     # key with lowest count
+
+# using Counter (does all of the above cleaner)
+from collections import Counter
+c1, c2 = Counter(s1), Counter(s2)
+c1 == c2                      # anagram check in one line
+```
+
+---
+
+## Pattern-recognition ("leanings") by category
+
+### Greedy
+- Smell: "maximize/minimize X", "at each step pick the best local option", words like "minimum number of," "maximum profit."
+- Core idea: sort first (usually), then make the locally optimal choice and never look back — no backtracking needed.
+- Common tells: interval scheduling (sort by end time), jump game (track farthest reachable), stock problems (track min-so-far).
+- Template feel:
+```python
+arr.sort(key=lambda x: x[1])   # sort by whatever makes greedy choice obvious
+result = 0
+for item in arr:
+    if <locally best condition>:
+        result += 1  # or update running state
+```
+- Gotcha: greedy only works when the problem has the "greedy choice property" — if you find yourself needing to reconsider past choices, it's not greedy, it's DP.
+
+### Graphs
+- Smell: "connections," "network," "islands," "shortest path," "can you reach," "dependencies" (course schedule = topological sort).
+- Decide representation first: adjacency list (`defaultdict(list)`) almost always, adjacency matrix only if dense/small.
+- Decide traversal:
+  - **Unweighted shortest path / level order** → BFS with `deque`.
+  - **"Does a path exist" / connected components / islands** → DFS (recursion or explicit stack) — order doesn't matter, just need to visit everything.
+  - **Weighted shortest path** → Dijkstra with `heapq` (push `(dist, node)`).
+  - **"Order of tasks with dependencies"** → topological sort (BFS with in-degree counting, aka Kahn's algorithm).
+  - **Cycle detection** → DFS with a "visiting/visited" 3-color state, or in-degree count reaching 0 for all nodes (topo sort).
+- Always track `visited = set()` — the #1 bug source is re-visiting nodes and infinite-looping.
+
+### Backtracking
+- Smell: "all possible," "all subsets/permutations/combinations," "valid arrangements" (N-Queens, Sudoku, word search).
+- Template feel:
+```python
+def backtrack(path, choices):
+    if <base case>:
+        res.append(path[:])   # copy! path is mutated later
+        return
+    for choice in choices:
+        path.append(choice)          # choose
+        backtrack(path, new_choices)  # explore
+        path.pop()                    # un-choose (the "backtrack")
+```
+- Gotcha: always undo the choice after recursing — that's the whole trick.
+
+### Dynamic Programming
+- Smell: "count the number of ways," "min/max cost to reach," overlapping subproblems, or greedy "feels wrong" because earlier choices affect later options.
+- Ask: can I define `dp[i]` = answer using only first `i` elements, and express `dp[i]` in terms of `dp[i-1]`, `dp[i-2]`, etc.?
+- Start with brute-force recursion + memo (`@lru_cache` or a dict), then convert to bottom-up table if needed.
+```python
+from functools import lru_cache
+
+@lru_cache(None)
+def dp(i):
+    if <base case>: return ...
+    return dp(i-1) + dp(i-2)   # or whatever the recurrence is
+```
+## Core algorithm templates to have memorized
+
+### Binary Search
+```python
+def binary_search(arr, target):
+    lo, hi = 0, len(arr) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return -1
+```
+- Gotcha: `mid = (lo+hi)//2` can overflow in other languages, not an issue in Python. Watch off-by-one on `lo <= hi` vs `lo < hi` depending on if you want "found" vs "insertion point."
+- Variant: binary search on **answer space** (e.g. "minimum capacity to ship in D days") — search over possible answers, not array indices.
+
+### Sliding Window (variable size)
+```python
+def longest_substring_with_condition(s):
+    left = 0
+    freq = {}
+    best = 0
+    for right in range(len(s)):
+        freq[s[right]] = freq.get(s[right], 0) + 1
+        while <window invalid>:          # shrink while condition breaks
+            freq[s[left]] -= 1
+            if freq[s[left]] == 0:
+                del freq[s[left]]
+            left += 1
+        best = max(best, right - left + 1)
+    return best
+```
+
+### Prefix Sum
+```python
+prefix = [0] * (len(arr) + 1)
+for i, x in enumerate(arr):
+    prefix[i+1] = prefix[i] + x
+
+# sum of arr[i:j] (inclusive i, exclusive j) in O(1):
+range_sum = prefix[j] - prefix[i]
+```
+- Used for "subarray sum equals K" combined with a dict of `{prefix_sum: count}`.
+
+### Fast & Slow Pointers (cycle detection)
+```python
+def has_cycle(head):
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        if slow == fast:
+            return True
+    return False
+```
+- Also used for "find middle of linked list" (slow ends at middle when fast hits end).
+
+### DFS (graph/tree, iterative with explicit stack)
+```python
+def dfs(start):
+    stack = [start]
+    visited = {start}
+    while stack:
+        node = stack.pop()
+        for neighbor in graph[node]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                stack.append(neighbor)
+```
+
+### BFS (shortest path, unweighted)
+```python
+def bfs(start):
+    queue = deque([(start, 0)])   # (node, distance)
+    visited = {start}
+    while queue:
+        node, dist = queue.popleft()
+        for neighbor in graph[node]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append((neighbor, dist + 1))
+```
+
+### Dijkstra (weighted shortest path)
+```python
+def dijkstra(start, n):
+    dist = {i: float('inf') for i in range(n)}
+    dist[start] = 0
+    heap = [(0, start)]
+    while heap:
+        d, node = heapq.heappop(heap)
+        if d > dist[node]:
+            continue        # stale entry, skip
+        for neighbor, weight in graph[node]:
+            nd = d + weight
+            if nd < dist[neighbor]:
+                dist[neighbor] = nd
+                heapq.heappush(heap, (nd, neighbor))
+    return dist
+```
+
+### Topological Sort (Kahn's algorithm, BFS-based)
+```python
+def topo_sort(n, edges):
+    graph = defaultdict(list)
+    indegree = [0] * n
+    for u, v in edges:            # u -> v
+        graph[u].append(v)
+        indegree[v] += 1
+
+    queue = deque([i for i in range(n) if indegree[i] == 0])
+    order = []
+    while queue:
+        node = queue.popleft()
+        order.append(node)
+        for neighbor in graph[node]:
+            indegree[neighbor] -= 1
+            if indegree[neighbor] == 0:
+                queue.append(neighbor)
+
+    return order if len(order) == n else []   # empty = cycle exists
+```
+
+### Union-Find / Disjoint Set (connectivity, cycle detection in undirected graphs)
+```python
+class UnionFind:
+    def __init__(self, n):
+        self.parent = list(range(n))
+        self.rank = [0] * n
+
+    def find(self, x):
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])   # path compression
+        return self.parent[x]
+
+    def union(self, x, y):
+        px, py = self.find(x), self.find(y)
+        if px == py:
+            return False     # already connected -> would form a cycle
+        if self.rank[px] < self.rank[py]:
+            px, py = py, px
+        self.parent[py] = px
+        if self.rank[px] == self.rank[py]:
+            self.rank[px] += 1
+        return True
+```
+- Comes up in: "number of connected components," "redundant connection," Kruskal's MST.
+
+### Quickselect (kth largest/smallest, O(n) average)
+```python
+import random
+
+def quickselect(arr, k):   # kth smallest, 1-indexed
+    pivot = random.choice(arr)
+    left = [x for x in arr if x < pivot]
+    mid = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+
+    if k <= len(left):
+        return quickselect(left, k)
+    elif k <= len(left) + len(mid):
+        return pivot
+    else:
+        return quickselect(right, k - len(left) - len(mid))
+```
+- Alternative to sorting or heaps for "kth largest element" — average O(n) vs O(n log n).
+
+### Merge Sort (stable, O(n log n), good to know for "merge intervals"/"count inversions")
+```python
+def merge_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    mid = len(arr) // 2
+    left, right = merge_sort(arr[:mid]), merge_sort(arr[mid:])
+    result, i, j = [], 0, 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i]); i += 1
+        else:
+            result.append(right[j]); j += 1
+    return result + left[i:] + right[j:]
+```
+
+---
+
+### One-line complexity cheat sheet (interviewers love hearing this stated out loud)
+
+| Structure/Op | Time |
 |---|---|
-| "find pair/duplicate/frequency" | dict / Counter / set |
-| "process in order, need index+value" | enumerate |
-| "shortest path, level order, BFS" | deque |
-| "top-k, kth largest, priority" | heapq |
-| "all orderings/subsets" | backtracking (or itertools) |
-| "need both ends fast" | deque |
-| "sorted array search" | bisect |
+| list append/pop (end) | O(1) |
+| list insert/pop (start/middle) | O(n) |
+| dict/set get, insert, in-check | O(1) avg |
+| deque append/pop (both ends) | O(1) |
+| heapq push/pop | O(log n) |
+| sort() | O(n log n) |
+| binary search | O(log n) |
+| BFS/DFS | O(V + E) |
 
-Want me to go deeper on any one of these (e.g. a full backtracking template, or Dijkstra with heapq), or move on to time/space complexity next?
+Want the Kruskal/Prim MST templates too, or is that enough graph coverage for now?
