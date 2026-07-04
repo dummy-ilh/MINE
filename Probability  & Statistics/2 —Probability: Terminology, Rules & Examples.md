@@ -647,3 +647,138 @@ Since the coin is *unfair*, p ≠ q, so (p − q)² > 0.
 - **The right counting method depends on whether order matters.** Always ask this explicitly before picking a formula.
 
 ---
+
+
+
+
+# Axioms of Probability — Simple Complete Notes + Interview Q&A (L5 Google/Apple)
+
+## 3. The Three Axioms of Probability (Kolmogorov's Axioms)
+
+A probability function $P$ assigns a number $P(A)$ to every event $A$, satisfying:
+
+**Axiom 1 — Non-negativity:** $P(A)\ge0$ for every event $A$.
+*Simple meaning: probabilities can't be negative.*
+
+**Axiom 2 — Normalization:** $P(S)=1$.
+*Simple meaning: something in the sample space is guaranteed to happen — total probability across all outcomes is exactly 1.*
+
+**Axiom 3 — Countable additivity:** if $A_1,A_2,A_3,\dots$ are mutually exclusive (pairwise disjoint) events, then
+$$P(A_1\cup A_2\cup A_3\cup\cdots) = P(A_1)+P(A_2)+P(A_3)+\cdots$$
+*Simple meaning: if events can't overlap, the probability of "at least one of them happens" is just adding up their individual probabilities.*
+
+**Why only three axioms, and why these three?** Everything else in probability theory — every formula, every theorem — is *derived* from just these three simple rules. This is worth appreciating: nothing else is assumed, and remarkably, that's enough to build the entire subject. **A favorite theoretical-depth interview question is simply "can you state the axioms of probability?" — many candidates can use probability fluently but freeze when asked to state the actual axioms from memory.**
+
+---
+
+## 4. Basic Theorems Derived Directly From the Axioms
+
+All of the following are **provable** from just the three axioms above — worth knowing the proofs, not just the results, since "derive this from the axioms" is a common interview follow-up.
+
+### 4.1 Probability of the Empty Set
+$$P(\emptyset) = 0$$
+**Proof:** $S$ and $\emptyset$ are disjoint, and $S\cup\emptyset=S$. By Axiom 3: $P(S)=P(S)+P(\emptyset)$, so $P(\emptyset)=0$.
+
+### 4.2 Complement Rule
+$$P(A^c) = 1-P(A)$$
+**Proof:** $A$ and $A^c$ are disjoint, and $A\cup A^c=S$. By Axiom 3: $P(S)=P(A)+P(A^c)=1$ (Axiom 2), so $P(A^c)=1-P(A)$.
+
+**Why this is one of the most useful tricks in all of probability:** whenever "at least one" or "none" language shows up, computing the complement is very often dramatically easier than computing the event directly. **This single rule is behind probably 30% of all "clever shortcut" interview solutions.**
+
+**Worked numerical:** roll a fair die twice. Find $P(\text{at least one 6})$.
+Direct computation is annoying (has to account for "first is 6," "second is 6," "both are 6" without double-counting). Complement is easy: $P(\text{no 6 at all}) = \left(\frac56\right)^2=\frac{25}{36}$, so $P(\text{at least one 6}) = 1-\frac{25}{36}=\frac{11}{36}$.
+
+### 4.3 Monotonicity
+If $A\subset B$, then $P(A)\le P(B)$.
+**Proof:** write $B = A\cup(B\cap A^c)$ — these two pieces are disjoint. By Axiom 3: $P(B) = P(A)+P(B\cap A^c) \ge P(A)$, since $P(B\cap A^c)\ge0$ by Axiom 1.
+**Simple meaning:** a bigger event (one that includes more outcomes) can never have smaller probability than a sub-event contained inside it.
+
+### 4.4 Inclusion-Exclusion for Two Events
+$$P(A\cup B) = P(A)+P(B)-P(A\cap B)$$
+**Proof idea:** if you just added $P(A)+P(B)$, you'd double-count the overlap $A\cap B$ — subtracting it once fixes the double-count. (Can be proven rigorously by splitting $A\cup B$ into three disjoint pieces — $A\cap B^c$, $A\cap B$, $A^c\cap B$ — and applying Axiom 3 to each.)
+
+**Worked numerical:** in a class of 50 students, 30 take Math, 25 take Physics, 15 take both. Find $P(\text{takes Math or Physics})$, picking a random student.
+$$P(M\cup P) = \frac{30}{50}+\frac{25}{50}-\frac{15}{50} = \frac{40}{50}=0.8$$
+
+### 4.5 Inclusion-Exclusion for Three Events
+$$P(A\cup B\cup C) = P(A)+P(B)+P(C)-P(A\cap B)-P(A\cap C)-P(B\cap C)+P(A\cap B\cap C)$$
+**Simple pattern to remember:** add the singles, subtract all the pairs, add back the triple. (This alternating add/subtract pattern continues for any number of events — the general formula is called the Inclusion-Exclusion Principle.)
+
+**Worked numerical:** 100 people surveyed: 40 like coffee, 35 like tea, 30 like juice, 15 like coffee & tea, 12 like coffee & juice, 10 like tea & juice, 5 like all three. Find $P(\text{likes at least one})$.
+$$P(C\cup T\cup J) = \frac{40+35+30-15-12-10+5}{100} = \frac{73}{100}=0.73$$
+
+### 4.6 Boole's Inequality (the Union Bound) — a Genuinely Useful Interview Tool
+$$P(A_1\cup A_2\cup\cdots\cup A_n) \le P(A_1)+P(A_2)+\cdots+P(A_n)$$
+
+**Simple meaning:** the probability that *at least one* of several events happens is never more than just adding up their individual probabilities — even if they overlap (in which case the sum over-counts, making the bound loose but still valid).
+
+**Why this is a favorite interview tool:** it gives you an instant, guaranteed upper bound with almost no work, useful whenever computing the *exact* union probability would require painful inclusion-exclusion with many terms. **This exact inequality is also the basis of the "union bound" technique used throughout computer science (e.g., bounding the probability that any of $n$ independent components fails, or that any of $n$ hash collisions occurs).**
+
+**Worked numerical:** a system has 5 independent components, each with a 2% chance of failing today. Bound the probability that *at least one* fails.
+$$P(\text{at least one fails}) \le 5\times0.02 = 0.10$$
+(The exact answer, via the complement, is $1-(0.98)^5\approx0.0961$ — notice the union bound (0.10) is close but slightly loose, exactly as expected, since it ignores the tiny probability of multiple simultaneous failures.)
+
+---
+
+
+## 7. Worked Numerical Examples (Mixed, Straight From the Axioms)
+
+### Example 1 — Direct axiom application
+Let $P(A)=0.4$, $P(B)=0.5$, $P(A\cap B)=0.2$. Find $P(A\cup B)$ and $P(A^c\cap B^c)$.
+$$P(A\cup B) = 0.4+0.5-0.2=0.7$$
+$$P(A^c\cap B^c) = P((A\cup B)^c) = 1-0.7=0.3 \quad \text{(via De Morgan's, Section 2)}$$
+
+### Example 2 — Complement rule shortcut
+A fair coin is flipped 5 times. Find $P(\text{at least one head})$.
+$$P(\text{no heads at all}) = \left(\frac12\right)^5=\frac{1}{32} \;\Rightarrow\; P(\text{at least one head}) = 1-\frac{1}{32}=\frac{31}{32}$$
+
+### Example 3 — Naive definition with combinations
+A hand of 5 cards is dealt from a standard 52-card deck. Find $P(\text{all 5 cards are hearts})$.
+$$P(\text{all hearts}) = \frac{\binom{13}{5}}{\binom{52}{5}} = \frac{1287}{2{,}598{,}960} \approx 0.000495$$
+
+### Example 4 — Boole's inequality vs. exact inclusion-exclusion
+3 events: $P(A)=0.3,P(B)=0.4,P(C)=0.2$, all pairwise and triple intersections $=0$ (mutually exclusive). Compare Boole's bound to the exact union.
+Boole's bound: $\le0.3+0.4+0.2=0.9$. Since they're mutually exclusive, the exact answer (via Axiom 3 directly) is also exactly $0.9$ — **when events are mutually exclusive, Boole's inequality becomes an *equality*, not just a bound** — worth noting as a sanity-check fact.
+
+---
+
+## 8. Cheat Sheet
+
+| Concept | Formula |
+|---|---|
+| Axiom 1 | $P(A)\ge0$ |
+| Axiom 2 | $P(S)=1$ |
+| Axiom 3 | Disjoint events: $P(\cup A_i)=\sum P(A_i)$ |
+| Empty set | $P(\emptyset)=0$ |
+| Complement | $P(A^c)=1-P(A)$ |
+| Monotonicity | $A\subset B \Rightarrow P(A)\le P(B)$ |
+| Inclusion-exclusion (2 events) | $P(A\cup B)=P(A)+P(B)-P(A\cap B)$ |
+| Inclusion-exclusion (3 events) | add singles, subtract pairs, add triple back |
+| Boole's inequality | $P(\cup A_i) \le \sum P(A_i)$ |
+| Naive/classical probability | $P(A)=|A|/|S|$, only if equally likely |
+| Permutations | $P(n,r)=n!/(n-r)!$ |
+| Combinations | $\binom{n}{r}=n!/[r!(n-r)!]$ |
+
+---
+
+## 9. Interview Q&A
+
+**Q2. Why do we need Axiom 3 to specifically require "mutually exclusive" events?**
+A: If events overlap, just adding their probabilities double-counts the overlap — you'd get a number that can exceed 1 or otherwise misrepresent the true probability. Requiring disjointness is exactly what makes simple addition valid.
+
+**Q3. Derive $P(A^c)=1-P(A)$ from the axioms.**
+A: $A$ and $A^c$ are disjoint and their union is the whole sample space $S$. By Axiom 3, $P(A)+P(A^c)=P(S)$, and by Axiom 2, $P(S)=1$. Rearranging gives $P(A^c)=1-P(A)$.
+
+**Q6. When would you use Boole's inequality instead of computing the exact probability?**
+A: When the exact union probability would require painful inclusion-exclusion across many events (many overlapping pairs/triples/etc.), and a quick, slightly loose upper bound is good enough for the purpose at hand — e.g., bounding the chance that *any* of many independent components fails.
+
+**Q7. If $A\subset B$, what can you say about $P(A)$ versus $P(B)$, and why?**
+A: $P(A)\le P(B)$ — since every outcome that makes $A$ happen also makes $B$ happen (that's what the subset relationship means), $B$ can only have "at least as much" probability as $A$.
+
+**Q9. When does Boole's inequality become an exact equality?**
+A: When all the events involved are pairwise mutually exclusive — in that case there's no overlap to over-count, so the sum of individual probabilities exactly equals the probability of the union (this is just Axiom 3 directly).
+
+**Q10. Give the inclusion-exclusion formula for 3 events, and explain the pattern in words.**
+A: $P(A\cup B\cup C)=P(A)+P(B)+P(C)-P(A\cap B)-P(A\cap C)-P(B\cap C)+P(A\cap B\cap C)$. Pattern: add all the singles, subtract all the pairwise overlaps (since they got double-counted), then add back the triple overlap (since it got subtracted out too many times in the pairwise step).
+**Q15. Explain De Morgan's Laws in plain English, without symbols.**
+A: "Not (A or B)" means neither one happened — i.e., "not A and not B." "Not (A and B)" means at least one of them failed to happen — i.e., "not A or not B."
