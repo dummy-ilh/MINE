@@ -6,7 +6,17 @@
 
 ## 🧠 What is Hypothesis Testing?
 
-Hypothesis testing is a **formal statistical framework** for making decisions about populations based on sample data. Rather than claiming certainty, it quantifies the *strength of evidence* against a default assumption.
+Hypothesis testing is a formal statistical procedure to decide whether there is enough evidence in your sample data to reject a default assumption (the null hypothesis) in favour of an alternative claim.
+
+    Plain English: You start by assuming "nothing interesting is happening." You then collect data and ask: "Is my data surprising enough to disprove that assumption?" If yes — you have a finding. If no — you don't have enough evidence to claim otherwise.
+
+    Analogy: It works like a court trial. The null hypothesis is "innocent until proven guilty." You need sufficient evidence (data) to convict (reject H₀). Failing to convict does not prove innocence — it just means the evidence wasn't strong enough.
+
+```
+H₀  (Null hypothesis)        — The default assumption. No effect, no difference.
+H₁  (Alternative hypothesis) — What you're trying to detect. Some effect exists.
+```
+
 
 ### Core Idea (Intuition First)
 
@@ -216,6 +226,71 @@ Step 7: State conclusion in the context of the problem
 | Can you ever "prove" H₁? | No — you can only make H₀ implausible enough to reject; that's indirect support, not proof. |
 | When do you use a one-tailed test? | Only when you have a strong pre-registered directional hypothesis and genuinely don't care about the opposite direction. |
 | What's the danger of one-tailed tests? | You get more power in your expected direction, but zero ability to detect a significant effect in the opposite direction. |
+
+---
+
+### The General Formula
+
+Every hypothesis test computes a **test statistic** of this form:
+
+```
+Test statistic = (Observed value − Expected value under H₀) / Standard Error
+
+                       signal
+              =       ────────
+                        noise
+```
+
+A large test statistic means your observation is many standard errors away from what H₀ predicts — strong evidence against H₀.
+
+**Specific formulas by test:**
+
+```
+z-test (large n or σ known):     z = (X̄ − μ₀) / (σ / √n)
+
+t-test (small n, σ unknown):     t = (X̄ − μ₀) / (s / √n)
+
+Proportion z-test (A/B):         z = (p̂₁ − p̂₂) / √[p̂(1−p̂)(1/n₁ + 1/n₂)]
+
+Chi-squared test:                 χ² = Σ (Observed − Expected)² / Expected
+```
+
+---
+
+### The Decision Rule
+
+```
+Compute test statistic  →  find p-value  →  compare to α
+
+If  p ≤ α   →  Reject H₀    ("statistically significant")
+If  p > α   →  Fail to reject H₀  ("insufficient evidence")
+```
+
+Common significance levels:
+
+| α | Confidence | Used when |
+|---|-----------|-----------|
+| 0.05 | 95% | Most standard experiments |
+| 0.01 | 99% | Higher-stakes decisions |
+| 0.001 | 99.9% | Medical, safety-critical |
+| 0.1 | 90% | Exploratory research |
+
+---
+
+### Key Terms at a Glance
+
+| Term | Symbol | Meaning |
+|------|--------|---------|
+| Null hypothesis | H₀ | Assumption of no effect |
+| Alternative hypothesis | H₁ | Claim you want to test |
+| Significance level | α | Max tolerable false positive rate |
+| p-value | p | P(data this extreme \| H₀ true) |
+| Test statistic | z, t, χ² | Standardised signal-to-noise ratio |
+| Critical value | z*, t* | Threshold for rejecting H₀ |
+| Type I error | α | False positive — reject true H₀ |
+| Type II error | β | False negative — miss real effect |
+| Statistical power | 1 − β | Probability of detecting a real effect |
+| Effect size | d, δ | Magnitude of the true difference |
 
 ---
 
