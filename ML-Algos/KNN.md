@@ -77,72 +77,92 @@ Imagine we are using the **$k$-Nearest Neighbors ($k$-NN)** algorithm to predict
 Our algorithm finds the 3 closest neighbor houses ($x_1, x_2, x_3$).
 
 ---
+### Example 2
 
-### 1. The Raw Data
+Nearest neighbors:
 
-Here are the distances from our query house ($x_q$) and the actual prices ($y_i$) of those neighbors:
+| Neighbor | Distance ($d_i$) | Price ($y_i$) |
+|----------|------------------:|--------------:|
+| 1 | 2 | \$300,000 |
+| 2 | 4 | \$200,000 |
+| 3 | 10 | \$100,000 |
 
-* **Neighbor 1 ($x_1$):** Distance $d_1 = 2$ miles, Price $y_1 = \$300,000$ (Very close)
-* **Neighbor 2 ($x_2$):** Distance $d_2 = 4$ miles, Price $y_2 = \$200,000$
-* **Neighbor 3 ($x_3$):** Distance $d_3 = 10$ miles, Price $y_3 = \$100,000$ (Far away)
+Weight formula:
 
----
+$$w_i=\frac{1}{d(x_i,x_q)}$$
 
-### Step 1: Calculate the Weights ($w_i$)
+Weights:
 
-The formula states that weight is the inverse of distance: $w_i = \frac{1}{d(x_i, x_q)}$.
+- $w_1=\frac12=0.5$
+- $w_2=\frac14=0.25$
+- $w_3=\frac1{10}=0.1$
 
-* $$w_1 = \frac{1}{2} = 0.5$$
+Total weight:
 
+$$\sum w_i=0.5+0.25+0.1=0.85$$
 
-* $$w_2 = \frac{1}{4} = 0.25$$
+Weighted sum:
 
+$$
+\sum(w_i y_i)=0.5(300000)+0.25(200000)+0.1(100000)=210000
+$$
 
-* $$w_3 = \frac{1}{10} = 0.1$$
+Final prediction:
 
+$$
+\hat y_q=\frac{210000}{0.85}\approx \mathbf{\$247,059}
+$$
 
+Unweighted average:
 
-> **Notice:** Neighbor 1 is close, so it gets a heavy weight ($0.5$). Neighbor 3 is far, so its influence drops significantly ($0.1$).
+$$
+\frac{300000+200000+100000}{3}=\mathbf{\$200,000}
+$$
 
----
-
-### Step 2: Sum the Weights ($\sum w_i$)
-
-We need the denominator for our final formula:
-
-$$\sum w_i = 0.5 + 0.25 + 0.1 = 0.85$$
-
----
-
-### Step 3: Calculate the Weighted Sum of Outcomes ($\sum w_i \cdot y_i$)
-
-Now we multiply each neighbor's house price by its respective distance weight:
-
-* **Neighbor 1:** $0.5 \times 300,000 = 150,000$
-* **Neighbor 2:** $0.25 \times 200,000 = 50,000$
-* **Neighbor 3:** $0.1 \times 100,000 = 10,000$
-
-$$\sum (w_i \cdot y_i) = 150,000 + 50,000 + 10,000 = 210,000$$
+> **Takeaway:** Distance weighting gives more influence to closer neighbors, producing a prediction closer to the nearest house.
 
 ---
 
-### Step 4: Final Prediction ($\hat{y}_q$)
+## Distance-Weighted k-NN Classification
 
-Divide the weighted sum of outcomes by the sum of the weights:
+Neighbors:
 
-$$\hat{y}_q = \frac{\sum (w_i \cdot y_i)}{\sum w_i} = \frac{210,000}{0.85} \approx \mathbf{\$247,058.82}$$
+| Neighbor | Distance | Label |
+|----------|---------:|-------|
+| 1 | 0.1 | Spam |
+| 2 | 0.5 | Ham |
+| 3 | 0.8 | Ham |
 
+Weights:
+
+- Spam: $\frac1{0.1}=10$
+- Ham: $\frac1{0.5}=2$
+- Ham: $\frac1{0.8}=1.25$
+
+Weighted votes:
+
+- **Spam:** $10$
+- **Ham:** $2+1.25=3.25$
+
+**Prediction:** **Spam**
+
+Without weighting:
+
+- Spam = 1 vote
+- Ham = 2 votes → **Ham** ❌
+
+> **Takeaway:** In classification, closer neighbors cast stronger votes, preventing distant neighbors from dominating the prediction.
 ---
 
-### The "Why This Matters" Comparison
+### Why Distance Weighting Fixed a Wrong Prediction Here
 
-If we had used the standard **unweighted average** formula:
+If you used the standard **majority vote** formula without distance weights:
 
+* **Spam Count:** 1 vote
+* **Ham Count:** 2 votes
+* **Unweighted Prediction:** **Ham** ❌ (Incorrectly classified)
 
-$$\hat{y}_q = \frac{300,000 + 200,000 + 100,000}{3} = \mathbf{\$200,000}$$
-
-**The Takeaway:** The unweighted average dragged the prediction down heavily because of Neighbor 3 ($10$ miles away). The **distance-weighted variant** correctly pulled the final prediction much closer to Neighbor 1 ($247k vs $300k), because Neighbor 1 is right next door.
-
+**The Takeaway:** Without distance weighting, the query was overwhelmed by Neighbors 2 and 3 simply because there were more of them, even though Neighbor 1 was practically identical to our query document. Distance weighting ensures that absolute proximity trumps raw numbers.
 
 ## Code (verified to run)
 
@@ -184,7 +204,9 @@ print("Test accuracy:", round(accuracy_score(y_test, y_pred), 3))  # -> 1.0
 
 The two things an interviewer is checking for here: **(1)** did you scale features inside a `Pipeline` (not before the split — that would leak test-set statistics into training), and **(2)** did you tune `k` via cross-validation instead of guessing.
 
-## Diagnostics — the pitfalls interviewers actually probe**1. Feature scaling (the #1 pitfall, always comes up)**
+## Diagnostics — the pitfalls interviewers actually probe
+
+**1. Feature scaling (the #1 pitfall, always comes up)**
 KNN uses raw distance, so a feature ranging 0–100,000 (e.g. income) will completely swamp a feature ranging 0–1 (e.g. a binary flag), regardless of which one actually matters. Symptom: model ignores features you know are predictive. Fix: `StandardScaler` or `MinMaxScaler`, fit only on the training set, inside a pipeline so cross-validation doesn't leak.
 
 **2. The k tradeoff (bias-variance, shown above)**
@@ -253,5 +275,128 @@ With even $k$ in binary classification, a 50/50 split has no natural winner (skl
 *A: A reasonable heuristic is $k \approx \sqrt{n}$ as a starting point, then do a coarse cross-validated sweep around that value (e.g. k ∈ {√n/2, √n, 2√n}) rather than a dense grid search over every integer — narrows the search using domain knowledge of the bias-variance curve's shape instead of brute-forcing it.*
 
 ---
+## Choosing the Value of $k$ in k-NN
 
-Want me to package this into a saved reference doc (Word or Markdown) so you can review it before the interview?
+The value of **$k$** determines how many nearest neighbors participate in the prediction.
+
+### Effect of Different $k$
+
+- **Small $k$ (e.g., 1, 3):**
+  - Captures local patterns.
+  - Sensitive to noise (**high variance**).
+
+- **Large $k$ (e.g., 15, 25):**
+  - Produces smoother predictions.
+  - May ignore local structure (**high bias**).
+
+---
+
+### How is $k$ Chosen?
+
+The best value of $k$ is usually selected using **Cross-Validation**.
+
+Example:
+
+| $k$ | Validation Accuracy |
+|----:|--------------------:|
+| 1 | 91% |
+| 3 | 94% |
+| 5 | **96%** ✅ |
+| 7 | 95% |
+| 11 | 93% |
+
+Choose the value with the **best validation performance** (here, $k=5$).
+
+> **Rule of Thumb:** Start with $k \approx \sqrt{N}$ (where $N$ is the number of training samples), then tune using cross-validation.
+
+---
+
+## KD-Tree
+
+A **KD-Tree (k-dimensional tree)** is a binary tree that recursively splits the feature space along feature axes.
+
+Instead of comparing the query with **every training sample**, it searches only the most promising regions.
+
+### Example
+
+Instead of checking **100,000** points:
+
+```
+Query
+  ↓
+KD-Tree
+  ↓
+Relevant regions only
+  ↓
+Nearest neighbors
+```
+
+**Advantages**
+
+- Much faster than brute-force search.
+- Works well for **low-dimensional data** (typically < 20–30 features).
+
+**Limitation**
+
+Performance degrades in high-dimensional data (Curse of Dimensionality).
+
+---
+
+## Ball-Tree
+
+A **Ball-Tree** groups nearby points into nested **hyperspheres (balls)** instead of splitting by axes.
+
+```
+Large Ball
+├── Small Ball
+└── Small Ball
+```
+
+During search, entire balls that cannot contain the nearest neighbor are skipped.
+
+**Advantages**
+
+- Better than KD-Tree for **higher-dimensional** datasets.
+- Efficient with non-axis-aligned data.
+
+---
+
+## KD-Tree vs Ball-Tree
+
+| KD-Tree | Ball-Tree |
+|----------|-----------|
+| Splits by feature axes | Groups points into hyperspheres |
+| Faster for low dimensions | Better for medium/high dimensions |
+| Simpler structure | More flexible structure |
+
+> **Note:** In `scikit-learn`, `algorithm='auto'` automatically chooses the best search method.
+
+---
+
+## Hyperparameters to Tune (`sklearn.neighbors.KNeighborsClassifier` / `KNeighborsRegressor`)
+
+| Parameter | Description | Common Values |
+|-----------|-------------|---------------|
+| `n_neighbors` | Number of neighbors ($k$) | 3, 5, 7, 11, 15 |
+| `weights` | Neighbor weighting | `'uniform'`, `'distance'` |
+| `metric` | Distance metric | `'minkowski'`, `'euclidean'`, `'manhattan'`, `'cosine'`* |
+| `p` | Power parameter for Minkowski | 1 (Manhattan), 2 (Euclidean) |
+| `algorithm` | Neighbor search algorithm | `'auto'`, `'kd_tree'`, `'ball_tree'`, `'brute'` |
+| `leaf_size` | Tree leaf size (KD/Ball Tree) | 20–50 (default: 30) |
+
+\* `cosine` is supported via the brute-force algorithm.
+
+---
+
+### Common GridSearchCV Example
+
+```python
+param_grid = {
+    "n_neighbors": [3, 5, 7, 11, 15],
+    "weights": ["uniform", "distance"],
+    "metric": ["euclidean", "manhattan"],
+    "algorithm": ["auto", "kd_tree", "ball_tree", "brute"]
+}
+```
+
+> **Most Important Hyperparameters:** `n_neighbors`, `weights`, and `metric`. The search `algorithm` mainly affects **speed**, not prediction quality.
