@@ -309,16 +309,6 @@ For Apple Maps specifically:
 
 ---
 
-**Your rule for today:**
-
-Open with a specific 18-24 year old. Name them. Give them a life. Tell me what they searched for yesterday and why they went to TikTok instead of Google.
-
-Do that first. Then build everything else from that person.
-
-Good instinct on all four. Now I'm going to do what an L5 interviewer does.
-
-Push on every single point until you either defend it or upgrade it.
-
 ---
 
 **Push 1 — On your user:**
@@ -357,11 +347,7 @@ One sentence. What's the right metric when there's no question to answer?
 
 ---
 
-Perfect. All four answers are strong. Especially the last one.
 
-Let me show you why each one worked and then give you the complete L5 answer.
-
----
 
 ## What You Got Right
 
@@ -431,14 +417,6 @@ Guardrail:
 
 **Decision: Borderline. No Hire L5. Very Strong Hire L4. Closest to L5 bar yet.**
 
----
-
-### What Improved Significantly:
-- Your user was specific and real — GTA 6, early buyer experience, shared feeling
-- Your gap identification was genuinely insightful — format and identity, not content
-- Your metric combination — DAU + session length + regret score — was sophisticated
-- You held your ground under four consecutive pushbacks
-- The filter bubble risk appeared unprompted as a guardrail
 
 ### What's Still Missing For L5:
 
@@ -514,13 +492,8 @@ For Google Search specifically:
 
 **Your rule for today:**
 
-Before you give me DEBT — tell me in one sentence:
-
 > What is the specific moment in a user's day where App Intelligence would feel magical — and what is the specific moment where it would feel like surveillance?
 
-Name both moments first. Then build your answer.
-
-Good. All three pushbacks answered correctly.
 
 Trust erosion even with on-device processing comes from the feeling that Apple is making choices for you — not from data leaving your phone. That's a subtle but important distinction. The discomfort is psychological not technical.
 
@@ -624,17 +597,15 @@ You gave no measurement framework. How do you know if App Intelligence is workin
 
 ---
 
-## The One Thing To Fix Before Day 5
-
-You keep forgetting metrics when you're deep in a tradeoff or product argument.
-
-Every recommendation needs three things at the end:
 
 > "I'd measure success by [north star]. I'd watch [guardrail] as the signal that something is going wrong. If [guardrail] crosses [specific threshold] — I'd kill the feature immediately."
 
-Three sentences. Every single answer. Even tradeoff answers. Even when you're arguing for or against something.
 
 ---
+
+
+
+
 Good question. Let me be specific.
 
 In standard Maps search — success is measured by:
@@ -810,28 +781,6 @@ You said regular users provide ample signals. That's too generic. Which segments
 **Trend:** 13 → 14 → 17 → 16 → 17
 
 Average: 15.4/25. Consistently approaching L5. Not yet crossing it.
-
----
-
-## End of Week 1 Assessment
-
-You've completed Days 1-5 — the single question type drilling phase.
-
-**What's working:**
-- Your instincts are consistently right
-- You hold ground under pushback
-- You're finding the right signals through reasoning not memorisation
-- Your user empathy is improving — GTA 6 moment was genuinely good
-
-**What's consistently missing across all 5 days:**
-- Metrics disappear when you're deep in an argument
-- MDE and sample size reasoning is formulaic not specific
-- You rarely name a specific human being unprompted
-- Business model tension appears late or not at all
-
-**The pattern I see:**
-
-You think correctly. You express incompletely. The gap between L4 and L5 for you is not knowledge — it's the discipline of finishing every thought to its conclusion before moving to the next one.
 
 ---
 
