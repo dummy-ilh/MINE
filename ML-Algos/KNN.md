@@ -1,6 +1,4 @@
-Good, it runs cleanly. Let's go through KNN top to bottom.
-
-## The one-liner
+## KNN - K Nearest Neighnours
 
 KNN predicts a new point by looking at its `k` closest neighbors in the training data and going with the majority (classification) or the average (regression). No training phase in the usual sense — it just memorizes the data and does the work at prediction time. That's why it's called a **lazy learner**, and it's the thing interviewers most want you to say unprompted.
 
@@ -71,6 +69,80 @@ Query: age=32, spend=38. Use $k=3$, Euclidean distance:
 3 nearest: A (7.28, No), C (7.28, No), B (22.20, Yes) → majority = **No, churn predicted "No"**.
 
 Notice: without scaling, "spend" (range ~15-45) and "age" (range ~25-50) happen to be similar scales here, but if spend were in dollars in the thousands, it would completely dominate the distance and age would become irrelevant. That's the segue into the single most important practical pitfall — scaling — which the diagnostics below cover.
+
+To see how distance weighting works, let’s run through a concrete example.
+
+Imagine we are using the **$k$-Nearest Neighbors ($k$-NN)** algorithm to predict the price of a house (Regression) based on its distance from a city center. We want to predict the value for a query house ($x_q$), and we set $k = 3$.
+
+Our algorithm finds the 3 closest neighbor houses ($x_1, x_2, x_3$).
+
+---
+
+### 1. The Raw Data
+
+Here are the distances from our query house ($x_q$) and the actual prices ($y_i$) of those neighbors:
+
+* **Neighbor 1 ($x_1$):** Distance $d_1 = 2$ miles, Price $y_1 = \$300,000$ (Very close)
+* **Neighbor 2 ($x_2$):** Distance $d_2 = 4$ miles, Price $y_2 = \$200,000$
+* **Neighbor 3 ($x_3$):** Distance $d_3 = 10$ miles, Price $y_3 = \$100,000$ (Far away)
+
+---
+
+### Step 1: Calculate the Weights ($w_i$)
+
+The formula states that weight is the inverse of distance: $w_i = \frac{1}{d(x_i, x_q)}$.
+
+* $$w_1 = \frac{1}{2} = 0.5$$
+
+
+* $$w_2 = \frac{1}{4} = 0.25$$
+
+
+* $$w_3 = \frac{1}{10} = 0.1$$
+
+
+
+> **Notice:** Neighbor 1 is close, so it gets a heavy weight ($0.5$). Neighbor 3 is far, so its influence drops significantly ($0.1$).
+
+---
+
+### Step 2: Sum the Weights ($\sum w_i$)
+
+We need the denominator for our final formula:
+
+$$\sum w_i = 0.5 + 0.25 + 0.1 = 0.85$$
+
+---
+
+### Step 3: Calculate the Weighted Sum of Outcomes ($\sum w_i \cdot y_i$)
+
+Now we multiply each neighbor's house price by its respective distance weight:
+
+* **Neighbor 1:** $0.5 \times 300,000 = 150,000$
+* **Neighbor 2:** $0.25 \times 200,000 = 50,000$
+* **Neighbor 3:** $0.1 \times 100,000 = 10,000$
+
+$$\sum (w_i \cdot y_i) = 150,000 + 50,000 + 10,000 = 210,000$$
+
+---
+
+### Step 4: Final Prediction ($\hat{y}_q$)
+
+Divide the weighted sum of outcomes by the sum of the weights:
+
+$$\hat{y}_q = \frac{\sum (w_i \cdot y_i)}{\sum w_i} = \frac{210,000}{0.85} \approx \mathbf{\$247,058.82}$$
+
+---
+
+### The "Why This Matters" Comparison
+
+If we had used the standard **unweighted average** formula:
+
+
+$$\hat{y}_q = \frac{300,000 + 200,000 + 100,000}{3} = \mathbf{\$200,000}$$
+
+**The Takeaway:** The unweighted average dragged the prediction down heavily because of Neighbor 3 ($10$ miles away). The **distance-weighted variant** correctly pulled the final prediction much closer to Neighbor 1 ($247k vs $300k), because Neighbor 1 is right next door.
+
 
 ## Code (verified to run)
 
