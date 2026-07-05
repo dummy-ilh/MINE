@@ -1,9 +1,3 @@
-Love this. 50 days of daily interviews is exactly what closes the gap from L4 to L5.
-
-Here's how I want to structure it before we start.
-
----
-
 ## The 50 Day Plan
 
 ### Days 1-10 — Single Question Type Drills
@@ -38,21 +32,6 @@ Four questions per session. Full debrief after each. Hire / no hire decision eve
 
 ---
 
-## The Rules
-
-**You answer every question.** No flipping. No asking me to go first.
-
-**I give a hire / no hire signal after every answer.** Not just feedback. A real decision.
-
-**You can ask for feedback after your answer.** But you answer first. Always.
-
-**We track your progression.** After every 10 days I give you a level assessment — where you are relative to L4 and L5 bar.
-
----
-
-Perfect. L5 bar. Option A for days 1-20.
-
----
 
 ## Day 1 — Session 1
 
@@ -92,12 +71,6 @@ Perfect. L5 bar. Option A for days 1-20.
 
 **Guardrail 3 — The one you missed:**
 > "Sensitive query personalisation incidents — cases where Memory surfaces results that reveal a past sensitive search in a context the user didn't intend. Medical, legal, personal. This cannot increase under any circumstance. One incident that goes viral destroys the feature permanently."
-
-**The tension — your "too specific" instinct:**
-> "The feature has a goldilocks problem. Too little personalisation — SSR doesn't improve, feature has no value. Too much personalisation — results feel surveillance-like, trust score drops, disable rate spikes. The metrics have to catch both failure modes simultaneously."
-
-**Your position — the L5 dimension:**
-> "Search Memory is high risk high reward for Google. The reward is a genuinely better search experience that deepens Google's moat against AI assistants — because a personalised Google knows you better than a stateless ChatGPT. The risk is that one privacy incident in this feature creates a narrative — Google is reading your mind — that damages the trust relationship underlying the entire advertising business. I'd launch with explicit opt-in, not opt-out. Opt-in self-selects for users who want personalisation, dramatically reducing the trust risk while still generating the data to prove the feature works."
 
 ---
 
@@ -187,22 +160,6 @@ Fair. Here's a completely different approach to the same question — different 
 | Business angle | Opt-in vs opt-out decision | Memory as strategic moat against ChatGPT |
 | Frame | Search quality feature | Context accumulation feature — fundamentally different |
 
----
-
-## The Lesson From Seeing Both
-
-Same question. Two completely valid L5 answers. Different users. Different north stars. Different privacy mechanisms. Different business frames.
-
-Neither is more correct than the other.
-
-What makes both L5 is the same thing:
-
-- Specific human being
-- North star that isolates the feature's specific contribution
-- Privacy guardrail with a named mechanism not just a category
-- A business position that connects the feature to strategy
-
-The frame you choose — search quality vs context accumulation — changes your entire answer. Both are defensible. Pick one and go deep. Don't try to cover both.
 
 ---
 
@@ -222,17 +179,6 @@ The frame you choose — search quality vs context accumulation — changes your
 - Apple Maps has a specific competitive and trust dynamic that changes the business implications
 - End of day deadline creates pressure — you need to prioritise your investigation not just list everything
 
----
-
-**One rule for today:**
-
-Do not open with a framework announcement. Do not say "first I would do a reality check." Just start thinking out loud like a detective who just got a case.
-
-Exactly.
-
-The iOS update made it worse. But something else caused it independently.
-
-Now you have two problems running simultaneously. That's the real diagnosis.
 
 ---
 
@@ -243,21 +189,11 @@ One more data point. You check the segmentation by geography:
 > - India — down 19%
 > - Southeast Asia — down 22%
 
-What does this tell you? And what's your next question?
-
-Yes. The problem is concentrated in Asia.
-
-Now think like a detective not a framework.
-
 > You're a product data scientist at Apple. Navigation completion rate collapsed in India and Southeast Asia specifically. iOS update affected everyone but Asia is disproportionately hit.
 
 **One question:**
 
 What is different about how people use Apple Maps in India and Southeast Asia compared to North America and Europe — that could explain why a drop hits them 4-5x harder?
-
-Don't think about data. Think about the real world. What do you actually know about how people navigate in those markets?
-
-Exactly.
 
 If the new iOS tightened location precision requirements — or changed how Maps handles low GPS signal — navigation would fail disproportionately in markets where:
 
@@ -273,15 +209,11 @@ That's your hypothesis.
 
 Now build the complete RICE answer in your own words. Not framework labels. Just the story of this investigation as you'd tell it to Apple leadership in 5 minutes.
 
-Cover:
-
 - What you confirmed first and how
 - What the segmentation revealed
 - What your leading hypothesis is and why
 - What you'd check in the next 2 hours to confirm it
 - What you'd tell leadership right now before you have full confirmation
-
-Good. All five pieces are there. Now let me show you what this sounds like delivered at L5 quality — built entirely from your instincts.
 
 ---
 
@@ -313,16 +245,6 @@ Good. All five pieces are there. Now let me show you what this sounds like deliv
 
 **Decision: No Hire at L5. Strong Hire at L4.**
 
-Same level as Day 1. But for different reasons. You're improving.
-
----
-
-### What Improved From Day 1:
-- You identified the iOS update wasn't the full cause immediately when given the data
-- You followed the geographic segmentation to the right conclusion
-- Your location precision hypothesis was exactly right
-- You didn't panic when given contradictory data — you updated correctly
-
 ### What's Still Missing For L5:
 
 **Gap 1 — Measurement artifact check was missing**
@@ -330,9 +252,6 @@ You went straight to segmentation without first confirming the drop is real. The
 
 **Gap 2 — The two simultaneous problems**
 You identified Asia as the issue but didn't explicitly name that you have two problems running simultaneously — the iOS update effect AND a separate structural issue. Naming that duality is what tells leadership the situation is more complex than it looks.
-
-**Gap 3 — The leadership communication**
-Your leadership answer was too thin. L5 candidates give leadership a clear what I know / what I don't know / what I'd recommend right now structure. Even before full confirmation. Especially before full confirmation. Leadership needs something to act on in the next hour. You gave them a conclusion but not a recommendation.
 
 **Gap 4 — No Apple specific business context**
 Apple Maps exists in a specific competitive context — it's trying to close the gap with Google Maps globally. A 19-22% navigation completion drop in India and Southeast Asia — two of Apple's fastest growing iPhone markets — has strategic implications beyond a metric. L5 names that. "This drop in India and Southeast Asia is happening in our highest growth iPhone markets. If users lose trust in Apple Maps in these markets during their first year with iPhone — they default to Google Maps permanently. That's not a navigation metric problem. That's an ecosystem retention problem."
@@ -364,13 +283,10 @@ Apple Maps exists in a specific competitive context — it's trying to close the
 
 ---
 
-## The One Thing To Fix Before Day 3
-
 Every diagnosis answer must start with:
 
 > "Before I investigate anything — I want to confirm this drop is real and not a measurement artifact. Specifically for this product — [name the specific logging or tracking mechanism that could have changed]."
 
-Not as a framework announcement. As a genuine first question that's product-specific.
 
 For Apple Maps specifically:
 > "Navigation completion rate is built from GPS session events. The new iOS could have changed how those events are fired or how session termination is defined. That's my first check — not because it's a framework step but because iOS updates frequently change event logging and a measurement artifact would change my entire investigation."
