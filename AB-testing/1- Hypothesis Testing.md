@@ -131,9 +131,9 @@ $$H_1: \theta < \theta_0 \quad \text{(left-tailed)}$$
 - **Is composite in the two-tailed case** — this is precisely why you can't test it directly (see above)
 
 ---
-![Alternative Text](/images/tails.png)
+![Alternative Text](./images/tails.png)
 
-![Alternative Text](/images/tails2.png)
+![Alternative Text](./images/tails2.png)
 
 
 
