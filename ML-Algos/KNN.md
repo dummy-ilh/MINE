@@ -400,3 +400,180 @@ param_grid = {
 ```
 
 > **Most Important Hyperparameters:** `n_neighbors`, `weights`, and `metric`. The search `algorithm` mainly affects **speed**, not prediction quality.
+
+
+Both Google and Apple frequently include $k$-Nearest Neighbors ($k$-NN) concepts in their interview loops for Data Scientist, Machine Learning Engineer, and Research Scientist roles. However, they rarely ask you to just define it. Instead, they focus on **architectural scaling**, **mathematical edge cases**, and **production trade-offs**.
+
+Past core conceptual and coding interview questions from both companies include:
+
+---
+
+### 1. The Pure Coding Challenge (Common at Apple)
+
+> **Question:** *"Write a production-ready $k$-NN classifier from scratch using only Python and NumPy. Do not use Scikit-Learn."*
+
+* **What they are looking for:** They want to see clean vectorization using NumPy instead of nested loops.
+* **The Trap:** If you use a `for` loop to calculate the distance of every data point one by one, you will fail the efficiency bar. They expect you to compute pairwise distances globally using matrix operations (e.g., Euclidean distance via dot products: $\sqrt{\sum(x-y)^2} = \sqrt{x^2 - 2xy + y^2}$).
+
+---
+
+### 2. The Scaling & Latency Dilemma (Classic Google System Design)
+
+> **Question:** *"You have a billion user-profile vectors, and you want to use $k$-NN to serve real-time recommendations on Google Search. Brute-force $O(N)$ is too slow. How do you scale this system to keep latency under 10 milliseconds?"*
+
+* **What they are looking for:** This tests your knowledge of spatial partitioning trees (KD-Trees, Ball Trees) and **Approximate Nearest Neighbor (ANN)** algorithms.
+* **The Ideal Answer:** You should explain that KD-Trees fail in high dimensions due to the "curse of dimensionality." To solve a 1-billion-scale problem at Google, you must trade 100% mathematical accuracy for speed using algorithms like **HNSW (Hierarchical Navigable Small World graphs)** or **LSH (Locality-Sensitive Hashing)** to find *approximate* nearest neighbors in $O(\log N)$ or $O(1)$ time.
+
+---
+
+### 3. The "Curse of Dimensionality" (Apple Hardware & ML Question)
+
+> **Question:** *"When deploying a $k$-NN model on an Apple Watch to detect anomalies in health data, you notice its classification accuracy drops significantly as you add more tracking features (dimensions). Mathematically, why does this happen, and how do you fix it?"*
+
+* **What they are looking for:** This tests your deep geometric understanding of high-dimensional vector spaces.
+* **The Ideal Answer:** As the number of dimensions ($D$) grows, the volume of the space grows exponentially, causing the data points to become extremely isolated and sparse. In high dimensions, the distance between the *closest* neighbor and the *farthest* neighbor converges to roughly the same value ($d_{max} \approx d_{min}$). Therefore, Euclidean distance loses its meaning.
+* **The Fix:** Mention applying dimensionality reduction (like PCA or Autoencoders) or feature selection before running $k$-NN.
+
+---
+
+### 4. Behavioral & Data Quirks
+
+> **Question:** *"Why is feature scaling (Normalization/Standardization) non-negotiable for $k$-NN? What happens if you skip it?"*
+
+* **The Answer:** Because $k$-NN relies entirely on geometric distance. If Feature A (e.g., Salary) ranges from $\$0$ to $\$200,000$ and Feature B (e.g., Age) ranges from $0$ to $100$, the distance formula will completely ignore Age because the large numerical swings in Salary will dominate the calculations.
+
+> **Question:** *"Why do we almost always choose an odd number for $K$ (like $K=3$ or $K=5$) in a binary classification model?"*
+
+* **The Answer:** To eliminate the risk of mathematical ties. If $K=4$, you could easily end up with exactly 2 neighbors voting for Class A and 2 voting for Class B, requiring an arbitrary tie-breaking rule.
+
+
+
+Here is a production-ready, highly optimized $k$-NN classifier written from scratch using only **Python** and **NumPy**.
+
+To make it truly production-ready, this implementation completely avoids slow Python `for` loops during distance calculation. Instead, it leverages a linear algebra trick to compute pairwise distances globally using vectorized matrix operations:
+
+
+$$\text{Distances} = \sqrt{\sum(X_{\text{train}} - X_{\text{test}})^2} = \sqrt{X_{\text{train}}^2 - 2 \cdot X_{\text{train}} \cdot X_{\text{test}}^T + X_{\text{test}}^2}$$
+
+---
+
+### The Code
+
+```python
+import numpy as np
+
+class NumPyKNNClassifier:
+    def __init__(self, k: int = 3):
+        """
+        Production-ready k-NN Classifier using vectorized NumPy operations.
+        
+        Parameters:
+        -----------
+        k : int, default=3
+            Number of nearest neighbors to consider for classification.
+        """
+        if k <= 0:
+            raise ValueError("k must be a positive integer greater than 0.")
+        
+        self.k = k
+        self.X_train = None
+        self.y_train = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+        """
+        Fit the model using X as training data and y as target values.
+        k-NN is a lazy learner, so this simply stores the data.
+        """
+        self.X_train = np.asarray(X, dtype=np.float64)
+        self.y_train = np.asarray(y)
+        
+        if self.X_train.shape[0] != self.y_train.shape[0]:
+            raise ValueError("X and y must have the same number of rows/samples.")
+            
+        if self.k > self.X_train.shape[0]:
+            raise ValueError(f"k={self.k} cannot be greater than the number of training samples ({self.X_train.shape[0]}).")
+
+    def predict(self, X_test: np.ndarray) -> np.ndarray:
+        """
+        Predict the class labels for the provided test data.
+        
+        Parameters:
+        -----------
+        X_test : np.ndarray
+            Matrix of test samples, shape (n_test_samples, n_features)
+            
+        Returns:
+        --------
+        predictions : np.ndarray
+            Predicted class labels, shape (n_test_samples,)
+        """
+        if self.X_train is None or self.y_train is None:
+            raise RuntimeError("This NumPyKNNClassifier instance is not fitted yet. Call 'fit' first.")
+            
+        X_test = np.asarray(X_test, dtype=np.float64)
+        
+        if X_test.shape[1] != self.X_train.shape[1]:
+            raise ValueError(f"Feature dimension mismatch. Expected {self.X_train.shape[1]} features, got {X_test.shape[1]}.")
+
+        # 1. Efficient Pairwise Euclidean Distance Matrix Calculation (No Loops!)
+        # Using the algebraic identity: (a - b)^2 = a^2 - 2ab + b^2
+        train_squared = np.sum(self.X_train ** 2, axis=1)          # Shape: (n_train,)
+        test_squared = np.sum(X_test ** 2, axis=1, keepdims=True)  # Shape: (n_test, 1)
+        dot_product = np.dot(X_test, self.X_train.T)               # Shape: (n_test, n_train)
+        
+        # Combining them throws a broad broadcast operation
+        # clip(min=0) safeguards against tiny negative floats due to floating-point imprecision
+        dists = np.sqrt(np.clip(test_squared - 2 * dot_product + train_squared, a_min=0, a_max=None))
+
+        # 2. Find the indices of the k smallest distances per test point
+        # argpartition is O(N), much faster than sorting the entire array O(N log N)
+        k_indices = np.argpartition(dists, self.k, axis=1)[:, :self.k]
+
+        # 3. Retrieve the target labels for those k nearest neighbors
+        k_nearest_labels = self.y_train[k_indices]                 # Shape: (n_test, k)
+
+        # 4. Majority Vote Vectorization
+        # Since classes can be strings or integers, we iterate row-wise across the test set
+        predictions = []
+        for row in k_nearest_labels:
+            labels, counts = np.unique(row, return_counts=True)
+            predictions.append(labels[np.argmax(counts)])
+
+        return np.array(predictions)
+
+# ==========================================
+# Example Verification Usage
+# ==========================================
+if __name__ == "__main__":
+    # Mocking standard dataset structure
+    X_train_mock = np.array([[1.0, 2.0], [1.5, 1.8], [5.0, 8.0], [6.0, 9.0]])
+    y_train_mock = np.array(["Class_A", "Class_A", "Class_B", "Class_B"])
+    
+    X_test_mock = np.array([[1.2, 1.9], [5.5, 8.5]])
+
+    # Initialize and fit
+    knn = NumPyKNNClassifier(k=2)
+    knn.fit(X_train_mock, y_train_mock)
+    
+    # Predict
+    preds = knn.predict(X_test_mock)
+    print("Predictions:", preds) 
+    # Output expected: ['Class_A' 'Class_B']
+
+```
+
+---
+
+### Production Engineering Details You Need to Highlight to an Interviewer:
+
+1. **Why `np.argpartition` over `np.argsort`?**
+* Using `np.argsort()` sorts the entire dataset of distances, costing $O(N \log N)$ complexity.
+* `np.argpartition()` only ensures the smallest $k$ items are pushed to the front partition, which runs in a highly optimized **linear time $O(N)$**.
+
+
+2. **Numerical Stability Guarantee (`np.clip`):**
+* Floating-point precision errors during `test_squared - 2 * dot_product + train_squared` can sometimes result in ultra-tiny negative values (e.g., `-1e-15`) for perfectly identical data points. Applying `np.sqrt()` to a negative number outputs `NaN`. `np.clip(..., a_min=0)` strictly neutralizes this risk.
+
+
+3. **True Memory Efficiency:**
+* Passing `dtype=np.float64` explicitly safeguards against arbitrary object types degrading underlying C-level performance speeds in NumPy array math.
