@@ -1,63 +1,5 @@
 # Hypothesis Testing — Complete Notes & FAANG Q&A
 
----
-
-## 1. Definition & Formula
-
-**Hypothesis testing** is a formal statistical procedure to decide whether there is enough evidence in your sample data to reject a default assumption (the null hypothesis) in favour of an alternative claim.
-
-> **Plain English:** You start by assuming "nothing interesting is happening." You then collect data and ask: "Is my data surprising enough to disprove that assumption?" If yes — you have a finding. If no — you don't have enough evidence to claim otherwise.
-
-> **Analogy:** It works like a court trial. The null hypothesis is "innocent until proven guilty." You need sufficient evidence (data) to convict (reject H₀). Failing to convict does not prove innocence — it just means the evidence wasn't strong enough.
-
----
-
-### The Two Hypotheses
-
-```
-H₀  (Null hypothesis)        — The default assumption. No effect, no difference.
-H₁  (Alternative hypothesis) — What you're trying to detect. Some effect exists.
-```
-
-**Examples:**
-
-| Context | H₀ | H₁ |
-|---------|----|----|
-| A/B test | New feature has no effect on CTR | New feature changes CTR |
-| Drug trial | Drug has no effect vs placebo | Drug reduces blood pressure |
-| Manufacturing | Machine produces bolts of 50mm | Machine produces bolts ≠ 50mm |
-| ML model | New model accuracy = old model | New model accuracy > old model |
-
----
-
-### The General Formula
-
-Every hypothesis test computes a **test statistic** of this form:
-
-```
-Test statistic = (Observed value − Expected value under H₀) / Standard Error
-
-                       signal
-              =       ────────
-                        noise
-```
-
-A large test statistic means your observation is many standard errors away from what H₀ predicts — strong evidence against H₀.
-
-**Specific formulas by test:**
-
-```
-z-test (large n or σ known):     z = (X̄ − μ₀) / (σ / √n)
-
-t-test (small n, σ unknown):     t = (X̄ − μ₀) / (s / √n)
-
-Proportion z-test (A/B):         z = (p̂₁ − p̂₂) / √[p̂(1−p̂)(1/n₁ + 1/n₂)]
-
-Chi-squared test:                 χ² = Σ (Observed − Expected)² / Expected
-```
-
----
-
 ### The Decision Rule
 
 ```
@@ -95,51 +37,6 @@ Common significance levels:
 
 ---
 
-## 2. Explanation
-
-### The Step-by-Step Process
-
-```
-Step 1 — State hypotheses
-         Define H₀ and H₁ clearly before looking at data.
-
-Step 2 — Choose significance level (α)
-         Typically 0.05. Set this BEFORE running the experiment.
-
-Step 3 — Select the right test
-         z-test, t-test, chi-squared, ANOVA — based on data type and design.
-
-Step 4 — Compute the test statistic
-         Plug your sample data into the formula.
-
-Step 5 — Find the p-value
-         Area in the tail(s) of the null distribution beyond your test statistic.
-
-Step 6 — Make a decision
-         p ≤ α → reject H₀. p > α → fail to reject H₀.
-
-Step 7 — Report effect size + CI
-         Statistical significance alone is not enough. Always report magnitude.
-```
-
----
-
-### One-Tailed vs Two-Tailed Tests
-
-```
-Two-tailed (H₁: μ ≠ μ₀)       — effect could go either direction
-   Reject if  |z| > z*          α split equally across both tails
-
-One-tailed right (H₁: μ > μ₀) — testing for an increase only
-   Reject if  z > z*            all α in right tail
-
-One-tailed left  (H₁: μ < μ₀) — testing for a decrease only
-   Reject if  z < −z*           all α in left tail
-```
-
-> In A/B testing, **always use two-tailed** unless you have a pre-specified directional hypothesis grounded in domain knowledge. One-tailed is easier to achieve significance with — and therefore easier to misuse.
-
----
 
 ### Type I and Type II Errors — The Trade-off
 
