@@ -4,7 +4,7 @@
 
 Most candidates jump straight to "log transform it." That's a **fix**, not a **diagnosis**. The interview-grade answer starts with: *skew is a symptom — what's the underlying data-generating process causing it?* The right fix depends entirely on the root cause; the wrong fix (e.g., log-transforming a bimodal mixture) can actively hurt the model.
 
-Think of skew like a fever — treating the number (log-transform it away) without diagnosing *why* it's elevated (infection? multiplicative growth process? bad thermometer?) means you might mask a real signal or miss a data bug entirely.
+
 
 ---
 
@@ -104,5 +104,96 @@ Duplicate zeros, unit mismatches (some rows in cents, some in dollars), copy-pas
 **Q2.** Why doesn't a log transform fix skew caused by survivorship bias?
 **Q3.** You see a spike of values exactly at 999999 in a "session duration in seconds" column. Which root cause is this, and what should you do?
 **Q4.** A skewed "time to churn" variable includes many still-active users. What's the root cause category, and what technique addresses it (not a transform)?
+Q1. Plot the conditional distributions after segmenting by a plausible categorical variable (tier, cohort, region). A genuine log-normal stays skewed within every segment. A mixture splits into two symmetric-ish humps — one per subpopulation — and the pooled skew largely disappears. Skewness is a single-number summary that's blind to this structure; the segmented histogram exposes it directly.
+Q2. Survivorship bias removes the left tail entirely — the low values (failed companies, dropped users, short sessions) simply don't exist in the dataset. A log transform compresses the right tail but does nothing to restore the missing left tail. The distribution is truncated at the bottom, not stretched at the top. The fix is upstream: reconstruct or acknowledge the missing population, not rescale the one you have.
+Q3. That's a sentinel value / data quality issue — 999999 is a system placeholder (cap, timeout, or "still active" flag encoded as a number) masquerading as a real measurement. What to do: treat it as missing, not as data. Null it out, then decide separately whether those rows represent censored observations (still-active sessions → survival analysis) or errors (timeout artifacts → drop). Never include it in a distribution or summary stat as-is.
+Q4. The root cause is censoring — right-censored observations where the event (churn) hasn't occurred yet, so the true duration is unknown and bounded only from below. The technique is survival analysis (Kaplan-Meier for description, Cox proportional hazards or parametric survival models for inference). These methods explicitly model the censoring mechanism rather than ignoring it or imputing it. Transforming the time variable and running a standard regression is wrong here because it treats censored values as if they were actual churn times, which biases every estimate.
 
-Want the transformation techniques + model-sensitivity mapping we built earlier merged with this root-cause doc into one master reference, or keep them separate?
+-------
+3 modes unsegented
+**What's happening:** Three salary populations — junior, mid-level, senior — each roughly normal around their own mean ($52k, $85k, $135k). When you pool them without segmenting by tier, their overlapping humps blend into one right-skewed blob with a long upper tail.
+
+**Why this fools analysts:**
+- The pooled histogram genuinely *looks* like a log-normal distribution
+- The skewness statistic is real and high
+- A log transform will compress the tail and make it look more symmetric — but you've just relabeled the same three populations in log-space; the mixture structure is still there
+
+**The diagnostic:** Segment by any plausible categorical variable — job tier, department, region, experience band. If the skew disappears and each segment looks roughly symmetric, you have a mixture, not a skewed distribution.
+
+**Why it matters for modeling:** The mean of the pooled distribution ($~85k) sits between all three group means and isn't particularly representative of *anyone*. The right model here is a mixture model or a model that conditions on tier — not a log-normal regression.
+
+------
+
+
+
+## Multiplicative Processes and Log-Normal Distributions
+
+The core idea is a direct parallel to why *additive* processes produce normal distributions — just one level of abstraction up.
+
+---
+
+### Start with the familiar: Additive CLT
+
+The Central Limit Theorem says: if you **add** many independent random variables, the result converges to a **normal distribution**, regardless of the individual distributions.
+
+$$X = x_1 + x_2 + x_3 + \cdots + x_n \xrightarrow{n \to \infty} \mathcal{N}(\mu, \sigma^2)$$
+
+This is why height, measurement error, and test scores are bell-shaped — they're sums of many small independent effects.
+
+---
+
+### Now: Multiplicative processes
+
+Many real quantities grow by **proportional factors** at each step. For example, a company's revenue this year is last year's revenue times some growth factor:
+
+$$X = x_1 \cdot x_2 \cdot x_3 \cdots x_n$$
+
+Each $x_i$ is a random multiplier (say, growth rate, share factor, probability of going viral at each step).
+
+---
+
+### The key move: take the log
+
+$$\ln(X) = \ln(x_1) + \ln(x_2) + \ln(x_3) + \cdots + \ln(x_n)$$
+
+A **product becomes a sum** under the logarithm. Now the CLT kicks in on $\ln(X)$: the sum of many independent log-terms converges to a normal distribution.
+
+So:
+
+$$\ln(X) \sim \mathcal{N}(\mu, \sigma^2)$$
+
+which means $X$ itself follows a **log-normal distribution**.
+
+---
+
+### Why this matches the real world
+
+| Quantity | Multiplicative mechanism |
+|---|---|
+| Income | Each raise/promotion is a % increase on current salary |
+| City population | Each year's growth is a fraction of current population |
+| Word frequency | Each word's usage spreads proportionally to existing usage |
+| File sizes | Files are built by compounding layers (headers, compression, encoding) |
+| Viral views | Each share multiplies from current reach |
+
+In every case, the "shock" at each stage is **proportional to the current value**, not a fixed additive amount.
+
+---
+
+### What log-normal distributions look like
+
+This produces a characteristic shape:
+
+- **Right-skewed** with a long tail (a few cities are enormous; most are tiny)
+- **Symmetric on a log scale** — if you plot $\ln(X)$, you get a bell curve
+- **Multiplicative mean** — the natural average is the geometric mean, not the arithmetic mean
+
+This is also why using the *arithmetic* mean for income is misleading — a billionaire can pull it far from the typical person's experience, but the *median* (which corresponds to the geometric mean on a log-normal) is far more representative.
+
+---
+
+### The one-line summary
+
+> The CLT says sums of random variables go normal. Multiplicative processes are sums *in log-space*. So their logarithms go normal — making the original quantities log-normal.
+
+It's the same theorem, applied after a change of variables.
