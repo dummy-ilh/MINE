@@ -35,8 +35,8 @@
 
 # Numbers 1-30
 
-1.
-2.
+1. Imbalanced Data
+2. Skewed Data RCA
 3.
 4.
 5.
