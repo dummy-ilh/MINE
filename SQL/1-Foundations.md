@@ -417,7 +417,7 @@ JOIN model_runs b
 ORDER BY gap DESC;
 ```
 vs
-
+```
 SELECT
     model_name,
     MAX(CASE WHEN dataset = 'train' THEN accuracy END) AS train_acc,
@@ -430,7 +430,7 @@ FROM model_runs
 WHERE dataset IN ('train', 'test')
 GROUP BY model_name
 ORDER BY gap DESC;
-
+```
 
 **Output:**
 
@@ -1017,6 +1017,28 @@ FROM model_scores;
 |-----------------|------------|------------|------------|
 | 1               | 1          | 1          | 1          |
 
+```
+SELECT
+    surface,
+    COUNT(CASE WHEN event_type = 'like'    THEN 1 END) AS like_count,
+    COUNT(CASE WHEN event_type = 'share'   THEN 1 END) AS share_count,
+    COUNT(CASE WHEN event_type = 'comment' THEN 1 END) AS comment_count,
+    COUNT(*) AS total_events
+FROM engagement_events
+GROUP BY surface
+ORDER BY total_events DESC;
+```
+**Output:**
+| surface | like_count | share_count | comment_count | total_events |
+|---|---|---|---|---|
+| feed | 4820 | 612 | 305 | 5737 |
+| story | 2140 | 890 | 88 | 3118 |
+| profile | 1350 | 140 | 210 | 1700 |
+| reels | 3990 | 1520 | 640 | 6150 |
+
+
+
+
 ---
 
 ### Variant 3 — CASE in ORDER BY (custom sort order)
@@ -1165,6 +1187,14 @@ If both precision and recall are 0, NULLIF makes the denominator NULL → result
 | ORDER BY puts NULLs at end (Postgres) or start (others) | Inconsistent across DBs | Use `ORDER BY col NULLS LAST` / `NULLS FIRST` |
 
 ---
+```sql
+SELECT * FROM users WHERE country != 'US';
+```
+
+This **silently excludes rows where `country IS NULL`** — `NULL != 'US'` evaluates to `NULL` (not true), so those rows get filtered out. Fix: add `OR country IS NULL` if you want to include them, i.e. `WHERE country != 'US' OR country IS NULL`.
+where county =NULL is wrong where country IS NULL is correct.
+
+
 
 ## 10. Safe Division / Divide-by-Zero Handling
 
@@ -1639,4 +1669,88 @@ JOIN users u ON e.user_id = u.user_id
 WHERE e.event_type = 'search'
 AND u.country = 'India';
 
+```
+
+
+```sql
+-- 1. COUNT(*) — counts all rows, including NULLs
+SELECT COUNT(*) FROM orders;
+
+-- 2. COUNT(column) — counts non-NULL values only
+SELECT COUNT(amount) FROM orders;
+
+-- 3. COUNT(DISTINCT column) — counts unique non-NULL values
+SELECT COUNT(DISTINCT customer_id) FROM orders;
+
+-- 4. COUNT(DISTINCT col1, col2) — unique combinations (MySQL/Postgres)
+SELECT COUNT(DISTINCT customer_id, product_id) FROM orders;
+
+-- 5. COUNT(CASE WHEN ... THEN 1 END) — conditional count
+SELECT COUNT(CASE WHEN status = 'shipped' THEN 1 END) FROM orders;
+
+-- 6. COUNT(CASE WHEN ... THEN 1 ELSE NULL END) — explicit form of #5
+SELECT COUNT(CASE WHEN status = 'shipped' THEN 1 ELSE NULL END) FROM orders;
+
+-- 7. COUNT(*) FILTER (WHERE ...) — PostgreSQL shorthand for conditional count
+SELECT COUNT(*) FILTER (WHERE status = 'shipped') FROM orders;
+
+-- 8. COUNT(1) — functionally same as COUNT(*), counts all rows
+SELECT COUNT(1) FROM orders;
+
+-- 9. COUNT(*) with GROUP BY — per-group counts
+SELECT customer_id, COUNT(*) FROM orders GROUP BY customer_id;
+
+-- 10. COUNT(*) OVER (...) — window function, running/group count without collapsing rows
+SELECT order_id, customer_id, COUNT(*) OVER (PARTITION BY customer_id) AS orders_per_customer
+FROM orders;
+
+-- 11. COUNT(DISTINCT ...) OVER (...) — distinct count as window function (Postgres/Oracle; not MySQL)
+SELECT customer_id, COUNT(DISTINCT product_id) OVER (PARTITION BY customer_id) AS unique_products
+FROM orders;
+
+-- 12. COUNT(*) with HAVING — filter groups by count
+SELECT customer_id, COUNT(*) AS order_count
+FROM orders
+GROUP BY customer_id
+HAVING COUNT(*) > 5;
+```
+
+
+```sql
+-- WHERE filters rows BEFORE grouping/aggregation
+SELECT * FROM orders
+WHERE amount > 100;              -- row-level filter, runs first
+
+-- HAVING filters groups AFTER aggregation
+SELECT customer_id, COUNT(*) AS order_count
+FROM orders
+GROUP BY customer_id
+HAVING COUNT(*) > 5;             -- group-level filter, runs after GROUP BY
+
+-- WHERE cannot use aggregate functions
+SELECT customer_id, COUNT(*) 
+FROM orders
+WHERE COUNT(*) > 5                -- ❌ ERROR: aggregate not allowed in WHERE
+GROUP BY customer_id;
+
+-- HAVING can reference aggregates, WHERE can't
+SELECT customer_id, SUM(amount) AS total_spent
+FROM orders
+WHERE status = 'completed'        -- filters individual rows first
+GROUP BY customer_id
+HAVING SUM(amount) > 1000;        -- then filters resulting groups
+
+-- Using both together: WHERE narrows rows, HAVING narrows groups
+SELECT customer_id, COUNT(*) AS order_count
+FROM orders
+WHERE order_date >= '2026-01-01'  -- step 1: filter rows
+GROUP BY customer_id              -- step 2: group
+HAVING COUNT(*) > 3;              -- step 3: filter groups
+
+-- Execution order (conceptual):
+-- FROM -> WHERE -> GROUP BY -> HAVING -> SELECT -> ORDER BY -> LIMIT
+
+-- Without GROUP BY, HAVING still works but treats whole table as one group
+SELECT COUNT(*) FROM orders
+HAVING COUNT(*) > 100;            -- valid, though unusual
 ```
