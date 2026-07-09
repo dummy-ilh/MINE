@@ -7,3 +7,4 @@ hstatistic
 shap-feateur interaction -mdoels
 Linear agebra
 calcuslus
+gini impurity
