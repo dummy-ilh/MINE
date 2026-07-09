@@ -42,6 +42,79 @@ Under a fair coin, 16+ heads happens only ~0.6% of the time — reject H₀.
 
 ---
 
+
+### Breaking It Down
+
+The p-value answers: **"If H₀ were true, how often would we see results this extreme or more extreme just by random chance?"**
+
+- **Small p-value** (e.g., 0.003): Data is very unlikely under H₀ → strong evidence against H₀
+- **Large p-value** (e.g., 0.42): Data is plausible under H₀ → no strong evidence against H₀
+
+### Mathematical Formulation
+
+For a right-tailed test with test statistic $T$ and observed value $t_{obs}$:
+
+$$p\text{-value} = P(T \geq t_{obs} \mid H_0)$$
+
+For a two-tailed test:
+
+$$p\text{-value} = 2 \cdot P(T \geq |t_{obs}| \mid H_0)$$
+
+For a Z-test with $z_{obs}$:
+
+$$p\text{-value} = 2 \cdot (1 - \Phi(|z_{obs}|))$$
+
+Where $\Phi$ is the standard normal CDF.
+
+---
+
+
+### Intuitive Walkthrough
+
+1. Assume H₀ is true — plot its sampling distribution
+2. Mark where your observed test statistic falls
+3. **The p-value = the probability of landing that far out or further** (in the tail)
+4. If p < α, that tail area is smaller than your tolerance threshold → reject H₀
+
+### Numeric Example
+
+Battery test: $Z = -2.0$ (from Section 03).
+
+$$p\text{-value (two-tailed)} = 2 \times P(Z \leq -2.0) = 2 \times 0.0228 = 0.0456$$
+
+At $\alpha = 0.05$: $0.0456 < 0.05$ → **Reject H₀**. The evidence against the manufacturer's claim is strong enough.
+
+---
+
+
+
+## 🎲 The Analogy: Flipping a Coin
+
+> You flip a coin 20 times and get 16 heads. Is the coin fair?
+
+- H₀: $p = 0.5$ (fair coin)
+- Observed: 16 heads out of 20
+- p-value: $P(X \geq 16 \mid p=0.5)$ where $X \sim \text{Bin}(20, 0.5)$
+
+$$p = \sum_{k=16}^{20} \binom{20}{k} 0.5^{20} \approx 0.0059$$
+
+**Interpretation:** If the coin were fair, we'd see 16+ heads only 0.59% of the time. That's unlikely enough to be suspicious — reject H₀ (coin appears biased).
+
+---
+
+
+## 🚨 The Replication Crisis Connection
+
+The widespread misuse of p-values contributed to the **replication crisis** in science (~50–70% of psychology studies failed to replicate). Key causes:
+- p-hacking (fishing for significance)
+- Optional stopping (peeking at results)
+- Publication bias (only significant results published)
+- Treating 0.05 as magical
+
+**Modern practice:** Report effect sizes, confidence intervals, and pre-register hypotheses. Some fields (e.g., genomics) use $\alpha = 5 \times 10^{-8}$.
+
+---
+
 ## Interview Q&A
 
 **Q1: Explain a p-value to a non-technical product manager.**
@@ -61,3 +134,6 @@ A: Practices like p-hacking (testing many hypotheses until one clears 0.05), opt
 
 **Q6 (curveball): Two studies report p = 0.04 and p = 0.06 on the same effect. Is the first meaningfully more significant?**
 A: No — this tests whether the candidate treats 0.05 as a real threshold (misinterpretation #6). Both represent similar evidence strength; a cliff-edge distinction between them is an artifact of the arbitrary α convention, not a meaningful statistical difference.
+
+
+---
