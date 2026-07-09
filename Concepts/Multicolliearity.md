@@ -157,13 +157,73 @@ These are the mistakes that quietly downgrade a candidate from "solid" to "junio
 
 ## 12. Comprehension Check ✅
 
-Before moving on, make sure you can answer these without looking back:
+Let me answer each one clearly, then walk through a calculation showing exactly why intervals and coefficients blow up.
 
-1. Why does multicollinearity barely hurt prediction but badly hurt inference?
-2. If VIF for X₁ is 10, what does that literally mean about X₁'s relationship to the other features?
-3. Why does Lasso behave "badly" under multicollinearity compared to Ridge?
-4. Why doesn't standardizing your features fix multicollinearity?
-5. What's the difference in root cause between the dummy-variable trap and polynomial-term collinearity — and what's the correct fix for each?
-6. Is OLS *biased* under multicollinearity? What's actually going wrong instead?
+## 1. Why does multicollinearity barely hurt prediction but badly hurt inference?
 
-*(Want me to quiz you on these one at a time before we move forward, the way we did with attention mechanisms?)*
+Prediction only cares about the **combined signal** \(X\beta = \beta_1 X_1 + \beta_2 X_2 + \dots\). If X₁ and X₂ are redundant, the model can put weight anywhere along the line connecting valid (β₁, β₂) combinations, and the *sum* stays essentially the same — so \(\hat{Y}\) barely moves.
+
+Inference cares about the **individual** β's — "how much does X₁ specifically contribute?" That question requires *separating* two variables that move together, and there's no information in the data to do that separation. It's like asking two people who always order the same combo meal "how much did you personally spend?" — the receipt can't tell you.
+
+**Formally:** the fitted values \(\hat{Y} = X\hat\beta\) are stable under collinearity because \(X\hat\beta\) is identified even when individual β's aren't (this holds exactly at perfect collinearity, and approximately at near-perfect collinearity). But \(\text{Var}(\hat\beta) = \sigma^2(X^TX)^{-1}\) explodes because you're inverting a near-singular matrix.
+
+## 2. VIF = 10 for X₁ — what does it literally mean?
+
+VIF₁ = 1/(1−R₁²). VIF=10 → R₁² = 0.9.
+
+That means: if you regressed X₁ against *all the other predictors in your model*, you'd explain 90% of X₁'s variance. In other words, 90% of what X₁ "knows" is already sitting in your other features — only 10% of X₁ is genuinely new information the model can use to isolate its unique effect.
+
+## 3. Why Lasso behaves badly, Ridge behaves well, under multicollinearity
+
+- **Lasso (L1)** pushes coefficients to exactly zero one at a time. When two features are near-duplicates, Lasso's penalty is roughly indifferent between "give all the credit to X₁" or "give it all to X₂" — whichever one wins is essentially arbitrary, driven by tiny noise in that specific training sample. Retrain on a slightly different sample (new month of data, different random seed) and the *other* feature might win instead. Unstable and non-reproducible.
+- **Ridge (L2)** penalizes the *squared* magnitude of coefficients, which mathematically prefers **splitting credit evenly** between correlated features rather than picking a winner (this is the "grouping effect"). It also directly fixes the numerical problem: adding \(\lambda I\) to \(X^TX\) makes it invertible again, since even a tiny λ lifts the near-zero eigenvalue away from zero.
+
+## 4. Why standardizing doesn't fix multicollinearity
+
+Standardizing (z-scoring) only rescales each variable — it subtracts the mean and divides by standard deviation. This is a shift + scale transform. **Correlation is invariant to shift and scale** — Corr(X₁, X₂) is exactly the same whether X₁ is in raw units or z-scored units. Since VIF is a function purely of R² between features (a correlation-based quantity), rescaling changes nothing about it. What standardization *does* help with is unrelated: numerical conditioning when features are on wildly different scales, and comparability of coefficient magnitudes.
+
+## 5. Dummy variable trap vs. polynomial-term collinearity
+
+These look similar (both are collinearity you *created yourself*) but have different root causes and different fixes:
+
+- **Dummy variable trap:** if you one-hot-encode a k-level category into k dummy columns **and** keep the intercept, those k columns always sum to 1 (which equals the intercept column) — this is **exact linear dependence**, i.e. perfect collinearity, purely structural, always present regardless of data. **Fix:** drop one dummy (the reference level) or drop the intercept.
+- **Polynomial/interaction terms:** X and X² (or X₁×X₂) are collinear because of *where your data sits* relative to zero — if X ranges from 50–60, X and X² are nearly perfectly linearly related over that narrow range. This isn't structural in the same absolute sense; it's a numerical artifact of not centering. **Fix:** center X (subtract its mean) before squaring/interacting — this breaks the near-linear relationship over the relevant range without changing the model's actual fit or predictions.
+
+## 6. Is OLS biased under multicollinearity?
+
+**No.** Gauss-Markov still holds as long as collinearity isn't *perfect* — OLS remains the Best Linear Unbiased Estimator. \(E[\hat\beta] = \beta\) still holds exactly.
+
+What's actually broken is **variance**, not bias: \(\text{Var}(\hat\beta) = \sigma^2(X^TX)^{-1}\) becomes enormous. So your estimator is still centered on the truth *on average, across infinitely many resamples* — but any single sample you actually have could be wildly off from that average. Saying "biased" in an interview is a real red flag; the correct vocabulary is "unbiased but high-variance / unstable."
+
+---
+
+## Calculation Example: Watch the Interval Blow Up
+
+Let's use your \(X_1=[1,2,3,4,5]\), \(X_2\approx 2X_1\) example and directly compare **collinear vs. non-collinear** standard errors on the *same scale* of data, so you see the effect in isolation.
+
+**Collinear case (from your notes, n=5):**
+
+$$X^TX = \begin{bmatrix} 55 & 109.7 \\ 109.7 & 218.9 \end{bmatrix}, \quad \det = 5.41$$
+
+$$(X^TX)^{-1} = \frac{1}{5.41}\begin{bmatrix} 218.9 & -109.7 \\ -109.7 & 55 \end{bmatrix} = \begin{bmatrix} 40.46 & -20.28 \\ -20.28 & 10.17 \end{bmatrix}$$
+
+So \(\text{Var}(\hat\beta_1) = \sigma^2 \times 40.46\), and \(\text{Var}(\hat\beta_2) = \sigma^2 \times 10.17\).
+
+**Non-collinear comparison:** suppose instead X₂ were *uncorrelated* with X₁ but with the same variance (say \(\sum X_2^2 = 218.9\) still, but \(\sum X_1 X_2 \approx 0\)):
+
+$$X^TX_{\text{indep}} = \begin{bmatrix} 55 & 0 \\ 0 & 218.9 \end{bmatrix}, \quad (X^TX)^{-1}_{\text{indep}} = \begin{bmatrix} 1/55 & 0 \\ 0 & 1/218.9 \end{bmatrix} = \begin{bmatrix} 0.018 & 0 \\ 0 & 0.0046 \end{bmatrix}$$
+
+**Direct comparison of the variance-inflation diagonal term for β₁:**
+
+| | Var(β̂₁) multiplier | Std. Error multiplier | 
+|---|---|---|
+| Independent features | 0.018 | baseline |
+| Collinear features | 40.46 | \(\sqrt{40.46/0.018} \approx 47\times\) larger |
+
+So the **standard error of β̂₁ is roughly 47x larger** purely because of the redundancy with X₂ — nothing to do with sample size, nothing to do with the true relationship between X₁ and Y. This is the exact mechanism behind:
+
+- **Wide confidence intervals:** a 95% CI is \(\hat\beta \pm 1.96 \times SE\). A 47x larger SE means an interval 47x wider — easily wide enough to comfortably contain zero even when the true effect is real.
+- **Collapsed t-statistics:** \(t = \hat\beta / SE\). Inflating SE by 47x crushes t toward zero, so you fail to reject \(H_0: \beta=0\) — you'd report "not statistically significant" for a feature that may genuinely matter.
+- **The sign flip you saw earlier:** with a variance this large, the *sampling distribution* of β̂ is so wide that one new data point can easily land you on the opposite side of zero from the last fit. It's not that the true effect changed — it's that your estimate was never precise enough to know which side of zero it was really on.
+
+**The one-sentence version to say in an interview:** *"Multicollinearity doesn't bias my estimate, it inflates its variance — so the confidence interval, which should tell me where the true effect lives, becomes so wide it's almost uninformative, even though the point estimate is still centered correctly on average."*
