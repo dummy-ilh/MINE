@@ -1366,3 +1366,142 @@ SELECT
     CURRENT_DATE - signup_date AS days_since_signup   -- Postgres
 FROM users;
 ```
+```sql
+-- ================================================================
+-- INTERVAL FUNCTIONS — adding/subtracting time, generating ranges
+-- ================================================================
+
+-- --- Basic interval arithmetic ---
+-- PostgreSQL
+SELECT NOW() + INTERVAL '1 day';
+SELECT NOW() - INTERVAL '7 days';
+SELECT NOW() + INTERVAL '3 months';
+SELECT NOW() + INTERVAL '1 year 2 months 3 days';
+SELECT order_date + INTERVAL '30 days' AS due_date FROM orders;
+
+-- MySQL
+SELECT NOW() + INTERVAL 1 DAY;
+SELECT NOW() - INTERVAL 7 DAY;
+SELECT DATE_ADD(NOW(), INTERVAL 3 MONTH);
+SELECT DATE_SUB(NOW(), INTERVAL 1 YEAR);
+
+-- SQL Server (no INTERVAL keyword, use DATEADD)
+SELECT DATEADD(DAY, 1, GETDATE());
+SELECT DATEADD(MONTH, -3, GETDATE());
+SELECT DATEADD(YEAR, 1, GETDATE());
+
+-- Snowflake
+SELECT DATEADD(DAY, 1, CURRENT_TIMESTAMP());
+SELECT DATEADD('month', 3, CURRENT_TIMESTAMP());
+
+-- BigQuery
+SELECT TIMESTAMP_ADD(CURRENT_TIMESTAMP(), INTERVAL 1 DAY);
+SELECT DATE_ADD(CURRENT_DATE(), INTERVAL 3 MONTH);
+
+
+-- --- Interval between two timestamps (as a duration, not a number) ---
+-- PostgreSQL: subtracting timestamps gives an INTERVAL type
+SELECT ship_date - order_date AS duration;             -- interval e.g. '3 days 04:00:00'
+SELECT AGE(ship_date, order_date);                      -- human-friendly interval
+SELECT justify_interval(ship_date - order_date);        -- normalizes days/months/years
+
+-- Extract parts out of an interval
+SELECT EXTRACT(DAY FROM (ship_date - order_date)) AS days_part
+FROM orders;
+SELECT EXTRACT(EPOCH FROM (ship_date - order_date)) AS total_seconds
+FROM orders;
+
+
+-- --- Common patterns: filtering by relative time windows ---
+-- Last 7 days
+SELECT * FROM orders WHERE order_date >= CURRENT_DATE - INTERVAL '7 days';       -- Postgres
+SELECT * FROM orders WHERE order_date >= NOW() - INTERVAL 7 DAY;                -- MySQL
+SELECT * FROM orders WHERE order_date >= DATEADD(DAY, -7, GETDATE());           -- SQL Server
+SELECT * FROM orders WHERE order_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY); -- BigQuery
+
+-- Last full calendar month
+SELECT * FROM orders
+WHERE order_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'
+  AND order_date <  DATE_TRUNC('month', CURRENT_DATE);                          -- Postgres
+
+-- Rolling 30-day window per row (correlated comparison)
+SELECT a.customer_id, a.order_date,
+       COUNT(b.order_id) AS orders_in_prior_30_days
+FROM orders a
+JOIN orders b
+  ON b.customer_id = a.customer_id
+ AND b.order_date BETWEEN a.order_date - INTERVAL '30 days' AND a.order_date
+GROUP BY a.customer_id, a.order_date;
+
+
+-- --- Generating a series of dates using intervals ---
+-- PostgreSQL: generate_series with interval step
+SELECT generate_series(
+    '2026-01-01'::date,
+    '2026-01-31'::date,
+    INTERVAL '1 day'
+) AS day;
+
+-- Weekly buckets
+SELECT generate_series(
+    '2026-01-01'::date,
+    '2026-12-31'::date,
+    INTERVAL '1 week'
+) AS week_start;
+
+-- BigQuery: GENERATE_DATE_ARRAY with interval-like step
+SELECT day
+FROM UNNEST(GENERATE_DATE_ARRAY('2026-01-01', '2026-01-31', INTERVAL 1 DAY)) AS day;
+
+-- Snowflake: recursive CTE (no native generate_series for dates pre-2023 versions)
+WITH RECURSIVE dates AS (
+    SELECT '2026-01-01'::date AS d
+    UNION ALL
+    SELECT DATEADD(day, 1, d) FROM dates WHERE d < '2026-01-31'
+)
+SELECT * FROM dates;
+
+
+-- --- Age / tenure calculations using intervals ---
+SELECT
+    user_id,
+    signup_date,
+    AGE(CURRENT_DATE, signup_date) AS tenure                -- Postgres: e.g. '2 years 3 mons 10 days'
+FROM users;
+
+SELECT
+    user_id,
+    TIMESTAMPDIFF(YEAR, signup_date, CURDATE()) AS tenure_years   -- MySQL
+FROM users;
+
+SELECT
+    user_id,
+    DATEDIFF(YEAR, signup_date, GETDATE()) AS tenure_years        -- SQL Server
+FROM users;
+
+
+-- --- Interval comparisons / boolean checks ---
+SELECT * FROM subscriptions
+WHERE (CURRENT_DATE - start_date) > INTERVAL '1 year';           -- Postgres
+
+SELECT * FROM subscriptions
+WHERE DATEDIFF(CURDATE(), start_date) > 365;                     -- MySQL (no interval compare, use days)
+
+
+-- --- Truncating an interval-based bucket for grouping ---
+SELECT
+    DATE_TRUNC('week', order_date) AS week_bucket,
+    SUM(amount) AS weekly_revenue
+FROM orders
+GROUP BY DATE_TRUNC('week', order_date)
+ORDER BY week_bucket;
+
+
+-- --- Quick reference: interval keywords by dialect ---
+-- | Task                  | Postgres              | MySQL                     | SQL Server           | BigQuery                    |
+-- |------------------------|------------------------|---------------------------|------------------------|-------------------------------|
+-- | Add N days             | date + INTERVAL 'N day'| DATE_ADD(date, INTERVAL N DAY) | DATEADD(DAY,N,date) | DATE_ADD(date, INTERVAL N DAY)|
+-- | Subtract N months      | date - INTERVAL 'N mon'| DATE_SUB(date, INTERVAL N MONTH)| DATEADD(MONTH,-N,date)| DATE_SUB(date, INTERVAL N MONTH)|
+-- | Diff as interval        | date2 - date1 (interval)| N/A (numeric only)        | N/A (numeric only)    | N/A (numeric only)             |
+-- | Generate date series    | generate_series(...)   | recursive CTE / calendar table | recursive CTE     | GENERATE_DATE_ARRAY(...)       |
+```
