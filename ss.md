@@ -515,7 +515,7 @@ This means: accumulate everything from the first row in the partition up to and 
 SELECT
     date,
     requests,
-    SUM(requests) OVER (
+    SUM(requests) OVER (  -- partion by mdodel not neneded here
         ORDER BY date
         ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
     ) AS cumulative_requests
@@ -1605,5 +1605,230 @@ ORDER BY model_name, month;
 
 ---
 
-*End of Module 3 — Window Functions.*
-*Module 4: Data Modelling for ML — fact/dimension tables, slowly changing dimensions, feature stores, event schema design.*
+```sql
+-- ================================================================
+-- 1) DEDUPLICATION VIA WINDOW FUNCTIONS
+-- ================================================================
+
+-- Basic: keep only the first row per duplicate group
+WITH ranked AS (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY email          -- dedup key
+               ORDER BY created_at ASC     -- keep earliest
+           ) AS rn
+    FROM users
+)
+SELECT * FROM ranked WHERE rn = 1;
+
+-- Delete duplicates, keeping the most recent row
+WITH ranked AS (
+    SELECT ctid,                           -- Postgres physical row id (use PK in other DBs)
+           ROW_NUMBER() OVER (
+               PARTITION BY email
+               ORDER BY created_at DESC
+           ) AS rn
+    FROM users
+)
+DELETE FROM users
+WHERE ctid IN (SELECT ctid FROM ranked WHERE rn > 1);
+
+-- Dedup on multiple columns
+SELECT *
+FROM (
+    SELECT *,
+           ROW_NUMBER() OVER (
+               PARTITION BY user_id, product_id, order_date
+               ORDER BY id
+           ) AS rn
+    FROM orders
+) t
+WHERE rn = 1;
+
+-- ROW_NUMBER vs RANK vs DENSE_RANK for dedup (know the difference!)
+SELECT *,
+       ROW_NUMBER() OVER (PARTITION BY email ORDER BY created_at) AS rn,  -- always unique 1,2,3...
+       RANK()       OVER (PARTITION BY email ORDER BY created_at) AS rnk, -- ties share rank, gaps after
+       DENSE_RANK() OVER (PARTITION BY email ORDER BY created_at) AS drnk -- ties share rank, no gaps
+FROM users;
+
+-- Find duplicate rows without deleting (audit use case)
+SELECT * FROM (
+    SELECT *, COUNT(*) OVER (PARTITION BY email) AS cnt
+    FROM users
+) t
+WHERE cnt > 1;
+
+
+-- ================================================================
+-- 2) PIVOT (rows → columns)
+-- ================================================================
+
+-- Manual pivot via CASE + aggregate (works everywhere)
+SELECT
+    product_id,
+    SUM(CASE WHEN quarter = 'Q1' THEN sales ELSE 0 END) AS q1,
+    SUM(CASE WHEN quarter = 'Q2' THEN sales ELSE 0 END) AS q2,
+    SUM(CASE WHEN quarter = 'Q3' THEN sales ELSE 0 END) AS q3,
+    SUM(CASE WHEN quarter = 'Q4' THEN sales ELSE 0 END) AS q4
+FROM sales
+GROUP BY product_id;
+
+-- PostgreSQL native pivot (needs tablefunc extension)
+CREATE EXTENSION IF NOT EXISTS tablefunc;
+SELECT * FROM crosstab(
+    'SELECT product_id, quarter, sales FROM sales ORDER BY 1,2'
+) AS ct(product_id INT, q1 NUMERIC, q2 NUMERIC, q3 NUMERIC, q4 NUMERIC);
+
+-- SQL Server native PIVOT
+SELECT product_id, [Q1], [Q2], [Q3], [Q4]
+FROM sales
+PIVOT (
+    SUM(sales) FOR quarter IN ([Q1], [Q2], [Q3], [Q4])
+) AS pvt;
+
+-- BigQuery native PIVOT
+SELECT *
+FROM sales
+PIVOT (SUM(sales) FOR quarter IN ('Q1', 'Q2', 'Q3', 'Q4'));
+
+-- Snowflake native PIVOT
+SELECT *
+FROM sales
+PIVOT (SUM(sales) FOR quarter IN ('Q1', 'Q2', 'Q3', 'Q4')) AS p;
+
+-- UNPIVOT (columns → rows) — manual via UNION ALL (portable)
+SELECT product_id, 'q1' AS quarter, q1 AS sales FROM pivoted_sales
+UNION ALL
+SELECT product_id, 'q2', q2 FROM pivoted_sales
+UNION ALL
+SELECT product_id, 'q3', q3 FROM pivoted_sales
+UNION ALL
+SELECT product_id, 'q4', q4 FROM pivoted_sales;
+
+-- SQL Server native UNPIVOT
+SELECT product_id, quarter, sales
+FROM pivoted_sales
+UNPIVOT (sales FOR quarter IN (q1, q2, q3, q4)) AS unpvt;
+
+
+-- ================================================================
+-- 3) MAJOR WINDOW FUNCTION PATTERNS
+-- ================================================================
+
+-- --- Ranking family ---
+SELECT *,
+       ROW_NUMBER() OVER (PARTITION BY dept ORDER BY salary DESC) AS rn,
+       RANK()       OVER (PARTITION BY dept ORDER BY salary DESC) AS rnk,
+       DENSE_RANK() OVER (PARTITION BY dept ORDER BY salary DESC) AS drnk,
+       NTILE(4)     OVER (PARTITION BY dept ORDER BY salary DESC) AS quartile
+FROM employees;
+
+-- --- Top-N per group (classic use of ROW_NUMBER) ---
+SELECT * FROM (
+    SELECT *, ROW_NUMBER() OVER (PARTITION BY dept ORDER BY salary DESC) AS rn
+    FROM employees
+) t
+WHERE rn <= 3;   -- top 3 earners per department
+
+-- --- LAG / LEAD: delta vs yesterday, previous row comparisons ---
+SELECT
+    order_date,
+    revenue,
+    LAG(revenue, 1)  OVER (ORDER BY order_date) AS prev_day_revenue,
+    revenue - LAG(revenue, 1) OVER (ORDER BY order_date) AS delta_vs_yesterday,
+    LEAD(revenue, 1) OVER (ORDER BY order_date) AS next_day_revenue
+FROM daily_revenue;
+
+-- --- % change day over day ---
+SELECT
+    order_date,
+    revenue,
+    ROUND(
+        100.0 * (revenue - LAG(revenue) OVER (ORDER BY order_date))
+        / NULLIF(LAG(revenue) OVER (ORDER BY order_date), 0), 2
+    ) AS pct_change
+FROM daily_revenue;
+
+-- --- Year-over-year comparison using LAG with offset ---
+SELECT
+    year,
+    revenue,
+    LAG(revenue, 1) OVER (ORDER BY year) AS prev_year_revenue
+FROM yearly_revenue;
+
+-- --- Running total / cumulative sum ---
+SELECT
+    order_date,
+    amount,
+    SUM(amount) OVER (ORDER BY order_date) AS running_total
+FROM orders;
+
+-- --- Running total per group (partitioned) ---
+SELECT
+    customer_id,
+    order_date,
+    amount,
+    SUM(amount) OVER (PARTITION BY customer_id ORDER BY order_date) AS running_total_per_customer
+FROM orders;
+
+-- --- Moving average (rolling window, e.g. 7-day) ---
+SELECT
+    order_date,
+    revenue,
+    AVG(revenue) OVER (
+        ORDER BY order_date
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+    ) AS moving_avg_7d
+FROM daily_revenue;
+
+-- --- First/last value in a window ---
+SELECT
+    customer_id,
+    order_date,
+    amount,
+    FIRST_VALUE(amount) OVER (PARTITION BY customer_id ORDER BY order_date) AS first_order_amt,
+    LAST_VALUE(amount) OVER (
+        PARTITION BY customer_id ORDER BY order_date
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS last_order_amt
+FROM orders;
+
+-- --- Cumulative distribution / percentile rank ---
+SELECT
+    student_id,
+    score,
+    PERCENT_RANK() OVER (ORDER BY score) AS pct_rank,
+    CUME_DIST()    OVER (ORDER BY score) AS cume_dist
+FROM exam_scores;
+
+-- --- Median via PERCENTILE_CONT (Postgres/Oracle/Snowflake) ---
+SELECT
+    department,
+    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY salary) OVER (PARTITION BY department) AS median_salary
+FROM employees;
+
+-- --- Gaps and islands: detect consecutive sequences ---
+SELECT
+    user_id,
+    login_date,
+    login_date - ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY login_date)::int AS grp
+FROM logins;
+-- rows with the same 'grp' value are part of the same consecutive streak
+
+-- --- Difference between current and average of partition ---
+SELECT
+    dept,
+    salary,
+    salary - AVG(salary) OVER (PARTITION BY dept) AS diff_from_dept_avg
+FROM employees;
+
+-- --- COUNT/SUM as window (no collapsing rows, unlike GROUP BY) ---
+SELECT
+    customer_id,
+    order_id,
+    amount,
+    COUNT(*) OVER (PARTITION BY customer_id) AS total_orders_by_customer,
+    SUM(amount) OVER (PARTITION BY customer_id) AS total_spent_by_customer
+FROM orders;
+```
