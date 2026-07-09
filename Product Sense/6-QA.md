@@ -603,7 +603,36 @@ You gave no measurement framework. How do you know if App Intelligence is workin
 
 ---
 
+## Day 5 — Session 5
 
+**Question Type:** Experiment Design
+**Company:** Google
+**Level:** L5
+
+---
+
+> **Google is testing a new feature in Google Maps called "Vibe Search" — instead of searching for "Italian restaurants near me" users can search for "somewhere cozy for a first date" or "a place to celebrate with my team" and Maps uses AI to interpret the vibe and return results.**
+>
+> **You need to design a complete experiment to test whether Vibe Search improves the Maps experience. Leadership wants a launch decision in 6 weeks.**
+
+**What makes this L5:**
+- Vibe Search has no clear success metric — "cozy for a first date" has no objective answer
+- The randomisation unit is non-obvious
+- 6 weeks is possibly too short — you need to flag that
+- There's a quality measurement problem — how do you know if the AI interpreted the vibe correctly?
+- This feature could cannibalise existing search behavior in ways that look negative but are actually positive
+
+---
+
+**Your rule for today:**
+
+Before you design anything — answer this:
+
+> Standard search success is measured by whether the user clicked and stayed. But Vibe Search success can't be measured that way. Why not — and what behavioral signal would actually tell you the AI got the vibe right?
+
+One sentence. Then build your full experiment design.
+
+Go.
 
 
 Good question. Let me be specific.
