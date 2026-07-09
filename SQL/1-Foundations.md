@@ -129,6 +129,63 @@ ORDER BY accuracy DESC;
 | LIMIT without ORDER BY | Results are non-deterministic | Always ORDER BY before LIMIT |
 | `SELECT *` in production | Fetches unused columns, breaks on schema changes | Always name columns explicitly |
 
+### ⚠️ Tips
+# SQL Tips & Corrected Queries
+
+## 1. Basic SELECT with subquery filter
+
+```sql
+SELECT event_id, user_id, event_type, created_at FROM events WHERE event_type = 'search'
+AND user_id IN (SELECT user_id FROM users WHERE country = 'India');
+```
+
+**Faster alternative (JOIN instead of subquery):**
+
+```sql
+SELECT e.event_id, e.user_id, e.event_type, e.created_at FROM events e
+JOIN users u ON e.user_id = u.user_id
+WHERE e.event_type = 'search' AND u.country = 'India';
+```
+
+---
+
+## 2. ORDER BY + Pagination
+
+```sql
+SELECT * FROM your_table ORDER BY county ASC, date DESC LIMIT 10 OFFSET 20;
+```
+This returns rows 21–30 (skips the first 20, then takes the next 10).
+
+---
+
+## 3. Random Sampling
+
+**❌ Wrong — `LIMIT` is not random:**
+
+```sql
+SELECT AVG(amount) AS avg_order FROM orders LIMIT 100;
+```
+
+**✅ Better — true random sampling:**
+
+```sql
+-- PostgreSQL
+SELECT AVG(amount) AS avg_order FROM orders WHERE random() < 0.01;
+```
+---
+
+## 4. NOT EXISTS
+
+Find rows in one table with no matching row in another — e.g., users who never placed an order.
+```sql
+SELECT u.user_id, u.name FROM users u
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM orders o
+    WHERE o.user_id = u.user_id
+);
+```
+Usually more efficient than `NOT IN` (which can misbehave with NULLs) or `LEFT JOIN ... WHERE o.user_id IS NULL` on large tables.
 ---
 
 ## 2. Aggregations — COUNT, SUM, AVG, GROUP BY
@@ -359,6 +416,21 @@ JOIN model_runs b
   AND b.dataset = 'test'
 ORDER BY gap DESC;
 ```
+vs
+
+SELECT
+    model_name,
+    MAX(CASE WHEN dataset = 'train' THEN accuracy END) AS train_acc,
+    MAX(CASE WHEN dataset = 'test'  THEN accuracy END) AS test_acc,
+    ROUND(
+        MAX(CASE WHEN dataset = 'train' THEN accuracy END) -
+        MAX(CASE WHEN dataset = 'test'  THEN accuracy END), 3
+    ) AS gap
+FROM model_runs
+WHERE dataset IN ('train', 'test')
+GROUP BY model_name
+ORDER BY gap DESC;
+
 
 **Output:**
 
@@ -1551,4 +1623,20 @@ SELECT model_name, version FROM staging_models;
 
 ---
 
-*End of Fundamentals Module — Dates & Strings module continues from Topic 14.*
+Extras
+
+```sql
+ SELECT event_id, user_id, event_type, created_at
+FROM events
+WHERE event_type = 'search'
+AND user_id IN (SELECT user_id FROM users WHERE country = 'India');
+
+vs
+
+SELECT e.event_id, e.user_id, e.event_type, e.created_at
+FROM events e
+JOIN users u ON e.user_id = u.user_id
+WHERE e.event_type = 'search'
+AND u.country = 'India';
+
+```
