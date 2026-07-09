@@ -476,6 +476,7 @@ These are the "cleanup" functions — used constantly for data normalisation bef
 | `REPLACE(str, from, to)` | Replace all occurrences of a substring |
 | `CONCAT(a, b, ...)` or `a \|\| b` | Concatenate strings |
 
+trim('ccchelloccc',c) --hello
 ---
 
 ### Sample Table: `raw_model_registry`
@@ -1271,5 +1272,97 @@ ORDER BY dow_number;
 
 ---
 
-*End of Module 2 — Dates, Strings & Interval Arithmetic.*
-*Module 3 will cover: Window Functions, Ranking, Lead/Lag, Running Totals, and Percentiles.*
+```sql
+-- ============================================
+-- DATE DIFF
+-- ============================================
+-- PostgreSQL
+SELECT order_date - ship_date AS day_diff;                     -- integer days
+SELECT AGE(order_date, ship_date);                              -- interval (y/m/d)
+SELECT EXTRACT(EPOCH FROM (ts2 - ts1))/3600 AS hour_diff;        -- hours between timestamps
+
+-- MySQL
+SELECT DATEDIFF(order_date, ship_date) AS day_diff;              -- days only
+SELECT TIMESTAMPDIFF(HOUR, ts1, ts2) AS hour_diff;               -- any unit: SECOND/MINUTE/HOUR/DAY/MONTH/YEAR
+
+-- SQL Server
+SELECT DATEDIFF(DAY, ship_date, order_date) AS day_diff;
+SELECT DATEDIFF(HOUR, ts1, ts2) AS hour_diff;
+
+-- Snowflake / BigQuery
+SELECT DATEDIFF(day, ship_date, order_date) AS day_diff;         -- Snowflake
+SELECT DATE_DIFF(order_date, ship_date, DAY) AS day_diff;        -- BigQuery (args reversed!)
+
+-- ============================================
+-- DATE_TRUNC — round down to unit
+-- ============================================
+-- PostgreSQL / Redshift / Snowflake
+SELECT DATE_TRUNC('day', created_at);      -- 2026-07-09 00:00:00
+SELECT DATE_TRUNC('month', created_at);    -- 2026-07-01 00:00:00
+SELECT DATE_TRUNC('year', created_at);     -- 2026-01-01 00:00:00
+SELECT DATE_TRUNC('week', created_at);     -- start of week (Mon, Postgres default)
+SELECT DATE_TRUNC('hour', created_at);     -- zeroes out minutes/seconds
+
+-- BigQuery
+SELECT DATE_TRUNC(created_at, MONTH);      -- unit unquoted, arg order flipped
+
+-- MySQL (no native DATE_TRUNC, emulate manually)
+SELECT DATE_FORMAT(created_at, '%Y-%m-01') AS month_trunc;
+SELECT DATE(created_at) AS day_trunc;
+
+-- SQL Server (no native DATE_TRUNC pre-2022, emulate manually)
+SELECT DATEFROMPARTS(YEAR(created_at), MONTH(created_at), 1) AS month_trunc;
+SELECT DATE_TRUNC(MONTH, created_at);      -- SQL Server 2022+ only
+
+-- ============================================
+-- EXTRACT — pull out a date part
+-- ============================================
+-- PostgreSQL / MySQL / Snowflake (ANSI standard, widely supported)
+SELECT EXTRACT(YEAR FROM created_at);
+SELECT EXTRACT(MONTH FROM created_at);
+SELECT EXTRACT(DAY FROM created_at);
+SELECT EXTRACT(DOW FROM created_at);        -- day of week (0=Sun, Postgres)
+SELECT EXTRACT(DOY FROM created_at);        -- day of year
+SELECT EXTRACT(QUARTER FROM created_at);
+SELECT EXTRACT(HOUR FROM created_at);
+SELECT EXTRACT(EPOCH FROM created_at);      -- unix timestamp (Postgres)
+
+-- SQL Server (no EXTRACT pre-2022, use DATEPART)
+SELECT DATEPART(YEAR, created_at);
+SELECT DATEPART(MONTH, created_at);
+SELECT DATEPART(WEEKDAY, created_at);
+
+-- BigQuery
+SELECT EXTRACT(YEAR FROM created_at);
+SELECT EXTRACT(DAYOFWEEK FROM created_at);  -- 1=Sunday
+
+-- ============================================
+-- QUICK REFERENCE TABLE (as comments)
+-- ============================================
+-- | Task              | Postgres            | MySQL                    | SQL Server            | BigQuery                  |
+-- |--------------------|----------------------|--------------------------|------------------------|----------------------------|
+-- | Diff in days       | date1 - date2        | DATEDIFF(date1,date2)    | DATEDIFF(DAY,d2,d1)    | DATE_DIFF(d1,d2,DAY)       |
+-- | Diff in hours      | EXTRACT(EPOCH..)/3600| TIMESTAMPDIFF(HOUR,..)   | DATEDIFF(HOUR,..)      | TIMESTAMP_DIFF(t1,t2,HOUR)|
+-- | Truncate to month  | DATE_TRUNC('month',x)| DATE_FORMAT(x,'%Y-%m-01')| DATEFROMPARTS(...)     | DATE_TRUNC(x, MONTH)       |
+-- | Extract year       | EXTRACT(YEAR FROM x) | YEAR(x)                 | DATEPART(YEAR,x)       | EXTRACT(YEAR FROM x)       |
+-- | Extract day-of-week| EXTRACT(DOW FROM x)  | DAYOFWEEK(x)             | DATEPART(WEEKDAY,x)    | EXTRACT(DAYOFWEEK FROM x)  |
+
+-- ============================================
+-- COMMON PATTERN: Monthly bucketed aggregation
+-- ============================================
+SELECT
+    DATE_TRUNC('month', order_date) AS month,
+    COUNT(*) AS orders,
+    SUM(amount) AS revenue
+FROM orders
+GROUP BY DATE_TRUNC('month', order_date)
+ORDER BY month;
+
+-- ============================================
+-- COMMON PATTERN: Age in days since signup
+-- ============================================
+SELECT
+    user_id,
+    CURRENT_DATE - signup_date AS days_since_signup   -- Postgres
+FROM users;
+```
