@@ -1754,3 +1754,247 @@ HAVING COUNT(*) > 3;              -- step 3: filter groups
 SELECT COUNT(*) FROM orders
 HAVING COUNT(*) > 100;            -- valid, though unusual
 ```
+```sql
+-- 1. Comparison operators
+SELECT * FROM orders WHERE amount = 100;
+SELECT * FROM orders WHERE amount != 100;
+SELECT * FROM orders WHERE amount > 100;
+SELECT * FROM orders WHERE amount <= 100;
+
+-- 2. BETWEEN — inclusive range
+SELECT * FROM orders WHERE amount BETWEEN 100 AND 500;
+
+-- 3. IN — match any value in a list
+SELECT * FROM orders WHERE status IN ('shipped', 'delivered');
+
+-- 4. NOT IN — exclude values in a list (careful with NULLs, see below)
+SELECT * FROM orders WHERE status NOT IN ('cancelled', 'refunded');
+
+-- 5. LIKE — pattern matching (% = any chars, _ = single char)
+SELECT * FROM users WHERE email LIKE '%@gmail.com';
+SELECT * FROM users WHERE name LIKE 'A_ex';        -- matches Alex, Anex etc
+
+-- 6. ILIKE — case-insensitive LIKE (PostgreSQL only)
+SELECT * FROM users WHERE name ILIKE 'john%';
+
+-- 7. IS NULL / IS NOT NULL — NULL checks (never use = NULL)
+SELECT * FROM users WHERE phone IS NULL;
+SELECT * FROM users WHERE phone IS NOT NULL;
+
+-- 8. AND / OR — combine conditions
+SELECT * FROM orders WHERE status = 'shipped' AND amount > 100;
+SELECT * FROM orders WHERE status = 'shipped' OR status = 'delivered';
+
+-- 9. NOT — negate a condition
+SELECT * FROM orders WHERE NOT status = 'cancelled';
+
+-- 10. EXISTS / NOT EXISTS — subquery match check
+SELECT * FROM users u
+WHERE EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.user_id);
+
+-- 11. Subquery with IN
+SELECT * FROM users
+WHERE user_id IN (SELECT user_id FROM orders WHERE amount > 1000);
+
+-- 12. Combining with parentheses — controls precedence
+SELECT * FROM orders
+WHERE (status = 'shipped' OR status = 'delivered') AND amount > 100;
+
+-- 13. Date/time comparisons
+SELECT * FROM orders WHERE order_date >= '2026-01-01';
+SELECT * FROM orders WHERE order_date BETWEEN '2026-01-01' AND '2026-06-30';
+
+-- 14. Boolean columns
+SELECT * FROM users WHERE is_active = TRUE;
+SELECT * FROM users WHERE is_active;              -- shorthand, same as above
+```
+
+```
+-- ============================================
+-- 1. SELECT/WHERE/ORDER BY/LIMIT
+-- ============================================
+-- Q: Nth highest salary (without LIMIT/OFFSET trick)
+SELECT DISTINCT salary FROM employees
+ORDER BY salary DESC
+LIMIT 1 OFFSET 2;   -- 3rd highest
+
+-- Q: Find duplicate rows
+SELECT name, email, COUNT(*)
+FROM users
+GROUP BY name, email
+HAVING COUNT(*) > 1;
+
+-- ============================================
+-- 2. Aggregations
+-- ============================================
+-- Q: Department with highest average salary
+SELECT department, AVG(salary) AS avg_sal
+FROM employees
+GROUP BY department
+ORDER BY avg_sal DESC
+LIMIT 1;
+
+-- Q: Running total / cumulative sum (ties into window functions)
+SELECT order_date, amount,
+       SUM(amount) OVER (ORDER BY order_date) AS running_total
+FROM orders;
+
+-- ============================================
+-- 3. JOINs
+-- ============================================
+-- Q: Employees who earn more than their manager (SELF JOIN classic)
+SELECT e.name AS employee, m.name AS manager
+FROM employees e
+JOIN employees m ON e.manager_id = m.id
+WHERE e.salary > m.salary;
+
+-- Q: Students enrolled in ALL courses (relational division)
+SELECT student_id
+FROM enrollments
+GROUP BY student_id
+HAVING COUNT(DISTINCT course_id) = (SELECT COUNT(*) FROM courses);
+
+-- ============================================
+-- 4. Anti-Joins
+-- ============================================
+-- Q: Customers who never placed an order
+SELECT c.customer_id
+FROM customers c
+LEFT JOIN orders o ON c.customer_id = o.customer_id
+WHERE o.customer_id IS NULL;
+
+-- Q: Products never sold
+SELECT p.product_id
+FROM products p
+LEFT JOIN order_items oi ON p.product_id = oi.product_id
+WHERE oi.product_id IS NULL;
+
+-- ============================================
+-- 5. EXISTS vs IN
+-- ============================================
+-- Q: Why does NOT IN silently return empty results with NULLs?
+SELECT * FROM users
+WHERE user_id NOT IN (SELECT user_id FROM orders);
+-- ⚠️ if orders.user_id has any NULL, this returns ZERO rows
+
+-- Fix using NOT EXISTS
+SELECT * FROM users u
+WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.user_id);
+
+-- ============================================
+-- 6. Subqueries vs CTEs
+-- ============================================
+-- Q: Rewrite nested subquery as CTE for readability
+WITH high_value_customers AS (
+    SELECT customer_id, SUM(amount) AS total
+    FROM orders
+    GROUP BY customer_id
+    HAVING SUM(amount) > 1000
+)
+SELECT * FROM high_value_customers;
+
+-- ============================================
+-- 7. Recursive CTEs
+-- ============================================
+-- Q: Employee hierarchy / org chart traversal
+WITH RECURSIVE org_chart AS (
+    SELECT id, name, manager_id, 1 AS level
+    FROM employees
+    WHERE manager_id IS NULL
+    UNION ALL
+    SELECT e.id, e.name, e.manager_id, oc.level + 1
+    FROM employees e
+    JOIN org_chart oc ON e.manager_id = oc.id
+)
+SELECT * FROM org_chart;
+
+-- Q: Generate a date series (common recursive CTE pattern)
+WITH RECURSIVE dates AS (
+    SELECT '2026-01-01'::date AS d
+    UNION ALL
+    SELECT d + 1 FROM dates WHERE d < '2026-01-31'
+)
+SELECT * FROM dates;
+
+-- ============================================
+-- 8. CASE WHEN
+-- ============================================
+-- Q: Bucket ages into groups
+SELECT name,
+       CASE
+           WHEN age < 18 THEN 'minor'
+           WHEN age BETWEEN 18 AND 64 THEN 'adult'
+           ELSE 'senior'
+       END AS age_group
+FROM users;
+
+-- Q: Pivot rows into columns (classic interview ask)
+SELECT
+    product_id,
+    SUM(CASE WHEN quarter = 'Q1' THEN sales END) AS q1_sales,
+    SUM(CASE WHEN quarter = 'Q2' THEN sales END) AS q2_sales
+FROM sales
+GROUP BY product_id;
+
+-- ============================================
+-- 9. NULL Behavior
+-- ============================================
+-- Q: Replace NULL with default value
+SELECT COALESCE(phone, 'N/A') FROM users;
+
+-- Q: Avoid divide-by-zero-like NULL issues
+SELECT NULLIF(total_orders, 0) FROM stats;  -- returns NULL instead of 0
+
+-- ============================================
+-- 10. Safe Division
+-- ============================================
+-- Q: Conversion rate without divide-by-zero crash
+SELECT
+    clicks,
+    conversions,
+    ROUND(conversions * 1.0 / NULLIF(clicks, 0), 3) AS conversion_rate
+FROM campaign_stats;
+
+-- ============================================
+-- 11. WHERE vs HAVING
+-- ============================================
+-- Q: Customers with more than 3 orders in 2026
+SELECT customer_id, COUNT(*) AS order_count
+FROM orders
+WHERE order_date >= '2026-01-01'
+GROUP BY customer_id
+HAVING COUNT(*) > 3;
+
+-- ============================================
+-- 12. COUNT Variations
+-- ============================================
+-- Q: Total rows vs non-null vs distinct — classic gotcha question
+SELECT
+    COUNT(*) AS total_rows,
+    COUNT(email) AS non_null_emails,
+    COUNT(DISTINCT email) AS unique_emails
+FROM users;
+
+-- ============================================
+-- 13. Set Operations
+-- ============================================
+-- Q: Users who bought in Jan but NOT in Feb (EXCEPT)
+SELECT customer_id FROM jan_orders
+EXCEPT
+SELECT customer_id FROM feb_orders;
+
+-- Q: Common customers across two tables (INTERSECT)
+SELECT customer_id FROM online_orders
+INTERSECT
+SELECT customer_id FROM store_orders;
+
+-- Q: UNION vs UNION ALL — dedup behavior
+SELECT customer_id FROM table_a
+UNION            -- removes duplicates
+SELECT customer_id FROM table_b;
+
+SELECT customer_id FROM table_a
+UNION ALL         -- keeps duplicates, faster
+SELECT customer_id FROM table_b;
+
+```
