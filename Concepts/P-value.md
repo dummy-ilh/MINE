@@ -114,7 +114,33 @@ The widespread misuse of p-values contributed to the **replication crisis** in s
 **Modern practice:** Report effect sizes, confidence intervals, and pre-register hypotheses. Some fields (e.g., genomics) use $\alpha = 5 \times 10^{-8}$.
 
 ---
+Here's a table of the main factors that affect a p-value, since this is exactly the kind of follow-up that comes after a p-value definition question in interviews:
 
+| Factor | Effect on p-value | Why |
+|---|---|---|
+| **Sample size (n)** | ↑ n → p tends to ↓ (for a true effect) | Larger samples give more precise estimates, so smaller effects become statistically detectable — standard error shrinks as n increases |
+| **Effect size** | ↑ effect size → ↓ p-value | A bigger true difference between groups is easier to distinguish from "no difference," even with a fixed sample size |
+| **Variance / spread in the data** | ↑ variance → ↑ p-value (less significant) | More noise/spread makes it harder to distinguish a real signal from random variation |
+| **Significance level / test choice** | Doesn't change the p-value itself, but changes your *decision* threshold | One-tailed vs two-tailed test changes p-value directly (one-tailed p is roughly half the two-tailed p for the same data) |
+| **Type of statistical test used** | Different tests → different p-values for the same data | e.g., t-test vs Mann-Whitney U vs chi-square make different assumptions and compute the test statistic differently |
+| **Number of comparisons (multiple testing)** | More comparisons → higher chance of a false positive somewhere | Doesn't change any single p-value, but raises the *family-wise* error rate — needs correction (Bonferroni, FDR/Benjamini-Hochberg) |
+| **Assumption violations** (normality, independence, equal variance) | Can distort p-value in either direction | If test assumptions are violated, the p-value from that test may not be valid/trustworthy at all |
+| **Measurement error / noise** | ↑ noise → ↑ p-value | Adds to variance, diluting the true signal, similar to the variance row above |
+| **Correlation/non-independence between observations** | Can artificially ↓ p-value (false positive risk) | Violates the independence assumption most tests rely on — pseudo-replication makes data look more informative than it truly is |
+| **Direction of test (one-tailed vs two-tailed)** | One-tailed p ≈ half of two-tailed p (same data) | One-tailed only tests one direction of effect, concentrating all the "rejection region" on one side |
+
+**The relationship worth memorizing (especially for a stats-heavy interview like Apple's):**
+
+$$p\text{-value} \propto \frac{\text{noise (variance)}}{\text{effect size} \times \sqrt{n}}$$
+
+This isn't a strict formula, but it captures the intuition: **p-value goes down when effect size or sample size go up, and goes up when variance/noise goes up.** This is essentially why "statistical significance" with p < 0.05 becomes almost guaranteed at very large n even for a trivial effect — which is the follow-up trap interviewers often lay ("your A/B test result is significant with p=0.001, should you ship it?" → answer should mention effect size, not just p-value).
+
+**Common interview follow-up questions this table sets up:**
+1. "If I increase my sample size, does my p-value always go down?" — No, only if there's a real effect; if H₀ is actually true, p-value is uniformly distributed regardless of n.
+2. "Why does running 20 A/B tests increase your false positive risk even if each individual test uses p < 0.05?" — multiple comparisons problem (~64% chance of at least one false positive across 20 independent tests at α=0.05).
+3. "What's the difference between p-value and statistical power?" — power is P(reject H₀ | H₀ is false), i.e., your ability to detect a real effect; p-value is about evidence against H₀ assuming it's true.
+
+Want me to build out a similar table/breakdown for Type I/II errors and statistical power, since that's the natural next topic in this same interview cluster?--
 ## Interview Q&A
 
 **Q1: Explain a p-value to a non-technical product manager.**
