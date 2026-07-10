@@ -894,6 +894,476 @@ By memorylessness, the 5 past failures are irrelevant — they still need **12.5
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
+Here are **2-3 numerical examples for each topic**, designed to be Google-interview caliber with clear step-by-step solutions:
+
 ---
+
+## 1. Random Variables as Payoff Functions
+
+### Example 1: Google Ad Auction
+
+**Scenario:** You're modeling a Google ad auction. An advertiser bids for a keyword. The auction has 3 possible outcomes:
+- **Outcome A:** Ad wins top position → Revenue = $10
+- **Outcome B:** Ad wins bottom position → Revenue = $4
+- **Outcome C:** Ad loses → Revenue = $0
+
+Define a random variable **X** = Revenue from the auction.
+
+**Q:** What values can X take? Is this discrete or continuous?
+
+**Solution:**
+```
+X : {Outcome A, Outcome B, Outcome C} → {10, 4, 0}
+
+X is DISCRETE (finite set of possible values)
+```
+
+**Google insight:** In real ad auctions, X is more complex (bid price × click probability × conversion rate), but this simplified mapping is the foundation.
+
+---
+
+### Example 2: YouTube Watch Time
+
+**Scenario:** YouTube recommends 3 videos. A user watches one of them. You define **X** = Watch time in seconds:
+- Video 1 (5 min): X = 300s
+- Video 2 (10 min): X = 600s  
+- Video 3 (2 min): X = 120s
+
+**Q:** Write X as a function of the random outcome (which video is watched).
+
+**Solution:**
+```
+Let Ω = {Video 1, Video 2, Video 3}
+X(ω) = watch time for video ω
+
+X(Video 1) = 300
+X(Video 2) = 600
+X(Video 3) = 120
+```
+
+**Google insight:** This is exactly what YouTube's recommendation system does — it maps user choices to metrics (watch time, engagement, satisfaction) that it tries to maximize.
+
+---
+
+### Example 3: Google Cloud Server Costs
+
+**Scenario:** A Google Cloud VM has 3 possible states:
+- **State 1:** Idle → Cost/hour = $0.10
+- **State 2:** Active → Cost/hour = $0.50
+- **State 3:** Peak → Cost/hour = $1.20
+
+Define **X** = Hourly cost.
+
+**Q:** If you observe the server for 10 hours, what's the **composition** of X over time (sum of hourly costs)?
+
+**Solution:**
+```
+X_hour ∈ {0.10, 0.50, 1.20} per hour
+
+Total cost over 10 hours = X₁ + X₂ + ... + X₁₀
+```
+
+This previews why sums of random variables matter (coming in Module 3).
+
+---
+
+## 2. Expectations
+
+### Example 1: Ad Click-Through (Easy)
+
+**Scenario:** A Google ad has a 4% click-through rate (CTR). Define **X** = 1 if user clicks, 0 if not (Bernoulli).
+
+**Q:** What's the expected value of X?
+
+**Solution:**
+```
+E[X] = 1 × P(X=1) + 0 × P(X=0)
+     = 1 × 0.04 + 0 × 0.96
+     = 0.04
+```
+
+**Interpretation:** The expected value is the probability of success. For 1000 impressions, you expect 1000 × 0.04 = 40 clicks.
+
+**Interview trap:** Some candidates say "0.04 clicks" and panic. Clarify: "That's 0.04 per impression — for 1000 impressions, 40 clicks expected."
+
+---
+
+### Example 2: Google Maps Trip Revenue (Linearity)
+
+**Scenario:** Google Maps shows 3 ads per trip. Each ad has a 2% CTR and pays $0.50 per click. Let **Xᵢ** = revenue from ad i (0 or $0.50).
+
+**Q:** What's the expected revenue per trip? What if the ads are correlated?
+
+**Solution:**
+```
+E[Xᵢ] = $0.50 × 0.02 = $0.01 per ad
+
+E[Total] = E[X₁ + X₂ + X₃]
+         = E[X₁] + E[X₂] + E[X₃]    ← LINEARITY!
+         = 0.01 + 0.01 + 0.01
+         = $0.03 per trip
+```
+
+**Key insight:** This works **even if ads are correlated** (e.g., clicking one ad makes you more likely to click another). No independence needed.
+
+**Google scale:** For 1 billion trips → $30 million expected revenue.
+
+---
+
+### Example 3: Google Search Ranking (LOTUS)
+
+**Scenario:** A search result has a relevance score **X**:
+- X = 0 (not relevant) with probability 0.3
+- X = 1 (somewhat relevant) with probability 0.5
+- X = 2 (very relevant) with probability 0.2
+
+Google's ranking model uses **squared relevance** (to penalize irrelevant results): Y = g(X) = X².
+
+**Q:** What's E[Y] = E[X²]? (This is the "Law of the Unconscious Statistician" in action.)
+
+**Solution — The Wrong Way:**
+```
+# Some candidates try to find distribution of Y:
+Y can be 0, 1, or 4.
+P(Y=0) = P(X=0) = 0.3
+P(Y=1) = P(X=1) = 0.5
+P(Y=4) = P(X=2) = 0.2
+
+E[Y] = 0×0.3 + 1×0.5 + 4×0.2 = 0 + 0.5 + 0.8 = 1.3  ✓
+```
+*This works here, but it's extra work.*
+
+**Solution — The Right Way (LOTUS):**
+```
+E[g(X)] = Σ g(x)·p(x)
+
+E[X²] = 0²·0.3 + 1²·0.5 + 2²·0.2
+      = 0 + 0.5 + 0.8
+      = 1.3
+```
+
+**Interview signal:** Mention "I'm using LOTUS here — I don't need the distribution of X², I can compute E[X²] directly from X's distribution." Shows depth.
+
+---
+
+### Example 4: Google A/B Test (Variance)
+
+**Scenario:** You run an A/B test. Variant A has conversion rate p = 0.05. Define **X** = conversion indicator (Bernoulli).
+
+**Q:** What's E[X] and Var(X)? Compute both ways.
+
+**Solution:**
+```
+E[X] = p = 0.05
+
+# Method 1: Definition
+Var(X) = E[(X - 0.05)²]
+       = (1-0.05)²·0.05 + (0-0.05)²·0.95
+       = 0.9025·0.05 + 0.0025·0.95
+       = 0.045125 + 0.002375
+       = 0.0475
+
+# Method 2: Shortcut (faster!)
+Var(X) = E[X²] - (E[X])²
+E[X²] = 1²·0.05 + 0²·0.95 = 0.05
+Var(X) = 0.05 - (0.05)² = 0.05 - 0.0025 = 0.0475 ✓
+```
+
+**Google insight:** For n = 1000 users, Var(total conversions) = n·p(1-p) = 1000 × 0.0475 = 47.5. This tells you how much random noise to expect in your experiment.
+
+---
+
+## 3. PMF (Probability Mass Function)
+
+### Example 1: Dice Sum (Two Dice)
+
+**Scenario:** Roll two fair dice. Let **X** = sum of the two dice.
+
+**Q:** Find P(X = 7) and P(X = 10). Find the full PMF for X = 7, 8, 9, 10.
+
+**Solution:**
+```
+Total possible outcomes = 6 × 6 = 36
+
+P(X = 7): combinations that sum to 7
+(1,6), (2,5), (3,4), (4,3), (5,2), (6,1) → 6 outcomes
+P(X=7) = 6/36 = 1/6 ≈ 0.167
+
+P(X = 10): combinations that sum to 10
+(4,6), (5,5), (6,4) → 3 outcomes
+P(X=10) = 3/36 = 1/12 ≈ 0.083
+
+PMF table:
+x     7    8    9    10
+p(x) 6/36 5/36 4/36 3/36
+```
+
+**Google insight:** This is the foundation of randomization in A/B testing — understanding the distribution of test statistics.
+
+---
+
+### Example 2: YouTube Video Clicks (Binomial PMF)
+
+**Scenario:** A YouTube suggested video has a 10% click-through rate. You show it to 3 users. Let **X** = number of clicks.
+
+**Q:** Find the PMF of X. Verify it sums to 1.
+
+**Solution:**
+```
+X ~ Binomial(n=3, p=0.1)
+
+P(X=0) = C(3,0)·(0.1)⁰·(0.9)³ = 1·1·0.729 = 0.729
+P(X=1) = C(3,1)·(0.1)¹·(0.9)² = 3·0.1·0.81 = 0.243
+P(X=2) = C(3,2)·(0.1)²·(0.9)¹ = 3·0.01·0.9 = 0.027
+P(X=3) = C(3,3)·(0.1)³·(0.9)⁰ = 1·0.001·1 = 0.001
+
+Check: 0.729 + 0.243 + 0.027 + 0.001 = 1.000 ✓
+```
+
+**Google insight:** PMF sums to 1 is the first thing to check in interviews. Always mention it.
+
+---
+
+### Example 3: Google Ad Impressions (Geometric PMF)
+
+**Scenario:** A user sees Google ads until they click one. Each impression has a 5% click probability. Let **X** = number of impressions until first click (including the clicked one).
+
+**Q:** What's P(X=3)? What's P(X > 5)?
+
+**Solution:**
+```
+X ~ Geometric(p=0.05)
+P(X=k) = (1-p)^(k-1)·p = (0.95)^(k-1)·(0.05)
+
+P(X=3) = (0.95)²·0.05 = 0.9025·0.05 = 0.045125 ≈ 4.51%
+
+P(X > 5) = P(no success in first 5 trials)
+         = (1-p)^5
+         = (0.95)^5
+         = 0.7738 ≈ 77.38%
+```
+
+**Interview tip:** "P(X > 5)" is the survival function. For Geometric, it's simply (1-p)^n — no summation needed.
+
+---
+
+## 4. PDF (Probability Density Function)
+
+### Example 1: Google Cloud Latency (Uniform)
+
+**Scenario:** A Google Cloud server's response time is uniformly distributed between 50ms and 150ms. Let **X** = response time (ms).
+
+**Q:** Find the PDF, expected value, and P(80 < X < 120).
+
+**Solution:**
+```
+X ~ Uniform(a=50, b=150)
+
+PDF: f(x) = 1/(b-a) = 1/100 = 0.01 for 50 ≤ x ≤ 150
+          = 0 otherwise
+
+E[X] = (a+b)/2 = (50+150)/2 = 100 ms
+
+P(80 < X < 120) = (120-80)/100 = 40/100 = 0.4
+```
+
+**Key point:** PDF can be > 1? Here f(x) = 0.01 < 1. But if Uniform(0, 0.5), f(x) = 2 > 1. **PDF is not probability!**
+
+**Google insight:** Load balancers often assume uniform distribution of requests across servers.
+
+---
+
+### Example 2: Google Search Latency (Exponential)
+
+**Scenario:** Time between Google searches for a user follows an Exponential distribution with mean 5 minutes. Let **X** = time (in minutes) between searches.
+
+**Q:** Find the PDF, E[X], and P(X > 5 | X > 3).
+
+**Solution:**
+```
+E[X] = 1/λ = 5 → λ = 0.2 searches per minute
+
+PDF: f(x) = λe^(-λx) = 0.2e^(-0.2x) for x ≥ 0
+
+P(X > 5 | X > 3) = ? 
+By memorylessness: P(X > 5 | X > 3) = P(X > 2)
+P(X > 2) = e^(-λ·2) = e^(-0.4) ≈ 0.6703
+```
+
+**Interview trap:** Many candidates compute P(X>5)/P(X>3). Memorylessness makes it simpler. Say: "The Exponential distribution forgets its past — given they've already waited 3 minutes, the remaining wait has the same distribution."
+
+---
+
+### Example 3: Google Revenue (Log-Normal)
+
+**Scenario:** Monthly revenue per user (in dollars) is Log-Normal. The log-revenue Y = ln(X) follows Normal(μ=3, σ=0.5).
+
+**Q:** What's the PDF of X? What's E[X]?
+
+**Solution:**
+```
+If Y ~ Normal(μ=3, σ=0.5) and X = e^Y, then:
+
+PDF: f_X(x) = (1/(xσ√(2π)))·exp(-(ln(x)-μ)²/(2σ²)) for x > 0
+
+E[X] = e^(μ + σ²/2) = e^(3 + 0.25/2) = e^(3.125) ≈ $22.76
+```
+
+**Google insight:** This is why you log-transform revenue data before analysis — it becomes Normal, making standard statistical tests valid.
+
+**Check your intuition:** Mean of revenue ($22.76) > median = e^μ = e³ ≈ $20.09. Right-skewed: mean > median. This matches real user revenue patterns.
+
+---
+
+## 5. CDF (Cumulative Distribution Function)
+
+### Example 1: Dice Sum (Discrete CDF)
+
+**Scenario:** Two fair dice, **X** = sum. Use the PMF from earlier.
+
+**Q:** Find the CDF at x = 7. What is P(X ≤ 8)?
+
+**Solution:**
+```
+F(7) = P(X ≤ 7) = P(X=2) + P(X=3) + ... + P(X=7)
+
+PMF:
+P(X=2) = 1/36
+P(X=3) = 2/36
+P(X=4) = 3/36
+P(X=5) = 4/36
+P(X=6) = 5/36
+P(X=7) = 6/36
+
+F(7) = (1+2+3+4+5+6)/36 = 21/36 = 7/12 ≈ 0.583
+
+P(X ≤ 8) = F(8) = F(7) + P(X=8) = 21/36 + 5/36 = 26/36 = 13/18 ≈ 0.722
+```
+
+**CDF properties check:**
+- F(7) = 0.583, F(8) = 0.722 → non-decreasing ✓
+- F(12) = 1, F(2) = 1/36 > 0 ✓
+
+---
+
+### Example 2: Exponential CDF (Continuous)
+
+**Scenario:** Time between Google Cloud service calls follows Exponential(λ=0.5).
+
+**Q:** Write the CDF. Find P(X ≤ 2) and P(X > 3).
+
+**Solution:**
+```
+PDF: f(x) = 0.5e^(-0.5x) for x ≥ 0
+
+CDF: F(x) = P(X ≤ x) = ∫₀ˣ 0.5e^(-0.5t) dt = 1 - e^(-0.5x)
+
+P(X ≤ 2) = F(2) = 1 - e^(-0.5×2) = 1 - e^(-1) ≈ 0.632
+
+P(X > 3) = 1 - F(3) = 1 - (1 - e^(-1.5)) = e^(-1.5) ≈ 0.223
+```
+
+**Interview signal:** "The CDF gives us probabilities directly via the cumulative area. For the Exponential, F(x) has a closed form — 1 - e^(-λx) — which is why it's so common in survival analysis."
+
+---
+
+### Example 3: Normal CDF + Google SLA (Continuous)
+
+**Scenario:** Page load times at Google follow Normal(μ=200ms, σ=30ms). An SLA requires 95% of pages load under 250ms.
+
+**Q:** Use the CDF to check if you meet the SLA. Find the 95th percentile.
+
+**Solution:**
+```
+X ~ Normal(μ=200, σ=30)
+
+P(X ≤ 250) = P(Z ≤ (250-200)/30) = P(Z ≤ 1.667)
+           = Φ(1.667) ≈ 0.952
+
+You meet the SLA (95.2% under 250ms).
+
+95th percentile (p95):
+Find z such that Φ(z) = 0.95 → z = 1.645
+p95 = μ + zσ = 200 + 1.645×30 = 200 + 49.35 = 249.35ms
+```
+
+**Check:** p95 = 249.35ms, comfortably under 250ms. You have a ~0.65ms buffer.
+
+**Google insight:** Google's actual SLA for search latency is famously tight (p99 under 100ms in some cases). This is how they set those thresholds.
+
+---
+
+## Summary Table: PDF, PMF, CDF Relationship
+
+| Aspect | PMF (Discrete) | PDF (Continuous) | CDF (Both) |
+|--------|---------------|------------------|------------|
+| **What it is** | P(X = x) | f(x) (density) | P(X ≤ x) |
+| **Can it exceed 1?** | No (≤ 1) | Yes (can exceed 1) | No (≤ 1) |
+| **Sum/integral** | Σ p(x) = 1 | ∫ f(x) dx = 1 | Approaches 1 |
+| **Find probability** | Sum over values | Integrate over range | Read directly |
+| **Relationship** | p(x) = F(x) - F(x-) | f(x) = F'(x) | F(x) = Σ_{t≤x} p(t) | F(x) = ∫₋∞ˣ f(t) dt |
+
+---
+
+## Interview Quick-Fire Problems
+
+### Problem 1 (Random Variable)
+**Q:** Google shows 3 search ads. Each ad has a 3% CTR. Define X = total clicks. What values can X take?
+
+**A:** X ∈ {0, 1, 2, 3}. This is discrete (Binomial).
+
+---
+
+### Problem 2 (Expectation — Linearity)
+**Q:** You have 2 independent ad campaigns. Campaign A has E[revenue] = $100, Var = 400. Campaign B has E[revenue] = $150, Var = 900. What's E[total] and Var(total)?
+
+**A:**
+```
+E[total] = 100 + 150 = $250
+Var(total) = 400 + 900 = 1300 (since independent)
+SD(total) = √1300 ≈ $36.06
+```
+
+---
+
+### Problem 3 (PMF Validation)
+**Q:** Is p(x) = x/6 for x = 1,2,3 a valid PMF?
+
+**A:**
+```
+p(1) = 1/6, p(2) = 2/6, p(3) = 3/6
+Sum = 1/6 + 2/6 + 3/6 = 6/6 = 1 ✓
+All p(x) ≥ 0 ✓
+Valid PMF (but support is only {1,2,3})
+```
+
+---
+
+### Problem 4 (PDF)
+**Q:** f(x) = 2x for 0 ≤ x ≤ 1. Is this a valid PDF? Find P(0.2 < X < 0.5).
+
+**A:**
+```
+∫₀¹ 2x dx = [x²]₀¹ = 1 ✓ (valid PDF, even though f(1)=2>1)
+
+P(0.2 < X < 0.5) = ∫₀.₂⁰·⁵ 2x dx = [x²]₀.₂⁰·⁵ = 0.25 - 0.04 = 0.21
+```
+
+---
+
+### Problem 5 (CDF)
+**Q:** For the PDF above, find F(0.75). Also find P(X > 0.3).
+
+**A:**
+```
+F(x) = ∫₀ˣ 2t dt = x² for 0 ≤ x ≤ 1
+F(0.75) = (0.75)² = 0.5625
+
+P(X > 0.3) = 1 - F(0.3) = 1 - 0.09 = 0.91
+```
+
+---
+
+
 
 *Next → Module 3: Joint Distributions, Covariance, CLT & LLN*
