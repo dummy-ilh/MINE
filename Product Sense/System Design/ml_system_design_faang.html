@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML System Design — FAANG Daily</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fafaf9;color:#1a1a18;line-height:1.6;}
+  .container{max-width:860px;margin:0 auto;padding:2rem 1.5rem;}
+  .badge{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:#f1efe8;border:1px solid #d3d1c7;border-radius:99px;padding:3px 12px;color:#5f5e5a;margin-bottom:.75rem;}
+  h1{font-size:28px;font-weight:600;margin-bottom:.25rem;}
+  .sub{font-size:15px;color:#888780;margin-bottom:1.5rem;}
+  .topic-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.5rem;}
+  .topic-btn{font-size:13px;padding:6px 16px;border-radius:99px;border:1px solid #d3d1c7;background:#fff;cursor:pointer;color:#5f5e5a;transition:all .15s;}
+  .topic-btn:hover,.topic-btn.sel{background:#1a1a18;color:#fff;border-color:#1a1a18;}
+  .tabs{display:flex;gap:0;border-bottom:1px solid #d3d1c7;margin-bottom:1.25rem;}
+  .tab{font-size:13px;padding:8px 16px;border:none;background:none;cursor:pointer;color:#888780;border-bottom:2px solid transparent;margin-bottom:-1px;}
+  .tab:hover{color:#1a1a18;}
+  .tab.active{color:#1a1a18;font-weight:600;border-bottom:2px solid #1a1a18;}
+  .section{display:none;}
+  .section.active{display:block;}
+  .card{background:#fff;border:1px solid #e8e6df;border-radius:12px;padding:1.25rem;margin-bottom:1rem;}
+  .card-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888780;margin-bottom:.75rem;}
+  .step-list{list-style:none;counter-reset:s;}
+  .step-list li{counter-increment:s;display:flex;gap:10px;padding:9px 0;border-bottom:1px solid #f1efe8;font-size:14px;align-items:flex-start;}
+  .step-list li:last-child{border-bottom:none;}
+  .step-list li::before{content:counter(s);min-width:22px;height:22px;border-radius:50%;background:#f1efe8;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#5f5e5a;flex-shrink:0;margin-top:2px;}
+  .pills{display:flex;flex-wrap:wrap;gap:6px;margin:.5rem 0;}
+  .pill{font-size:12px;padding:4px 12px;border-radius:99px;font-weight:500;}
+  .p-blue{background:#E6F1FB;color:#0C447C;}
+  .p-teal{background:#E1F5EE;color:#085041;}
+  .p-purple{background:#EEEDFE;color:#3C3489;}
+  .p-amber{background:#FAEEDA;color:#633806;}
+  .p-coral{background:#FAECE7;color:#712B13;}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+  .m-card{background:#f8f7f4;border-radius:8px;padding:.85rem 1rem;}
+  .m-label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#888780;margin-bottom:3px;}
+  .m-val{font-size:20px;font-weight:600;color:#1a1a18;}
+  .m-sub{font-size:11px;color:#888780;margin-top:2px;}
+  .tradeoff{padding:10px 0;border-bottom:1px solid #f1efe8;font-size:13px;display:flex;gap:12px;}
+  .tradeoff:last-child{border-bottom:none;}
+  .t-label{min-width:90px;font-weight:600;color:#5f5e5a;flex-shrink:0;}
+  .q{padding:10px 0;border-bottom:1px solid #f1efe8;}
+  .q:last-child{border-bottom:none;}
+  .q-title{font-size:14px;font-weight:600;margin-bottom:4px;}
+  .q-hint{font-size:13px;color:#5f5e5a;line-height:1.5;}
+  .arch-row{display:flex;align-items:center;flex-wrap:wrap;gap:4px;padding:.5rem 0;}
+  .arch-box{font-size:12px;font-weight:500;padding:5px 12px;border-radius:8px;border:1px solid #e8e6df;background:#fff;}
+  .arch-arrow{color:#b4b2a9;font-size:13px;}
+  a.btn{display:inline-block;font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid #d3d1c7;color:#5f5e5a;text-decoration:none;margin-top:8px;}
+  a.btn:hover{background:#f1efe8;}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="badge">Day 1 · Foundations</div>
+  <h1 id="sys-title">Recommendation system design</h1>
+  <p class="sub" id="sys-sub">Two-stage retrieval + ranking · Netflix, YouTube, TikTok</p>
+
+  <div class="topic-row">
+    <button class="topic-btn sel" onclick="setTopic(this,'rec')">Recommendations</button>
+    <button class="topic-btn" onclick="setTopic(this,'search')">Search ranking</button>
+    <button class="topic-btn" onclick="setTopic(this,'ads')">Ad CTR prediction</button>
+    <button class="topic-btn" onclick="setTopic(this,'feed')">Feed ranking</button>
+    <button class="topic-btn" onclick="setTopic(this,'fraud')">Fraud detection</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="go(this,'problem')">Problem framing</button>
+    <button class="tab" onclick="go(this,'arch')">Architecture</button>
+    <button class="tab" onclick="go(this,'features')">Features</button>
+    <button class="tab" onclick="go(this,'metrics')">Metrics</button>
+    <button class="tab" onclick="go(this,'tradeoffs')">Tradeoffs</button>
+    <button class="tab" onclick="go(this,'qs')">Interview Qs</button>
+  </div>
+
+  <!-- PROBLEM FRAMING -->
+  <div id="problem" class="section active">
+    <div class="card">
+      <div class="card-title">Clarify scope first — always</div>
+      <ol class="step-list">
+        <li>Business goal: engagement, revenue, retention, discovery, or safety?</li>
+        <li>Scale: How many users? Items? QPS? (10M vs 1B changes everything)</li>
+        <li>Latency budget: 50ms? 500ms? Real-time or batch?</li>
+        <li>Feedback signal: explicit (ratings, thumbs) or implicit (clicks, watch time)?</li>
+        <li>Cold start: constraints for new users? New items?</li>
+      </ol>
+    </div>
+    <div class="card">
+      <div class="card-title">ML formulation</div>
+      <p style="font-size:14px;margin-bottom:.75rem;">Frame as <strong>two tasks</strong>: (1) retrieve ~1000 candidates from millions, (2) rank precisely. Never run a heavy model over all items.</p>
+      <div class="pills">
+        <span class="pill p-blue">Retrieval: ANN search (FAISS/ScaNN)</span>
+        <span class="pill p-purple">Ranking: pointwise / pairwise / listwise</span>
+        <span class="pill p-teal">Output: ordered list of K items</span>
+      </div>
+      <p style="font-size:13px;color:#888780;margin-top:.5rem;">Funnel: 10M items → 1000 (retrieval) → 200 (pre-ranking) → 10 (ranking) → response</p>
+    </div>
+  </div>
+
+  <!-- ARCHITECTURE -->
+  <div id="arch" class="section">
+    <div class="card">
+      <div class="card-title">End-to-end architecture</div>
+      <div class="arch-row">
+        <div class="arch-box" style="background:#E6F1FB;border-color:#B5D4F4;color:#185FA5;">User request</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box" style="background:#EEEDFE;border-color:#CECBF6;color:#534AB7;">Feature store</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box" style="background:#E1F5EE;border-color:#9FE1CB;color:#0F6E56;">Retrieval (ANN)</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box" style="background:#FAEEDA;border-color:#FAC775;color:#854F0B;">Ranker (DNN)</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box" style="background:#FAECE7;border-color:#F5C4B3;color:#993C1D;">Business rules</div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-box">Response</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Key components</div>
+      <ol class="step-list">
+        <li><strong>User embedding service</strong> — two-tower model, user vector cached in Redis with TTL</li>
+        <li><strong>Item embedding index</strong> — FAISS / ScaNN for ANN, pre-computed offline</li>
+        <li><strong>Feature store</strong> — Feast / Tecton; point-in-time correct to avoid leakage</li>
+        <li><strong>Ranking model</strong> — GBDT or DNN with cross features (DCN-v2, DIN, DIEN)</li>
+        <li><strong>Logging pipeline</strong> — Kafka → Flink → offline store; foundation of training data</li>
+        <li><strong>Training pipeline</strong> — daily/hourly retraining, shadow + canary deployment</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <div id="features" class="section">
+    <div class="card">
+      <div class="card-title">User features</div>
+      <div class="pills">
+        <span class="pill p-blue">User ID embedding</span>
+        <span class="pill p-blue">Demographics</span>
+        <span class="pill p-blue">Interaction history (sequence)</span>
+        <span class="pill p-blue">Session context (device, time of day)</span>
+        <span class="pill p-blue">Long-term interests (30-day)</span>
+        <span class="pill p-blue">Short-term intent (last 10 actions)</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Item features</div>
+      <div class="pills">
+        <span class="pill p-teal">Item ID embedding</span>
+        <span class="pill p-teal">Category / tags</span>
+        <span class="pill p-teal">Content embedding (BERT / ViT)</span>
+        <span class="pill p-teal">Global & regional popularity</span>
+        <span class="pill p-teal">Freshness / recency</span>
+        <span class="pill p-teal">Creator quality signals</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Cross / interaction features</div>
+      <div class="pills">
+        <span class="pill p-purple">User × item affinity score</span>
+        <span class="pill p-purple">Historical CTR on similar items</span>
+        <span class="pill p-purple">Co-occurrence in sessions</span>
+        <span class="pill p-purple">Category match score</span>
+      </div>
+      <p style="font-size:13px;color:#888780;margin-top:.75rem;"><strong>Key trap:</strong> training-serving skew — always use the same feature store for both. Log features at serving time.</p>
+    </div>
+  </div>
+
+  <!-- METRICS -->
+  <div id="metrics" class="section">
+    <div class="card">
+      <div class="card-title">Offline metrics</div>
+      <div class="metrics">
+        <div class="m-card"><div class="m-label">Ranking quality</div><div class="m-val">NDCG@K</div><div class="m-sub">normalized discounted gain</div></div>
+        <div class="m-card"><div class="m-label">Retrieval</div><div class="m-val">Recall@K</div><div class="m-sub">relevant items found</div></div>
+        <div class="m-card"><div class="m-label">Classification</div><div class="m-val">AUC-ROC</div><div class="m-sub">click prediction quality</div></div>
+        <div class="m-card"><div class="m-label">Calibration</div><div class="m-val">Log loss</div><div class="m-sub">predicted vs actual prob</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Online / business metrics</div>
+      <div class="metrics">
+        <div class="m-card"><div class="m-label">Engagement</div><div class="m-val">CTR</div><div class="m-sub">click-through rate</div></div>
+        <div class="m-card"><div class="m-label">Satisfaction</div><div class="m-val">Watch time</div><div class="m-sub">or dwell time</div></div>
+        <div class="m-card"><div class="m-label">Retention</div><div class="m-val">D7 / D30</div><div class="m-sub">user return rate</div></div>
+        <div class="m-card"><div class="m-label">Diversity</div><div class="m-val">ILD</div><div class="m-sub">intra-list diversity</div></div>
+      </div>
+      <p style="font-size:13px;color:#888780;margin-top:.75rem;"><strong>Always run A/B tests.</strong> Offline gains don't always translate online. Watch for novelty effects.</p>
+    </div>
+  </div>
+
+  <!-- TRADEOFFS -->
+  <div id="tradeoffs" class="section">
+    <div class="card">
+      <div class="card-title">Tradeoffs to discuss in every interview</div>
+      <div class="tradeoff"><div class="t-label">Latency vs quality</div><div>Heavier ranker = better results but slower. Cascade: cheap model first, expensive model on top-N only.</div></div>
+      <div class="tradeoff"><div class="t-label">Explore vs exploit</div><div>ε-greedy, UCB, or Thompson sampling. Over-exploitation → filter bubble. Over-exploration → bad UX.</div></div>
+      <div class="tradeoff"><div class="t-label">Freshness vs stability</div><div>Frequent retraining catches trends but risks regressions. Shadow deployment + canary rollout is key.</div></div>
+      <div class="tradeoff"><div class="t-label">Personalization vs popularity</div><div>Cold-start users need popularity fallback. Blend: α·personal + (1−α)·global_popularity.</div></div>
+      <div class="tradeoff"><div class="t-label">Recall vs precision</div><div>Retrieval optimizes recall (don't miss good items). Ranking optimizes precision (top spots must count).</div></div>
+    </div>
+  </div>
+
+  <!-- INTERVIEW Qs -->
+  <div id="qs" class="section">
+    <div class="card">
+      <div class="card-title">High-signal interview questions</div>
+      <div class="q">
+        <div class="q-title">"How would you reduce latency from 500ms to 50ms?"</div>
+        <div class="q-hint">→ Pre-compute embeddings, quantize FAISS index, cache user vectors in Redis, cascade ranking, early exit.</div>
+      </div>
+      <div class="q">
+        <div class="q-title">"How do you handle the cold start problem?"</div>
+        <div class="q-hint">→ Content-based fallback, onboarding survey, transfer learning, explore new users more aggressively.</div>
+      </div>
+      <div class="q">
+        <div class="q-title">"Model has high AUC offline but business metrics drop in A/B test. Why?"</div>
+        <div class="q-hint">→ Metric misalignment, position bias, data leakage, distribution shift, novelty effect.</div>
+      </div>
+      <div class="q">
+        <div class="q-title">"How do you detect and fix training-serving skew?"</div>
+        <div class="q-hint">→ Log features at serving time, compare distributions, use same feature store for train and serve.</div>
+      </div>
+      <div class="q">
+        <div class="q-title">"How would you improve diversity without hurting relevance?"</div>
+        <div class="q-hint">→ Post-processing: MMR (maximal marginal relevance), DPP (determinantal point process), slot-based diversification.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+const topics={
+  rec:{t:'Recommendation system design',s:'Two-stage retrieval + ranking · Netflix, YouTube, TikTok'},
+  search:{t:'Search ranking system design',s:'Query understanding + BM25 + LTR · Google, Amazon, LinkedIn Search'},
+  ads:{t:'Ad click prediction (CTR)',s:'Logistic regression → GBDT → DNN · Facebook Ads, Google AdWords'},
+  feed:{t:'Social feed ranking system design',s:'Multi-objective ranking · Instagram, Twitter/X, LinkedIn Feed'},
+  fraud:{t:'Fraud detection system design',s:'Real-time scoring + graph signals · Stripe, PayPal, Uber'}
+};
+function setTopic(btn,k){
+  document.querySelectorAll('.topic-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.getElementById('sys-title').textContent=topics[k].t;
+  document.getElementById('sys-sub').textContent=topics[k].s;
+}
+function go(btn,id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+</script>
+</body>
+</html>
