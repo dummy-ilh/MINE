@@ -1,0 +1,28 @@
+from langchain.chat_models import AzureChatOpenAI
+from langchain.schema import SystemMessage, HumanMessage
+
+# Initialize the model
+llm = AzureChatOpenAI(
+    deployment_name="your_deployment_name", 
+    model="your_model_name"
+)
+
+# Format messages
+prompt = "Summarize the following text: {context}"
+chunk = "Azure OpenAI provides enterprise-grade AI models."
+msg = prompt.format(context=chunk)
+
+human_message = "Follow this policy: {policy}"
+policy = "Be concise and neutral."
+msg += " " + human_message.format(policy)
+
+# Create messages in LangChain format
+messages = [
+    SystemMessage(content="You are an AI that summarizes text."),
+    HumanMessage(content=msg)
+]
+
+# Generate response (use .invoke(), NOT .chat)
+response = llm.invoke(messages)
+
+print(response.content)
