@@ -105,15 +105,9 @@ Same bag. Same marbles. Opposite direction of reasoning.
 ---
 
 ## 2. Frequentist vs. Bayesian Interpretations
-Here is the **simplified version** of Part 2:
-
----
 
 ## The Core Debate: What does "probability" actually mean?
 
-Two groups have different answers. Both are smart. Neither is wrong.
-
----
 
 ### Frequentist: Probability = Repeatable Frequency
 
@@ -134,7 +128,7 @@ Two groups have different answers. Both are smart. Neither is wrong.
   3. Use math to update to a **posterior** (your new, improved guess).
 - **Key rule:** You **can** say "there's a 95% chance the true value is in this range." That's called a "credible interval."
 
----
+
 
 ### The Coin Flip Example (10 flips, 8 heads)
 
@@ -144,35 +138,9 @@ Two groups have different answers. Both are smart. Neither is wrong.
 | Build a confidence interval around 80%. | Update after seeing 8 heads. Now you have a full curve showing what you believe about the true chance. |
 | **Cannot** say "80% is likely correct." | **Can** say "there's a high chance the true chance is above 70%." |
 
----
 
-### Confidence vs. Credible Interval (The Big Trap)
 
-| **Frequentist Confidence Interval** | **Bayesian Credible Interval** |
-|-------------------------------------|--------------------------------|
-| "If I did this experiment 100 times, 95 of my intervals would contain the true value." | "Given my data, there's a 95% chance the true value lies in this interval." |
-| ❌ NOT: "95% chance it's in here." | ✅ Exactly: "95% chance it's in here." |
 
----
-
-### Quick Comparison Table
-
-| | **Frequentist** | **Bayesian** |
-|--|----------------|--------------|
-| Probability = | Long-run frequency | Degree of belief |
-| Parameters = | Fixed, unknown | Random (because we're uncertain) |
-| Uses prior beliefs? | ❌ No | ✅ Yes (explicitly) |
-| Output | Single guess + confidence interval | Full distribution of guesses |
-| Subjectivity | Objective (just data) | Subjective (prior matters) |
-| Best for | Big data, regulatory work | Small data, incorporating past knowledge |
-
----
-
-### When do they agree?
-
-**With lots of data:** They give almost the same answer. The data "overwhelms" your starting belief. So in big data settings, just pick whichever is easier.
-
----
 
 ### Where each is used
 
