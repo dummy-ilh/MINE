@@ -1,7 +1,7 @@
 # June
 # Numbers 1-30
 
-1.
+1. Information Retrieval
 2.
 3.
 4.
