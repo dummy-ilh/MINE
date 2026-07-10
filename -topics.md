@@ -9,3 +9,4 @@ calcuslus
 gini impurity
 
 hnswa-fais-ann-why dor in prod not cosine.
+Tokenization deep dive (BPE, WordPiece, SentencePiece — how modern tokenizers work)
