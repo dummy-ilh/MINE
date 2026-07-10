@@ -536,4 +536,5 @@ Geometric distribution, $p=0.5$: $E[X] = 1/p = 2$.
 | Non-transitive dice | Whether you question intuition instead of pattern-matching |
 | Linearity of expectation | The most powerful tool in probabilistic combinatorics |
 
-*Next: Module 2 — Random Variables & Distributions.*
+
+![Set Operations](images/set.png)
