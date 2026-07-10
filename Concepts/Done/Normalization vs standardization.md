@@ -89,11 +89,7 @@ Take `[15, 18, 22, 25, 100]` — four normal points, one outlier.
 
 ---
 
-## The cardinal rule, regardless of method
 
-Fit the scaler (compute min/max, mean/std, or median/IQR) **only on the training set**, then apply that exact transform to validation/test data. Recomputing statistics on test data leaks test-set information into the pipeline and makes your evaluation metrics overly optimistic.
-
----
 
 ## Conceptual interview questions
 
@@ -120,3 +116,65 @@ A: Standardization doesn't clip or bound the output, so nothing "breaks" mechani
 
 **Q8: Why is it considered data leakage to compute your scaler's mean/std using the full dataset before train/test splitting?**
 A: The scaler's parameters would then carry information about the test set's distribution — meaning the "unseen" test data has already influenced how every feature is transformed during training. Any performance number computed afterward is optimistically biased and doesn't reflect genuine out-of-sample performance. Always fit scaling parameters using only the training fold.
+
+---
+
+To understand why we standardize and normalize data, it helps to first clear up a massive point of confusion: **In data science, "Normalization" and "Standardization" are two different things.** 
+
+- **Standardization** (Z-score scaling) turns your data into a **mean of 0** and a **standard deviation of 1**.
+- **Normalization** (Min-Max scaling) squishes your data into a fixed range, usually **between 0 and 1**.
+
+Here is exactly why we need them, when to use which, and why they are critical.
+
+---
+
+### 1. The #1 Reason: Gradient Descent Works Faster
+Most machine learning algorithms (like Linear Regression, Logistic Regression, Neural Networks, and SVMs) use **Gradient Descent** to find the best weights. 
+
+- If you have one feature ranging from 0 to 1 (e.g., "Age in years") and another ranging from 0 to 100,000 (e.g., "Salary"), the "Salary" feature will dominate the loss function. 
+- The algorithm will take tiny, zig-zagging steps to adjust for the huge salary numbers, making training painfully slow.
+- **The fix:** Standardization puts both features on the same scale. Gradient Descent can now take a straight, efficient path to the minimum, **converging much faster**.
+
+### 2. The #2 Reason: Distance-Based Algorithms Break Without It
+Algorithms that rely on **Euclidean distance** (like K-Nearest Neighbors, K-Means clustering, and PCA) are mathematically ruined by different scales.
+
+- Imagine clustering customers by "Age" (0–100) and "Income" ($0–$200,000). 
+- The distance between two customers will be 99.9% determined by their income difference. Their age becomes mathematically irrelevant to the algorithm.
+- **The fix:** Standardization ensures every feature contributes equally to the "distance" calculation.
+
+### 3. The #3 Reason: It Prevents Numerical Overflow
+In algorithms like Neural Networks and Logistic Regression, we multiply inputs by weights and pass them through activation functions (like Sigmoid or Tanh). 
+
+- If your input numbers are huge (like 100,000), the math inside the computer can explode into **"NaN" (Not a Number)** errors. 
+- **The fix:** Standardization keeps input values small (usually between -3 and +3), keeping the math stable.
+
+---
+
+### So, Which One Do You Use? (The Golden Rule)
+
+- **Use STANDARDIZATION when:** Your algorithm assumes your data has a **Gaussian (bell-curve) distribution** or uses linear relationships. This includes **Linear Regression, Logistic Regression, Lasso, Ridge, SVM, Neural Networks, and PCA**. (Standardization does *not* change the shape of your distribution; it just shifts and scales it).
+
+- **Use NORMALIZATION (Min-Max) when:** Your algorithm does **not** care about the shape of the distribution, but strictly needs bounded values. This includes **K-Nearest Neighbors, K-Means Clustering**, and any algorithm using **Gradient Descent** when you know your data has no outliers. (Normalization is also required for displaying pixel data in images, where values must be 0–255 or 0–1).
+
+---
+
+### The Dangerous Exception: TREE-BASED MODELS
+**You DO NOT need either standardization or normalization for Decision Trees, Random Forests, XGBoost, or LightGBM.** 
+
+- Tree models work by splitting data at specific values (e.g., "Is Age > 30?"). 
+- Since they don't use distance or gradients, scaling the numbers doesn't change where the splits happen. Applying scaling to trees is a complete waste of compute time.
+
+---
+
+### A Crucial Warning: The "Leak" Problem
+No matter which you use, you must do it **AFTER** splitting your data into training and test sets.
+
+- You calculate the `mean` and `std` (for standardization) **ONLY from the training data**.
+- You then use those *same training* statistics to transform your test data.
+- **Why?** In the real world, you won't know the mean of the entire population. If you scale the whole dataset before splitting, you are "leaking" information from the future into your training set, which will give you overly optimistic, false results when you deploy the model. 
+
+### The Math in Summary
+| Technique | Formula | Output Range | Best Used For |
+| :--- | :--- | :--- | :--- |
+| **Standardization** | (x - mean) / std | Usually -3 to +3 | Linear models, Neural Nets, PCA, SVM |
+| **Normalization** | (x - min) / (max - min) | Exactly 0 to 1 | KNN, K-Means, Image Data |
