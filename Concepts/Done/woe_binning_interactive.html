@@ -1,0 +1,278 @@
+
+<style>
+  .tab-bar { display: flex; gap: 8px; margin-bottom: 1.5rem; border-bottom: 0.5px solid var(--border); padding-bottom: 0; }
+  .tab { padding: 8px 16px; font-size: 14px; cursor: pointer; border: none; background: none; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab.active { color: var(--text-primary); border-bottom: 2px solid #2a78d6; font-weight: 500; }
+  .section { display: none; } .section.active { display: block; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 10px; font-size: 12px; font-weight: 500; color: var(--text-secondary); border-bottom: 0.5px solid var(--border-strong); background: var(--surface-1); }
+  td { padding: 8px 10px; border-bottom: 0.5px solid var(--border); color: var(--text-primary); }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .badge-blue { background: #e6f1fb; color: #185fa5; }
+  .badge-green { background: #eaf3de; color: #3b6d11; }
+  .badge-red { background: #fcebeb; color: #a32d2d; }
+  .badge-amber { background: #faeeda; color: #854f0b; }
+  .formula-box { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: 8px; padding: 1rem; font-family: var(--font-mono); font-size: 13px; color: var(--text-primary); margin: 1rem 0; }
+  .highlight-row td { background: #e6f1fb22; }
+  .bar-track { background: var(--surface-1); border-radius: 4px; height: 8px; width: 100%; border: 0.5px solid var(--border); }
+  .bar-fill-pos { background: #2a78d6; height: 8px; border-radius: 4px; }
+  .bar-fill-neg { background: #e24b4a; height: 8px; border-radius: 4px; }
+  .step-num { width: 24px; height: 24px; border-radius: 50%; background: #2a78d6; color: white; font-size: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 1.25rem; }
+  .card { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 1rem 0; }
+  .metric { background: var(--surface-1); border-radius: 8px; padding: 0.75rem; }
+  .metric-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+  .metric-val { font-size: 20px; font-weight: 500; color: var(--text-primary); }
+</style>
+
+<h2 class="sr-only">Interactive WoE binning explainer with numerical example on loan default dataset</h2>
+
+<div class="tab-bar">
+  <button class="tab active" onclick="show('woe')">WoE Binning</button>
+  <button class="tab" onclick="show('eqfreq')">Equal-Frequency</button>
+  <button class="tab" onclick="show('dectree')">Decision Tree</button>
+</div>
+
+<div id="woe" class="section active">
+  <p style="font-size:14px; color:var(--text-secondary); margin: 0 0 1.25rem;">
+    Example: 1,000 loan applicants. Target = default (1) or no-default (0). Feature = <strong style="color:var(--text-primary)">Age</strong>.
+  </p>
+
+  <div class="step-row">
+    <div class="step-num">1</div>
+    <div style="flex:1">
+      <div style="font-size:14px; font-weight:500; color:var(--text-primary); margin-bottom:4px;">Bin the continuous feature</div>
+      <div style="font-size:13px; color:var(--text-secondary);">Divide Age into 5 groups. Count events (defaults) and non-events (no-defaults) per bin.</div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr>
+      <th>Bin</th><th>Age range</th><th>Total</th><th>Defaults (events)</th><th>Non-defaults</th><th>Default rate</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-blue">1</span></td><td>18–25</td><td>150</td><td>60</td><td>90</td><td>40%</td></tr>
+      <tr><td><span class="badge badge-blue">2</span></td><td>26–35</td><td>250</td><td>75</td><td>175</td><td>30%</td></tr>
+      <tr class="highlight-row"><td><span class="badge badge-blue">3</span></td><td>36–45</td><td>300</td><td>60</td><td>240</td><td>20%</td></tr>
+      <tr><td><span class="badge badge-blue">4</span></td><td>46–55</td><td>200</td><td>30</td><td>170</td><td>15%</td></tr>
+      <tr><td><span class="badge badge-blue">5</span></td><td>56+</td><td>100</td><td>25</td><td>75</td><td>25%</td></tr>
+      <tr style="background:var(--surface-1)"><td colspan="2" style="font-weight:500">Total</td><td>1,000</td><td>250</td><td>750</td><td>25%</td></tr>
+    </tbody>
+  </table>
+
+  <div class="step-row" style="margin-top:1.5rem">
+    <div class="step-num">2</div>
+    <div style="flex:1">
+      <div style="font-size:14px; font-weight:500; color:var(--text-primary); margin-bottom:4px;">Calculate distributions</div>
+      <div style="font-size:13px; color:var(--text-secondary);">Express each bin's events and non-events as % of the total events and non-events.</div>
+    </div>
+  </div>
+
+  <div class="formula-box">
+    Dist. of Events  (bin i) = Events_i / Total Events = Events_i / 250<br>
+    Dist. of Non-Events (bin i) = Non-Events_i / Total Non-Events = Non-Events_i / 750
+  </div>
+
+  <div class="step-row">
+    <div class="step-num">3</div>
+    <div style="flex:1">
+      <div style="font-size:14px; font-weight:500; color:var(--text-primary); margin-bottom:4px;">Compute WoE per bin</div>
+      <div style="font-size:13px; color:var(--text-secondary);">WoE = ln(Distribution of Events ÷ Distribution of Non-Events)</div>
+    </div>
+  </div>
+
+  <div class="formula-box">WoE_i = ln( (Events_i / 250) / (Non-Events_i / 750) )</div>
+
+  <table style="margin-top:0.5rem">
+    <thead><tr>
+      <th>Bin</th><th>Dist. Events</th><th>Dist. Non-Events</th><th>WoE = ln(E/NE)</th><th>IV contribution</th><th>Signal</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-blue">18–25</span></td><td>60/250 = 0.240</td><td>90/750 = 0.120</td><td>ln(0.240/0.120) = <strong>+0.693</strong></td><td>(0.240−0.120)×0.693 = 0.083</td><td><span class="badge badge-red">High risk</span></td></tr>
+      <tr><td><span class="badge badge-blue">26–35</span></td><td>75/250 = 0.300</td><td>175/750 = 0.233</td><td>ln(0.300/0.233) = <strong>+0.251</strong></td><td>(0.300−0.233)×0.251 = 0.017</td><td><span class="badge badge-amber">Moderate risk</span></td></tr>
+      <tr class="highlight-row"><td><span class="badge badge-blue">36–45</span></td><td>60/250 = 0.240</td><td>240/750 = 0.320</td><td>ln(0.240/0.320) = <strong>−0.288</strong></td><td>(0.240−0.320)×(−0.288) = 0.023</td><td><span class="badge badge-green">Low risk</span></td></tr>
+      <tr><td><span class="badge badge-blue">46–55</span></td><td>30/250 = 0.120</td><td>170/750 = 0.227</td><td>ln(0.120/0.227) = <strong>−0.635</strong></td><td>(0.120−0.227)×(−0.635) = 0.068</td><td><span class="badge badge-green">Lowest risk</span></td></tr>
+      <tr><td><span class="badge badge-blue">56+</span></td><td>25/250 = 0.100</td><td>75/750 = 0.100</td><td>ln(0.100/0.100) = <strong>0.000</strong></td><td>0</td><td><span class="badge">Neutral</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="step-row" style="margin-top:1.5rem">
+    <div class="step-num">4</div>
+    <div style="flex:1">
+      <div style="font-size:14px; font-weight:500; color:var(--text-primary); margin-bottom:4px;">Sum IV and interpret</div>
+    </div>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Total IV</div><div class="metric-val" style="color:#2a78d6">0.191</div></div>
+    <div class="metric"><div class="metric-label">Predictive power</div><div class="metric-val" style="font-size:14px; padding-top:4px">Medium</div></div>
+    <div class="metric"><div class="metric-label">Strongest bin</div><div class="metric-val" style="font-size:14px; padding-top:4px">18–25</div></div>
+    <div class="metric"><div class="metric-label">WoE range</div><div class="metric-val" style="font-size:14px; padding-top:4px">−0.64 to +0.69</div></div>
+  </div>
+
+  <div style="margin: 1rem 0;">
+    <div style="font-size:13px; color:var(--text-secondary); margin-bottom:8px;">WoE values — positive = risky, negative = safe</div>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="display:flex; align-items:center; gap:10px; font-size:12px;"><span style="width:60px; color:var(--text-muted)">18–25</span><div style="flex:1; display:flex; align-items:center; gap:4px"><div style="width:50%; display:flex; justify-content:flex-end"><div class="bar-fill-pos" style="width:100%; max-width:80px"></div></div><div style="width:50%"></div></div><span style="color:#2a78d6; font-weight:500">+0.69</span></div>
+      <div style="display:flex; align-items:center; gap:10px; font-size:12px;"><span style="width:60px; color:var(--text-muted)">26–35</span><div style="flex:1; display:flex; align-items:center; gap:4px"><div style="width:50%; display:flex; justify-content:flex-end"><div class="bar-fill-pos" style="width:36%; max-width:80px"></div></div><div style="width:50%"></div></div><span style="color:#2a78d6; font-weight:500">+0.25</span></div>
+      <div style="display:flex; align-items:center; gap:10px; font-size:12px;"><span style="width:60px; color:var(--text-muted)">36–45</span><div style="flex:1; display:flex; align-items:center; gap:4px"><div style="width:50%; display:flex; justify-content:flex-end"></div><div style="width:50%"><div class="bar-fill-neg" style="width:42%; max-width:80px"></div></div></div><span style="color:#e24b4a; font-weight:500">−0.29</span></div>
+      <div style="display:flex; align-items:center; gap:10px; font-size:12px;"><span style="width:60px; color:var(--text-muted)">46–55</span><div style="flex:1; display:flex; align-items:center; gap:4px"><div style="width:50%; display:flex; justify-content:flex-end"></div><div style="width:50%"><div class="bar-fill-neg" style="width:92%; max-width:80px"></div></div></div><span style="color:#e24b4a; font-weight:500">−0.64</span></div>
+      <div style="display:flex; align-items:center; gap:10px; font-size:12px;"><span style="width:60px; color:var(--text-muted)">56+</span><div style="flex:1"></div><span style="color:var(--text-muted)">0.00</span></div>
+    </div>
+  </div>
+
+  <div class="step-row" style="margin-top:1.5rem">
+    <div class="step-num">5</div>
+    <div style="flex:1">
+      <div style="font-size:14px; font-weight:500; color:var(--text-primary); margin-bottom:4px;">Replace raw feature with WoE values</div>
+      <div style="font-size:13px; color:var(--text-secondary);">Each row's Age is now replaced with its bin's WoE score — a single numeric column that is monotonically structured and ready for logistic regression.</div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Applicant</th><th>Age</th><th>→ WoE(Age)</th><th>Default?</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td>22</td><td style="color:#2a78d6; font-weight:500">+0.693</td><td>Yes</td></tr>
+      <tr><td>B</td><td>48</td><td style="color:#e24b4a; font-weight:500">−0.635</td><td>No</td></tr>
+      <tr><td>C</td><td>31</td><td style="color:#2a78d6; font-weight:500">+0.251</td><td>Yes</td></tr>
+      <tr><td>D</td><td>40</td><td style="color:#e24b4a; font-weight:500">−0.288</td><td>No</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div id="eqfreq" class="section">
+  <p style="font-size:14px; color:var(--text-secondary); margin: 0 0 1.25rem;">
+    Same 1,000 applicants, same Age feature — now using <strong style="color:var(--text-primary)">Equal-Frequency (Quantile) Binning</strong> into 4 quartiles.
+  </p>
+
+  <div class="step-row">
+    <div class="step-num">1</div>
+    <div style="flex:1">
+      <div style="font-size:14px; font-weight:500; color:var(--text-primary); margin-bottom:4px;">Sort all values, split into 4 equal groups</div>
+      <div style="font-size:13px; color:var(--text-secondary);">Each bin has exactly 250 people. Bin edges come from the 25th, 50th, 75th percentiles.</div>
+    </div>
+  </div>
+
+  <div class="formula-box">
+    n = 1000, k = 4 → each bin has 1000/4 = 250 rows<br><br>
+    Q1 (25th pct) = Age 29 → Bin 1: Age 18–29<br>
+    Q2 (50th pct) = Age 38 → Bin 2: Age 30–38<br>
+    Q3 (75th pct) = Age 50 → Bin 3: Age 39–50<br>
+                             Bin 4: Age 51–75
+  </div>
+
+  <table>
+    <thead><tr>
+      <th>Bin</th><th>Age range</th><th>Count</th><th>Defaults</th><th>Default rate</th><th>Width</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-blue">Q1</span></td><td>18–29</td><td>250</td><td>88</td><td>35.2%</td><td>11 yrs</td></tr>
+      <tr><td><span class="badge badge-blue">Q2</span></td><td>30–38</td><td>250</td><td>65</td><td>26.0%</td><td>8 yrs</td></tr>
+      <tr><td><span class="badge badge-blue">Q3</span></td><td>39–50</td><td>250</td><td>55</td><td>22.0%</td><td>11 yrs</td></tr>
+      <tr><td><span class="badge badge-blue">Q4</span></td><td>51–75</td><td>250</td><td>42</td><td>16.8%</td><td>24 yrs</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card" style="margin-top:1.25rem">
+    <div style="font-size:13px; font-weight:500; margin-bottom:8px; color:var(--text-primary)">Key observations</div>
+    <div style="font-size:13px; color:var(--text-secondary); display:flex; flex-direction:column; gap:6px;">
+      <div>✓ All bins have equal count (250) — no empty or sparse bins</div>
+      <div>✓ Bins vary in width: Q4 spans 24 years vs Q2's 8 years (skew handled automatically)</div>
+      <div>✗ Bin edges (29, 38, 50) are arbitrary — no domain meaning</div>
+      <div>✗ Not informed by the target — bins aren't necessarily predictive</div>
+    </div>
+  </div>
+
+  <div class="step-row" style="margin-top:1rem">
+    <div class="step-num">2</div>
+    <div style="flex:1">
+      <div style="font-size:14px; font-weight:500; color:var(--text-primary); margin-bottom:4px;">Encode and use</div>
+      <div style="font-size:13px; color:var(--text-secondary);">Replace Age with ordinal label (1–4) or one-hot encode. Unlike WoE, you don't get a meaningful numeric score — just a category.</div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Applicant</th><th>Age</th><th>→ Bin</th><th>One-hot: Q1</th><th>Q2</th><th>Q3</th><th>Q4</th></tr></thead>
+    <tbody>
+      <tr><td>A</td><td>22</td><td><span class="badge badge-blue">Q1</span></td><td>1</td><td>0</td><td>0</td><td>0</td></tr>
+      <tr><td>B</td><td>48</td><td><span class="badge badge-blue">Q3</span></td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
+      <tr><td>C</td><td>31</td><td><span class="badge badge-blue">Q2</span></td><td>0</td><td>1</td><td>0</td><td>0</td></tr>
+      <tr><td>D</td><td>72</td><td><span class="badge badge-blue">Q4</span></td><td>0</td><td>0</td><td>0</td><td>1</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div id="dectree" class="section">
+  <p style="font-size:14px; color:var(--text-secondary); margin: 0 0 1.25rem;">
+    Same dataset — now a <strong style="color:var(--text-primary)">shallow decision tree</strong> learns the optimal split points from the data.
+  </p>
+
+  <div class="step-row">
+    <div class="step-num">1</div>
+    <div style="flex:1">
+      <div style="font-size:14px; font-weight:500; color:var(--text-primary); margin-bottom:4px;">Fit a tree on one feature</div>
+      <div style="font-size:13px; color:var(--text-secondary);">Train DecisionTreeClassifier with max_leaf_nodes=4 on Age vs Default. The tree searches every possible split point and picks the one that minimises Gini impurity.</div>
+    </div>
+  </div>
+
+  <div class="formula-box">
+    from sklearn.tree import DecisionTreeClassifier<br>
+    tree = DecisionTreeClassifier(max_leaf_nodes=4, random_state=0)<br>
+    tree.fit(X[['age']], y)<br><br>
+    # Tree finds optimal splits at: 27.5, 42.5, 55.5<br>
+    thresholds = tree.tree_.threshold  # → [27.5, 42.5, 55.5]
+  </div>
+
+  <div class="step-row">
+    <div class="step-num">2</div>
+    <div style="flex:1">
+      <div style="font-size:14px; font-weight:500; color:var(--text-primary); margin-bottom:4px;">Use tree thresholds as bin edges</div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr>
+      <th>Bin</th><th>Age range</th><th>Count</th><th>Defaults</th><th>Gini</th><th>Why split here?</th>
+    </tr></thead>
+    <tbody>
+      <tr><td><span class="badge badge-red">Leaf 1</span></td><td>≤ 27.5</td><td>170</td><td>72</td><td>0.421</td><td>Highest default cluster</td></tr>
+      <tr><td><span class="badge badge-amber">Leaf 2</span></td><td>27.5–42.5</td><td>340</td><td>85</td><td>0.371</td><td>Moderate mixed group</td></tr>
+      <tr><td><span class="badge badge-green">Leaf 3</span></td><td>42.5–55.5</td><td>290</td><td>42</td><td>0.234</td><td>Lower risk group</td></tr>
+      <tr><td><span class="badge badge-green">Leaf 4</span></td><td>> 55.5</td><td>200</td><td>51</td><td>0.311</td><td>Slightly higher risk again</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card" style="margin-top:1.25rem">
+    <div style="font-size:13px; font-weight:500; margin-bottom:8px; color:var(--text-primary)">Key observations</div>
+    <div style="font-size:13px; color:var(--text-secondary); display:flex; flex-direction:column; gap:6px;">
+      <div>✓ Splits are chosen to maximise separation of default vs no-default</div>
+      <div>✓ No need to assume uniform distribution or equal count</div>
+      <div>✓ Captures non-monotonic patterns (e.g. older people also default more)</div>
+      <div>✗ Thresholds (27.5, 42.5, 55.5) may not align with domain intuition</div>
+      <div>✗ With small max_depth, can miss subtle patterns</div>
+    </div>
+  </div>
+
+  <div class="step-row" style="margin-top:1rem">
+    <div class="step-num">3</div>
+    <div style="flex:1">
+      <div style="font-size:14px; font-weight:500; color:var(--text-primary); margin-bottom:4px;">Apply cuts to data</div>
+    </div>
+  </div>
+  <div class="formula-box">
+    bins = [-np.inf, 27.5, 42.5, 55.5, np.inf]<br>
+    labels = ['high_risk','moderate','low_risk','mid_senior']<br>
+    df['age_bin'] = pd.cut(df['age'], bins=bins, labels=labels)
+  </div>
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
