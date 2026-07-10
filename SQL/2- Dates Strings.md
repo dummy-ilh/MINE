@@ -1505,3 +1505,44 @@ ORDER BY week_bucket;
 -- | Diff as interval        | date2 - date1 (interval)| N/A (numeric only)        | N/A (numeric only)    | N/A (numeric only)             |
 -- | Generate date series    | generate_series(...)   | recursive CTE / calendar table | recursive CTE     | GENERATE_DATE_ARRAY(...)       |
 ```
+
+```
+
+SELECT
+  LOCATE('world', 'hello world'),   -- 7 (position of substring)
+  LOCATE('@', 'john@gmail.com'),    -- 5
+  INSTR('hello world', 'world');    -- 7 (same as LOCATE, different arg order)
+
+sql-- Find users with gmail
+SELECT email FROM users
+WHERE LOCATE('@gmail.com', email) > 0;
+
+-- Or simpler with LIKE
+SELECT email FROM users WHERE email LIKE '%@gmail.com';
+
+SELECT
+  REPLACE('hello world', 'world', 'SQL'), -- 'hello SQL'
+  REPLACE(phone, '-', ''),               -- remove dashes
+  REPLACE(phone, ' ', '');               -- remove spaces
+
+-- CONCAT
+SELECT
+  CONCAT(first_name, ' ', last_name) AS full_name,
+  CONCAT('user_', user_id)           AS user_label
+FROM users;
+
+-- CONCAT_WS — skips NULLs safely
+SELECT CONCAT_WS(', ', city, state, country) AS full_address
+FROM users;
+-- NULL state → 'New York, USA' not 'New York, , USA'
+
+
+SELECT
+  user_id,
+  LOWER(TRIM(email))              AS clean_email,
+  CONCAT('****', RIGHT(phone, 4)) AS masked_phone,
+  UPPER(TRIM(country))            AS clean_country
+FROM users;
+
+
+```
