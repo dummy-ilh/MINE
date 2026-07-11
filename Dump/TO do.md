@@ -12,7 +12,6 @@
 8. [ ] **Boosting** — gradient boosting mechanics, XGBoost (regularization, tree construction), LightGBM (leaf-wise vs level-wise), CatBoost, DART, monotonic constraints, handling class imbalance; differences vs bagging
 
 ## Deep Learning
-9. [ ] **DL Basics** — backprop (chain rule, vanishing/exploding gradients), activations (ReLU, GELU, Swish), optimizers (SGD, Adam, AdamW), batch norm vs layer norm, dropout, learning rate schedules (warmup, cosine decay, cyclical)
 10. [ ] **DL Architectures** — CNNs (conv, pooling, receptive field), RNNs, LSTMs, GRUs (gating mechanisms), Transformers (self-attention, multi-head, positional encoding), attention variants (cross, sparse, flash)
 11. [ ] **Multi-task & Transfer Learning** — fine-tuning strategies, catastrophic forgetting, prompt tuning vs full fine-tune at scale, LoRA, adapter layers, domain adaptation
 
