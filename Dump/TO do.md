@@ -33,7 +33,6 @@
 23. [ ] **ML Metrics & Evaluation** — metric selection, offline vs online, ranking metrics (NDCG, MAP, MRR), calibration (Platt scaling, isotonic regression), business metric alignment, Goodhart's Law
 
 ## ML Problem Formulation & Feature Work
-24. [ ] **Feature Engineering** — categorical encoding (OHE, target encoding, hashing), missing data strategies, scaling (standard, min-max, robust), feature selection, leakage detection, target encoding pitfalls, feature crosses
 25. [ ] **ML Problem Formulation** — defining labels, data collection strategy, proxy metrics, metric decomposition, failure mode analysis from vague business problems; "design an ML system for X" style
 
 ## MLE / Applied Scientist Focus
