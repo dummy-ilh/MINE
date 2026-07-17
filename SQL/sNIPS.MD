@@ -211,3 +211,36 @@ ORDER BY final_score DESC LIMIT 15;
 
 ---
 
+Consecutive 7-day active users (island-gap trick)
+WITH daily AS (
+  SELECT DISTINCT user_id, DATE(order_date) AS day FROM orders
+),
+with_grp AS (
+  SELECT user_id, day,
+    DATE_SUB(day, INTERVAL ROW_NUMBER() OVER (
+      PARTITION BY user_id ORDER BY day) DAY) AS grp
+  FROM daily
+)
+SELECT user_id FROM with_grp
+GROUP BY user_id, grp
+HAVING COUNT(*) >= 7;
+
+-- Session analysis (30-min gap = new session)
+WITH gaps AS (
+  SELECT user_id, event_time,
+    LAG(event_time) OVER (PARTITION BY user_id ORDER BY event_time) AS prev_time
+  FROM events
+),
+sessions AS (
+  SELECT user_id, event_time,
+    SUM(CASE
+      WHEN TIMESTAMPDIFF(MINUTE, prev_time, event_time) > 30
+        OR prev_time IS NULL THEN 1 ELSE 0
+    END) OVER (PARTITION BY user_id ORDER BY event_time) AS session_id
+  FROM gaps
+)
+SELECT user_id, session_id, COUNT(*) AS events_in_session
+FROM sessions
+GROUP BY user_id, session_id;
+
+
