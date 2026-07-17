@@ -110,3 +110,104 @@ WHERE DATEDIFF(CURRENT_DATE, l.last_event_date) > 30
 ORDER BY days_since_last_event DESC;
 ```
 
+
+
+
+🟢 Q1 — Easy
+
+Table: orders(order_id, user_id, product_id, amount, order_date)
+Find the top 10 most frequently co-purchased product pairs (bought in the same order). Return product_a, product_b, co_purchase_count, sorted descending.
+
+
+### Q1 — Easy ✅
+Top 10 most co-purchased product pairs.
+
+```sql
+SELECT a.product_id AS product_a, b.product_id AS product_b,
+  COUNT(DISTINCT a.order_id) AS co_purchase_count
+FROM orders a
+JOIN orders b ON a.order_id = b.order_id AND a.product_id < b.product_id
+GROUP BY a.product_id, b.product_id
+ORDER BY co_purchase_count DESC LIMIT 10;
+🟡 Q2 — Medium
+
+Same table plus products(product_id, name, category).
+For user_id = 200, recommend the top 10 products they haven't bought yet, based on what similar users purchased. Define similarity as number of products in common. Exclude products already purchased by user 200.
+
+```
+
+### Q2 — Medium ✅
+Top 10 personalized recommendations for user 200 based on similar users.
+
+```sql
+WITH user_products AS (SELECT DISTINCT user_id, product_id FROM orders),
+similar_users AS (
+  SELECT b.user_id AS similar_user, COUNT(*) AS common_products
+  FROM user_products a
+  JOIN user_products b ON a.product_id = b.product_id AND b.user_id != 200
+  WHERE a.user_id = 200
+  GROUP BY b.user_id ORDER BY common_products DESC LIMIT 10
+),
+already_bought AS (SELECT DISTINCT product_id FROM orders WHERE user_id = 200)
+SELECT up.product_id, p.name, p.category,
+  SUM(su.common_products)         AS recommendation_score,
+  COUNT(DISTINCT su.similar_user) AS supporting_users
+FROM similar_users su
+JOIN user_products up ON su.similar_user = up.user_id
+JOIN products p       ON up.product_id   = p.product_id
+WHERE up.product_id NOT IN (SELECT product_id FROM already_bought)
+GROUP BY up.product_id, p.name, p.category
+ORDER BY recommendation_score DESC LIMIT 10;
+```
+
+🔴 Q3 — Hard
+
+Tables: orders(order_id, user_id, product_id, amount, order_date), products(product_id, name, category)
+Build a full recommendation pipeline for user 200: (1) item-item recs based on co-purchases (score = sum of co_counts), (2) popularity fallback for categories where item-item score is low, (3) ensure no more than 3 items per category (diversity constraint). Return top 15 recommendations with source (item_item or popularity_fallback).
+---
+### Q3 — Hard ✅
+Full pipeline: item-item → popularity fallback → diversity constraint → top 15.
+
+```sql
+WITH already_bought AS (
+  SELECT DISTINCT product_id FROM orders WHERE user_id = 200
+),
+item_item AS (
+  SELECT b.product_id,
+    COUNT(*) AS item_item_score, 'item_item' AS source
+  FROM orders a
+  JOIN orders b ON a.order_id = b.order_id AND a.product_id != b.product_id
+  WHERE a.product_id IN (SELECT product_id FROM already_bought)
+    AND b.product_id NOT IN (SELECT product_id FROM already_bought)
+  GROUP BY b.product_id
+),
+popularity AS (
+  SELECT o.product_id,
+    COUNT(DISTINCT o.order_id) AS pop_score, 'popularity_fallback' AS source
+  FROM orders o
+  WHERE o.product_id NOT IN (SELECT product_id FROM already_bought)
+  GROUP BY o.product_id
+),
+combined AS (
+  SELECT COALESCE(ii.product_id, pop.product_id) AS product_id,
+    COALESCE(ii.item_item_score, pop.pop_score * 0.1) AS final_score,
+    COALESCE(ii.source, pop.source) AS source
+  FROM item_item ii
+  FULL OUTER JOIN popularity pop ON ii.product_id = pop.product_id
+),
+with_category AS (
+  SELECT c.product_id, p.name, p.category, c.final_score, c.source,
+    ROW_NUMBER() OVER (
+      PARTITION BY p.category ORDER BY c.final_score DESC
+    ) AS category_rank
+  FROM combined c JOIN products p ON c.product_id = p.product_id
+)
+SELECT product_id, name, category,
+  ROUND(final_score, 4) AS score, source, category_rank
+FROM with_category
+WHERE category_rank <= 3
+ORDER BY final_score DESC LIMIT 15;
+```
+
+---
+
