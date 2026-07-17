@@ -355,6 +355,19 @@ SELECT
 FROM deployments d
 INNER JOIN models m ON d.model_id = m.model_id
 ORDER BY d.deploy_id;
+
+SELECT e.name, e.salary, d.dept_name
+FROM employees e
+INNER JOIN departments d ON e.dept_id = d.dept_id;
+-- Excludes employees with no dept and depts with no employees
+
+-- Multi-table INNER JOIN
+SELECT c.name, p.product_name, o.amount
+FROM orders o
+INNER JOIN customers c ON o.customer_id = c.customer_id
+INNER JOIN products p  ON o.product_id  = p.product_id;
+
+
 ```
 
 **Output:**
@@ -382,6 +395,22 @@ SELECT
 FROM models m
 LEFT JOIN deployments d ON m.model_id = d.model_id
 ORDER BY m.model_id;
+
+-- All employees, with their department if it exists
+SELECT e.name, d.dept_name
+FROM employees e
+LEFT JOIN departments d ON e.dept_id = d.dept_id;
+-- employees with no department → dept_name = NULL
+
+-- Classic FAANG pattern: find rows with NO match (anti-join)
+-- "Find employees who are NOT assigned to any department"
+SELECT e.name
+FROM employees e
+LEFT JOIN departments d ON e.dept_id = d.dept_id
+WHERE d.dept_id IS NULL;  -- ← the key: filter where right side is NULL
+
+    ⚠️ LEFT JOIN + WHERE right.col IS NULL = Anti-join. Finds rows that DON'T exist in the other table. Asked constantly at Meta/Google.
+
 ```
 
 **Output:**
@@ -430,6 +459,25 @@ FROM model_runs
 WHERE dataset IN ('train', 'test')
 GROUP BY model_name
 ORDER BY gap DESC;
+
+-- employees(emp_id, name, manager_id)
+-- manager_id references emp_id in the same table
+
+-- Find each employee and their manager's name
+SELECT
+  e.name        AS employee,
+  m.name        AS manager
+FROM employees e
+LEFT JOIN employees m ON e.manager_id = m.emp_id;
+-- LEFT JOIN so employees with no manager (CEO) still appear
+
+-- Pairs of employees in same dept within $5000 salary of each other
+SELECT a.name AS emp1, b.name AS emp2, a.salary, b.salary
+FROM employees a
+JOIN employees b
+  ON  a.dept_id = b.dept_id
+  AND a.emp_id  < b.emp_id   -- avoid (A,B) and (B,A) duplicates
+  AND ABS(a.salary - b.salary) <= 5000;
 ```
 
 **Output:**
@@ -670,8 +718,188 @@ WHERE NOT EXISTS (
 | EXISTS returns TRUE/FALSE only | Can't use `SELECT col` inside EXISTS meaningfully | Use `SELECT 1` or `SELECT NULL` — column values are ignored |
 | IN with 10,000+ values | Can exceed query limits or be slow | Use a JOIN or temp table instead |
 
+--
+5. FULL OUTER JOIN
+
+Returns everything from both tables. NULLs fill in where there's no match.
+```
+-- Everything from both tables
+SELECT e.name, d.dept_name
+FROM employees e
+FULL OUTER JOIN departments d ON e.dept_id = d.dept_id;
+
+-- Find unmatched on BOTH sides
+SELECT e.name, d.dept_name
+FROM employees e
+FULL OUTER JOIN departments d ON e.dept_id = d.dept_id
+WHERE e.emp_id IS NULL OR d.dept_id IS NULL;```
+
+
+CROSS JOIN
+
+Every row of A combined with every row of B. M × N rows.
+```
+-- All size-color combinations (M × N rows)
+SELECT s.size, c.color
+FROM sizes s
+CROSS JOIN colors c;
+
+-- Common FAANG use: generate a date spine
+-- dates table has one row per day
+-- combine with all users to get user × day grid for activity analysis
+SELECT u.user_id, d.date
+FROM users u
+CROSS JOIN dates d
+WHERE d.date BETWEEN '2023-01-01' AND '2023-12-31';```
 ---
 
+
+##  JOIN Traps
+
+### Trap 1: Duplicates from JOIN
+```sql
+-- If join key has duplicates in either table, rows multiply
+-- Always verify uniqueness of join key before joining
+-- If departments has duplicate dept_ids, your JOIN multiplies rows
+-- Always check: SELECT COUNT(*) FROM departments WHERE dept_id IN (SELECT dept_id FROM departments GROUP BY dept_id HAVING COUNT(*) > 1)
+SELECT COUNT(*), COUNT(DISTINCT dept_id) FROM departments;
+```
+
+### Trap 2: Filtering in ON vs WHERE (Critical!)
+```sql
+-- ❌ WHERE filter turns LEFT JOIN into INNER JOIN
+SELECT e.name, d.dept_name
+FROM employees e
+LEFT JOIN departments d ON e.dept_id = d.dept_id
+WHERE d.location = 'NYC';  -- loses employees with no dept
+
+-- ✅ Filter in ON preserves LEFT JOIN behavior
+SELECT e.name, d.dept_name
+FROM employees e
+LEFT JOIN departments d
+  ON  e.dept_id  = d.dept_id
+  AND d.location = 'NYC';  -- unmatched employees still appear
+```
+
+### Trap 3: NULL keys never match
+```sql
+-- NULL = NULL is FALSE in SQL
+-- Rows with NULL join keys always produce NULL on the other side
+```
+
+---
+
+## 9. Tricky FAANG JOIN Patterns
+
+### Pattern 1: Range / Inequality JOIN
+```sql
+-- Assign discount tier based on order amount range
+SELECT o.order_id, o.amount, t.tier_name, t.discount_pct
+FROM orders o
+JOIN discount_tiers t
+  ON o.amount BETWEEN t.min_amount AND t.max_amount;
+```
+
+### Pattern 2: Time-Window JOIN (Meta/Google Ads)
+```sql
+-- Clicks within 1 hour of ad impression
+SELECT i.user_id, i.imp_time, c.click_time
+FROM impressions i
+JOIN clicks c
+  ON  i.user_id   = c.user_id
+  AND c.click_time BETWEEN i.imp_time AND i.imp_time + INTERVAL 1 HOUR;
+```
+
+### Pattern 3: JOIN on Subquery Aggregate (Top 5 FAANG Pattern)
+```sql
+-- Employee with max salary per department
+SELECT e.name, e.department, e.salary
+FROM employees e
+JOIN (
+  SELECT department, MAX(salary) AS max_sal
+  FROM employees
+  GROUP BY department
+) dept_max
+  ON  e.department = dept_max.department
+  AND e.salary     = dept_max.max_sal;
+```
+
+```sql
+-- Most recent order per customer
+SELECT o.customer_id, o.order_id, o.amount, o.order_date
+FROM orders o
+JOIN (
+  SELECT customer_id, MAX(order_date) AS latest
+  FROM orders
+  GROUP BY customer_id
+) last_order
+  ON  o.customer_id = last_order.customer_id
+  AND o.order_date  = last_order.latest;
+```
+
+### Pattern 4: CROSS JOIN + Anti-Join (Recommendations)
+```sql
+-- User-product combinations never purchased (Netflix/Amazon pattern)
+SELECT u.user_id, p.product_id
+FROM users u
+CROSS JOIN products p
+LEFT JOIN purchases pur
+  ON  u.user_id    = pur.user_id
+  AND p.product_id = pur.product_id
+WHERE pur.purchase_id IS NULL;
+```
+
+### Pattern 5: Chained LEFT JOINs — Filter in ON
+```sql
+-- ❌ Wrong — WHERE breaks the LEFT JOIN chain
+SELECT e.name, d.dept_name, p.project_name
+FROM employees e
+LEFT JOIN departments d ON e.dept_id = d.dept_id
+LEFT JOIN projects p    ON d.dept_id = p.dept_id
+WHERE d.location = 'NYC';
+
+-- ✅ Correct — filter inside ON
+SELECT e.name, d.dept_name, p.project_name
+FROM employees e
+LEFT JOIN departments d
+  ON  e.dept_id  = d.dept_id
+  AND d.location = 'NYC'
+LEFT JOIN projects p ON d.dept_id = p.dept_id;
+```
+
+### Pattern 6: Consecutive Events (Retention/Fraud)
+```sql
+-- Users who logged in on two consecutive days
+SELECT DISTINCT a.user_id
+FROM logins a
+JOIN logins b
+  ON  a.user_id   = b.user_id
+  AND b.login_date = a.login_date + INTERVAL 1 DAY;
+```
+
+```sql
+-- Two events within 5 minutes for same user
+SELECT a.user_id, a.event_type AS event1, b.event_type AS event2
+FROM events a
+JOIN events b
+  ON  a.user_id   = b.user_id
+  AND b.event_time BETWEEN a.event_time AND a.event_time + INTERVAL 5 MINUTE
+  AND a.event_time < b.event_time;
+```
+
+### Pattern 7: USING vs ON
+```sql
+-- ON (always works)
+SELECT e.name, d.dept_name
+FROM employees e
+JOIN departments d ON e.dept_id = d.dept_id;
+
+-- USING (cleaner, only when column names match exactly)
+SELECT e.name, d.dept_name
+FROM employees e
+JOIN departments d USING (dept_id);
+-- dept_id appears only once in result set
+```
 ## 6. Subqueries vs CTEs
 
 ### Concept
@@ -695,6 +923,161 @@ WITH sub AS (
 )
 SELECT * FROM sub
 ```
+
+### Pattern 1: Range / Inequality JOIN
+
+- Join on a range instead of a single value
+- Useful for tier assignment, pricing bands, date buckets
+
+```sql
+-- Assign discount tier based on order amount range
+SELECT o.order_id, o.amount, t.tier_name, t.discount_pct
+FROM orders o
+JOIN discount_tiers t
+  ON o.amount BETWEEN t.min_amount AND t.max_amount;
+```
+
+---
+
+### Pattern 2: Time-Window JOIN (Meta / Google Ads)
+
+- Join rows only if they fall within a time gap of each other
+- Common in ad attribution, session analysis, funnel tracking
+
+```sql
+-- Clicks within 1 hour of ad impression
+SELECT i.user_id, i.imp_time, c.click_time
+FROM impressions i
+JOIN clicks c
+  ON  i.user_id   = c.user_id
+  AND c.click_time BETWEEN i.imp_time AND i.imp_time + INTERVAL 1 HOUR;
+```
+
+---
+
+### Pattern 3: JOIN on Subquery Aggregate
+
+- Subquery computes a group-level stat (MAX, MIN, COUNT), then JOIN filters to only matching rows
+- Classic for "top N per group" problems
+
+```sql
+-- Employee with max salary per department
+SELECT e.name, e.department, e.salary
+FROM employees e
+JOIN (
+  SELECT department, MAX(salary) AS max_sal
+  FROM employees
+  GROUP BY department
+) dept_max
+  ON  e.department = dept_max.department
+  AND e.salary     = dept_max.max_sal;
+```
+
+```sql
+-- Most recent order per customer
+SELECT o.customer_id, o.order_id, o.amount, o.order_date
+FROM orders o
+JOIN (
+  SELECT customer_id, MAX(order_date) AS latest
+  FROM orders
+  GROUP BY customer_id
+) last_order
+  ON  o.customer_id = last_order.customer_id
+  AND o.order_date  = last_order.latest;
+```
+
+---
+
+### Pattern 4: CROSS JOIN + Anti-JOIN (Recommendations)
+
+- CROSS JOIN generates all possible pairs
+- LEFT JOIN + `WHERE NULL` filters out pairs that already exist
+- Used for "what hasn't this user seen/bought?" (Netflix, Amazon)
+
+```sql
+-- User-product combinations never purchased
+SELECT u.user_id, p.product_id
+FROM users u
+CROSS JOIN products p
+LEFT JOIN purchases pur
+  ON  u.user_id    = pur.user_id
+  AND p.product_id = pur.product_id
+WHERE pur.purchase_id IS NULL;
+```
+
+---
+
+### Pattern 5: Chained LEFT JOINs — Filter in ON vs WHERE
+
+- Putting a filter in `WHERE` on a LEFT JOIN silently converts it to an INNER JOIN
+- Always move optional filters into the `ON` clause to preserve nulls
+
+```sql
+-- ❌ Wrong — WHERE kills rows where dept is NULL (acts like INNER JOIN)
+SELECT e.name, d.dept_name, p.project_name
+FROM employees e
+LEFT JOIN departments d ON e.dept_id = d.dept_id
+LEFT JOIN projects p    ON d.dept_id = p.dept_id
+WHERE d.location = 'NYC';
+
+-- ✅ Correct — filter inside ON keeps all employees
+SELECT e.name, d.dept_name, p.project_name
+FROM employees e
+LEFT JOIN departments d
+  ON  e.dept_id  = d.dept_id
+  AND d.location = 'NYC'
+LEFT JOIN projects p ON d.dept_id = p.dept_id;
+```
+
+---
+
+### Pattern 6: Consecutive Events (Retention / Fraud)
+
+- Self-join on the same table with a time offset condition
+- Used for streak detection, fraud signals, funnel step sequencing
+
+```sql
+-- Users who logged in on two consecutive days
+SELECT DISTINCT a.user_id
+FROM logins a
+JOIN logins b
+  ON  a.user_id    = b.user_id
+  AND b.login_date = a.login_date + INTERVAL 1 DAY;
+```
+
+```sql
+-- Two events within 5 minutes for the same user
+SELECT a.user_id, a.event_type AS event1, b.event_type AS event2
+FROM events a
+JOIN events b
+  ON  a.user_id    = b.user_id
+  AND b.event_time BETWEEN a.event_time AND a.event_time + INTERVAL 5 MINUTE
+  AND a.event_time < b.event_time;
+```
+
+---
+
+### Pattern 7: USING vs ON
+
+- `ON` works everywhere, even when column names differ
+- `USING` is cleaner shorthand when the column name is identical in both tables — and deduplicates it in the result set
+
+```sql
+-- ON (always works)
+SELECT e.name, d.dept_name
+FROM employees e
+JOIN departments d ON e.dept_id = d.dept_id;
+
+-- USING (cleaner when column names match exactly)
+-- dept_id appears only once in the result set
+SELECT e.name, d.dept_name
+FROM employees e
+JOIN departments d USING (dept_id);
+```
+
+
+
+
 
 CTEs can be referenced multiple times in the same query. Subqueries cannot (without repeating the SQL).
 ---
