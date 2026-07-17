@@ -10,7 +10,12 @@
 12. **Set logic on user segments** — users in A but not B, overlap between two behaviors.
 13. **Percentile / distribution questions** — median, p90 latency, using `PERCENTILE_CONT` or NTILE.
 14. **Hierarchical/recursive queries** — org charts, category trees, recursive CTEs.
+GROUP BY with CASE WHEN
+DISTINCT in Aggregates
+ROLLUP
 
+
+QUERY OPTIM
 
 Got it — here's the pattern taxonomy, the shapes interviewers reuse over and over:
 
