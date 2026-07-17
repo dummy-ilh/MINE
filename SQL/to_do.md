@@ -3,8 +3,6 @@
 3. **Cohort retention** — group users by signup week/month, track what % return in week N.
 
 8. **Sessionization** — group events into sessions based on time gaps between them.
-9. **Self-join for pairwise comparisons** — e.g., users who bought A and B, friend recommendations, A/B pairing.
-11. **Pivoting / unpivoting** — long-to-wide or wide-to-long transforms, often with conditional `SUM(CASE WHEN...)`.
 12. **Set logic on user segments** — users in A but not B, overlap between two behaviors.
 13. **Percentile / distribution questions** — median, p90 latency, using `PERCENTILE_CONT` or NTILE.
 14. **Hierarchical/recursive queries** — org charts, category trees, recursive CTEs.
