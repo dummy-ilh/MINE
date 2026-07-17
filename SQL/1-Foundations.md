@@ -2069,9 +2069,306 @@ SELECT model_name, version FROM staging_models;
 | Column types mismatched | `SELECT 1 UNION SELECT 'text'` → error or cast | Cast explicitly: `CAST(1 AS VARCHAR)` |
 | EXCEPT order matters | `A EXCEPT B ≠ B EXCEPT A` | Always put the "source of truth" table first |
 | INTERSECT vs JOIN confusion | INTERSECT checks full row equality; JOIN matches on keys | Use JOIN when you need to match on specific columns only |
+--
+
+Set logic answers questions about membership across two or more groups:
+
+| Question | Set operation |
+|---|---|
+| Users in A but not in B | EXCEPT / LEFT JOIN + IS NULL |
+| Users in both A and B | INTERSECT / INNER JOIN |
+| All users in A or B | UNION |
+| Overlap size and exclusives | Segment arithmetic |
 
 ---
 
+### The three operations and their SQL forms
+
+#### EXCEPT — users in A but not B
+
+**Scenario:** Users who signed up but never made a purchase.
+
+```sql
+-- Form 1: set operator (clean, readable)
+SELECT user_id FROM signups
+EXCEPT
+SELECT user_id FROM purchases;
+
+-- Form 2: LEFT JOIN + IS NULL (more flexible — lets you pull extra columns)
+SELECT s.user_id, s.signup_date
+FROM   signups s
+LEFT   JOIN purchases p ON s.user_id = p.user_id
+WHERE  p.user_id IS NULL;
+```
+
+**How LEFT JOIN + IS NULL works:**
+
+```
+signups:   1, 2, 3, 4
+purchases: 2, 4
+
+LEFT JOIN result (all signups, purchases side NULL when no match):
+user_id | p.user_id
+1       | NULL      ← no purchase — kept by WHERE
+2       | 2         ← has purchase — filtered out
+3       | NULL      ← no purchase — kept
+4       | 4         ← has purchase — filtered out
+```
+
+#### Why it fails
+
+| Mistake | Result |
+|---|---|
+| `WHERE p.user_id != s.user_id` instead of `IS NULL` | Compares every row to every row — wrong |
+| `INNER JOIN` instead of `LEFT JOIN` | Only keeps matched rows — the opposite of what you want |
+| Checking a non-key column for NULL | If purchases.amount can be NULL legitimately, the filter misfires; always check the join key |
+| `EXCEPT ALL` vs `EXCEPT` | `EXCEPT` deduplicates; `EXCEPT ALL` keeps duplicates — know which you want |
+
+---
+
+#### INTERSECT — users in both A and B
+
+**Scenario:** Users who both viewed a product page and added to cart.
+
+```sql
+-- Form 1: set operator
+SELECT user_id FROM page_views WHERE page = 'product'
+INTERSECT
+SELECT user_id FROM cart_events;
+
+-- Form 2: INNER JOIN (lets you add columns, timestamps, etc.)
+SELECT DISTINCT v.user_id
+FROM   page_views v
+JOIN   cart_events c ON v.user_id = c.user_id
+WHERE  v.page = 'product';
+```
+
+The `DISTINCT` in form 2 is important — without it, one user who viewed 3 pages and added 2 items produces 6 rows (cartesian of matching rows within the join).
+
+---
+
+#### UNION — all users across both segments (deduped)
+
+```sql
+SELECT user_id, 'signup' AS source FROM signups
+UNION
+SELECT user_id, 'purchase' AS source FROM purchases;
+```
+
+`UNION` deduplicates on the full row — here, a user who signed up and purchased appears **twice** because the `source` column differs. Use `UNION` on just the key column if you want true deduplication across sources.
+
+---
+
+### Segment overlap analysis — the Venn breakdown
+
+**Goal:** Count users in only A, only B, and both A and B, in a single query.
+
+```sql
+SELECT
+    SUM(CASE WHEN a.user_id IS NOT NULL AND b.user_id IS NULL THEN 1 ELSE 0 END) AS only_a,
+    SUM(CASE WHEN b.user_id IS NOT NULL AND a.user_id IS NULL THEN 1 ELSE 0 END) AS only_b,
+    SUM(CASE WHEN a.user_id IS NOT NULL AND b.user_id IS NOT NULL THEN 1 ELSE 0 END) AS both_ab
+FROM (SELECT DISTINCT user_id FROM segment_a) a
+FULL OUTER JOIN (SELECT DISTINCT user_id FROM segment_b) b
+  ON a.user_id = b.user_id;
+```
+
+**Why FULL OUTER JOIN?**
+
+| Join type | What you lose |
+|---|---|
+| INNER JOIN | Users in only A or only B |
+| LEFT JOIN | Users in only B |
+| RIGHT JOIN | Users in only A |
+| FULL OUTER JOIN | Nothing — all users from both sides, NULLs where no match |
+
+The `DISTINCT` inside the subqueries collapses duplicate user events before the join, so a user who triggered segment A five times still counts as one person.
+
+---
+
+### Practical example — email campaign funnel segments
+
+**Tables:** `sent`, `opened`, `clicked`
+
+```sql
+-- sent but never opened
+SELECT user_id FROM sent
+EXCEPT
+SELECT user_id FROM opened;
+
+-- opened but never clicked
+SELECT user_id FROM opened
+EXCEPT
+SELECT user_id FROM clicked;
+
+-- clicked (implies opened and sent)
+SELECT DISTINCT user_id FROM clicked;
+
+-- full funnel breakdown in one query
+SELECT
+    COUNT(DISTINCT s.user_id)                          AS total_sent,
+    COUNT(DISTINCT o.user_id)                          AS opened,
+    COUNT(DISTINCT c.user_id)                          AS clicked,
+    COUNT(DISTINCT s.user_id) - COUNT(DISTINCT o.user_id) AS never_opened,
+    COUNT(DISTINCT o.user_id) - COUNT(DISTINCT c.user_id) AS opened_not_clicked
+FROM       sent s
+LEFT JOIN  opened  o ON s.user_id = o.user_id
+LEFT JOIN  clicked c ON s.user_id = c.user_id;
+```
+
+---
+
+##  Percentile and distribution questions
+
+### Why standard aggregates fall short
+
+`AVG` hides the shape of your data. A p90 latency of 4s with an average of 0.8s means 10% of users are suffering — but the average looks fine. Distribution functions expose that.
+
+---
+
+### `PERCENTILE_CONT` — the standard way
+
+`PERCENTILE_CONT(fraction) WITHIN GROUP (ORDER BY column)` returns the value at the given percentile, interpolating between adjacent values when the fraction falls between two rows.
+
+```sql
+SELECT
+    PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY latency_ms) AS median,
+    PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY latency_ms) AS p90,
+    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms) AS p95,
+    PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY latency_ms) AS p99
+FROM api_requests;
+```
+
+`PERCENTILE_DISC` is the alternative — it returns an actual value from the dataset (no interpolation). Use `DISC` when the column is discrete (integers, categories); `CONT` for continuous values (floats, durations).
+
+| | `PERCENTILE_CONT` | `PERCENTILE_DISC` |
+|---|---|---|
+| Returns | Interpolated value | Actual value from data |
+| Use for | Latency, revenue (continuous) | Counts, ratings (discrete) |
+| Availability | PostgreSQL, SQL Server, Oracle, BigQuery | Same |
+| MySQL support | Not available (use workaround below) | Not available |
+
+---
+
+### Percentiles per group
+
+**Goal:** p50 and p90 latency per API endpoint.
+
+```sql
+SELECT
+    endpoint,
+    COUNT(*)                                                          AS request_count,
+    PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY latency_ms)        AS p50,
+    PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY latency_ms)        AS p90
+FROM api_requests
+GROUP BY endpoint
+ORDER BY p90 DESC;
+```
+
+Output immediately shows which endpoints have the worst tail latency — sorted by p90 so the worst offenders surface first.
+
+---
+
+### `NTILE` — bucketing into percentile bands
+
+`NTILE(n)` divides rows into `n` equally-sized buckets. `NTILE(100)` gives percentile rank; `NTILE(4)` gives quartiles.
+
+```sql
+SELECT
+    user_id,
+    revenue,
+    NTILE(100) OVER (ORDER BY revenue)  AS percentile_rank,
+    NTILE(4)   OVER (ORDER BY revenue)  AS quartile
+FROM user_revenue;
+```
+
+**Important gotcha:** `NTILE` assigns bucket numbers, not the bucket boundary values. Bucket 90 means "this user is in the 90th percentile band" — it does not tell you what revenue value separates p89 from p90. Use `PERCENTILE_CONT` for the boundary value.
+
+---
+
+### Distribution histogram — bucketing with `WIDTH_BUCKET`
+
+**Goal:** How many requests fall into each 100ms latency band?
+
+```sql
+SELECT
+    WIDTH_BUCKET(latency_ms, 0, 2000, 20) AS bucket,   -- 20 buckets between 0 and 2000ms
+    MIN(latency_ms)  AS bucket_start,
+    MAX(latency_ms)  AS bucket_end,
+    COUNT(*)         AS request_count
+FROM api_requests
+GROUP BY bucket
+ORDER BY bucket;
+```
+
+`WIDTH_BUCKET(value, min, max, num_buckets)` returns which bucket a value falls into. Values below `min` return 0; values above `max` return `num_buckets + 1` — check for those outlier buckets.
+
+---
+
+### MySQL workaround — percentiles without `PERCENTILE_CONT`
+
+MySQL (before 8.0 window functions) requires a manual approach:
+
+```sql
+-- Median in MySQL 8+
+WITH ranked AS (
+    SELECT latency_ms,
+           ROW_NUMBER() OVER (ORDER BY latency_ms) AS rn,
+           COUNT(*) OVER ()                         AS total
+    FROM api_requests
+)
+SELECT AVG(latency_ms) AS median
+FROM   ranked
+WHERE  rn IN (FLOOR((total + 1) / 2), CEIL((total + 1) / 2));
+```
+
+For p90:
+
+```sql
+WITH ranked AS (
+    SELECT latency_ms,
+           PERCENT_RANK() OVER (ORDER BY latency_ms) AS pct_rank
+    FROM api_requests
+)
+SELECT MIN(latency_ms) AS p90
+FROM   ranked
+WHERE  pct_rank >= 0.90;
+```
+
+`PERCENT_RANK()` returns a value from 0 to 1. `WHERE pct_rank >= 0.90` keeps the top 10% — `MIN` of that set is the p90 boundary.
+
+---
+
+### Full distribution summary in one query
+
+```sql
+SELECT
+    COUNT(*)                                                   AS total_requests,
+    MIN(latency_ms)                                            AS min_ms,
+    ROUND(AVG(latency_ms), 1)                                  AS avg_ms,
+    PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY latency_ms)  AS p50_ms,
+    PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY latency_ms)  AS p75_ms,
+    PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY latency_ms)  AS p90_ms,
+    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency_ms)  AS p95_ms,
+    PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY latency_ms)  AS p99_ms,
+    MAX(latency_ms)                                            AS max_ms
+FROM api_requests;
+```
+
+This is the equivalent of a `describe()` in pandas — a single-row statistical summary. The gap between p99 and max tells you whether you have extreme outliers beyond the 99th percentile.
+
+---
+
+### Why distribution questions fail
+
+| Mistake | Result |
+|---|---|
+| Using `AVG` as a proxy for median | Misleading when distribution is skewed (e.g. a few huge orders inflate the average) |
+| `NTILE(100)` and assuming bucket 90 = p90 value | NTILE assigns ranks, not boundary values |
+| `PERCENTILE_CONT` without `WITHIN GROUP` | Syntax error |
+| Forgetting `GROUP BY` when using `PERCENTILE_CONT` per segment | Aggregates the entire table |
+| Using `PERCENT_RANK()` expecting it to return the value at that rank | It returns the rank (0–1), not the metric value |
+| `WIDTH_BUCKET` values outside the range | Returns 0 or `n+1` — easy to miss outlier buckets silently |
 ## Quick Reference — Logical Query Execution Order
 
 ```
