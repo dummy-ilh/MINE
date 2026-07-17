@@ -30,6 +30,19 @@ There are four main deduplication strategies:
 
 **Key insight for interviews:** `SELECT DISTINCT` is blunt — it only works when every column is identical. In real data, duplicates usually have different timestamps or IDs, so `ROW_NUMBER()` is almost always what you actually need.
 
+```sql
+SELECT *
+FROM (
+    SELECT
+        t.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY user_id          -- the "duplicate key"
+            ORDER BY updated_at DESC      -- the tie-break rule
+        ) AS rn
+    FROM events t
+) ranked
+WHERE rn = 1;```
+hy not RANK() or DENSE_RANK()? Both can assign rank 1 to multiple rows when the ORDER BY column ties (e.g., two rows with the identical updated_at). If you use RANK() = 1 for dedup and there's a tie, you get both rows back — silently re-introducing the duplicate you were trying to remove. ROW_NUMBER() always breaks ties by physical row order, guaranteeing exactly one row per partition. This is the single most common interview trap.
 ---
 
 ### Sample Table: `raw_predictions` (messy, with duplicates)
