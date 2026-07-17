@@ -18,7 +18,7 @@
 39. [Attribution Modeling — First-touch / Last-touch](#39-attribution-modeling--first-touch--last-touch)
 40. [Sampling in SQL — TABLESAMPLE, Stratified Sampling](#40-sampling-in-sql--tablesample-stratified-sampling)
 41. [Fuzzy / Near-duplicate Matching](#41-fuzzy--near-duplicate-matching)
-
+42. [Histogram & Bucketing](#42-histogram-buckets)
 ---
 
 ## 30. Funnel Analysis
@@ -1722,7 +1722,1141 @@ ORDER BY soundex_code, model_name;
 | Cross join on large tables | 100k names → 10B pairs | Block on first character or first trigram before cross joining |
 
 ---
+## 42. Histogram & Bucketing
 
+
+---
+
+## Table of Contents
+
+1. [The Bucketing Mindset](#1-the-bucketing-mindset)
+2. [The Three Bucketing Methods](#2-the-three-bucketing-methods)
+3. [Fixed-Width Buckets — CASE WHEN](#3-fixed-width-buckets--case-when)
+4. [Dynamic-Width Buckets — FLOOR + Division](#4-dynamic-width-buckets--floor--division)
+5. [Percentile Buckets — NTILE](#5-percentile-buckets--ntile)
+6. [Width-Bucket — Auto Histogram](#6-width-bucket--auto-histogram)
+7. [Frequency Distribution — The True Histogram](#7-frequency-distribution--the-true-histogram)
+8. [Cumulative Distribution (CDF)](#8-cumulative-distribution-cdf)
+9. [Revenue Bucketing by Order Size](#9-revenue-bucketing-by-order-size)
+10. [Age Cohort Analysis](#10-age-cohort-analysis)
+11. [Spend Tier Segmentation (RFM-style)](#11-spend-tier-segmentation-rfm-style)
+12. [Bucket + Funnel (Conversion by Tier)](#12-bucket--funnel-conversion-by-tier)
+13. [Session Duration Distribution](#13-session-duration-distribution)
+14. [Percentile Computation (P50, P90, P99)](#14-percentile-computation-p50-p90-p99)
+15. [Outlier Detection via Buckets](#15-outlier-detection-via-buckets)
+16. [Key Takeaways Cheatsheet](#16-key-takeaways-cheatsheet)
+
+---
+
+## 1. The Bucketing Mindset
+
+Raw continuous values — age, revenue, session duration, order amount — are useless in GROUP BY. You can't group by `age = 27` and learn anything. Bucketing converts a continuous axis into **discrete, comparable groups**.
+
+```
+Raw column:  23, 27, 31, 45, 52, 67, 71, 84
+                         │
+                    BUCKET BY 20s
+                         │
+             20-29 → 2 users
+             30-39 → 1 user
+             40-49 → 1 user
+             50-59 → 1 user
+             60-69 → 1 user
+             70-79 → 1 user
+             80-89 → 1 user
+```
+
+**When to bucket:**
+- Visualizing distributions ("how are our users spread across age groups?")
+- Comparing metrics across tiers ("do high spenders churn less?")
+- Cohort analysis ("how does conversion differ by order size?")
+- Detecting skew / outliers ("is revenue concentrated in a few users?")
+
+**The three questions before writing any bucket query:**
+1. **Fixed or dynamic width?** — Do you want equal-sized ranges (0-10, 10-20) or equal-sized populations (each bucket has same number of users)?
+2. **Business-driven or data-driven?** — Business says "under 25, 25-34, 35-44, 45+" OR you let the data decide with NTILE/percentiles.
+3. **What to aggregate inside each bucket?** — Count, sum, average, conversion rate, retention rate?
+
+---
+
+## 2. The Three Bucketing Methods
+
+| Method | What It Does | Use When |
+|--------|-------------|----------|
+| `CASE WHEN` | Hand-written ranges, any width | Business-defined tiers, irregular breakpoints |
+| `FLOOR(value / width) * width` | Auto equal-width buckets | Quick histograms, any numeric column |
+| `NTILE(n)` | Equal-population buckets (quantiles) | Quartiles, deciles, percentile tiers |
+| `WIDTH_BUCKET` | Auto histogram between min/max | PostgreSQL/Snowflake; cleanest syntax |
+
+Each method solves a different problem. You'll mix them in real queries.
+
+---
+
+## 3. Fixed-Width Buckets — CASE WHEN
+
+**The most readable, most interview-friendly method. Use when a business person defined the tiers.**
+
+### Pattern
+
+```sql
+CASE
+  WHEN value <  10          THEN '0-9'
+  WHEN value <  20          THEN '10-19'
+  WHEN value <  30          THEN '20-29'
+  WHEN value >= 30          THEN '30+'
+  ELSE 'Unknown'
+END AS bucket
+```
+
+SQL evaluates CASE top-to-bottom and stops at the first TRUE condition. So `WHEN value < 20` implicitly means `>= 10 AND < 20` because the `< 10` case already caught anything below 10.
+
+### Full Query — Age Distribution
+
+```sql
+WITH age_buckets AS (
+  SELECT
+    user_id,
+    age,
+    CASE
+      WHEN age < 18           THEN 'Under 18'
+      WHEN age BETWEEN 18 AND 24 THEN '18-24'
+      WHEN age BETWEEN 25 AND 34 THEN '25-34'
+      WHEN age BETWEEN 35 AND 44 THEN '35-44'
+      WHEN age BETWEEN 45 AND 54 THEN '45-54'
+      WHEN age >= 55          THEN '55+'
+      ELSE 'Unknown'
+    END AS age_group
+  FROM users
+)
+SELECT
+  age_group,
+  COUNT(*)                                   AS user_count,
+  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS pct_of_total
+FROM age_buckets
+GROUP BY age_group
+ORDER BY MIN(age);   -- order by actual age, not alphabetically
+```
+
+### CTE-Level I/O Trace
+
+**Input `users`:**
+```
+user_id | age
+U1      | 22
+U2      | 29
+U3      | 33
+U4      | 41
+U5      | 17
+U6      | 28
+U7      | 60
+```
+
+**`age_buckets`:**
+```
+user_id | age | age_group
+U1      | 22  | 18-24
+U2      | 29  | 25-34
+U3      | 33  | 25-34
+U4      | 41  | 35-44
+U5      | 17  | Under 18
+U6      | 28  | 25-34
+U7      | 60  | 55+
+```
+
+**GROUP BY age_group + COUNT:**
+```
+age_group  | user_count | pct_of_total
+Under 18   | 1          | 14.29
+18-24      | 1          | 14.29
+25-34      | 3          | 42.86
+35-44      | 1          | 14.29
+55+        | 1          | 14.29
+```
+
+**Why `ORDER BY MIN(age)` not `ORDER BY age_group`?** Alphabetical order gives: "18-24, 25-34, 35-44, 55+, Under 18" — wrong. `MIN(age)` inside each group returns the smallest real age value per bucket, so the order is chronological.
+
+**Why `SUM(COUNT(*)) OVER ()`?** This is a window function with no PARTITION BY — it sums across ALL rows of the result set, giving total users. Each row divides its own count by that total for the percentage.
+
+---
+
+## 4. Dynamic-Width Buckets — FLOOR + Division
+
+**When you don't want to write every bucket by hand — especially useful for revenue, price, or any column with a wide range.**
+
+### The Formula
+
+```sql
+FLOOR(value / bucket_width) * bucket_width AS bucket_floor
+```
+
+This maps any value to the lower bound of its bucket:
+- `FLOOR(23 / 10) * 10 = FLOOR(2.3) * 10 = 2 * 10 = 20`  → bucket "20-29"
+- `FLOOR(57 / 10) * 10 = FLOOR(5.7) * 10 = 5 * 10 = 50`  → bucket "50-59"
+- `FLOOR(100 / 10) * 10 = 100`                              → bucket "100-109"
+
+### Full Query — Order Amount Distribution
+
+```sql
+WITH bucketed AS (
+  SELECT
+    order_id,
+    amount,
+    FLOOR(amount / 50) * 50 AS bucket_floor     -- $50 bucket width
+  FROM orders
+)
+SELECT
+  bucket_floor                                        AS bucket_start,
+  bucket_floor + 49                                   AS bucket_end,
+  CONCAT('$', bucket_floor, '-$', bucket_floor + 49) AS bucket_label,
+  COUNT(*)                                            AS order_count,
+  SUM(amount)                                         AS total_revenue,
+  ROUND(AVG(amount), 2)                               AS avg_order_value,
+  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS pct_of_orders
+FROM bucketed
+GROUP BY bucket_floor
+ORDER BY bucket_floor;
+```
+
+### CTE-Level I/O Trace
+
+**Input `orders`:**
+```
+order_id | amount
+O1       | 12.50
+O2       | 47.00
+O3       | 53.00
+O4       | 98.00
+O5       | 105.00
+O6       | 23.00
+O7       | 76.00
+```
+
+**`bucketed` — FLOOR(amount / 50) * 50:**
+```
+order_id | amount | FLOOR(amount/50) | bucket_floor
+O1       | 12.50  | FLOOR(0.25) = 0  | 0
+O2       | 47.00  | FLOOR(0.94) = 0  | 0
+O3       | 53.00  | FLOOR(1.06) = 1  | 50
+O4       | 98.00  | FLOOR(1.96) = 1  | 50
+O5       | 105.00 | FLOOR(2.10) = 2  | 100
+O6       | 23.00  | FLOOR(0.46) = 0  | 0
+O7       | 76.00  | FLOOR(1.52) = 1  | 50
+```
+
+**GROUP BY bucket_floor:**
+```
+bucket_start | bucket_end | label       | order_count | total_revenue | avg_order
+0            | 49         | $0-$49      | 3           | 82.50         | 27.50
+50           | 99         | $50-$99     | 3           | 227.00        | 75.67
+100          | 149        | $100-$149   | 1           | 105.00        | 105.00
+```
+
+**Changing bucket width is one number change:** Switch `50` to `25` for finer granularity, or `100` for coarser. No rewriting of CASE WHEN.
+
+---
+
+## 5. Percentile Buckets — NTILE
+
+**Equal-population buckets. Instead of equal-width ranges, every bucket gets the same number of rows.**
+
+### When to Use NTILE vs FLOOR
+
+| FLOOR bucketing | NTILE bucketing |
+|----------------|-----------------|
+| Equal-width ranges | Equal-population groups |
+| Most users in $0-$50, few in $500+ | Each quartile has exactly 25% of users |
+| Good for showing distribution shape | Good for "top 25%" analysis |
+| Sensitive to outliers | Robust to outliers |
+
+### Full Query — Customer Spend Quartiles
+
+```sql
+WITH spend_per_user AS (
+  SELECT
+    user_id,
+    SUM(amount) AS total_spend
+  FROM orders
+  GROUP BY user_id
+),
+quartiles AS (
+  SELECT
+    user_id,
+    total_spend,
+    NTILE(4) OVER (ORDER BY total_spend ASC) AS quartile
+  FROM spend_per_user
+)
+SELECT
+  quartile,
+  CASE quartile
+    WHEN 1 THEN 'Q1 — Bottom 25%'
+    WHEN 2 THEN 'Q2 — Lower Mid'
+    WHEN 3 THEN 'Q3 — Upper Mid'
+    WHEN 4 THEN 'Q4 — Top 25%'
+  END AS quartile_label,
+  COUNT(*)                AS user_count,
+  MIN(total_spend)        AS min_spend,
+  MAX(total_spend)        AS max_spend,
+  ROUND(AVG(total_spend), 2) AS avg_spend,
+  SUM(total_spend)        AS total_revenue_from_tier
+FROM quartiles
+GROUP BY quartile
+ORDER BY quartile;
+```
+
+### CTE-Level I/O Trace
+
+**Input `orders` → `spend_per_user`:**
+```
+user_id | total_spend
+U1      | 20
+U2      | 45
+U3      | 80
+U4      | 150
+U5      | 200
+U6      | 320
+U7      | 500
+U8      | 950
+```
+
+**`quartiles` — NTILE(4) ORDER BY total_spend ASC:**
+
+8 users, 4 buckets → 2 users per bucket.
+```
+user_id | total_spend | quartile
+U1      | 20          | 1
+U2      | 45          | 1
+U3      | 80          | 2
+U4      | 150         | 2
+U5      | 200         | 3
+U6      | 320         | 3
+U7      | 500         | 4
+U8      | 950         | 4
+```
+
+**GROUP BY quartile:**
+```
+quartile | label          | count | min  | max  | avg    | total_revenue
+1        | Q1 Bottom 25%  | 2     | 20   | 45   | 32.50  | 65
+2        | Q2 Lower Mid   | 2     | 80   | 150  | 115.00 | 230
+3        | Q3 Upper Mid   | 2     | 200  | 320  | 260.00 | 520
+4        | Q4 Top 25%     | 2     | 500  | 950  | 725.00 | 1450
+```
+
+**The key insight:** Q4 (top 25% of users) generates 1450/2265 = **64% of total revenue**. This is the kind of finding that drives business decisions — protect your top quartile at all costs.
+
+### Deciles — Same Pattern, N=10
+
+```sql
+NTILE(10) OVER (ORDER BY total_spend ASC) AS decile
+-- Decile 10 = top 10%, decile 1 = bottom 10%
+```
+
+---
+
+## 6. WIDTH_BUCKET — Auto Histogram
+
+**PostgreSQL / Snowflake / BigQuery only. Cleanest syntax for equal-width histograms.**
+
+```sql
+-- WIDTH_BUCKET(value, min, max, num_buckets)
+-- Returns bucket number 1 through num_buckets
+-- Values below min → 0, above max → num_buckets + 1
+
+SELECT
+  WIDTH_BUCKET(amount, 0, 1000, 10) AS bucket_num,
+  -- Translate bucket number back to range label
+  (WIDTH_BUCKET(amount, 0, 1000, 10) - 1) * 100 AS range_start,
+  WIDTH_BUCKET(amount, 0, 1000, 10) * 100        AS range_end,
+  COUNT(*)                                        AS order_count,
+  SUM(amount)                                     AS revenue
+FROM orders
+WHERE amount BETWEEN 0 AND 1000
+GROUP BY WIDTH_BUCKET(amount, 0, 1000, 10)
+ORDER BY bucket_num;
+```
+
+### I/O Trace
+
+`WIDTH_BUCKET(amount, 0, 1000, 10)` creates 10 equal buckets of width 100:
+```
+amount  | bucket_num | range
+55      | 1          | $0–$100
+150     | 2          | $100–$200
+375     | 4          | $300–$400
+999     | 10         | $900–$1000
+1001    | 11         | overflow (> max)
+```
+
+**Output:**
+```
+bucket_num | range_start | range_end | order_count | revenue
+1          | 0           | 100       | 142         | 8,234
+2          | 100         | 200       | 87          | 13,050
+3          | 200         | 300       | 61          | 15,300
+...
+```
+
+---
+
+## 7. Frequency Distribution — The True Histogram
+
+**"How many users have exactly 1 order? 2 orders? 3-5 orders? 6+?"**
+
+This is bucketing applied to a *computed* column (order count), not a raw column.
+
+```sql
+WITH order_counts AS (
+  SELECT
+    user_id,
+    COUNT(DISTINCT order_id) AS num_orders
+  FROM orders
+  GROUP BY user_id
+),
+frequency_buckets AS (
+  SELECT
+    user_id,
+    num_orders,
+    CASE
+      WHEN num_orders = 1  THEN '1 order'
+      WHEN num_orders = 2  THEN '2 orders'
+      WHEN num_orders BETWEEN 3 AND 5   THEN '3-5 orders'
+      WHEN num_orders BETWEEN 6 AND 10  THEN '6-10 orders'
+      WHEN num_orders > 10 THEN '10+ orders'
+    END AS frequency_bucket
+  FROM order_counts
+)
+SELECT
+  frequency_bucket,
+  COUNT(*)                                            AS user_count,
+  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS pct_users,
+  SUM(COUNT(*)) OVER (
+    ORDER BY MIN(num_orders)
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  )                                                   AS cumulative_users
+FROM frequency_buckets
+GROUP BY frequency_bucket
+ORDER BY MIN(num_orders);
+```
+
+### CTE-Level I/O Trace
+
+**`order_counts`:**
+```
+user_id | num_orders
+U1      | 1
+U2      | 1
+U3      | 2
+U4      | 4
+U5      | 4
+U6      | 7
+U7      | 1
+U8      | 12
+```
+
+**`frequency_buckets`:**
+```
+user_id | num_orders | frequency_bucket
+U1      | 1          | 1 order
+U2      | 1          | 1 order
+U3      | 2          | 2 orders
+U4      | 4          | 3-5 orders
+U5      | 4          | 3-5 orders
+U6      | 7          | 6-10 orders
+U7      | 1          | 1 order
+U8      | 12         | 10+ orders
+```
+
+**Final output:**
+```
+frequency_bucket | user_count | pct_users | cumulative_users
+1 order          | 3          | 37.50     | 3
+2 orders         | 1          | 12.50     | 4
+3-5 orders       | 2          | 25.00     | 6
+6-10 orders      | 1          | 12.50     | 7
+10+ orders       | 1          | 12.50     | 8
+```
+
+**Reading this:** 37.5% of users are one-and-done. Only 12.5% are highly engaged (10+ orders). Classic long-tail distribution you see in every e-commerce dataset.
+
+---
+
+## 8. Cumulative Distribution (CDF)
+
+**"What percentage of orders are under $100? Under $200? Under $500?"**
+
+The CDF answers: for a given value X, what fraction of the data falls at or below X.
+
+```sql
+WITH bucketed AS (
+  SELECT
+    order_id,
+    amount,
+    FLOOR(amount / 100) * 100 AS bucket_floor
+  FROM orders
+),
+bucket_counts AS (
+  SELECT
+    bucket_floor,
+    COUNT(*) AS bucket_count
+  FROM bucketed
+  GROUP BY bucket_floor
+)
+SELECT
+  bucket_floor                              AS bucket_start,
+  bucket_floor + 99                         AS bucket_end,
+  bucket_count,
+  SUM(bucket_count) OVER (
+    ORDER BY bucket_floor
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  )                                         AS cumulative_count,
+  ROUND(
+    SUM(bucket_count) OVER (
+      ORDER BY bucket_floor
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) * 100.0 / SUM(bucket_count) OVER ()
+  , 2)                                      AS cumulative_pct
+FROM bucket_counts
+ORDER BY bucket_floor;
+```
+
+### CTE-Level I/O Trace
+
+**`bucket_counts`:**
+```
+bucket_floor | bucket_count
+0            | 400
+100          | 250
+200          | 150
+300          | 100
+400          | 60
+500          | 40
+```
+
+Total = 1000 orders.
+
+**After window functions:**
+```
+bucket_start | bucket_end | bucket_count | cumulative_count | cumulative_pct
+0            | 99         | 400          | 400              | 40.00
+100          | 199        | 250          | 650              | 65.00
+200          | 299        | 150          | 800              | 80.00
+300          | 399        | 100          | 900              | 90.00
+400          | 499        | 60           | 960              | 96.00
+500          | 599        | 40           | 1000             | 100.00
+```
+
+**Reading this:** 80% of orders are under $300. 96% are under $500. The $500+ tail is only 4% of order volume — but may be disproportionate revenue. Pair this with a `SUM(amount)` cumulative to see revenue CDF.
+
+---
+
+## 9. Revenue Bucketing by Order Size
+
+**"Do small, medium, or large orders drive most of our revenue?"**
+
+```sql
+WITH order_buckets AS (
+  SELECT
+    order_id,
+    user_id,
+    amount,
+    CASE
+      WHEN amount <  50   THEN 'Small  (<$50)'
+      WHEN amount <  200  THEN 'Medium ($50-$199)'
+      WHEN amount <  500  THEN 'Large  ($200-$499)'
+      WHEN amount >= 500  THEN 'XL     ($500+)'
+    END AS order_size
+  FROM orders
+)
+SELECT
+  order_size,
+  COUNT(*)                                           AS order_count,
+  COUNT(DISTINCT user_id)                            AS unique_buyers,
+  ROUND(SUM(amount), 2)                              AS total_revenue,
+  ROUND(AVG(amount), 2)                              AS avg_order_value,
+  -- % of order volume
+  ROUND(COUNT(*) * 100.0        / SUM(COUNT(*))        OVER (), 2) AS pct_orders,
+  -- % of revenue
+  ROUND(SUM(amount) * 100.0     / SUM(SUM(amount))     OVER (), 2) AS pct_revenue,
+  -- avg orders per buyer in this tier
+  ROUND(COUNT(*) * 1.0          / COUNT(DISTINCT user_id), 2)      AS orders_per_buyer
+FROM order_buckets
+GROUP BY order_size
+ORDER BY MIN(amount);
+```
+
+### I/O Trace
+
+**`order_buckets`:**
+```
+order_size     | order_count | total_revenue
+Small (<$50)   | 600         | 15,000
+Medium ($50-$) | 300         | 36,000
+Large ($200-)  | 80          | 24,000
+XL ($500+)     | 20          | 18,000
+```
+
+Total orders = 1000, total revenue = 93,000.
+
+```
+order_size     | order_count | revenue  | pct_orders | pct_revenue
+Small          | 600         | 15,000   | 60.00%     | 16.13%
+Medium         | 300         | 36,000   | 30.00%     | 38.71%
+Large          | 80          | 24,000   | 8.00%      | 25.81%
+XL ($500+)     | 20          | 18,000   | 2.00%      | 19.35%
+```
+
+**The "aha":** 2% of orders (XL) generate nearly 20% of revenue. Small orders are 60% of volume but only 16% of revenue. Classic power law. This drives decisions: optimize checkout for large orders, use promotions to convert medium buyers to large.
+
+---
+
+## 10. Age Cohort Analysis
+
+**"Do younger or older users buy more, spend more, and retain better?"**
+
+```sql
+WITH user_stats AS (
+  SELECT
+    u.user_id,
+    u.age,
+    u.signup_date,
+    COUNT(DISTINCT o.order_id)   AS total_orders,
+    COALESCE(SUM(o.amount), 0)   AS total_spend,
+    MAX(o.order_date)            AS last_order_date
+  FROM users u
+  LEFT JOIN orders o ON u.user_id = o.user_id
+  GROUP BY u.user_id, u.age, u.signup_date
+),
+age_cohorts AS (
+  SELECT
+    user_id, age, total_orders, total_spend, last_order_date,
+    CASE
+      WHEN age < 25           THEN 'Gen Z    (<25)'
+      WHEN age BETWEEN 25 AND 34 THEN 'Millennial (25-34)'
+      WHEN age BETWEEN 35 AND 44 THEN 'Gen X Early (35-44)'
+      WHEN age BETWEEN 45 AND 54 THEN 'Gen X Late (45-54)'
+      WHEN age >= 55          THEN 'Boomer+ (55+)'
+    END AS age_cohort,
+    -- Is the user "active" — ordered in last 90 days?
+    CASE WHEN last_order_date >= CURRENT_DATE - INTERVAL 90 DAY
+         THEN 1 ELSE 0 END AS is_active
+  FROM user_stats
+)
+SELECT
+  age_cohort,
+  COUNT(*)                                           AS users,
+  ROUND(AVG(total_orders), 2)                        AS avg_orders,
+  ROUND(AVG(total_spend), 2)                         AS avg_ltv,
+  ROUND(SUM(total_spend), 2)                         AS total_revenue,
+  ROUND(SUM(is_active) * 100.0 / COUNT(*), 2)        AS active_pct,
+  ROUND(AVG(CASE WHEN total_orders > 0
+            THEN total_spend / total_orders END), 2)  AS avg_order_value
+FROM age_cohorts
+GROUP BY age_cohort
+ORDER BY MIN(age);
+```
+
+### CTE-Level I/O Trace
+
+**`user_stats` (abbreviated):**
+```
+user_id | age | total_orders | total_spend | last_order_date
+U1      | 22  | 3            | 85.00       | 2024-11-01
+U2      | 29  | 8            | 340.00      | 2025-01-10
+U3      | 44  | 15           | 1200.00     | 2025-01-15
+U4      | 51  | 12           | 980.00      | 2024-08-01
+U5      | 23  | 1            | 25.00       | 2024-06-01
+```
+
+**`age_cohorts`:**
+```
+user_id | age_cohort          | is_active
+U1      | Gen Z (<25)         | 1   (ordered Nov 2024, within 90d of Jan 2025)
+U2      | Millennial (25-34)  | 1
+U3      | Gen X Early (35-44) | 1
+U4      | Gen X Late (45-54)  | 0   (Aug 2024, > 90d ago)
+U5      | Gen Z (<25)         | 0
+```
+
+**Final output:**
+```
+age_cohort           | users | avg_orders | avg_ltv | active_pct | avg_order_value
+Gen Z (<25)          | 2     | 2.00       | 55.00   | 50.00      | 28.33
+Millennial (25-34)   | 1     | 8.00       | 340.00  | 100.00     | 42.50
+Gen X Early (35-44)  | 1     | 15.00      | 1200.00 | 100.00     | 80.00
+Gen X Late (45-54)   | 1     | 12.00      | 980.00  | 0.00       | 81.67
+```
+
+---
+
+## 11. Spend Tier Segmentation (RFM-style)
+
+**Bucket users by total spend, then label them as Bronze/Silver/Gold/Platinum.**
+
+```sql
+WITH user_spend AS (
+  SELECT
+    user_id,
+    SUM(amount)               AS total_spend,
+    COUNT(DISTINCT order_id)  AS order_count,
+    MAX(order_date)           AS last_order_date,
+    DATEDIFF(CURRENT_DATE, MAX(order_date)) AS days_since_last_order
+  FROM orders
+  GROUP BY user_id
+),
+spend_percentiles AS (
+  SELECT
+    user_id,
+    total_spend,
+    order_count,
+    days_since_last_order,
+    NTILE(100) OVER (ORDER BY total_spend ASC) AS spend_percentile
+  FROM user_spend
+),
+tiers AS (
+  SELECT
+    user_id,
+    total_spend,
+    order_count,
+    days_since_last_order,
+    spend_percentile,
+    CASE
+      WHEN spend_percentile >= 95 THEN 'Platinum (Top 5%)'
+      WHEN spend_percentile >= 75 THEN 'Gold (75th-95th)'
+      WHEN spend_percentile >= 40 THEN 'Silver (40th-75th)'
+      ELSE                             'Bronze (Bottom 40%)'
+    END AS spend_tier
+  FROM spend_percentiles
+)
+SELECT
+  spend_tier,
+  COUNT(*)                                             AS user_count,
+  ROUND(MIN(total_spend), 2)                           AS min_spend,
+  ROUND(MAX(total_spend), 2)                           AS max_spend,
+  ROUND(AVG(total_spend), 2)                           AS avg_spend,
+  ROUND(SUM(total_spend), 2)                           AS tier_revenue,
+  ROUND(SUM(total_spend) * 100.0 /
+        SUM(SUM(total_spend)) OVER (), 2)              AS pct_of_revenue,
+  ROUND(AVG(days_since_last_order), 1)                 AS avg_days_since_order
+FROM tiers
+GROUP BY spend_tier
+ORDER BY MIN(spend_percentile) DESC;
+```
+
+### CTE-Level I/O Trace (8 users)
+
+**`user_spend`:**
+```
+user_id | total_spend | order_count | days_since_last_order
+U1      | 20          | 1           | 200
+U2      | 45          | 2           | 150
+U3      | 80          | 3           | 90
+U4      | 150         | 5           | 60
+U5      | 200         | 6           | 45
+U6      | 320         | 9           | 30
+U7      | 500         | 12          | 15
+U8      | 950         | 20          | 5
+```
+
+**`spend_percentiles`** — NTILE(100) on 8 users distributes percentiles:
+```
+U1 → percentile ~6
+U2 → percentile ~19
+U3 → percentile ~31
+U4 → percentile ~44
+U5 → percentile ~56
+U6 → percentile ~69
+U7 → percentile ~81
+U8 → percentile ~94
+```
+
+**`tiers`:**
+```
+user_id | spend_tier
+U1      | Bronze
+U2      | Bronze
+U3      | Bronze
+U4      | Silver
+U5      | Silver
+U6      | Silver
+U7      | Gold
+U8      | Gold
+```
+
+> Note: With only 8 users, Platinum (top 5%) has no members. In real data with thousands of users NTILE(100) is precise.
+
+**Final output:**
+```
+spend_tier  | users | min  | max  | avg    | tier_revenue | pct_revenue | avg_days
+Gold        | 2     | 500  | 950  | 725    | 1,450        | 62.5%       | 10
+Silver      | 3     | 150  | 320  | 223    | 670          | 28.9%       | 45
+Bronze      | 3     | 20   | 80   | 48     | 145          | 6.3%        | 147
+```
+
+**The business reading:** Gold is 25% of users, 62.5% of revenue. Bronze is 37.5% of users, 6.3% of revenue. Gold users also ordered recently (avg 10 days ago) — they're your loyal high-value segment.
+
+---
+
+## 12. Bucket + Funnel (Conversion by Tier)
+
+**"Do high spenders convert from trial to paid at higher rates?"**
+
+This combines bucketing with funnel analysis — measuring a rate metric *inside* each bucket.
+
+```sql
+WITH user_spend AS (
+  SELECT user_id, SUM(amount) AS total_spend
+  FROM orders GROUP BY user_id
+),
+spend_tiers AS (
+  SELECT
+    user_id,
+    total_spend,
+    CASE
+      WHEN total_spend <  100  THEN '1. Low (<$100)'
+      WHEN total_spend <  500  THEN '2. Mid ($100-$499)'
+      WHEN total_spend <  1000 THEN '3. High ($500-$999)'
+      WHEN total_spend >= 1000 THEN '4. VIP ($1000+)'
+    END AS tier
+  FROM user_spend
+),
+funnel_events AS (
+  SELECT
+    st.tier,
+    st.user_id,
+    -- Binary flags per user per funnel stage
+    MAX(CASE WHEN e.event_type = 'trial_start'   THEN 1 ELSE 0 END) AS started_trial,
+    MAX(CASE WHEN e.event_type = 'trial_end'     THEN 1 ELSE 0 END) AS completed_trial,
+    MAX(CASE WHEN e.event_type = 'subscription'  THEN 1 ELSE 0 END) AS converted
+  FROM spend_tiers st
+  LEFT JOIN events e ON st.user_id = e.user_id
+  GROUP BY st.tier, st.user_id
+)
+SELECT
+  tier,
+  COUNT(*)                                              AS total_users,
+  SUM(started_trial)                                    AS trialists,
+  SUM(converted)                                        AS converted,
+  -- Trial start rate
+  ROUND(SUM(started_trial) * 100.0  / COUNT(*), 2)     AS trial_start_rate,
+  -- Conversion rate among trialists
+  ROUND(SUM(converted) * 100.0 /
+        NULLIF(SUM(started_trial), 0), 2)               AS trial_to_paid_cvr
+FROM funnel_events
+GROUP BY tier
+ORDER BY tier;
+```
+
+### I/O Trace
+
+**`funnel_events` (per user, aggregated):**
+```
+tier       | user_id | started_trial | completed_trial | converted
+1. Low     | U1      | 1             | 0               | 0
+1. Low     | U2      | 1             | 1               | 0
+2. Mid     | U3      | 1             | 1               | 1
+2. Mid     | U4      | 1             | 1               | 1
+3. High    | U5      | 1             | 1               | 1
+```
+
+**Final output:**
+```
+tier   | total_users | trialists | converted | trial_rate | cvr
+1. Low | 2           | 2         | 0         | 100%       | 0.00%
+2. Mid | 2           | 2         | 2         | 100%       | 100.00%
+3. High| 1           | 1         | 1         | 100%       | 100.00%
+```
+
+**The pattern this reveals:** Higher-spend users convert at higher rates. This is common — high-spend users are already engaged. Hypothesis: nudge Mid-tier users who haven't converted with targeted offers.
+
+---
+
+## 13. Session Duration Distribution
+
+**"How long are users spending per session, and where does engagement fall off?"**
+
+```sql
+WITH session_durations AS (
+  SELECT
+    session_id,
+    user_id,
+    TIMESTAMPDIFF(MINUTE, session_start, session_end) AS duration_minutes
+  FROM sessions
+  WHERE session_end IS NOT NULL     -- exclude abandoned/open sessions
+),
+bucketed AS (
+  SELECT
+    session_id,
+    user_id,
+    duration_minutes,
+    CASE
+      WHEN duration_minutes <   1 THEN '0. Bounce (<1m)'
+      WHEN duration_minutes <   5 THEN '1. Short  (1-4m)'
+      WHEN duration_minutes <  15 THEN '2. Medium (5-14m)'
+      WHEN duration_minutes <  30 THEN '3. Long   (15-29m)'
+      WHEN duration_minutes >= 30 THEN '4. Power  (30m+)'
+    END AS duration_bucket
+  FROM session_durations
+)
+SELECT
+  duration_bucket,
+  COUNT(*)                                             AS session_count,
+  COUNT(DISTINCT user_id)                              AS unique_users,
+  ROUND(AVG(duration_minutes), 1)                      AS avg_duration,
+  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2)  AS pct_sessions,
+  -- Cumulative: what % of sessions are AT MOST this long?
+  ROUND(SUM(COUNT(*)) OVER (
+    ORDER BY MIN(duration_minutes)
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) * 100.0 / SUM(COUNT(*)) OVER (), 2)               AS cumulative_pct
+FROM bucketed
+GROUP BY duration_bucket
+ORDER BY duration_bucket;
+```
+
+### I/O Trace
+
+**`bucketed` (abbreviated):**
+```
+duration_bucket   | session_count
+0. Bounce (<1m)   | 350
+1. Short  (1-4m)  | 280
+2. Medium (5-14m) | 200
+3. Long  (15-29m) | 100
+4. Power  (30m+)  | 70
+```
+
+Total = 1000 sessions.
+
+**Final output:**
+```
+duration_bucket   | sessions | pct   | cumulative_pct
+0. Bounce (<1m)   | 350      | 35.0% | 35.0%
+1. Short  (1-4m)  | 280      | 28.0% | 63.0%
+2. Medium (5-14m) | 200      | 20.0% | 83.0%
+3. Long  (15-29m) | 100      | 10.0% | 93.0%
+4. Power  (30m+)  | 70       | 7.0%  | 100.0%
+```
+
+**Reading:** 35% of sessions bounce immediately. 83% of sessions are under 15 minutes. Only 7% are power sessions — but these users are your most valuable. Cross this with conversion: do power-session users buy at higher rates?
+
+---
+
+## 14. Percentile Computation (P50, P90, P99)
+
+**"What's the median order value? What's the 90th percentile? What does our worst 1% look like?"**
+
+### Method 1 — PERCENTILE_CONT (Standard SQL)
+
+```sql
+SELECT
+  PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY amount) AS p50_median,
+  PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY amount) AS p75,
+  PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY amount) AS p90,
+  PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY amount) AS p95,
+  PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY amount) AS p99
+FROM orders;
+```
+
+### Method 2 — NTILE Approximation (when PERCENTILE_CONT unavailable)
+
+```sql
+WITH ranked AS (
+  SELECT
+    amount,
+    NTILE(100) OVER (ORDER BY amount) AS percentile
+  FROM orders
+)
+SELECT
+  MAX(CASE WHEN percentile = 50 THEN amount END) AS p50,
+  MAX(CASE WHEN percentile = 75 THEN amount END) AS p75,
+  MAX(CASE WHEN percentile = 90 THEN amount END) AS p90,
+  MAX(CASE WHEN percentile = 99 THEN amount END) AS p99
+FROM ranked;
+```
+
+### Method 3 — Per-Bucket Percentiles (Most Useful for Analysis)
+
+```sql
+WITH age_groups AS (
+  SELECT
+    o.user_id,
+    o.amount,
+    CASE
+      WHEN u.age < 25  THEN 'Gen Z'
+      WHEN u.age < 35  THEN 'Millennial'
+      WHEN u.age < 45  THEN 'Gen X'
+      ELSE                  'Boomer+'
+    END AS age_group
+  FROM orders o
+  JOIN users u ON o.user_id = u.user_id
+)
+SELECT
+  age_group,
+  COUNT(*)                                                          AS orders,
+  ROUND(AVG(amount), 2)                                            AS avg_amount,
+  PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY amount)             AS p50,
+  PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY amount)             AS p90,
+  PERCENTILE_CONT(0.99) WITHIN GROUP (ORDER BY amount)             AS p99,
+  MAX(amount)                                                       AS max_amount
+FROM age_groups
+GROUP BY age_group
+ORDER BY age_group;
+```
+
+### I/O Trace
+
+**Input amounts for Gen Z users:** 10, 15, 20, 25, 30, 50, 200
+
+```
+p50 = 25    (middle value)
+p90 = 50    (90% of orders are ≤ 50)
+p99 = 200   (99% of orders are ≤ 200 — the $200 is an outlier)
+avg = 50    (mean is pulled up by the $200 outlier)
+```
+
+**Why P50 > AVG is a red flag:**  
+If average = $50 but P50 = $25, the median buyer spends $25 but a few very large orders pull the average up. Reporting "average order value = $50" is misleading. Always report median alongside mean.
+
+---
+
+## 15. Outlier Detection via Buckets
+
+**"Which users have unusually high session counts or spend? Flag them for review."**
+
+```sql
+WITH user_metrics AS (
+  SELECT
+    user_id,
+    COUNT(DISTINCT order_id)  AS order_count,
+    SUM(amount)               AS total_spend,
+    AVG(amount)               AS avg_order
+  FROM orders
+  GROUP BY user_id
+),
+with_stats AS (
+  SELECT
+    user_id, order_count, total_spend, avg_order,
+    AVG(total_spend)    OVER () AS mean_spend,
+    STDDEV(total_spend) OVER () AS stddev_spend,
+    NTILE(100)          OVER (ORDER BY total_spend ASC) AS spend_percentile
+  FROM user_metrics
+)
+SELECT
+  user_id,
+  order_count,
+  ROUND(total_spend, 2)      AS total_spend,
+  ROUND(mean_spend, 2)       AS mean_spend,
+  ROUND(stddev_spend, 2)     AS stddev_spend,
+  spend_percentile,
+  -- Z-score: how many std deviations from mean?
+  ROUND((total_spend - mean_spend) / NULLIF(stddev_spend, 0), 2) AS z_score,
+  CASE
+    WHEN (total_spend - mean_spend) / NULLIF(stddev_spend, 0) >  3 THEN 'Outlier High'
+    WHEN (total_spend - mean_spend) / NULLIF(stddev_spend, 0) < -3 THEN 'Outlier Low'
+    WHEN spend_percentile >= 95 THEN 'Top 5%'
+    WHEN spend_percentile <= 5  THEN 'Bottom 5%'
+    ELSE 'Normal'
+  END AS flag
+FROM with_stats
+ORDER BY z_score DESC;
+```
+
+### I/O Trace
+
+Mean spend = $200, Stddev = $150.
+
+```
+user_id | total_spend | z_score | flag
+U8      | 1200        | 6.67    | Outlier High  ← (1200-200)/150 = 6.67
+U7      | 500         | 2.00    | Top 5%
+U3      | 80          | -0.80   | Normal
+U1      | 5           | -1.30   | Normal
+```
+
+**Z-score > 3:** Statistically unusual. Could be a fraudulent account, a B2B buyer accidentally in consumer dataset, or a data error. Flag for investigation.
+
+---
+
+## 16. Key Takeaways Cheatsheet
+
+### Method Selection Guide
+
+```
+What are you trying to do?
+│
+├── Business-defined tiers ("under 25", "25-34", "premium vs standard")
+│   └── CASE WHEN — readable, explicit, handles irregular breakpoints
+│
+├── Quick histogram, width is a round number you choose
+│   └── FLOOR(value / width) * width — one-line, no CASE needed
+│
+├── Equal-population groups (top 25%, quartiles, deciles)
+│   └── NTILE(n) OVER (ORDER BY value) — ensures balanced group sizes
+│
+├── Auto histogram between min/max (PostgreSQL/Snowflake/BigQuery)
+│   └── WIDTH_BUCKET(value, min, max, n_buckets) — cleanest syntax
+│
+└── Exact percentile values (median, P90, P99)
+    └── PERCENTILE_CONT(p) WITHIN GROUP (ORDER BY value)
+```
+
+### The Universal Bucket Query Shape
+
+```sql
+WITH bucketed AS (
+  SELECT
+    id_column,
+    value_column,
+    <BUCKET EXPRESSION> AS bucket   -- CASE WHEN or FLOOR or NTILE
+  FROM source_table
+)
+SELECT
+  bucket,
+  COUNT(*)                                             AS count,
+  ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2)  AS pct,
+  MIN(value_column)                                    AS min_val,
+  MAX(value_column)                                    AS max_val,
+  ROUND(AVG(value_column), 2)                          AS avg_val,
+  SUM(value_column)                                    AS total,
+  -- Optional CDF
+  SUM(COUNT(*)) OVER (
+    ORDER BY MIN(value_column)
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  )                                                    AS cumulative_count
+FROM bucketed
+GROUP BY bucket
+ORDER BY MIN(value_column);   -- never ORDER BY bucket label alphabetically
+```
+
+### Window Functions Used in Bucketing
+
+| Function | What It Computes | Used For |
+|----------|-----------------|----------|
+| `SUM(COUNT(*)) OVER ()` | Grand total across all buckets | Percentage of total |
+| `SUM(SUM(amount)) OVER ()` | Grand revenue total | Revenue percentage |
+| `SUM(COUNT(*)) OVER (ORDER BY ... ROWS UNBOUNDED PRECEDING)` | Running total | CDF / cumulative % |
+| `NTILE(n) OVER (ORDER BY value)` | Equal-population bucket number | Quartiles / deciles |
+| `PERCENTILE_CONT(p) WITHIN GROUP (ORDER BY value)` | Exact percentile value | P50, P90, P99 |
+| `STDDEV(value) OVER ()` | Standard deviation across all rows | Z-score outlier detection |
+| `AVG(value) OVER ()` | Grand mean | Z-score outlier detection |
+
+### Common Pitfalls
+
+| Pitfall | Fix |
+|---------|-----|
+| `ORDER BY bucket_label` alphabetically | Use `ORDER BY MIN(value_column)` — sorts by actual data |
+| `NTILE(n)` gives unequal bucket sizes | Expected when `COUNT(*) % n != 0`; SQL distributes remainder to first buckets |
+| `FLOOR` on negative values | `FLOOR(-0.3) = -1` → bucket -10 to -1, not 0-9. Add check or shift values |
+| NULL values landing in no bucket | Add `ELSE 'Unknown'` in CASE WHEN; filter NULLs or handle separately |
+| Mean reported without median | Always pair AVG with P50; skewed distributions make mean misleading |
+| `BETWEEN` inclusive on both ends | `BETWEEN 25 AND 34` includes 25 AND 34. Use `< 35` if you want <35 |
+| Overlapping CASE WHEN ranges | SQL takes FIRST match; order from smallest to largest to avoid gaps |
+| Dividing by zero in percentages | `NULLIF(SUM(COUNT(*)) OVER (), 0)` — rare but safe habit |
+
+---
+
+
+---
 ## Master Cheat Sheet — Applied Topics
 
 ### Pattern → Query Shape
