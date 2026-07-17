@@ -262,6 +262,24 @@ This is invalid in strict SQL (and misleading even where permitted, e.g. MySQL's
 
 **Pivoting** transforms rows into columns — turning a long/narrow table into a wide table.
 
+**Long format (normalized):**
+
+| student | subject | score |
+|---|---|---|
+| Alice | Math | 90 |
+| Alice | Science | 85 |
+| Bob | Math | 78 |
+| Bob | Science | 92 |
+
+**Wide format (pivoted):**
+
+| student | Math | Science |
+|---|---|---|
+| Alice | 90 | 85 |
+| Bob | 78 | 92 |
+
+Pivoting turns distinct **values** in one column into **separate columns**.
+
 In SQL, there are two approaches:
 
 | Approach | Syntax | Best for |
@@ -316,8 +334,6 @@ GROUP BY model_name
 ORDER BY test_acc DESC;
 ```
 
-**Output:**
-
 | model_name | train_acc | val_acc | test_acc | train_test_gap |
 |------------|-----------|---------|----------|----------------|
 | LightGBM   | 0.975     | 0.945   | 0.940    | 0.035          |
@@ -325,6 +341,36 @@ ORDER BY test_acc DESC;
 | BERT       | 0.940     | 0.905   | 0.890    | 0.050          |
 
 > `train_test_gap` reveals overfitting — LightGBM generalises best despite highest train accuracy.
+
+```sql
+SELECT
+    student,
+    SUM(CASE WHEN subject = 'Math'    THEN score END) AS math,
+    SUM(CASE WHEN subject = 'Science' THEN score END) AS science
+FROM   scores
+GROUP  BY student;
+```
+
+#### How it works, step by step
+
+1. `GROUP BY student` — one output row per student.
+2. For each group, `SUM(CASE WHEN subject = 'Math' THEN score END)` walks every row in that group.
+   - If `subject = 'Math'`, it contributes the `score` value.
+   - Otherwise it contributes `NULL` (implicit `ELSE NULL`).
+3. `SUM(NULL)` = `NULL` but `SUM(90, NULL, NULL)` = `90`.
+4. Result: one column per subject, populated only where that condition is true.
+
+#### Why `SUM` and not `MAX` or `MIN`?
+
+| Aggregate | Use when |
+|---|---|
+| `SUM` | Scores, amounts — you want totals |
+| `MAX` | You want the single value (when there's only one per group) |
+| `MIN` | Same as MAX — choose based on semantics |
+| `COUNT` | Counting occurrences |
+
+If a student can only have one score per subject, `MAX` and `SUM` give the same result. `MAX` is often clearer semantically in that case ("give me the value, not the sum")
+**Output:**
 
 ---
 
@@ -437,73 +483,6 @@ FROM crosstab(
 
 
 
-
-### What is pivoting?
-
-**Long format (normalized):**
-
-| student | subject | score |
-|---|---|---|
-| Alice | Math | 90 |
-| Alice | Science | 85 |
-| Bob | Math | 78 |
-| Bob | Science | 92 |
-
-**Wide format (pivoted):**
-
-| student | Math | Science |
-|---|---|---|
-| Alice | 90 | 85 |
-| Bob | 78 | 92 |
-
-Pivoting turns distinct **values** in one column into **separate columns**.
-
----
-
-### The core pattern — `SUM(CASE WHEN ...)`
-
-Standard SQL has no `PIVOT` keyword (SQL Server and Oracle do, but MySQL and PostgreSQL do not). The portable pattern is:
-
-```sql
-SELECT
-    student,
-    SUM(CASE WHEN subject = 'Math'    THEN score END) AS math,
-    SUM(CASE WHEN subject = 'Science' THEN score END) AS science
-FROM   scores
-GROUP  BY student;
-```
-
-#### How it works, step by step
-
-1. `GROUP BY student` — one output row per student.
-2. For each group, `SUM(CASE WHEN subject = 'Math' THEN score END)` walks every row in that group.
-   - If `subject = 'Math'`, it contributes the `score` value.
-   - Otherwise it contributes `NULL` (implicit `ELSE NULL`).
-3. `SUM(NULL)` = `NULL` but `SUM(90, NULL, NULL)` = `90`.
-4. Result: one column per subject, populated only where that condition is true.
-
-#### Why `SUM` and not `MAX` or `MIN`?
-
-| Aggregate | Use when |
-|---|---|
-| `SUM` | Scores, amounts — you want totals |
-| `MAX` | You want the single value (when there's only one per group) |
-| `MIN` | Same as MAX — choose based on semantics |
-| `COUNT` | Counting occurrences |
-
-If a student can only have one score per subject, `MAX` and `SUM` give the same result. `MAX` is often clearer semantically in that case ("give me the value, not the sum").
-
-#### Why it fails (common mistakes)
-
-| Mistake | Result |
-|---|---|
-| Forget `GROUP BY` | Collapses entire table into one row |
-| Use `WHERE subject = 'Math'` instead of `CASE WHEN` | Filters out all Science rows before aggregation — Science column is always NULL |
-| Use `CASE WHEN` without an aggregate | Syntax error or wrong results; CASE alone returns per-row values, not per-group |
-| Use `ELSE 0` in numeric SUM | `SUM(0)` is 0, not NULL — silently replaces missing data with 0, which is misleading |
-
----
-
 ### Extended example — multiple aggregates in one pivot
 
 **Table: `sales`**
@@ -567,20 +546,6 @@ SELECT student, 'Science' AS subject, science AS score FROM wide_scores;
 | Alice | Science | 85 |
 | Bob | Math | 78 |
 | Bob | Science | 92 |
-
-Each `SELECT` extracts one column as a row, then `UNION ALL` stacks them.
-
-**PostgreSQL alternative with `CROSS JOIN LATERAL`:**
-
-```sql
-SELECT student, subject, score
-FROM   wide_scores
-CROSS  JOIN LATERAL (
-    VALUES ('Math', math), ('Science', science)
-) AS t(subject, score);
-```
-
-More concise as the number of columns grows; avoids repeating the table scan.
 
 #### Why `UNION ALL` not `UNION`?
 
