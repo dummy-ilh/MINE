@@ -1,4 +1,4 @@
-# SQL Funnels
+# PART 1 — FUNNEL CONVERSION
 
 A **funnel** measures how many users progress through a sequence of events.
 
@@ -98,12 +98,7 @@ signup_count | activation_count | purchase_count
 ```
 
 ### Interview takeaway
-
-This counts users who **ever** reached each stage.
-
-It **does not** guarantee they reached them **in order**.
-
-For many dashboards, this is completely acceptable.
+Problem: this counts user 4 as "activated → purchased" implicitly through independence, but it does NOT enforce order. If your funnel doesn't require strict sequence, this is genuinely fine and is what most product analytics dashboards do (Mixpanel/Amplitude funnels are configurable between "any order" and "in order"). If the interviewer says "step-by-step, in order
 
 ---
 
@@ -150,16 +145,14 @@ LEFT JOIN purchase p
 
 Result
 
-```
-user_id | signup | activation | purchase
------------------------------------------
-1       | ✓      | ✓          | ✓
-2       | ✓      | ✓          | NULL
-3       | ✓      | NULL       | NULL
-4       | ✓      | NULL       | NULL
+user_id | signup_time         | activation_time     | purchase_time
+1       | 2024-01-01 10:00:00 | 2024-01-01 10:05:00 | 2024-01-02 09:00:00
+2       | 2024-01-01 11:00:00 | 2024-01-03 12:00:00 | NULL
+3       | 2024-01-01 12:00:00 | NULL                | NULL
+4       | 2024-01-02 08:00:00 | NULL                | NULL   <- purchase dropped! joined off activation
 ```
 
-Notice user **4** disappears from purchases because purchase is joined from activation, not signup.
+This is the key interview trap. User 4 purchased but never activated. Because the purchase join is chained off activation_time (to enforce strict in-order sequence), user 4's purchase disappears — which is correct if the funnel truly requires activation before purchase, but wrong if you meant "reached this step at all, regardless of order." Always ask the interviewer: "does the funnel require strict sequential order, or just 'did they eventually do X'?" This single clarifying question is a strong L5 signal — it shows you know the two interpretations produce different numbers.
 
 ### Interview takeaway
 
