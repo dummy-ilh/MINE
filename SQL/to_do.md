@@ -1,8 +1,7 @@
 1. **Funnel conversion** — signup → activation → purchase, step-by-step drop-off, usually via conditional aggregation or self-joins on a session/user timeline.
 2. **Gaps and islands** — find consecutive streaks (active days, login streaks) or find gaps (missing dates, churn windows).
 3. **Cohort retention** — group users by signup week/month, track what % return in week N.
-5. **Running/rolling metrics** — cumulative sum, moving average, rolling 7-day active users.
-6. **Period-over-period comparison** — day-over-day, week-over-week deltas using LAG/LEAD.
+
 8. **Sessionization** — group events into sessions based on time gaps between them.
 9. **Self-join for pairwise comparisons** — e.g., users who bought A and B, friend recommendations, A/B pairing.
 11. **Pivoting / unpivoting** — long-to-wide or wide-to-long transforms, often with conditional `SUM(CASE WHEN...)`.
