@@ -436,4 +436,88 @@ Use when: you want % conversion between adjacent stages and average time-to-conv
 
 ---
 
-Want me to fill these in with your actual table/column names and event values so they're ready to run as-is?
+## 1. Conversion Funnel Basics
+A funnel tracks users moving through sequential steps. The key metric is drop-off rate at each step.
+```sql
+-- Table: events(user_id, event_type, event_date)
+-- Funnel: signup → onboarding → first_purchase → repeat_purchase
+
+WITH funnel AS (
+  SELECT
+    COUNT(DISTINCT CASE WHEN event_type = 'signup'
+          THEN user_id END)           AS step1_signup,
+    COUNT(DISTINCT CASE WHEN event_type = 'onboarding'
+          THEN user_id END)           AS step2_onboarding,
+    COUNT(DISTINCT CASE WHEN event_type = 'first_purchase'
+          THEN user_id END)           AS step3_purchase,
+    COUNT(DISTINCT CASE WHEN event_type = 'repeat_purchase'
+          THEN user_id END)           AS step4_repeat
+  FROM events
+)
+SELECT
+  step1_signup,
+  step2_onboarding,
+  step3_purchase,
+  step4_repeat,
+  ROUND(step2_onboarding  * 100.0 / step1_signup,    2) AS signup_to_onboard_pct,
+  ROUND(step3_purchase    * 100.0 / step2_onboarding, 2) AS onboard_to_purchase_pct,
+  ROUND(step4_repeat      * 100.0 / step3_purchase,   2) AS purchase_to_repeat_pct,
+  ROUND(step4_repeat      * 100.0 / step1_signup,     2) AS overall_conversion_pct
+FROM funnel;
+```
+
+---
+
+## 2. Ordered Funnel (Steps Must Be Sequential)
+Real funnels require steps to happen in order. This is harder.
+```sql
+-- User must: view_product → add_to_cart → checkout → purchase
+-- Each step must come AFTER the previous one
+
+WITH step1 AS (
+  SELECT DISTINCT user_id, MIN(event_date) AS s1_date
+  FROM events WHERE event_type = 'view_product'
+  GROUP BY user_id
+),
+step2 AS (
+  SELECT DISTINCT e.user_id, MIN(e.event_date) AS s2_date
+  FROM events e
+  JOIN step1 s ON e.user_id = s.user_id
+  WHERE e.event_type = 'add_to_cart'
+    AND e.event_date > s.s1_date   -- must happen AFTER step 1
+  GROUP BY e.user_id
+),
+step3 AS (
+  SELECT DISTINCT e.user_id, MIN(e.event_date) AS s3_date
+  FROM events e
+  JOIN step2 s ON e.user_id = s.user_id
+  WHERE e.event_type = 'checkout'
+    AND e.event_date > s.s2_date
+  GROUP BY e.user_id
+),
+step4 AS (
+  SELECT DISTINCT e.user_id, MIN(e.event_date) AS s4_date
+  FROM events e
+  JOIN step3 s ON e.user_id = s.user_id
+  WHERE e.event_type = 'purchase'
+    AND e.event_date > s.s3_date
+  GROUP BY e.user_id
+)
+SELECT
+  COUNT(DISTINCT step1.user_id) AS viewed,
+  COUNT(DISTINCT step2.user_id) AS added_to_cart,
+  COUNT(DISTINCT step3.user_id) AS checked_out,
+  COUNT(DISTINCT step4.user_id) AS purchased,
+  ROUND(COUNT(DISTINCT step2.user_id) * 100.0 /
+        COUNT(DISTINCT step1.user_id), 2) AS view_to_cart_pct,
+  ROUND(COUNT(DISTINCT step4.user_id) * 100.0 /
+        COUNT(DISTINCT step1.user_id), 2) AS overall_pct
+FROM step1
+LEFT JOIN step2 USING (user_id)
+LEFT JOIN step3 USING (user_id)
+LEFT JOIN step4 USING (user_id);
+```
+
+> 💡 Each CTE filters `event_date > prev step date` — enforces ordering.
+
+---
