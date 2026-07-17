@@ -3,8 +3,7 @@
 3. **Cohort retention** — group users by signup week/month, track what % return in week N.
 
 8. **Sessionization** — group events into sessions based on time gaps between them.
-12. **Set logic on user segments** — users in A but not B, overlap between two behaviors.
-13. **Percentile / distribution questions** — median, p90 latency, using `PERCENTILE_CONT` or NTILE.
+
 14. **Hierarchical/recursive queries** — org charts, category trees, recursive CTEs.
 
 
