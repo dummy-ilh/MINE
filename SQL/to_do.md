@@ -6,11 +6,12 @@
 5. **Running/rolling metrics** — cumulative sum, moving average, rolling 7-day active users.
 6. **Period-over-period comparison** — day-over-day, week-over-week deltas using LAG/LEAD.
 9. **Self-join for pairwise comparisons** — e.g., users who bought A and B, friend recommendations, A/B pairing.
-10. **Histogram/bucketing** — binning continuous values (age, revenue) into ranges then aggregating.
 11. **Pivoting / unpivoting** — long-to-wide or wide-to-long transforms, often with conditional `SUM(CASE WHEN...)`.
 12. **Set logic on user segments** — users in A but not B, overlap between two behaviors.
 13. **Percentile / distribution questions** — median, p90 latency, using `PERCENTILE_CONT` or NTILE.
 14. **Hierarchical/recursive queries** — org charts, category trees, recursive CTEs.
+
+
 Got it — here's the pattern taxonomy, the shapes interviewers reuse over and over:
 
 1. **Funnel conversion** — signup → activation → purchase, step-by-step drop-off, usually via conditional aggregation or self-joins on a session/user timeline.
