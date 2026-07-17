@@ -1725,61 +1725,10 @@ ORDER BY soundex_code, model_name;
 ## 42. Histogram & Bucketing
 
 
----
-
-## Table of Contents
-
-1. [The Bucketing Mindset](#1-the-bucketing-mindset)
-2. [The Three Bucketing Methods](#2-the-three-bucketing-methods)
-3. [Fixed-Width Buckets — CASE WHEN](#3-fixed-width-buckets--case-when)
-4. [Dynamic-Width Buckets — FLOOR + Division](#4-dynamic-width-buckets--floor--division)
-5. [Percentile Buckets — NTILE](#5-percentile-buckets--ntile)
-6. [Width-Bucket — Auto Histogram](#6-width-bucket--auto-histogram)
-7. [Frequency Distribution — The True Histogram](#7-frequency-distribution--the-true-histogram)
-8. [Cumulative Distribution (CDF)](#8-cumulative-distribution-cdf)
-9. [Revenue Bucketing by Order Size](#9-revenue-bucketing-by-order-size)
-10. [Age Cohort Analysis](#10-age-cohort-analysis)
-11. [Spend Tier Segmentation (RFM-style)](#11-spend-tier-segmentation-rfm-style)
-12. [Bucket + Funnel (Conversion by Tier)](#12-bucket--funnel-conversion-by-tier)
-13. [Session Duration Distribution](#13-session-duration-distribution)
-14. [Percentile Computation (P50, P90, P99)](#14-percentile-computation-p50-p90-p99)
-15. [Outlier Detection via Buckets](#15-outlier-detection-via-buckets)
-16. [Key Takeaways Cheatsheet](#16-key-takeaways-cheatsheet)
 
 ---
 
-## 1. The Bucketing Mindset
-
-Raw continuous values — age, revenue, session duration, order amount — are useless in GROUP BY. You can't group by `age = 27` and learn anything. Bucketing converts a continuous axis into **discrete, comparable groups**.
-
-```
-Raw column:  23, 27, 31, 45, 52, 67, 71, 84
-                         │
-                    BUCKET BY 20s
-                         │
-             20-29 → 2 users
-             30-39 → 1 user
-             40-49 → 1 user
-             50-59 → 1 user
-             60-69 → 1 user
-             70-79 → 1 user
-             80-89 → 1 user
-```
-
-**When to bucket:**
-- Visualizing distributions ("how are our users spread across age groups?")
-- Comparing metrics across tiers ("do high spenders churn less?")
-- Cohort analysis ("how does conversion differ by order size?")
-- Detecting skew / outliers ("is revenue concentrated in a few users?")
-
-**The three questions before writing any bucket query:**
-1. **Fixed or dynamic width?** — Do you want equal-sized ranges (0-10, 10-20) or equal-sized populations (each bucket has same number of users)?
-2. **Business-driven or data-driven?** — Business says "under 25, 25-34, 35-44, 45+" OR you let the data decide with NTILE/percentiles.
-3. **What to aggregate inside each bucket?** — Count, sum, average, conversion rate, retention rate?
-
----
-
-## 2. The Three Bucketing Methods
+## A. The Three Bucketing Methods
 
 | Method | What It Does | Use When |
 |--------|-------------|----------|
@@ -1792,7 +1741,7 @@ Each method solves a different problem. You'll mix them in real queries.
 
 ---
 
-## 3. Fixed-Width Buckets — CASE WHEN
+##  Fixed-Width Buckets — CASE WHEN
 
 **The most readable, most interview-friendly method. Use when a business person defined the tiers.**
 
