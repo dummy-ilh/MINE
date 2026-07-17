@@ -15,3 +15,8 @@ Ohe
 transform 
 outlier
 Feature Interactions & Crosses
+KL divergnve
+batch norm
+jacobian
+lr scheduler
+
