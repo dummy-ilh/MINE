@@ -177,6 +177,69 @@ ORDER BY row_count DESC;
 | Deduping training data vs serving data differently | Dedup logic for model training (keep all real labels) differs from serving (keep latest score) | Define dedup rules per use case explicitly |
 | Dedup after a JOIN causes row explosion | Joining before deduping multiplies duplicates | Dedup each table first, then join |
 | Using DISTINCT COUNT vs COUNT DISTINCT | `SELECT DISTINCT COUNT(*)` is wrong; `COUNT(DISTINCT col)` is right | Always `COUNT(DISTINCT col)` |
+---
+
+# SQL Deduplication
+
+## 2. The Core Pattern: ROW_NUMBER() + PARTITION BY
+
+```sql
+SELECT *
+FROM (
+    SELECT
+        t.*, --- or just *
+        ROW_NUMBER() OVER (
+            PARTITION BY user_id          -- the "duplicate key"
+            ORDER BY updated_at DESC      -- the tie-break rule
+        ) AS rn
+    FROM events t
+) ranked
+WHERE rn = 1;
+```
+
+**Why not `RANK()` or `DENSE_RANK()`?** Both can assign rank 1 to multiple rows when the `ORDER BY` column ties (e.g., two rows with the identical `updated_at`). If you use `RANK() = 1` for dedup and there's a tie, you get *both* rows back — silently re-introducing the duplicate you were trying to remove. `ROW_NUMBER()` always breaks ties by physical row order, guaranteeing exactly one row per partition. This is the single most common interview trap.
+
+
+Common trap: people write
+
+```sql
+SELECT user_id, MAX(updated_at) AS updated_at, status
+FROM events
+GROUP BY user_id
+```
+
+This is **invalid in strict SQL** (and misleading even where permitted, e.g. MySQL's non-strict mode) because `status` isn't functionally dependent on `user_id` in the `GROUP BY` — the engine picks an arbitrary `status` value, not necessarily the one that goes with the max `updated_at`. This is a classic L5 interview trap: candidates reach for `GROUP BY + MAX` when they actually need `ROW_NUMBER`.
+
+---
+
+
+```sql
+SELECT user_id, COUNT(*) AS cnt
+FROM events
+GROUP BY user_id
+HAVING COUNT(*) > 1;
+```
+
+To see the actual duplicate rows (not just counts):
+
+```sql
+SELECT *
+FROM events e
+WHERE user_id IN (
+    SELECT user_id FROM events GROUP BY user_id HAVING COUNT(*) > 1
+)
+ORDER BY user_id, updated_at;
+```
+
+
+ Why is `SELECT customer_id, MAX(created_at), status FROM orders GROUP BY customer_id` problematic if you want "the status of the most recent order per customer"? What's the correct rewrite?
+Common trap: people write
+
+SELECT user_id, MAX(updated_at) AS updated_at, status
+FROM events
+GROUP BY user_id
+
+This is invalid in strict SQL (and misleading even where permitted, e.g. MySQL's non-strict mode) because status isn't functionally dependent on user_id in the GROUP BY — the engine picks an arbitrary status value, not necessarily the one that goes with the max updated_at. This is a classic L5 interview trap: candidates reach for GROUP BY + MAX when they actually need ROW_NUMBER.
 
 ---
 
