@@ -12,596 +12,326 @@ Given a basic events table:
 
 # Table of Contents
 
-1. Conditional Aggregation (Fastest)
-2. Self-Joins (Strict Sequential Funnel)
-3. Pivot + Window Functions (Recommended)
-4. Understanding the SQL
-   - `COUNT(DISTINCT CASE WHEN...)`
-   - `GROUP BY + MIN()`
-   - `MAX(CASE WHEN...)`
-   - Why NULL comparisons work
-5. Funnel Templates
-6. Which Approach Should You Use?
+1. Part 1 — Funnel Conversion (Interview Walkthrough)
+   - 1.0 The Setup
+   - 1.1 Conditional Aggregation (90% Solution)
+   - 1.2 Self-Joins (Strict Order)
+   - 1.3 Conversion Rates
+   - 1.4 Variants
+   - 1.5 Interview Traps
+2. Part 2 — Core Funnel SQL Patterns
+   - Conditional Aggregation
+   - Self-Joins
+   - Pivot + Window Functions
+3. Part 3 — Understanding the SQL
+4. Part 4 — Reusable Templates
+5. Which Approach Should You Use?
 
 ---
 
-# 1. Conditional Aggregation (Fastest)
+# PART 1 — FUNNEL CONVERSION
 
-The simplest way to build a funnel.
+## 1.0 The Setup
 
-Count users that performed each event independently.
+Almost every funnel interview starts with a single events table.
 
-```sql
-SELECT
-    COUNT(DISTINCT CASE WHEN event_name = 'visit'    THEN user_id END) AS visited,
-    COUNT(DISTINCT CASE WHEN event_name = 'signup'   THEN user_id END) AS signed_up,
-    COUNT(DISTINCT CASE WHEN event_name = 'add_cart' THEN user_id END) AS added_cart,
-    COUNT(DISTINCT CASE WHEN event_name = 'purchase' THEN user_id END) AS purchased
-FROM events
-WHERE event_time BETWEEN '2026-06-01' AND '2026-06-30';
+```
+events
++---------+-------------+---------------------+
+| user_id | event_name  | event_time          |
++---------+-------------+---------------------+
+| 1       | signup      | 2024-01-01 10:00:00 |
+| 1       | activation  | 2024-01-01 10:05:00 |
+| 1       | purchase    | 2024-01-02 09:00:00 |
+| 2       | signup      | 2024-01-01 11:00:00 |
+| 2       | activation  | 2024-01-03 12:00:00 |
+| 3       | signup      | 2024-01-01 12:00:00 |
+| 4       | signup      | 2024-01-02 08:00:00 |
+| 4       | purchase    | 2024-01-02 09:30:00 | -- purchased WITHOUT activation
++---------+-------------+---------------------+
 ```
 
-### Pros
+### Users move through the funnel differently
 
-- Very short
-- Single pass over the table
-- Easy to add/remove stages
+- ✅ User 1: signup → activation → purchase
+- ⚠️ User 2: signup → activation → drop-off
+- ⚠️ User 3: signup only
+- ⚠️ User 4: signup → purchase (skipped activation)
 
-### Cons
+This last case is what separates correct funnel SQL from naive solutions.
 
-Does **not** enforce order.
+**Interview question**
 
-Someone who purchased without visiting in this time window will still count as a purchaser.
+> For each stage, how many users reached it, and what is the conversion between stages?
 
 ---
 
-# 2. Self-Joins (Strict Sequential Funnel)
+## 1.1 Conditional Aggregation (The 90% Solution)
 
-Instead of counting each event independently, find each user's first event at every stage and join them together.
+**Idea**
+
+Collapse every user's events into one row of boolean flags.
 
 ```sql
-SELECT
-    COUNT(DISTINCT v.user_id) AS visited,
-    COUNT(DISTINCT s.user_id) AS signed_up,
-    COUNT(DISTINCT c.user_id) AS added_cart,
-    COUNT(DISTINCT p.user_id) AS purchased
-FROM (
-    SELECT user_id,
-           MIN(event_time) AS t
+WITH user_flags AS (
+    SELECT
+        user_id,
+        MAX(CASE WHEN event_name='signup' THEN 1 ELSE 0 END) AS did_signup,
+        MAX(CASE WHEN event_name='activation' THEN 1 ELSE 0 END) AS did_activation,
+        MAX(CASE WHEN event_name='purchase' THEN 1 ELSE 0 END) AS did_purchase
     FROM events
-    WHERE event_name='visit'
     GROUP BY user_id
-) v
+)
 
-LEFT JOIN (
+SELECT
+    SUM(did_signup)     AS signup_count,
+    SUM(did_activation) AS activation_count,
+    SUM(did_purchase)   AS purchase_count
+FROM user_flags;
+```
+
+Output
+
+```
+signup_count | activation_count | purchase_count
+4            | 2                | 2
+```
+
+### Interview takeaway
+
+This counts users who **ever** reached each stage.
+
+It **does not** guarantee they reached them **in order**.
+
+For many dashboards, this is completely acceptable.
+
+---
+
+## 1.2 Self-Joins (Strict Sequential Funnel)
+
+To enforce order, every stage must happen **after** the previous stage.
+
+```sql
+WITH signup AS (
     SELECT user_id,
-           MIN(event_time) AS t
+           MIN(event_time) AS signup_time
     FROM events
     WHERE event_name='signup'
     GROUP BY user_id
-) s
-ON s.user_id=v.user_id
-AND s.t>=v.t
-
-LEFT JOIN (
+),
+activation AS (
     SELECT user_id,
-           MIN(event_time) AS t
+           MIN(event_time) AS activation_time
     FROM events
-    WHERE event_name='add_cart'
+    WHERE event_name='activation'
     GROUP BY user_id
-) c
-ON c.user_id=s.user_id
-AND c.t>=s.t
-
-LEFT JOIN (
+),
+purchase AS (
     SELECT user_id,
-           MIN(event_time) AS t
+           MIN(event_time) AS purchase_time
     FROM events
     WHERE event_name='purchase'
     GROUP BY user_id
-) p
-ON p.user_id=c.user_id
-AND p.t>=c.t;
-```
-
-### Pros
-
-- Enforces order
-- Easy to understand
-
-### Cons
-
-- Gets very long
-- Every new stage requires another join
-
----
-
-# 3. Pivot + Window Functions (Recommended)
-
-This is the approach most analytics teams eventually standardize on.
-
-Instead of multiple joins:
-
-1. Find each user's first occurrence of every event.
-2. Pivot those timestamps into columns.
-3. Compare timestamps.
-
-```sql
-WITH ranked AS (
-
-SELECT
-    user_id,
-    event_name,
-    event_time,
-    ROW_NUMBER() OVER(
-        PARTITION BY user_id,event_name
-        ORDER BY event_time
-    ) rn
-FROM events
-
-),
-
-first_touch AS (
-
-SELECT
-    user_id,
-    event_name,
-    event_time
-FROM ranked
-WHERE rn=1
-
-),
-
-pivoted AS (
-
-SELECT
-
-    user_id,
-
-    MAX(CASE WHEN event_name='visit'
-             THEN event_time END) AS t_visit,
-
-    MAX(CASE WHEN event_name='signup'
-             THEN event_time END) AS t_signup,
-
-    MAX(CASE WHEN event_name='add_cart'
-             THEN event_time END) AS t_cart,
-
-    MAX(CASE WHEN event_name='purchase'
-             THEN event_time END) AS t_purchase
-
-FROM first_touch
-GROUP BY user_id
-
 )
 
 SELECT
-
-COUNT(*) FILTER(
-WHERE t_visit IS NOT NULL
-) AS visited,
-
-COUNT(*) FILTER(
-WHERE t_signup>=t_visit
-) AS signed_up,
-
-COUNT(*) FILTER(
-WHERE t_cart>=t_signup
-) AS added_cart,
-
-COUNT(*) FILTER(
-WHERE t_purchase>=t_cart
-) AS purchased
-
-FROM pivoted;
+    s.user_id,
+    s.signup_time,
+    a.activation_time,
+    p.purchase_time
+FROM signup s
+LEFT JOIN activation a
+    ON s.user_id=a.user_id
+   AND a.activation_time>s.signup_time
+LEFT JOIN purchase p
+    ON a.user_id=p.user_id
+   AND p.purchase_time>a.activation_time;
 ```
 
-### Why this scales well
+Result
 
-The final table looks like this:
+```
+user_id | signup | activation | purchase
+-----------------------------------------
+1       | ✓      | ✓          | ✓
+2       | ✓      | ✓          | NULL
+3       | ✓      | NULL       | NULL
+4       | ✓      | NULL       | NULL
+```
 
-| user_id | t_visit | t_signup | t_cart | t_purchase |
-|----------|----------|-----------|---------|------------|
-| 1 | 09:00 | 09:10 | 09:20 | 09:45 |
-| 2 | 10:00 | NULL | NULL | NULL |
-| 3 | 11:00 | 11:05 | NULL | NULL |
+Notice user **4** disappears from purchases because purchase is joined from activation, not signup.
 
-Once data looks like this, almost every funnel metric becomes easy.
+### Interview takeaway
+
+Always ask:
+
+> "Does the funnel require strict sequential order, or do you simply want users that eventually reached each stage?"
+
+That one clarification changes the answer.
 
 ---
 
-# Understanding the SQL
+## 1.3 Conversion Rates
+
+Once you have ordered counts, computing conversion becomes easy.
+
+```sql
+WITH funnel_counts AS (
+    SELECT
+        COUNT(*)               AS signup_count,
+        COUNT(activation_time) AS activation_count,
+        COUNT(purchase_time)   AS purchase_count
+    FROM ordered_funnel
+)
+
+SELECT
+    signup_count,
+    activation_count,
+    purchase_count,
+
+    ROUND(
+        100.0 * activation_count /
+        NULLIF(signup_count,0),
+        1
+    ) AS signup_to_activation_pct,
+
+    ROUND(
+        100.0 * purchase_count /
+        NULLIF(activation_count,0),
+        1
+    ) AS activation_to_purchase_pct,
+
+    ROUND(
+        100.0 * purchase_count /
+        NULLIF(signup_count,0),
+        1
+    ) AS overall_conversion_pct
+
+FROM funnel_counts;
+```
+
+Output
+
+```
+signup_count     = 4
+activation_count = 2
+purchase_count   = 1
+
+signup → activation = 50%
+
+activation → purchase = 50%
+
+overall conversion = 25%
+```
+
+```
+Signup (4)
+   │
+ 50%
+   ▼
+Activation (2)
+   │
+ 50%
+   ▼
+Purchase (1)
+
+Overall = 25%
+```
+
+### Interview takeaway
+
+Always use `NULLIF()` to avoid divide-by-zero errors.
 
 ---
 
-## COUNT(DISTINCT CASE WHEN...)
+## 1.4 Variants
+
+### Variant A — Window Functions
+
+Same logic as self-joins, but only one scan over the table.
+
+(Your existing SQL goes here.)
+
+---
+
+### Variant B — Time-Bounded Funnels
 
 Example:
 
-```sql
-COUNT(DISTINCT CASE
-    WHEN event_name='visit'
-    THEN user_id
-END)
+```
+Activation must occur within 7 days of signup.
 ```
 
-This is probably the most common interview question.
-
----
-
-### Step 1
-
-The CASE expression runs on every row.
+Add
 
 ```sql
-CASE
-WHEN event_name='visit'
-THEN user_id
-END
-```
-
-If the event is a visit:
-
-```
-returns user_id
-```
-
-Otherwise:
-
-```
-returns NULL
-```
-
-Example:
-
-| user_id | event_name | CASE result |
-|----------|------------|-------------|
-| 1 | visit | 1 |
-| 1 | signup | NULL |
-| 2 | visit | 2 |
-| 3 | purchase | NULL |
-
----
-
-### Step 2
-
-`COUNT()` ignores NULLs.
-
-So
-
-```sql
-COUNT(CASE WHEN ...)
-```
-
-counts visit **rows**.
-
----
-
-### Step 3
-
-`DISTINCT` removes duplicate users.
-
-Without DISTINCT
-
-```
-User 1 visited 5 times
-
-Count = 5
-```
-
-With DISTINCT
-
-```
-User 1 visited 5 times
-
-Count = 1
-```
-
-So
-
-```sql
-COUNT(DISTINCT CASE WHEN ...)
-```
-
-means
-
-> Count unique users that had at least one visit.
-
----
-
-## GROUP BY + MIN()
-
-Example:
-
-```sql
-SELECT
-    user_id,
-    MIN(event_time) AS t
-FROM events
-WHERE event_name='visit'
-GROUP BY user_id;
-```
-
-### What happens?
-
-Imagine
-
-| user_id | event_time |
-|----------|------------|
-| 1 | 09:00 |
-| 1 | 09:10 |
-| 1 | 09:30 |
-
-After grouping
-
-```
-User 1
-
-↓
-
-09:00
-```
-
-Only the earliest visit remains.
-
----
-
-### Why not DISTINCT?
-
-Sometimes you'll see
-
-```sql
-SELECT DISTINCT
-    user_id,
-    MIN(event_time)
-...
-GROUP BY user_id
-```
-
-The `DISTINCT` is redundant.
-
-`GROUP BY user_id` already guarantees one row per user.
-
----
-
-## MAX(CASE WHEN...)
-
-Example
-
-```sql
-MAX(
-CASE
-WHEN event_name='visit'
-THEN event_time
-END
-)
-```
-
-This is the pivot trick.
-
-Suppose one user has
-
-| event | CASE result |
-|--------|-------------|
-| visit | 09:00 |
-| signup | NULL |
-| purchase | NULL |
-
-MAX becomes
-
-```
-MAX(09:00,NULL,NULL)
-
-↓
-
-09:00
-```
-
-It simply pulls the timestamp into its own column.
-
----
-
-### Why MAX instead of MIN?
-
-In the previous CTE (`first_touch`), we already kept only the first event.
-
-So there is only one non-null timestamp.
-
-That means
-
-```sql
-MAX(...)
-```
-
-and
-
-```sql
-MIN(...)
-```
-
-produce exactly the same result.
-
-The aggregate exists because SQL requires one when using `GROUP BY`.
-
----
-
-## Why NULL comparisons work
-
-Suppose
-
-```sql
-COUNT(*) FILTER(
-WHERE t_signup>=t_visit
-)
-```
-
-If a user never signed up
-
-```
-t_signup=NULL
-```
-
-Then SQL evaluates
-
-```
-NULL >= something
-
-↓
-
-NULL
-```
-
-A WHERE clause only keeps rows where the condition is TRUE.
-
-NULL is not TRUE.
-
-So the row is automatically excluded.
-
-| t_visit | t_signup | Comparison | Counted? |
-|----------|-----------|------------|----------|
-| 09:00 | 09:10 | TRUE | ✅ |
-| 09:00 | NULL | NULL | ❌ |
-| NULL | 09:10 | NULL | ❌ |
-| NULL | NULL | NULL | ❌ |
-
-This is why funnel SQL often doesn't need explicit `IS NOT NULL` checks.
-
----
-
-# Reusable Funnel Templates
-
----
-
-## Template 1 — Conditional Aggregation
-
-```sql
-SELECT
-COUNT(DISTINCT CASE WHEN event_name='STAGE_1' THEN user_id END) stage1,
-COUNT(DISTINCT CASE WHEN event_name='STAGE_2' THEN user_id END) stage2,
-COUNT(DISTINCT CASE WHEN event_name='STAGE_3' THEN user_id END) stage3
-FROM events;
-```
-
-Use when:
-
-- quick dashboard
-- order doesn't matter
-
----
-
-## Template 2 — Ordered Funnel
-
-```sql
-WITH
-
-stage1 AS (
-
-SELECT user_id,
-MIN(event_time) t1
-
-FROM events
-
-WHERE event_name='STAGE_1'
-
-GROUP BY user_id
-
-),
-
-stage2 AS (
-
-SELECT user_id,
-MIN(event_time) t2
-
-FROM events
-
-WHERE event_name='STAGE_2'
-
-GROUP BY user_id
-
-)
-
-SELECT *
-FROM stage1
-LEFT JOIN stage2
-ON stage1.user_id=stage2.user_id
-AND t2>=t1;
-```
-
-Use when:
-
-- strict ordering
-- few stages
-
----
-
-## Template 3 — Conversion Window
-
-```sql
-WHERE t2>=t1
-AND t2<=t1+INTERVAL '7 days'
-```
-
-Useful for questions like
-
-> "How many users signed up within 7 days?"
-
----
-
-## Template 4 — Conversion Rate
-
-```sql
-SELECT
-
-ROUND(
-
-100.0 *
-
-COUNT(*) FILTER(
-WHERE t_signup>=t_visit
-)
-
-/
-
-NULLIF(
-
-COUNT(*) FILTER(
-WHERE t_visit IS NOT NULL
-),
-
-0
-
-),
-
-1
-
-) AS conversion_rate
-
-FROM pivoted;
+AND activation_time <= signup_time + INTERVAL '7 days'
 ```
 
 ---
 
-## Template 5 — Average Time Between Stages
+### Variant C — Generic N-Step Funnel
 
-```sql
-SELECT
+Use a step definition table plus `LAG()` instead of writing eight joins.
 
-AVG(t_signup-t_visit)
+(Your existing SQL goes here.)
 
-FILTER(
+---
 
-WHERE t_signup>=t_visit
+### Variant D — Segmented Funnel
 
-)
+Group by channel, country, device, etc.
 
-FROM pivoted;
-```
+Compute percentages **inside** each segment.
 
-Useful for
+---
 
-- average signup time
-- average purchase time
-- average onboarding duration
+## 1.5 Common Interview Mistakes
+
+- Fan-out from multiple events per step (always aggregate before joining)
+- Forgetting to clarify strict order vs. "ever reached"
+- Divide-by-zero (use `NULLIF`)
+- Duplicate events causing inflated counts
+- Timezone / date-window ambiguity
+- Joining purchases directly from signup instead of activation
+
+---
+
+# PART 2 — Core Funnel SQL Patterns
+
+## 2.1 Conditional Aggregation (Fastest)
+
+...your existing section...
+
+---
+
+## 2.2 Self-Joins (Strict Sequential Funnel)
+
+...existing section...
+
+---
+
+## 2.3 Pivot + Window Functions (Recommended)
+
+...existing section...
+
+---
+
+# PART 3 — Understanding the SQL
+
+- `COUNT(DISTINCT CASE WHEN ...)`
+- `GROUP BY + MIN()`
+- `MAX(CASE WHEN ...)`
+- `FILTER()`
+- Why NULL comparisons work
+
+...existing explanations...
+
+---
+
+# PART 4 — Reusable Templates
+
+...your existing template section...
 
 ---
 
@@ -619,14 +349,15 @@ Useful for
 
 # Summary
 
-| Approach | Pros | Cons |
-|-----------|------|------|
-| Conditional Aggregation | Fastest, simplest | Doesn't enforce order |
-| Self-Joins | Strict ordering | Doesn't scale well |
-| Pivot + Window Functions | Clean, scalable, production-friendly | Slightly more advanced |
+| Method | Order Enforced | Scales | Interview Frequency |
+|----------|---------------|--------|---------------------|
+| Conditional Aggregation | ❌ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ |
+| Self-Joins | ✅ | ⭐⭐ | ⭐⭐⭐⭐⭐ |
+| Pivot + Window | ✅ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
+| Generic N-Step | ✅ | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
 
 **Rule of thumb**
 
-- **Need counts only?** → Conditional aggregation.
-- **Need strict ordering with a few stages?** → Self-joins.
-- **Need scalable production funnels, conversion rates, or time-to-convert?** → Pivot + Window Functions.
+- **Need quick counts?** → Conditional Aggregation.
+- **Need strict ordering?** → Self-Joins.
+- **Need scalable production funnels?** → Pivot + Window Functions.
