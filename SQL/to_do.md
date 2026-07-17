@@ -1,10 +1,9 @@
-1. **Funnel conversion** — signup → activation → purchase, step-by-step drop-off, usually via conditional aggregation or self-joins on a session/user timeline.
+
 2. **Gaps and islands** — find consecutive streaks (active days, login streaks) or find gaps (missing dates, churn windows).
 3. **Cohort retention** — group users by signup week/month, track what % return in week N.
 
 8. **Sessionization** — group events into sessions based on time gaps between them.
 
-14. **Hierarchical/recursive queries** — org charts, category trees, recursive CTEs.
 
 
 GROUP BY with CASE WHEN
