@@ -434,6 +434,169 @@ FROM crosstab(
 | NULL vs 0 in pivot | `CASE WHEN ... THEN val END` returns NULL (not 0) when condition is false | Use `COALESCE(MAX(CASE WHEN ... THEN val END), 0)` if 0 is the right default |
 | Unpivot column count mismatch | UNION ALL requires same number of columns with compatible types | Cast as needed: `CAST(train_acc AS FLOAT)` |
 
+
+
+
+
+### What is pivoting?
+
+**Long format (normalized):**
+
+| student | subject | score |
+|---|---|---|
+| Alice | Math | 90 |
+| Alice | Science | 85 |
+| Bob | Math | 78 |
+| Bob | Science | 92 |
+
+**Wide format (pivoted):**
+
+| student | Math | Science |
+|---|---|---|
+| Alice | 90 | 85 |
+| Bob | 78 | 92 |
+
+Pivoting turns distinct **values** in one column into **separate columns**.
+
+---
+
+### The core pattern — `SUM(CASE WHEN ...)`
+
+Standard SQL has no `PIVOT` keyword (SQL Server and Oracle do, but MySQL and PostgreSQL do not). The portable pattern is:
+
+```sql
+SELECT
+    student,
+    SUM(CASE WHEN subject = 'Math'    THEN score END) AS math,
+    SUM(CASE WHEN subject = 'Science' THEN score END) AS science
+FROM   scores
+GROUP  BY student;
+```
+
+#### How it works, step by step
+
+1. `GROUP BY student` — one output row per student.
+2. For each group, `SUM(CASE WHEN subject = 'Math' THEN score END)` walks every row in that group.
+   - If `subject = 'Math'`, it contributes the `score` value.
+   - Otherwise it contributes `NULL` (implicit `ELSE NULL`).
+3. `SUM(NULL)` = `NULL` but `SUM(90, NULL, NULL)` = `90`.
+4. Result: one column per subject, populated only where that condition is true.
+
+#### Why `SUM` and not `MAX` or `MIN`?
+
+| Aggregate | Use when |
+|---|---|
+| `SUM` | Scores, amounts — you want totals |
+| `MAX` | You want the single value (when there's only one per group) |
+| `MIN` | Same as MAX — choose based on semantics |
+| `COUNT` | Counting occurrences |
+
+If a student can only have one score per subject, `MAX` and `SUM` give the same result. `MAX` is often clearer semantically in that case ("give me the value, not the sum").
+
+#### Why it fails (common mistakes)
+
+| Mistake | Result |
+|---|---|
+| Forget `GROUP BY` | Collapses entire table into one row |
+| Use `WHERE subject = 'Math'` instead of `CASE WHEN` | Filters out all Science rows before aggregation — Science column is always NULL |
+| Use `CASE WHEN` without an aggregate | Syntax error or wrong results; CASE alone returns per-row values, not per-group |
+| Use `ELSE 0` in numeric SUM | `SUM(0)` is 0, not NULL — silently replaces missing data with 0, which is misleading |
+
+---
+
+### Extended example — multiple aggregates in one pivot
+
+**Table: `sales`**
+
+| rep | region | amount |
+|---|---|---|
+| Alice | North | 100 |
+| Alice | South | 200 |
+| Bob | North | 150 |
+| Bob | North | 50 |
+| Bob | South | 300 |
+
+**Goal:** Total and count of sales per rep, broken out by region.
+
+```sql
+SELECT
+    rep,
+    SUM(CASE WHEN region = 'North' THEN amount END) AS north_total,
+    COUNT(CASE WHEN region = 'North' THEN 1 END)    AS north_count,
+    SUM(CASE WHEN region = 'South' THEN amount END) AS south_total,
+    COUNT(CASE WHEN region = 'South' THEN 1 END)    AS south_count
+FROM   sales
+GROUP  BY rep;
+```
+
+**Output:**
+
+| rep | north_total | north_count | south_total | south_count |
+|---|---|---|---|---|
+| Alice | 100 | 1 | 200 | 1 |
+| Bob | 200 | 2 | 300 | 1 |
+
+Note: `COUNT(CASE WHEN ... THEN 1 END)` counts non-NULL values — since the CASE returns 1 (non-NULL) only when the condition is true, this counts matching rows per group.
+
+---
+
+### Unpivoting — wide to long
+
+The reverse operation: turn column headers back into row values.
+
+**Table: `wide_scores`**
+
+| student | math | science |
+|---|---|---|
+| Alice | 90 | 85 |
+| Bob | 78 | 92 |
+
+**Using UNION ALL (portable):**
+
+```sql
+SELECT student, 'Math'    AS subject, math    AS score FROM wide_scores
+UNION ALL
+SELECT student, 'Science' AS subject, science AS score FROM wide_scores;
+```
+
+**Output:**
+
+| student | subject | score |
+|---|---|---|
+| Alice | Math | 90 |
+| Alice | Science | 85 |
+| Bob | Math | 78 |
+| Bob | Science | 92 |
+
+Each `SELECT` extracts one column as a row, then `UNION ALL` stacks them.
+
+**PostgreSQL alternative with `CROSS JOIN LATERAL`:**
+
+```sql
+SELECT student, subject, score
+FROM   wide_scores
+CROSS  JOIN LATERAL (
+    VALUES ('Math', math), ('Science', science)
+) AS t(subject, score);
+```
+
+More concise as the number of columns grows; avoids repeating the table scan.
+
+#### Why `UNION ALL` not `UNION`?
+
+`UNION` deduplicates rows. If two students happened to have the same name, subject, and score, `UNION` would silently remove one row. `UNION ALL` keeps all rows — which is correct for unpivoting.
+
+---
+
+## Summary: when to use what
+
+| Need | Technique |
+|---|---|
+| Both sides of a within-table relationship (hierarchy, co-purchase, pairs) | Self-join with two aliases |
+| All unordered pairs | Self-join with `a.id < b.id` |
+| Friends of friends / multi-hop | Chain of self-joins |
+| Turn row values into columns | `SUM(CASE WHEN ...)` + `GROUP BY` |
+| Turn columns into rows | `UNION ALL` per column, or `CROSS JOIN LATERAL (VALUES ...)` |
 ---
 
 ## 28. GROUPING SETS, ROLLUP, CUBE
@@ -932,5 +1095,173 @@ ARRAY_SIZE(array_col)        -- BigQuery / Spark SQL
 
 ---
 
-*End of Module 4 — Advanced Aggregation Patterns.*
-*Module 5 will cover: Query Optimisation — indexes, EXPLAIN, partitioning, query rewrites, common anti-patterns.*
+# SQL deep dive: self-joins and pivoting
+
+---
+
+## Part 1 — Self-join
+
+### What is a self-join?
+
+A self-join joins a table to itself. SQL has no special `SELF JOIN` keyword — you just reference the same table twice using two different aliases.
+
+```sql
+SELECT a.col, b.col
+FROM my_table a
+JOIN my_table b ON a.some_col = b.other_col;
+```
+
+The aliases (`a`, `b`) are mandatory — without them, the database cannot distinguish which copy of the table each column reference belongs to.
+
+---
+
+### Why does it exist?
+
+Some relationships live inside a single table:
+
+| Scenario | Same table contains... |
+|---|---|
+| Org hierarchy | Employee → their Manager (also an employee) |
+| Friend graph | User A ↔ User B (both users) |
+| Co-purchase | Order rows for the same customer |
+| A/B pairing | Experiment arms in one log table |
+
+Pulling both sides of the relationship into one row requires reading the table twice — hence two aliases.
+
+---
+
+### Use case 1 — Users who bought both product A and product B
+
+**Table: `orders`**
+
+| user_id | product |
+|---|---|
+| 1 | A |
+| 1 | B |
+| 2 | A |
+| 3 | B |
+| 4 | A |
+| 4 | B |
+
+**Goal:** Find every `user_id` who bought **A and B**.
+
+```sql
+SELECT a.user_id
+FROM   orders a
+JOIN   orders b
+  ON   a.user_id = b.user_id   -- same customer
+ AND   a.product = 'A'          -- left copy: bought A
+ AND   b.product = 'B';         -- right copy: bought B
+```
+
+**Output:**
+
+| user_id |
+|---|
+| 1 |
+| 4 |
+
+#### Why it works
+
+- `a` is every row where `product = 'A'`.
+- `b` is every row where `product = 'B'`.
+- The `ON a.user_id = b.user_id` condition stitches them together — only users who appear in **both** filtered sets survive.
+
+#### Why it fails (common mistakes)
+
+| Mistake | What happens |
+|---|---|
+| Forget `AND a.product = 'A'` | Joins every row to every row for the same user — massive cross-product |
+| Use `WHERE` instead of `AND` in the join | Logically equivalent for inner joins, but confusing; gets wrong results with outer joins |
+| Use `a.product = b.product` | Only matches rows with the same product — returns nothing useful |
+
+---
+
+### Use case 2 — Pairwise comparison (every distinct pair of users in the same city)
+
+**Table: `users`**
+
+| id | name | city |
+|---|---|---|
+| 1 | Alice | NYC |
+| 2 | Bob | NYC |
+| 3 | Carol | NYC |
+| 4 | Dan | LA |
+
+**Goal:** All unordered pairs of users in the same city.
+
+```sql
+SELECT a.name AS user_1,
+       b.name AS user_2,
+       a.city
+FROM   users a
+JOIN   users b
+  ON   a.city = b.city
+ AND   a.id < b.id;   -- prevents (Alice,Bob) AND (Bob,Alice); also removes self-pairs
+```
+
+**Output:**
+
+| user_1 | user_2 | city |
+|---|---|---|
+| Alice | Bob | NYC |
+| Alice | Carol | NYC |
+| Bob | Carol | NYC |
+
+#### The `a.id < b.id` trick
+
+Without it you get three problems in the result:
+
+1. **Self-pairs** — `(Alice, Alice)`.
+2. **Duplicates** — `(Alice, Bob)` and `(Bob, Alice)` both appear.
+3. Unnecessary row count explosion.
+
+`a.id < b.id` enforces a strict ordering — only the lower ID goes on the left. This eliminates all three at once.
+
+Using `a.id != b.id` removes self-pairs but still produces duplicates.
+Using `a.id > b.id` is equivalent to `<` — just mirror-image; pick one and be consistent.
+
+---
+
+### Use case 3 — Friend recommendations (friends of friends)
+
+**Table: `friendships`**
+
+| user_a | user_b |
+|---|---|
+| 1 | 2 |
+| 1 | 3 |
+| 2 | 4 |
+| 3 | 4 |
+
+**Goal:** Recommend users who are 2 hops away but not already friends.
+
+```sql
+SELECT DISTINCT f1.user_a AS user_id,
+                f2.user_b AS recommended
+FROM   friendships f1
+JOIN   friendships f2
+  ON   f1.user_b = f2.user_a           -- chain: user_a → bridge → recommended
+WHERE  f2.user_b != f1.user_a          -- don't recommend yourself
+  AND  NOT EXISTS (                     -- don't recommend existing friends
+         SELECT 1 FROM friendships f3
+          WHERE f3.user_a = f1.user_a
+            AND f3.user_b = f2.user_b
+       );
+```
+
+**Reading the chain:**
+
+```
+f1: user_a  →  bridge_user   (first hop)
+f2:            bridge_user  →  recommended   (second hop)
+```
+
+The `JOIN ON f1.user_b = f2.user_a` is the pivot point — it connects the end of the first friendship to the start of the second.
+
+#### Why it fails without the NOT EXISTS
+
+Without the `NOT EXISTS`, you recommend people who are already friends, which is noisy and wrong for a recommendation engine. You could also use a `LEFT JOIN` + `WHERE f3.user_a IS NULL` pattern as an alternative.
+
+---
+
