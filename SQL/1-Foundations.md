@@ -681,6 +681,13 @@ Both let you define an intermediate result set. A **CTE (Common Table Expression
 ```sql
 -- Subquery style
 SELECT * FROM (SELECT ...) AS sub
+--
+SELECT name FROM employees
+WHERE salary > (SELECT AVG(salary) FROM employees);
+--
+SELECT name, salary,
+  (SELECT AVG(salary) FROM employees) AS company_avg
+FROM employees
 
 -- CTE style
 WITH sub AS (
@@ -690,7 +697,28 @@ SELECT * FROM sub
 ```
 
 CTEs can be referenced multiple times in the same query. Subqueries cannot (without repeating the SQL).
+---
+Correlated vs Non-Correlated Subqueries
+Non-Correlated — runs ONCE
 
+-- Inner query has no reference to outer query
+-- Runs independently, result is reused
+```SELECT name FROM employees
+WHERE salary > (SELECT AVG(salary) FROM employees);```
+--              ↑ runs once, returns one number
+
+Correlated — runs for EVERY row
+
+-- Inner query references outer query's current row
+-- Runs once PER ROW — can be slow on large tables
+```SELECT e.name, e.salary
+FROM employees e
+WHERE e.salary > (
+  SELECT AVG(salary)
+  FROM employees
+  WHERE department = e.department  -- ← references outer row
+);```
+-- For each employee, calculates avg of THEIR department
 ---
 
 ### Sample Table: `feature_importance`
@@ -725,7 +753,53 @@ JOIN (
 WHERE f.importance > avg_by_model.avg_imp
 ORDER BY f.model_name, f.importance DESC;
 ```
+---
+```
+-- EXISTS: stops as soon as it finds ONE match (short-circuits)
+SELECT name FROM employees e
+WHERE EXISTS (
+  SELECT 1 FROM departments d
+  WHERE d.dept_id = e.dept_id
+  AND d.location = 'NYC'
+);
+-- ✅ Faster for large datasets
+-- ✅ NULL-safe
+-- SELECT 1 is convention — EXISTS only cares if a row exists
 
+'SELECT name FROM employees e
+WHERE NOT EXISTS (
+  SELECT 1 FROM departments d
+  WHERE d.dept_id = e.dept_id
+  AND d.location = 'NYC'
+);
+
+-- Customers with at least one order over $500
+SELECT name FROM customers c
+WHERE EXISTS (
+  SELECT 1 FROM orders o
+  WHERE o.customer_id = c.customer_id AND o.amount > 500
+);
+
+-- Products never returned
+SELECT product_id, product_name FROM products p
+WHERE NOT EXISTS (
+  SELECT 1 FROM returns r WHERE r.product_id = p.product_id
+);
+
+-- Users who signed up but never logged in
+SELECT user_id, name FROM users u
+WHERE NOT EXISTS (
+  SELECT 1 FROM login_events l WHERE l.user_id = u.user_id
+);
+
+-- Managers with at least one report earning over 150k
+SELECT DISTINCT m.name AS manager
+FROM employees m
+WHERE EXISTS (
+  SELECT 1 FROM employees e
+  WHERE e.manager_id = m.emp_id AND e.salary > 150000
+);
+```
 ---
 
 ### Variant 2 — CTE (same logic, far more readable)
