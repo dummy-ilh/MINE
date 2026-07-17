@@ -1,0 +1,1316 @@
+# Recommender Systems SQL Masterclass
+### FAANG 30-Day Prep — Complete Reference
+
+---
+
+## Table of Contents
+
+1. [The Recommender Mindset](#1-the-recommender-mindset)
+2. [The Four Similarity Metrics](#2-the-four-similarity-metrics)
+3. [Item-Item Collaborative Filtering (Co-Purchase)](#3-item-item-collaborative-filtering-co-purchase)
+4. [Market Basket Analysis — Confidence & Lift](#4-market-basket-analysis--confidence--lift)
+5. [User-Based Collaborative Filtering (Jaccard)](#5-user-based-collaborative-filtering-jaccard)
+6. [User-Based Collaborative Filtering (Cosine / Implicit Feedback)](#6-user-based-collaborative-filtering-cosine--implicit-feedback)
+7. [Personalized Recommendations for a Specific User](#7-personalized-recommendations-for-a-specific-user)
+8. [Item-Item Recs for a Specific User ("Because You Bought X")](#8-item-item-recs-for-a-specific-user-because-you-bought-x)
+9. [Popularity-Based Fallback (Cold Start)](#9-popularity-based-fallback-cold-start)
+10. [Category Affinity Recommendations](#10-category-affinity-recommendations)
+11. [Session-Based Recommendations (Co-Views × CVR)](#11-session-based-recommendations-co-views--cvr)
+12. [Diversity & Re-Ranking](#12-diversity--re-ranking)
+13. [Full Pipeline — Item-Item + Fallback + Diversity](#13-full-pipeline--item-item--fallback--diversity)
+14. [Trending Score — Recency-Weighted Popularity](#14-trending-score--recency-weighted-popularity)
+15. [Author Engagement Rate + MoM Trend (Meta Pattern)](#15-author-engagement-rate--mom-trend-meta-pattern)
+16. [Key Takeaways Cheatsheet](#16-key-takeaways-cheatsheet)
+
+---
+
+## 1. The Recommender Mindset
+
+Every recommender system in SQL answers one question:
+
+> **"Given what we know about user X, what item should we surface next?"**
+
+There are three strategies, and real systems blend all three:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   RECOMMENDATION STRATEGIES                     │
+├─────────────────┬───────────────────────────┬───────────────────┤
+│  Collaborative  │     Content-Based         │  Hybrid / Rules   │
+│  Filtering      │     Filtering             │                   │
+├─────────────────┼───────────────────────────┼───────────────────┤
+│ User-based:     │ Match item attributes     │ Popularity        │
+│ similar users   │ to user profile           │ fallback          │
+│ → same items    │                           │                   │
+│                 │ e.g. "You like action     │ Category affinity │
+│ Item-based:     │ movies → here are more    │                   │
+│ similar items   │ action movies"            │ Session-based     │
+│ → next purchase │                           │ (real-time)       │
+└─────────────────┴───────────────────────────┴───────────────────┘
+```
+
+**Why item-item >> user-user at FAANG scale:**
+- User-user: compare every user to every other user → O(N²) pairs. With 1B users, this is impossible in real time.
+- Item-item: item similarities are pre-computed offline and stored. At query time, just look up the items the user has interacted with → fetch pre-computed similar items. O(1) online.
+
+**The cold-start problem:**
+- New user: no interaction history → fall back to popularity/trending.
+- New item: no co-purchase data → fall back to content-based (category, attributes).
+
+---
+
+## 2. The Four Similarity Metrics
+
+Before writing any query, understand what metric to use and why.
+
+### Jaccard Similarity
+
+```
+Jaccard(A, B) = |A ∩ B| / |A ∪ B|
+             = co_count / (count_a + count_b - co_count)
+```
+
+**Use when:** binary data (bought / not bought, liked / not liked). Penalizes popular items naturally — two niche items with 3 co-purchases out of 5 total are more similar than two popular items with 100 co-purchases out of 10,000.
+
+**Range:** 0 (no overlap) to 1 (identical sets).
+
+### Lift
+
+```
+Lift(A → B) = P(A and B) / (P(A) × P(B))
+            = (co_count × total_orders) / (count_a × count_b)
+```
+
+**Use when:** you want to measure how much MORE likely two items are to be bought together versus by random chance. Lift = 1 means independence. Lift > 1 means positive association.
+
+**Intuition:** If milk appears in 50% of baskets and bread in 40%, you'd expect them together in 20% of baskets by chance. If they appear together in 40%, lift = 40/20 = 2.
+
+### Confidence
+
+```
+Confidence(A → B) = P(A and B) / P(A)
+                  = co_count / count_a
+```
+
+**Use when:** directional rules ("if user buys A, show them B"). Confidence tells you: of all the times A was bought, how often was B also bought?
+
+**Caveat:** Confidence ignores B's popularity. If B is in 99% of all baskets, confidence is trivially high. Always pair with lift.
+
+### Cosine Similarity
+
+```
+Cosine(A, B) = dot_product(A, B) / (norm(A) × norm(B))
+             = Σ(score_a × score_b) / (√Σscore_a² × √Σscore_b²)
+```
+
+**Use when:** weighted/continuous data (view counts, ratings, implicit feedback scores). Two users who both rated the same movies similarly will have a high cosine — even if one is a light user and one is heavy, because cosine normalizes by magnitude.
+
+**Range:** 0 to 1 (with non-negative scores).
+
+---
+
+## 3. Item-Item Collaborative Filtering (Co-Purchase)
+
+**"Users who bought X also bought Y."** — The Amazon sidebar.
+
+### The Core Join Pattern
+
+The trick is a **self-join on `order_id`** — the same order contains both items:
+
+```sql
+FROM orders a
+JOIN orders b
+  ON  a.order_id   = b.order_id     -- same basket
+  AND a.product_id < b.product_id   -- canonical pair, no duplicates
+```
+
+### Full Query with Jaccard + Lift
+
+```sql
+-- Step 1: Find all co-purchased pairs + count
+WITH co_purchases AS (
+  SELECT
+    a.product_id                   AS product_a,
+    b.product_id                   AS product_b,
+    COUNT(DISTINCT a.order_id)     AS co_purchase_count
+  FROM orders a
+  JOIN orders b
+    ON  a.order_id   = b.order_id
+    AND a.product_id < b.product_id
+  GROUP BY a.product_id, b.product_id
+),
+-- Step 2: Individual product purchase counts
+product_counts AS (
+  SELECT product_id,
+    COUNT(DISTINCT order_id) AS total_orders
+  FROM orders
+  GROUP BY product_id
+),
+-- Step 3: Total orders in the catalog (for lift denominator)
+total AS (
+  SELECT COUNT(DISTINCT order_id) AS n FROM orders
+)
+SELECT
+  cp.product_a,
+  cp.product_b,
+  cp.co_purchase_count,
+  pa.total_orders                                           AS orders_a,
+  pb.total_orders                                           AS orders_b,
+  -- Jaccard: co_count / union
+  ROUND(cp.co_purchase_count * 1.0 /
+    (pa.total_orders + pb.total_orders - cp.co_purchase_count), 4)
+    AS jaccard_similarity,
+  -- Lift: (co_count × total) / (count_a × count_b)
+  ROUND(cp.co_purchase_count * 1.0 * t.n /
+    (pa.total_orders * pb.total_orders), 4)
+    AS lift,
+  -- Confidence A→B
+  ROUND(cp.co_purchase_count * 1.0 / pa.total_orders, 4)  AS confidence_a_to_b,
+  -- Confidence B→A
+  ROUND(cp.co_purchase_count * 1.0 / pb.total_orders, 4)  AS confidence_b_to_a
+FROM co_purchases cp
+JOIN product_counts pa ON cp.product_a = pa.product_id
+JOIN product_counts pb ON cp.product_b = pb.product_id
+CROSS JOIN total t
+ORDER BY lift DESC;
+```
+
+### CTE-Level I/O Trace
+
+**Input `orders`:**
+```
+order_id | user_id | product_id
+O1       | U1      | P1
+O1       | U1      | P2
+O1       | U1      | P3
+O2       | U2      | P1
+O2       | U2      | P2
+O3       | U3      | P2
+O3       | U3      | P3
+```
+
+**`co_purchases` — self-join on order_id, product_a < product_b:**
+
+Pairs from O1: (P1,P2), (P1,P3), (P2,P3)
+Pairs from O2: (P1,P2)
+Pairs from O3: (P2,P3)
+
+```
+product_a | product_b | co_purchase_count
+P1        | P2        | 2   (O1 and O2)
+P1        | P3        | 1   (O1 only)
+P2        | P3        | 2   (O1 and O3)
+```
+
+**`product_counts`:**
+```
+product_id | total_orders
+P1         | 2   (O1, O2)
+P2         | 3   (O1, O2, O3)
+P3         | 2   (O1, O3)
+```
+
+**`total`:** n = 3 orders
+
+**Final metrics for (P1, P2):**
+```
+co_count   = 2
+orders_a   = 2  (P1)
+orders_b   = 3  (P2)
+jaccard    = 2 / (2 + 3 - 2)    = 2/3  = 0.6667
+lift       = (2 × 3) / (2 × 3)  = 6/6  = 1.0000
+conf_a→b   = 2/2 = 1.0000  (every P1 order also had P2)
+conf_b→a   = 2/3 = 0.6667  (2/3 P2 orders also had P1)
+```
+
+**For (P2, P3):**
+```
+jaccard    = 2 / (3 + 2 - 2) = 2/3 = 0.6667
+lift       = (2 × 3) / (3 × 2) = 1.0000
+conf_a→b   = 2/3 = 0.6667
+```
+
+**Output:**
+```
+product_a | product_b | co_count | jaccard | lift   | conf_a→b | conf_b→a
+P1        | P2        | 2        | 0.6667  | 1.0000 | 1.0000   | 0.6667
+P2        | P3        | 2        | 0.6667  | 1.0000 | 0.6667   | 1.0000
+P1        | P3        | 1        | 0.3333  | 1.0000 | 0.5000   | 0.5000
+```
+
+> **Why does lift = 1.0 here?** With only 3 orders and these specific co-occurrences, the expected and actual co-purchase rates are equal. In real data, niche item pairs will have lift >> 1.
+
+---
+
+## 4. Market Basket Analysis — Confidence & Lift
+
+This is the same as above but with a **minimum support filter** (at least N co-purchases) to avoid noisy low-frequency pairs. This is the formal "Association Rule Mining" pattern used at Amazon.
+
+```sql
+WITH basket_pairs AS (
+  SELECT
+    a.product_id AS p1,
+    b.product_id AS p2,
+    COUNT(DISTINCT a.order_id) AS both_count
+  FROM orders a
+  JOIN orders b
+    ON a.order_id   = b.order_id
+    AND a.product_id < b.product_id
+  GROUP BY a.product_id, b.product_id
+  HAVING COUNT(DISTINCT a.order_id) >= 10    -- minimum support threshold
+),
+totals AS (
+  SELECT product_id, COUNT(DISTINCT order_id) AS cnt
+  FROM orders GROUP BY product_id
+),
+total_orders AS (
+  SELECT COUNT(DISTINCT order_id) AS n FROM orders
+)
+SELECT
+  bp.p1, bp.p2,
+  bp.both_count,
+  t1.cnt                                        AS count_p1,
+  t2.cnt                                        AS count_p2,
+  ROUND(bp.both_count * 1.0 / t1.cnt, 4)       AS confidence_p1_to_p2,
+  ROUND(bp.both_count * 1.0 / t2.cnt, 4)       AS confidence_p2_to_p1,
+  ROUND(bp.both_count * 1.0 * tot.n /
+    (t1.cnt * t2.cnt), 4)                       AS lift,
+  ROUND(bp.both_count * 1.0 /
+    (t1.cnt + t2.cnt - bp.both_count), 4)       AS jaccard
+FROM basket_pairs bp
+JOIN totals t1       ON bp.p1 = t1.product_id
+JOIN totals t2       ON bp.p2 = t2.product_id
+CROSS JOIN total_orders tot
+ORDER BY lift DESC, bp.both_count DESC;
+```
+
+### Interpreting the Output
+
+| Metric | Value | Meaning |
+|--------|-------|---------|
+| `confidence_p1_to_p2 = 0.80` | High | 80% of P1 buyers also bought P2 → strong rule |
+| `confidence_p2_to_p1 = 0.10` | Low | Only 10% of P2 buyers also bought P1 → P2 is very popular |
+| `lift = 3.50` | High | They're 3.5× more likely to be bought together than by chance |
+| `lift = 0.80` | < 1 | Negative association — buying P1 makes P2 less likely |
+
+**Decision rule for product page:** Surface P2 on P1's page (high confidence + high lift). Don't surface P1 on P2's page (low confidence in that direction).
+
+---
+
+## 5. User-Based Collaborative Filtering (Jaccard)
+
+**"Find users similar to user X based on purchase overlap → recommend what they bought."**
+
+### Step A — Compute All User Pair Similarities
+
+```sql
+-- Step 1: Binary user-product matrix (bought or not)
+WITH user_products AS (
+  SELECT DISTINCT user_id, product_id FROM orders
+),
+-- Step 2: Count products bought by each user
+user_counts AS (
+  SELECT user_id, COUNT(DISTINCT product_id) AS total_products
+  FROM orders GROUP BY user_id
+),
+-- Step 3: Find common products between all user pairs
+user_similarity AS (
+  SELECT
+    a.user_id AS user_a,
+    b.user_id AS user_b,
+    COUNT(*)  AS common_products       -- |A ∩ B|
+  FROM user_products a
+  JOIN user_products b
+    ON  a.product_id = b.product_id   -- shared product
+    AND a.user_id    < b.user_id      -- canonical pair
+  GROUP BY a.user_id, b.user_id
+)
+-- Step 4: Compute Jaccard
+SELECT
+  s.user_a,
+  s.user_b,
+  s.common_products,
+  pa.total_products  AS products_a,
+  pb.total_products  AS products_b,
+  ROUND(s.common_products * 1.0 /
+    (pa.total_products + pb.total_products - s.common_products), 4)
+    AS jaccard_similarity
+FROM user_similarity s
+JOIN user_counts pa ON s.user_a = pa.user_id
+JOIN user_counts pb ON s.user_b = pb.user_id
+ORDER BY jaccard_similarity DESC;
+```
+
+### CTE-Level I/O Trace
+
+**Input `orders`:**
+```
+user_id | product_id
+U1      | P1
+U1      | P2
+U1      | P3
+U2      | P1
+U2      | P2
+U2      | P4
+U3      | P3
+U3      | P5
+```
+
+**`user_products`** (DISTINCT, same as above)
+
+**`user_counts`:**
+```
+user_id | total_products
+U1      | 3   (P1, P2, P3)
+U2      | 3   (P1, P2, P4)
+U3      | 2   (P3, P5)
+```
+
+**`user_similarity`** — join on shared product, user_a < user_b:
+```
+Pair (U1, U2): common = P1, P2 → count = 2
+Pair (U1, U3): common = P3 → count = 1
+Pair (U2, U3): common = none → no rows (not joined)
+```
+
+```
+user_a | user_b | common_products
+U1     | U2     | 2
+U1     | U3     | 1
+```
+
+**Jaccard:**
+```
+(U1, U2): 2 / (3 + 3 - 2) = 2/4 = 0.5000
+(U1, U3): 1 / (3 + 2 - 1) = 1/4 = 0.2500
+```
+
+**Output:**
+```
+user_a | user_b | common_products | products_a | products_b | jaccard
+U1     | U2     | 2               | 3          | 3          | 0.5000
+U1     | U3     | 1               | 3          | 2          | 0.2500
+```
+
+---
+
+## 6. User-Based Collaborative Filtering (Cosine / Implicit Feedback)
+
+**When users have weighted interactions** (views, cart adds, purchases), Jaccard ignores signal strength. Cosine similarity captures it.
+
+```sql
+-- Step 1: Build weighted interaction scores per user-product
+WITH weighted AS (
+  SELECT user_id, product_id,
+    SUM(CASE
+      WHEN event_type = 'purchase'    THEN 10
+      WHEN event_type = 'add_to_cart' THEN 3
+      WHEN event_type = 'view'        THEN 1
+      ELSE 0
+    END) AS score
+  FROM events
+  GROUP BY user_id, product_id
+),
+-- Step 2: For each user pair, compute dot product and norms
+similarity AS (
+  SELECT
+    a.user_id AS user_a,
+    b.user_id AS user_b,
+    SUM(a.score * b.score)         AS dot_product,  -- Σ(score_a × score_b)
+    SQRT(SUM(POW(a.score, 2)))     AS norm_a,        -- √(Σ score_a²)
+    SQRT(SUM(POW(b.score, 2)))     AS norm_b         -- √(Σ score_b²)
+  FROM weighted a
+  JOIN weighted b
+    ON  a.product_id = b.product_id   -- same product (aligned dimensions)
+    AND a.user_id    < b.user_id
+  GROUP BY a.user_id, b.user_id
+)
+SELECT
+  user_a,
+  user_b,
+  dot_product,
+  ROUND(norm_a, 4) AS norm_a,
+  ROUND(norm_b, 4) AS norm_b,
+  ROUND(dot_product / NULLIF(norm_a * norm_b, 0), 4) AS cosine_similarity
+FROM similarity
+ORDER BY cosine_similarity DESC;
+```
+
+### CTE-Level I/O Trace
+
+**Input `events`:**
+```
+user_id | product_id | event_type
+U1      | P1         | purchase      (+10)
+U1      | P1         | view          (+1)
+U1      | P2         | add_to_cart   (+3)
+U2      | P1         | purchase      (+10)
+U2      | P2         | purchase      (+10)
+```
+
+**`weighted`:**
+```
+user_id | product_id | score
+U1      | P1         | 11   (10 + 1)
+U1      | P2         | 3    (3)
+U2      | P1         | 10
+U2      | P2         | 10
+```
+
+**`similarity`** — join U1 × U2 on shared products (P1 and P2):
+
+```
+Product P1: a.score=11, b.score=10 → dot contribution = 110
+Product P2: a.score=3,  b.score=10 → dot contribution = 30
+
+dot_product = 110 + 30 = 140
+norm_a = √(11² + 3²)  = √(121 + 9)  = √130 ≈ 11.402
+norm_b = √(10² + 10²) = √200        ≈ 14.142
+cosine = 140 / (11.402 × 14.142)   ≈ 140 / 161.24 ≈ 0.8682
+```
+
+**Output:**
+```
+user_a | user_b | dot_product | norm_a  | norm_b  | cosine_similarity
+U1     | U2     | 140         | 11.4018 | 14.1421 | 0.8682
+```
+
+> **Why not Jaccard here?** Jaccard would say U1 and U2 have Jaccard = 2/(2+2-2) = 1.0 — perfect similarity. But U2 has 10 purchase score on P2 while U1 only has 3 (cart add). Cosine captures that U2 is more committed to P2 than U1 — a meaningful distinction for recommending P2 to U1.
+
+---
+
+## 7. Personalized Recommendations for a Specific User
+
+**"Based on similar users, what should we recommend to user 101?"**
+
+```sql
+WITH user_products AS (
+  SELECT DISTINCT user_id, product_id FROM orders
+),
+-- Step 1: Find top 10 most similar users to 101
+similar_users AS (
+  SELECT
+    b.user_id  AS similar_user,
+    COUNT(*)   AS common_products       -- proxy for similarity
+  FROM user_products a
+  JOIN user_products b
+    ON  a.product_id = b.product_id
+    AND b.user_id   != 101
+  WHERE a.user_id = 101
+  GROUP BY b.user_id
+  ORDER BY common_products DESC
+  LIMIT 10
+),
+-- Step 2: Products user 101 already bought
+already_bought AS (
+  SELECT DISTINCT product_id FROM orders WHERE user_id = 101
+),
+-- Step 3: Aggregate products from similar users, score by weighted support
+candidates AS (
+  SELECT
+    up.product_id,
+    SUM(su.common_products)          AS recommendation_score,  -- weighted by similarity
+    COUNT(DISTINCT su.similar_user)  AS supporting_users        -- how many similar users have it
+  FROM similar_users su
+  JOIN user_products up ON su.similar_user = up.user_id
+  WHERE up.product_id NOT IN (SELECT product_id FROM already_bought)
+  GROUP BY up.product_id
+)
+SELECT
+  c.product_id,
+  p.name,
+  p.category,
+  c.recommendation_score,
+  c.supporting_users
+FROM candidates c
+JOIN products p ON c.product_id = p.product_id
+ORDER BY recommendation_score DESC
+LIMIT 20;
+```
+
+### CTE-Level I/O Trace
+
+User 101 has bought: {P1, P2, P3}
+
+**`similar_users`:**
+```
+similar_user | common_products
+U5           | 3   (bought P1, P2, P3)
+U7           | 2   (bought P1, P2)
+U9           | 1   (bought P3)
+```
+
+**Products from similar users NOT in {P1, P2, P3}:**
+```
+similar_user | product_id | common_products
+U5           | P10        | 3
+U5           | P11        | 3
+U7           | P10        | 2
+U9           | P15        | 1
+```
+
+**`candidates` — GROUP BY product_id, SUM(common_products):**
+```
+product_id | recommendation_score | supporting_users
+P10        | 3+2=5                | 2
+P11        | 3                    | 1
+P15        | 1                    | 1
+```
+
+**Output:**
+```
+product_id | name | category | recommendation_score | supporting_users
+P10        | ...  | ...      | 5                    | 2
+P11        | ...  | ...      | 3                    | 1
+P15        | ...  | ...      | 1                    | 1
+```
+
+**Why `SUM(common_products)` as score?** A recommendation supported by a user with 3 products in common with 101 is stronger evidence than one supported by a user with 1 product in common. This weights each similar user's contribution by their similarity to 101.
+
+---
+
+## 8. Item-Item Recs for a Specific User ("Because You Bought X")
+
+**"For user 101 who bought {P1, P2, P3}, find all items co-purchased with those items, excluding already-bought items."**
+
+This is the scalable FAANG pattern — pre-computed item similarities, applied per user at query time.
+
+```sql
+WITH already_bought AS (
+  SELECT DISTINCT product_id FROM orders WHERE user_id = 101
+),
+-- Step 1: For each product 101 bought, find co-purchased items
+co_purchases AS (
+  SELECT
+    a.product_id  AS seed_product,     -- what user already bought
+    b.product_id  AS recommended,      -- what to recommend
+    COUNT(DISTINCT a.order_id) AS co_count
+  FROM orders a
+  JOIN orders b
+    ON  a.order_id   = b.order_id
+    AND a.product_id != b.product_id   -- not the same product
+  WHERE a.product_id IN (SELECT product_id FROM already_bought)
+    AND b.product_id NOT IN (SELECT product_id FROM already_bought)
+  GROUP BY a.product_id, b.product_id
+),
+-- Step 2: Aggregate across all seed products
+aggregated AS (
+  SELECT
+    recommended,
+    SUM(co_count)                 AS total_co_purchase_score,
+    COUNT(DISTINCT seed_product)  AS triggered_by_n_seeds,   -- diversity signal
+    MAX(co_count)                 AS best_single_seed_score
+  FROM co_purchases
+  GROUP BY recommended
+)
+SELECT
+  a.recommended                    AS product_id,
+  p.name,
+  p.category,
+  a.total_co_purchase_score,
+  a.triggered_by_n_seeds,
+  a.best_single_seed_score
+FROM aggregated a
+JOIN products p ON a.recommended = p.product_id
+ORDER BY total_co_purchase_score DESC
+LIMIT 20;
+```
+
+### CTE-Level I/O Trace
+
+User 101 has bought: {P1, P2}
+
+**Self-join on orders, seed in {P1,P2}, recommended NOT in {P1,P2}:**
+
+```
+seed_product | recommended | co_count
+P1           | P4          | 15   (P4 bought with P1 in 15 orders)
+P1           | P5          | 8
+P2           | P4          | 12
+P2           | P6          | 5
+```
+
+**`aggregated`:**
+```
+recommended | total_score | triggered_by | best_single
+P4          | 15+12=27    | 2            | 15
+P5          | 8           | 1            | 8
+P6          | 5           | 1            | 5
+```
+
+**Key insight — `triggered_by_n_seeds`:** P4 is recommended by BOTH P1 AND P2 the user bought. This "triangulation" signal is much stronger than if only one seed triggered it. You can use this as a secondary sort or boost multiplier.
+
+---
+
+## 9. Popularity-Based Fallback (Cold Start)
+
+**For new users with no history — rank everything by trending score.**
+
+```sql
+WITH product_stats AS (
+  SELECT
+    product_id,
+    COUNT(DISTINCT order_id)   AS purchase_count,
+    COUNT(DISTINCT user_id)    AS unique_buyers,
+    SUM(amount)                AS total_revenue,
+    -- Recency buckets
+    SUM(CASE WHEN order_date >= CURRENT_DATE - INTERVAL 7  DAY
+             THEN 1 ELSE 0 END)  AS purchases_7d,
+    SUM(CASE WHEN order_date >= CURRENT_DATE - INTERVAL 30 DAY
+             THEN 1 ELSE 0 END)  AS purchases_30d,
+    SUM(CASE WHEN order_date >= CURRENT_DATE - INTERVAL 90 DAY
+             THEN 1 ELSE 0 END)  AS purchases_90d
+  FROM orders
+  GROUP BY product_id
+)
+SELECT
+  product_id,
+  purchase_count,
+  unique_buyers,
+  total_revenue,
+  purchases_7d,
+  purchases_30d,
+  -- Trending score: heavier weight on recent purchases
+  ROUND(
+    purchases_7d  * 0.50 +
+    purchases_30d * 0.30 +
+    unique_buyers * 0.20
+  , 2)                                              AS trending_score,
+  RANK() OVER (ORDER BY purchases_7d   DESC)        AS trending_rank,
+  RANK() OVER (ORDER BY purchase_count DESC)        AS all_time_rank,
+  RANK() OVER (ORDER BY unique_buyers  DESC)        AS reach_rank
+FROM product_stats
+ORDER BY trending_score DESC
+LIMIT 50;
+```
+
+### I/O Trace
+
+```
+product | p_count | unique_buyers | p_7d | p_30d | trending_score
+P1      | 500     | 300           | 100  | 200   | 100×0.5 + 200×0.3 + 300×0.2 = 50+60+60 = 170
+P2      | 1000    | 100           | 10   | 50    | 10×0.5  + 50×0.3  + 100×0.2 = 5+15+20  = 40
+```
+
+P1 wins trending despite fewer all-time purchases — it's heating up recently.
+
+---
+
+## 10. Category Affinity Recommendations
+
+**"User 101 buys 60% Electronics → show them top Electronics they haven't seen."**
+
+```sql
+-- Step 1: Compute what fraction of each user's purchases are in each category
+WITH user_category_affinity AS (
+  SELECT
+    o.user_id,
+    p.category,
+    COUNT(*)     AS purchases_in_category,
+    SUM(o.amount) AS spend_in_category,
+    -- Window function: what % of this user's total purchases is this category?
+    ROUND(COUNT(*) * 1.0 /
+      SUM(COUNT(*)) OVER (PARTITION BY o.user_id), 4) AS category_affinity
+  FROM orders o
+  JOIN products p ON o.product_id = p.product_id
+  GROUP BY o.user_id, p.category
+),
+-- Step 2: Top products per category by popularity
+top_products_per_category AS (
+  SELECT
+    p.category,
+    o.product_id,
+    COUNT(DISTINCT o.user_id)  AS buyers,
+    RANK() OVER (
+      PARTITION BY p.category
+      ORDER BY COUNT(DISTINCT o.user_id) DESC
+    ) AS category_rank
+  FROM orders o
+  JOIN products p ON o.product_id = p.product_id
+  GROUP BY p.category, o.product_id
+)
+-- Step 3: Cross user's top categories with top products in those categories
+SELECT
+  uca.user_id,
+  uca.category,
+  uca.category_affinity,
+  tp.product_id,
+  tp.category_rank,
+  tp.buyers
+FROM user_category_affinity uca
+JOIN top_products_per_category tp
+  ON  tp.category      = uca.category
+  AND tp.category_rank <= 5          -- top 5 products per category
+WHERE uca.category_affinity >= 0.20  -- only categories with ≥20% of purchases
+  AND tp.product_id NOT IN (
+    SELECT product_id FROM orders WHERE user_id = uca.user_id
+  )
+ORDER BY uca.user_id, uca.category_affinity DESC, tp.category_rank;
+```
+
+### CTE-Level I/O Trace
+
+User 101 has bought: 6 Electronics, 2 Books, 2 Clothing (total=10)
+
+**`user_category_affinity`:**
+```
+user_id | category    | purchases | affinity (COUNT/TOTAL per user)
+101     | Electronics | 6         | 6/10 = 0.6000
+101     | Books       | 2         | 2/10 = 0.2000
+101     | Clothing    | 2         | 2/10 = 0.2000
+```
+
+All three pass the `>= 0.20` filter.
+
+**`top_products_per_category`** (Electronics):
+```
+product_id | buyers | category_rank
+P10        | 500    | 1
+P11        | 450    | 2
+P12        | 400    | 3
+```
+
+After joining and filtering already-bought:
+```
+user_id | category    | affinity | product_id | category_rank | buyers
+101     | Electronics | 0.6000   | P10        | 1             | 500
+101     | Electronics | 0.6000   | P11        | 2             | 450
+101     | Books       | 0.2000   | B5         | 1             | 200
+```
+
+---
+
+## 11. Session-Based Recommendations (Co-Views × CVR)
+
+**"Right now in this session, user viewed P1 → show products often viewed alongside P1 that convert well."**
+
+This powers real-time "also viewed" rails without requiring login history.
+
+```sql
+-- Step 1: Deduplicate views per session (one row per session-product pair)
+WITH session_views AS (
+  SELECT DISTINCT session_id, product_id
+  FROM sessions
+  WHERE event_type = 'view'
+),
+-- Step 2: Find products viewed together in same session
+co_views AS (
+  SELECT
+    a.product_id AS product_a,
+    b.product_id AS product_b,
+    COUNT(DISTINCT a.session_id) AS co_view_sessions
+  FROM session_views a
+  JOIN session_views b
+    ON  a.session_id = b.session_id   -- same session
+    AND a.product_id < b.product_id
+  GROUP BY a.product_id, b.product_id
+),
+-- Step 3: Conversion rate per product (sessions that purchased / sessions that viewed)
+conversion AS (
+  SELECT
+    product_id,
+    COUNT(DISTINCT CASE WHEN event_type = 'view'     THEN session_id END) AS view_sessions,
+    COUNT(DISTINCT CASE WHEN event_type = 'purchase' THEN session_id END) AS purchase_sessions,
+    ROUND(
+      COUNT(DISTINCT CASE WHEN event_type = 'purchase' THEN session_id END) * 100.0 /
+      NULLIF(COUNT(DISTINCT CASE WHEN event_type = 'view' THEN session_id END), 0)
+    , 2) AS conversion_rate
+  FROM sessions
+  GROUP BY product_id
+)
+-- Step 4: Score = co-view frequency × target product's conversion rate
+SELECT
+  cv.product_a,
+  cv.product_b,
+  cv.co_view_sessions,
+  c.conversion_rate AS product_b_cvr,
+  -- Co-viewed often AND converts well = best recommendation
+  ROUND(cv.co_view_sessions * c.conversion_rate / 100.0, 4) AS recommendation_score
+FROM co_views cv
+JOIN conversion c ON cv.product_b = c.product_id
+ORDER BY recommendation_score DESC;
+```
+
+### CTE-Level I/O Trace
+
+**Input `sessions`:**
+```
+session_id | product_id | event_type
+S1         | P1         | view
+S1         | P2         | view
+S1         | P2         | purchase
+S2         | P1         | view
+S2         | P3         | view
+S3         | P2         | view
+S3         | P2         | purchase
+```
+
+**`session_views`** (DISTINCT):
+```
+session_id | product_id
+S1         | P1
+S1         | P2
+S2         | P1
+S2         | P3
+S3         | P2
+```
+
+**`co_views`** — same session, product_a < product_b:
+```
+S1: (P1, P2)
+S2: (P1, P3)
+→
+product_a | product_b | co_view_sessions
+P1        | P2        | 1
+P1        | P3        | 1
+```
+
+**`conversion`:**
+```
+product_id | view_sessions | purchase_sessions | cvr
+P1         | 2             | 0                 | 0.00%
+P2         | 2             | 2                 | 100.00%
+P3         | 1             | 0                 | 0.00%
+```
+
+**Final scores:**
+```
+product_a | product_b | co_views | b_cvr  | rec_score
+P1        | P2        | 1        | 100.00 | 1.0000   ← surface P2 when user views P1
+P1        | P3        | 1        | 0.00   | 0.0000   ← P3 never converts, skip
+```
+
+**Insight:** P3 is viewed alongside P1 as often as P2, but P3 never converts. The score correctly surfaces P2. Pure co-view frequency would mistakenly treat them equally.
+
+---
+
+## 12. Diversity & Re-Ranking
+
+**"Don't show 15 phones in a row — cap recommendations at 3 per category."**
+
+```sql
+WITH raw_recommendations AS (
+  -- Assume this comes from any upstream rec CTE
+  SELECT
+    user_id,
+    product_id,
+    category,
+    recommendation_score,
+    -- Global rank ignoring category
+    ROW_NUMBER() OVER (
+      PARTITION BY user_id
+      ORDER BY recommendation_score DESC
+    ) AS global_rank,
+    -- Rank WITHIN each category for this user
+    ROW_NUMBER() OVER (
+      PARTITION BY user_id, category
+      ORDER BY recommendation_score DESC
+    ) AS category_rank
+  FROM recommendations_raw
+)
+SELECT
+  user_id,
+  product_id,
+  category,
+  recommendation_score,
+  global_rank,
+  category_rank
+FROM raw_recommendations
+WHERE category_rank <= 3       -- max 3 per category
+ORDER BY user_id, recommendation_score DESC;
+```
+
+### I/O Trace
+
+**Input `recommendations_raw` for user 101:**
+```
+product_id | category    | score
+P1         | Electronics | 95
+P2         | Electronics | 90
+P3         | Electronics | 85
+P4         | Electronics | 80
+P5         | Books       | 75
+P6         | Books       | 70
+```
+
+**After window functions:**
+```
+product_id | category    | score | global_rank | category_rank
+P1         | Electronics | 95    | 1           | 1
+P2         | Electronics | 90    | 2           | 2
+P3         | Electronics | 85    | 3           | 3
+P4         | Electronics | 80    | 4           | 4   ← FILTERED OUT
+P5         | Books       | 75    | 5           | 1
+P6         | Books       | 70    | 6           | 2
+```
+
+**Output (category_rank <= 3):**
+```
+product_id | category    | score | global_rank | category_rank
+P1         | Electronics | 95    | 1           | 1
+P2         | Electronics | 90    | 2           | 2
+P3         | Electronics | 85    | 3           | 3
+P5         | Books       | 75    | 5           | 1
+P6         | Books       | 70    | 6           | 2
+```
+
+P4 (4th Electronics) is dropped. The list is now diverse.
+
+> **ROW_NUMBER vs RANK here:** Use `ROW_NUMBER()` because you want exactly N items per category, not "all items tied for position N". `RANK()` could let 4+ items through if scores are tied.
+
+---
+
+## 13. Full Pipeline — Item-Item + Fallback + Diversity
+
+**The FAANG production pattern: primary algorithm → fallback → diversity filter.**
+
+```sql
+WITH already_bought AS (
+  SELECT DISTINCT product_id FROM orders WHERE user_id = 200
+),
+-- LAYER 1: Item-item collaborative filtering
+item_item AS (
+  SELECT
+    b.product_id                   AS product_id,
+    SUM(1)                         AS item_item_score,
+    'item_item'                    AS source
+  FROM orders a
+  JOIN orders b
+    ON  a.order_id   = b.order_id
+    AND a.product_id != b.product_id
+  WHERE a.product_id IN (SELECT product_id FROM already_bought)
+    AND b.product_id NOT IN (SELECT product_id FROM already_bought)
+  GROUP BY b.product_id
+),
+-- LAYER 2: Popularity fallback (for products item-item didn't surface)
+popularity AS (
+  SELECT
+    o.product_id,
+    COUNT(DISTINCT o.order_id) * 0.1   AS pop_score,   -- scaled down vs item-item
+    'popularity_fallback'               AS source
+  FROM orders o
+  WHERE o.product_id NOT IN (SELECT product_id FROM already_bought)
+  GROUP BY o.product_id
+),
+-- LAYER 3: Merge layers — item_item takes priority
+combined AS (
+  SELECT
+    COALESCE(ii.product_id, pop.product_id)           AS product_id,
+    COALESCE(ii.item_item_score, pop.pop_score)        AS final_score,
+    COALESCE(ii.source, pop.source)                    AS source
+  FROM item_item ii
+  FULL OUTER JOIN popularity pop ON ii.product_id = pop.product_id
+),
+-- LAYER 4: Join metadata and apply diversity constraint
+with_diversity AS (
+  SELECT
+    c.product_id,
+    p.name,
+    p.category,
+    c.final_score,
+    c.source,
+    ROW_NUMBER() OVER (
+      PARTITION BY p.category
+      ORDER BY c.final_score DESC
+    ) AS category_rank
+  FROM combined c
+  JOIN products p ON c.product_id = p.product_id
+)
+-- LAYER 5: Final output — diversity filter + top N
+SELECT
+  product_id,
+  name,
+  category,
+  ROUND(final_score, 4) AS score,
+  source,
+  category_rank
+FROM with_diversity
+WHERE category_rank <= 3    -- max 3 per category
+ORDER BY final_score DESC
+LIMIT 15;
+```
+
+### Pipeline Architecture Map
+
+```
+orders (user 200's history)
+        │
+        ▼
+already_bought ──────────────────────────────────────────────────┐
+        │                                                         │ (exclusion filter)
+        ▼                                                         │
+item_item CTE                          popularity CTE            │
+(self-join on order_id)                (count × 0.1 weight)      │
+source = 'item_item'                   source = 'popularity_...' │
+        │                                      │                  │
+        └──────────────────┬───────────────────┘                  │
+                           ▼                                      │
+                       combined CTE                               │
+                   (FULL OUTER JOIN,                              │
+                    item_item priority)                           │
+                           │                                      │
+                           ▼                                      │
+                    JOIN products ◄────────────────────────────────┘
+                           │
+                           ▼
+                   with_diversity CTE
+                  (ROW_NUMBER per category)
+                           │
+                           ▼
+               WHERE category_rank <= 3
+               ORDER BY final_score DESC
+               LIMIT 15
+```
+
+### I/O Trace (abbreviated)
+
+User 200 has bought: {P1, P2}
+
+**`item_item`** (products co-purchased with P1 or P2):
+```
+product_id | item_item_score | source
+P5         | 12              | item_item
+P6         | 8               | item_item
+P7         | 3               | item_item
+```
+
+**`popularity`** (all unordered products):
+```
+product_id | pop_score | source
+P5         | 5.0       | popularity_fallback
+P8         | 9.0       | popularity_fallback  ← not in item_item
+P9         | 7.0       | popularity_fallback  ← not in item_item
+```
+
+**`combined`** (FULL OUTER JOIN):
+```
+product_id | final_score | source
+P5         | 12          | item_item           (item_item wins, has higher score)
+P6         | 8           | item_item
+P7         | 3           | item_item
+P8         | 9.0         | popularity_fallback (no item_item match)
+P9         | 7.0         | popularity_fallback
+```
+
+**After diversity (assuming P5,P6,P7 = Electronics; P8,P9 = Books):**
+All pass since ≤ 3 per category.
+
+**Output:**
+```
+product_id | score | source              | category_rank
+P5         | 12    | item_item           | 1
+P8         | 9.0   | popularity_fallback | 1
+P6         | 8     | item_item           | 2
+P9         | 7.0   | popularity_fallback | 2
+P7         | 3     | item_item           | 3
+```
+
+---
+
+## 14. Trending Score — Recency-Weighted Popularity
+
+**"Surface what's hot right now, not just what sold well historically."**
+
+```sql
+WITH product_stats AS (
+  SELECT
+    o.product_id,
+    p.name,
+    p.category,
+    COUNT(DISTINCT o.order_id)  AS all_time_purchases,
+    COUNT(DISTINCT o.user_id)   AS unique_buyers,
+    SUM(o.amount)               AS total_revenue,
+    SUM(CASE WHEN o.order_date >= CURRENT_DATE - INTERVAL  7 DAY
+             THEN 1 ELSE 0 END) AS p_7d,
+    SUM(CASE WHEN o.order_date >= CURRENT_DATE - INTERVAL 30 DAY
+             THEN 1 ELSE 0 END) AS p_30d,
+    SUM(CASE WHEN o.order_date >= CURRENT_DATE - INTERVAL 90 DAY
+             THEN 1 ELSE 0 END) AS p_90d
+  FROM orders o
+  JOIN products p ON o.product_id = p.product_id
+  GROUP BY o.product_id, p.name, p.category
+)
+SELECT
+  product_id, name, category,
+  all_time_purchases, unique_buyers,
+  p_7d, p_30d, p_90d,
+  ROUND(
+    p_7d  * 0.50 +   -- last 7d weighted heaviest (most recent signal)
+    p_30d * 0.30 +   -- last 30d moderate weight
+    unique_buyers * 0.20  -- reach as a quality signal
+  , 2)                                             AS trending_score,
+  RANK() OVER (ORDER BY p_7d DESC)                AS trending_rank_7d,
+  RANK() OVER (ORDER BY all_time_purchases DESC)   AS all_time_rank,
+  RANK() OVER (
+    PARTITION BY category ORDER BY p_7d DESC
+  )                                                AS trending_rank_in_category
+FROM product_stats
+ORDER BY trending_score DESC
+LIMIT 50;
+```
+
+### Why Partition the Rank by Category?
+
+`trending_rank_in_category` lets you build category-specific trending carousels ("Trending in Electronics") while the global `trending_score` powers the homepage. You compute both in one pass.
+
+---
+
+## 15. Author Engagement Rate + MoM Trend (Meta Pattern)
+
+**"Track creator engagement health month-over-month and flag drops."**
+
+```sql
+WITH post_er AS (
+  SELECT
+    p.post_id,
+    p.author_id,
+    DATE_FORMAT(p.created_at, '%Y-%m-01') AS post_month,
+    COUNT(DISTINCT pv.user_id) AS viewers,
+    COUNT(DISTINCT CASE WHEN i.interaction_type IN ('like','comment','share')
+          THEN i.user_id END) AS engagers,
+    ROUND(
+      COUNT(DISTINCT CASE WHEN i.interaction_type IN ('like','comment','share')
+            THEN i.user_id END) * 100.0 /
+      NULLIF(COUNT(DISTINCT pv.user_id), 0)
+    , 4) AS er
+  FROM posts p
+  LEFT JOIN post_views pv  ON p.post_id = pv.post_id
+  LEFT JOIN interactions i ON p.post_id = i.post_id
+  GROUP BY p.post_id, p.author_id, DATE_FORMAT(p.created_at, '%Y-%m-01')
+),
+-- Best post per author per month
+best_post AS (
+  SELECT author_id, post_month, post_id AS best_post_id
+  FROM (
+    SELECT author_id, post_month, post_id,
+      ROW_NUMBER() OVER (
+        PARTITION BY author_id, post_month
+        ORDER BY er DESC
+      ) AS rn
+    FROM post_er
+  ) t
+  WHERE rn = 1
+),
+-- Monthly author summary
+author_monthly AS (
+  SELECT
+    pe.author_id, pe.post_month,
+    COUNT(*)              AS total_posts,
+    ROUND(AVG(er), 4)     AS avg_er,
+    bp.best_post_id
+  FROM post_er pe
+  JOIN best_post bp
+    ON pe.author_id  = bp.author_id
+    AND pe.post_month = bp.post_month
+  GROUP BY pe.author_id, pe.post_month, bp.best_post_id
+),
+-- MoM comparison via LAG
+with_trend AS (
+  SELECT *,
+    LAG(avg_er) OVER (
+      PARTITION BY author_id ORDER BY post_month
+    ) AS prev_er
+  FROM author_monthly
+)
+SELECT
+  author_id,
+  post_month,
+  total_posts,
+  avg_er,
+  prev_er,
+  best_post_id,
+  ROUND((avg_er - prev_er) * 100.0 / NULLIF(prev_er, 0), 2) AS er_mom_pct,
+  CASE
+    WHEN (avg_er - prev_er) * 100.0 / NULLIF(prev_er, 0) < -20
+    THEN 'ENGAGEMENT DROP'
+    ELSE 'STABLE'
+  END AS trend_flag
+FROM with_trend
+ORDER BY author_id, post_month;
+```
+
+### CTE-Level I/O Trace
+
+Author A1 data:
+```
+Jan: 5 posts, avg_er = 8.00%
+Feb: 6 posts, avg_er = 5.50%
+Mar: 4 posts, avg_er = 9.00%
+```
+
+**`with_trend` after LAG:**
+```
+author | month | avg_er | prev_er
+A1     | Jan   | 8.00   | NULL    (no prior month)
+A1     | Feb   | 5.50   | 8.00
+A1     | Mar   | 9.00   | 5.50
+```
+
+**MoM calculations:**
+```
+Feb: (5.50 - 8.00) / 8.00 × 100 = -31.25% → ENGAGEMENT DROP ← flagged
+Mar: (9.00 - 5.50) / 5.50 × 100 = +63.64% → STABLE
+```
+
+---
+
+## 16. Key Takeaways Cheatsheet
+
+### Metric Formula Reference
+
+| Metric | Formula | Use When |
+|--------|---------|----------|
+| **Jaccard** | `co_count / (count_a + count_b - co_count)` | Binary data, normalizes for popularity |
+| **Lift** | `(co_count × total) / (count_a × count_b)` | Measure co-occurrence beyond chance |
+| **Confidence A→B** | `co_count / count_a` | Directional rule strength |
+| **Cosine** | `dot_product / (norm_a × norm_b)` | Weighted/implicit feedback |
+| **Category affinity** | `COUNT in category / total COUNT` (window fn) | Personalize by taste profile |
+| **Trending score** | `p_7d × 0.5 + p_30d × 0.3 + unique_buyers × 0.2` | Cold start / new users |
+| **Engagement rate** | `unique engagers / unique viewers` | Content creator health |
+
+### Pattern → SQL Technique Map
+
+| Problem | Core SQL Pattern | Key Trick |
+|---------|-----------------|-----------|
+| Co-purchased pairs | Self-join on `order_id` | `product_a < product_b` to avoid duplicates |
+| User similarity (binary) | Self-join on `product_id` | `user_a < user_b` + Jaccard normalization |
+| User similarity (weighted) | Self-join on `product_id` | `SUM(a.score × b.score)` for dot product |
+| Top-N per user | Window function | `RANK() OVER (PARTITION BY user ORDER BY score DESC)` |
+| Category affinity | Window function | `COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY user_id)` |
+| Best post per month | ROW_NUMBER | `PARTITION BY author_id, month ORDER BY er DESC` |
+| Diversity constraint | ROW_NUMBER | `PARTITION BY user_id, category ORDER BY score DESC` |
+| Popularity fallback | CASE WHEN + date arithmetic | Weight recency buckets |
+| MoM trend | LAG | `LAG(metric) OVER (PARTITION BY entity ORDER BY period)` |
+| Item-item + fallback merge | FULL OUTER JOIN + COALESCE | `COALESCE(item_item_score, pop_score)` |
+| Session-based | Co-views × CVR | Self-join `sessions` on `session_id` |
+
+### Common Pitfalls
+
+| Pitfall | Fix |
+|---------|-----|
+| Duplicate pairs (A,B) and (B,A) | `AND product_a < product_b` in every pair-join |
+| Division by zero in similarity | `NULLIF(denominator, 0)` |
+| Recommending already-bought items | `NOT IN (SELECT product_id FROM already_bought)` |
+| `NOT IN` with NULLs (returns no rows) | Use `NOT EXISTS` instead |
+| Counting events not users | `COUNT(DISTINCT user_id)`, never `COUNT(*)` in funnels |
+| All recs from same category | `ROW_NUMBER() PARTITION BY user_id, category <= N` |
+| Lift = 1 meaning "good" | Lift = 1 means independence; you want Lift >> 1 |
+| Popular items dominating Jaccard | Jaccard handles this; Lift/Confidence do not |
+| User-user at scale | Pre-compute item-item offline; apply per user at query time |
+
+### The Production Decision Tree
+
+```
+Has user purchase/event history?
+├── YES: Item-item collaborative filtering (primary)
+│         + category affinity boost
+│         + diversity constraint (max N per category)
+│         + fallback slots filled from trending
+└── NO (new user): Popularity / Trending fallback
+                    + (if we know category from signup) category top items
+                    → Transition to collaborative as history accumulates
+```
+
+---
+
+*Recommender Systems SQL Masterclass — Day 21 Complete Reference*
