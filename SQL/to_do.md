@@ -13,15 +13,12 @@
 13. **Percentile / distribution questions** — median, p90 latency, using `PERCENTILE_CONT` or NTILE.
 14. **Hierarchical/recursive queries** — org charts, category trees, recursive CTEs.
 
-Funnel, cohort retention, and gaps-and-islands are the three DS-specific ones Google/Apple lean on hardest since they map directly to product metrics. Want me to build out funnel and cohort retention as dedicated deep-dive files the way you did for the others, or do you already have those covered in your existing 46-topic set?
+
 GROUP BY with CASE WHEN
 DISTINCT in Aggregates
 
 QUERY OPTIM
-ROLLUP — Hierarchical Subtotals
-CUBE — All Combinations
-GROUPING SETS — Precise Control
-GROUPING() and GROUPING_ID()
+
 
 Pareto / 80-20 Analysis
 
