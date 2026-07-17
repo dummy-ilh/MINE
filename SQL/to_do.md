@@ -12,10 +12,14 @@
 14. **Hierarchical/recursive queries** — org charts, category trees, recursive CTEs.
 GROUP BY with CASE WHEN
 DISTINCT in Aggregates
-ROLLUP
-
 
 QUERY OPTIM
+ROLLUP — Hierarchical Subtotals
+CUBE — All Combinations
+GROUPING SETS — Precise Control
+GROUPING() and GROUPING_ID()
+
+Pareto / 80-20 Analysis
 
 Got it — here's the pattern taxonomy, the shapes interviewers reuse over and over:
 
