@@ -1,4 +1,4 @@
-34
+33
 
 1. 09_10_11_chisq_anova_nonparam.md
 2. 100day_abtesting_days1to50.md
@@ -14,7 +14,6 @@
 12. Chapter_07_Unit_of_Randomization.md
 14. Chapter_09_Sample_Size_Power_Calculations.md
 15. Chapter_10_Randomization_Mechanics.md
-16. Chapter_11_Novelty_Primacy_Effects_Test_Duration.md
 17. Chapter_12.1_T_tests_Z_tests.md
 18. Chapter_12_Choosing_the_Right_Test.md
 19. Chapter_13_Ratio_Metrics_Delta_Method.md
