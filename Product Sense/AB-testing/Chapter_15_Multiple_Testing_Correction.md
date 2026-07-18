@@ -650,3 +650,182 @@ Add this at the end to get a "Hire" signal:
 | A regulatory/compliance test where the government fines you for any negative effect. | **Bonferroni** (or ideally, Sequential Testing with alpha-spending). |
 | A PM cherry-picked 1 metric out of 100 that went up. | Reject the request; demand a **Holdout Validation** or a new, powered experiment. |
 | You have a Primary Metric (Conversion) and 4 Secondary Metrics. | **Holm-Bonferroni** (step-down) for the secondaries, Primary stays at 0.05. |
+
+
+Good question. This is actually a known failure mode of over-correcting — it has a name: **underpowered experimentation culture**.
+
+---
+
+## Why it happens
+
+Bonferroni at large m is so strict that real, meaningful effects simply don't clear the bar. Teams run experiments, see "no significant results," and nothing ships. After a while people stop trusting the process — or worse, start gaming it.
+
+```
+  THE DEATH SPIRAL
+
+  Strict correction → nothing significant
+         ↓
+  Teams run more metrics "just in case"
+         ↓
+  More metrics → even stricter correction
+         ↓
+  Even less gets through
+         ↓
+  Engineers bypass experiments entirely
+  ("let's just ship it, A/B testing never finds anything")
+```
+
+This is arguably worse than the original problem. A few false positives are recoverable. A culture that stops experimenting is not.
+
+---
+
+## The real fixes
+
+**1. Fewer metrics, not more correction**
+
+The root cause is usually tracking too many metrics simultaneously. If you pre-register one primary metric per experiment (Ch. 8), you don't need correction at all on that test. The correction problem only appears when you've let metric sprawl happen.
+
+```
+  BAD                           GOOD
+  ───                           ────
+  20 metrics, all "primary"     1 primary metric
+  → Bonferroni → nothing        → no correction needed
+    survives                    → full power preserved
+```
+
+**2. Switch to BH for exploratory metrics**
+
+If you genuinely need to test many secondary metrics, Bonferroni is the wrong tool. BH gives you far more power while still controlling the false discovery rate. Something that dies under Bonferroni at m=20 (threshold 0.0025) might survive BH easily if several other metrics also show strong signal.
+
+**3. Check if you're underpowered before blaming correction**
+
+Sometimes nothing gets through because the experiment wasn't run long enough, or the MDE was set too small for the traffic available. The correction is blamed but the real problem is sample size. Run the power calculation *before* the experiment, not after.
+
+**4. Separate decision tiers explicitly**
+
+```
+  TIER 1 — SHIP DECISION        TIER 2 — LEARNING
+  ──────────────────────        ──────────────────
+  1 pre-registered primary      Secondary metrics under BH
+  No correction needed          Results labeled "exploratory"
+  Full power                    Feed future experiment designs
+  Binary: ship or don't         No ship decision from these
+```
+
+Nothing in Tier 2 ships directly. But it also doesn't go to waste — a BH-significant secondary metric becomes next experiment's primary. You build a pipeline of hypotheses rather than demanding every experiment be a ship decision.
+
+---
+
+## The uncomfortable truth
+
+If experiments consistently produce nothing, the problem is usually upstream — vague hypotheses with no real causal mechanism, MDEs set too small, or too many metrics diluting power. The correction is doing its job. The hypothesis generation isn't.
+
+A well-run team should expect roughly:
+- ~20-30% of experiments to ship (meaningful positive effects)
+- ~40-50% to be true nulls (the change simply didn't matter)
+- ~20-30% to be informative failures that sharpen the next hypothesis
+
+If your ship rate is 0%, the correction isn't the problem.
+
+No universal answer, but there's a strong consensus from teams that run experiments at scale.
+
+---
+
+## The ratio that actually works
+
+```
+  PER EXPERIMENT
+
+  Primary metrics:     1  (the ship/no-ship decider)
+  Guardrail metrics:   2–5
+  Secondary/learning:  5–10
+
+  Total:               ~8–15 metrics maximum
+```
+
+Beyond ~15, you're not learning more — you're just inflating your correction burden and making it harder to explain results to stakeholders.
+
+---
+
+## Why each tier has a natural limit
+
+**Primary — exactly 1**
+
+If you have 2 "primary" metrics you don't actually have a primary metric. You have a choice you're deferring until after results come in. That's the garden of forking paths problem (Ch. 8) in disguise. One metric, one ship decision.
+
+**Guardrails — 2 to 5**
+
+These cover the things you'd be embarrassed to have broken. For most products that's something like: crash rate, latency/load time, core revenue metric, support ticket volume. You rarely need more than 5 because genuinely catastrophic regressions tend to show up in a small number of places.
+
+The ceiling is 5 because each guardrail needs to be evaluated at full sensitivity independently. The more you add, the more you're crying wolf on launches.
+
+**Secondary/learning — 5 to 10**
+
+These go under BH correction, so adding more is less costly than adding primaries or guardrails. But past ~10 you're tracking noise and the results become uninterpretable in a readout. A stakeholder can absorb "here are 7 secondary metrics and what they tell us." They cannot absorb 30.
+
+---
+
+## What the big platforms actually do
+
+```
+  Google / Microsoft ExP:
+  Enforce declaration of primary metric at launch.
+  Secondary metrics unlimited in dashboards but
+  only primary drives the decision.
+
+  Booking.com:
+  Famous for running thousands of experiments simultaneously.
+  Each individual experiment still has one OEC
+  (Overall Evaluation Criterion) — their term for primary metric.
+
+  Netflix:
+  Uses a composite metric (single score) as primary
+  to avoid the multi-primary problem entirely.
+  Secondary metrics are learning only.
+```
+
+The pattern is consistent — one primary, everything else is learning.
+
+---
+
+## The composite metric trick
+
+If you genuinely can't pick one metric because you care about several equally, the mature solution is to combine them into a single composite score before the experiment runs.
+
+```
+  INSTEAD OF:                   DO THIS:
+  Primary 1: CTR                OEC = 0.4×(CTR) + 0.4×(revenue)
+  Primary 2: Revenue                + 0.2×(session length)
+  Primary 3: Session length
+  → need correction             → one number, no correction,
+  → ambiguous ship decision       weights decided before launch
+```
+
+The weights are a product/business decision made in advance. Controversial, but Netflix, Booking, and LinkedIn all use variants of this. The key is the weights are pre-committed — you don't tune them after seeing which weighting makes your experiment look better.
+
+---
+
+## When teams go wrong
+
+```
+  TOO FEW METRICS               TOO MANY METRICS
+  ───────────────               ────────────────
+  Miss important regressions    Correction kills everything
+  Ship things that break        Nothing gets to production
+  adjacent features             (the problem you just asked about)
+  Guardrails are the            Stakeholders lose trust in
+  classic thing to skip         the process
+  "we'll notice in prod"        "A/B testing never finds
+                                 anything"
+
+  Sweet spot: enough guardrails to catch real harm,
+  few enough secondaries that BH still has power
+```
+
+---
+
+## Practical rule of thumb
+
+Before adding any metric to an experiment, ask: **"what decision would change if this metric moved?"**
+
+If the answer is "none — we'd just find it interesting," cut it. Every metric you add costs statistical power on everything else. The discipline of that question alone usually gets teams from 30 metrics down to 10 naturally.
