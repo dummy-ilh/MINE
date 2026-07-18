@@ -408,14 +408,303 @@ A: Switch to bootstrap (Section 9) — resample your randomization units with re
 
 ## 12. Comprehension Check (Self-Test)
 
-1. Why can't you just compute the average of each user's individual ratio (clicks/impressions per user) and run a standard t-test on those averages?
-2. Write the delta method variance formula for a ratio $R=X/Y$ and explain where the covariance term comes from.
-3. In the worked examples, ignoring the covariance term overstated the variance (by 2x and ~2.7x respectively). Under what circumstances would ignoring the covariance term instead *understate* the true variance?
-4. What's a practical, assumption-free alternative to the delta method when the ratio's denominator is close to zero or highly skewed?
-5. Explain the difference between the "ratio metric variance" problem in this tutorial and the "randomization unit vs. analysis unit" problem — are these the same issue or different ones?
-6. When would you NOT need to apply the Delta Method to a metric that superficially looks like a ratio?
-7. A ratio metric is computed by averaging session-level ratios instead of aggregating to the user level first. What two problems does this introduce?
-8. Compute, by hand, the delta-method variance for a ratio with $\bar{X}=10$, $\bar{Y}=20$, $Var(X)=25$, $Var(Y)=16$, $Cov(X,Y)=8$. Compare it to the naive estimate that omits the covariance term.
+These questions test whether you **understand the intuition behind the Delta Method and ratio metrics**, not just the formulas. Here's how I'd answer them in an interview.
+
+---
+
+# 1. In your own words (no formula), explain why positive correlation between numerator and denominator makes a ratio metric more stable than the two raw numbers alone.
+
+Imagine you're measuring:
+
+* **Clicks per session**
+* Numerator = clicks
+* Denominator = sessions
+
+Suppose users who have more sessions also naturally generate more clicks.
+
+That means the numerator and denominator **move together**.
+
+For example:
+
+| User | Sessions | Clicks |
+| ---- | -------- | ------ |
+| A    | 10       | 50     |
+| B    | 20       | 100    |
+
+Both doubled.
+
+The ratio stayed around **5 clicks/session**.
+
+Even though both raw numbers changed a lot, the **ratio hardly changed** because increases in one were accompanied by increases in the other.
+
+That's why **positive correlation stabilizes the ratio**—the numerator and denominator "track" each other, so random fluctuations partially cancel out instead of amplifying each other.
+
+---
+
+# 2. Using the Section 5 diagram, predict—before calculating anything—whether ignoring covariance in a metric with negative correlation will widen or narrow your confidence interval.
+
+Suppose numerator and denominator are **negatively correlated**.
+
+Example:
+
+When sessions go up, clicks tend to go down.
+
+Now imagine the ratio.
+
+The numerator and denominator move in **opposite directions**, making the ratio fluctuate more.
+
+Negative correlation therefore **increases the variance** of the ratio.
+
+If you ignore covariance, you're ignoring this extra source of variability.
+
+So you'll **underestimate the true variance**, which means:
+
+* standard error is too small
+* confidence interval becomes **too narrow**
+* you become overly confident
+* Type I error increases
+
+**Prediction:** Ignoring negative covariance **narrows the confidence interval** (incorrectly).
+
+---
+
+# 3. Redo the worked example assuming Cov(X,Y) = –60 instead of +60.
+
+Assume the worked example used:
+
+* Var(X) = 400
+* Var(Y) = 100
+* Cov(X,Y) = +60 originally
+
+The **naive estimate** ignores covariance completely.
+
+Suppose the Delta Method variance expression is:
+
+[
+\text{Variance} = \text{Naive part} - \text{Covariance contribution}
+]
+
+With **positive covariance (+60)**, that covariance term reduces the overall variance.
+
+Now change it to:
+
+[
+Cov(X,Y)=-60
+]
+
+The sign flips.
+
+Instead of reducing variance, covariance now **adds** to it.
+
+If the covariance contribution was 120 in magnitude:
+
+Naive variance:
+
+[
+500
+]
+
+Positive covariance:
+
+[
+500-120=380
+]
+
+Negative covariance:
+
+[
+500+120=620
+]
+
+So:
+
+* **Corrected variance = 620**
+* **Naive (ignoring covariance) = 500**
+
+Therefore:
+
+* corrected variance is **larger**
+* ignoring covariance **underestimates uncertainty**
+
+*(The exact number depends on the values in your Section 6 example, but the direction is always the same: negative covariance increases the variance of the ratio.)*
+
+---
+
+# 4. Why does "average session duration per user" NOT need the Delta Method, but "average clicks per session" does?
+
+The key question is:
+
+**What is the unit of analysis?**
+
+### Average session duration per user
+
+Each user contributes **one value**:
+
+```
+User A → 15 minutes
+User B → 8 minutes
+User C → 22 minutes
+```
+
+You simply compare two sample means.
+
+No ratio of two random quantities is involved.
+
+A standard t-test is sufficient.
+
+---
+
+### Average clicks per session
+
+Now suppose:
+
+User A
+
+* Sessions = 10
+* Clicks = 40
+
+User B
+
+* Sessions = 2
+* Clicks = 6
+
+The metric is
+
+```
+Total Clicks
+-------------
+Total Sessions
+```
+
+Both the numerator (clicks) and denominator (sessions) are random variables.
+
+Because both vary from sample to sample—and they're often correlated—you need the **Delta Method** to correctly estimate the variance of the ratio.
+
+So:
+
+* **Session duration per user** → ordinary mean → no Delta Method.
+* **Clicks per session** → ratio of two random variables → Delta Method.
+
+---
+
+# 5. When would you use bootstrap instead of the Delta Method, and why doesn't bootstrap require Cov(X,Y)?
+
+Use the **bootstrap** when:
+
+* the metric has a complicated distribution,
+* the ratio is difficult to analyze mathematically,
+* the sample size is modest,
+* the data are highly skewed,
+* or you don't trust the assumptions behind the Delta Method.
+
+Examples include:
+
+* Revenue per user with a few "whale" customers
+* Average order value
+* Complex funnel metrics
+* Custom business metrics
+
+### Why doesn't bootstrap need covariance?
+
+The Delta Method is an **analytical approach**.
+
+It derives the variance using formulas, so you must explicitly account for how the numerator and denominator move together (their covariance).
+
+Bootstrap takes a different approach:
+
+1. Resample users (with replacement) many times.
+2. Recalculate the ratio metric for each resample.
+3. Look at the spread of those bootstrap estimates.
+
+Because each bootstrap sample preserves the original pairing of numerator and denominator for every observation, **their correlation is automatically reflected in the resampled data**. The variability across bootstrap estimates naturally includes the covariance effect, so you never have to calculate ( \text{Cov}(X,Y) ) yourself.
+
 
 ---
 *
+This is the perfect question to ask because it cuts straight to the *business value* of the Delta Method. 
+
+The mathematical derivation is useless if you don't understand *when* to deploy it and *what the consequences* of ignoring it are. 
+
+Here is the interview-ready breakdown of exactly **why**, **when**, and **what happens if you don't**.
+
+---
+
+### Part 1: Why do you NEED the Delta Method?
+
+You need the Delta Method for one simple reason: **Variance doesn't "pool" the same way averages do.**
+
+- When you compute a **simple mean** (Avg. Clicks/User), the variance is just \( Var(X) / N \). Easy. 
+- But a **ratio metric** (Clicks/Session) is a *division problem*. 
+  
+You are dividing two random variables. **The variance of a division is NOT the division of the variances.** You cannot just take \( Var(Clicks) / Var(Sessions) \). That is mathematically illegal. 
+
+If you want a Confidence Interval or a p-value for your ratio, you **must** figure out how the *combination* of Numerator-variance, Denominator-variance, and their relationship (Covariance) affects the final ratio. **The Delta Method is the mathematical crowbar that pries open a division problem so we can measure its variance.**
+
+---
+
+### Part 2: How do you USE it? (The Interview Script)
+
+When the interviewer asks you to calculate the standard error for a ratio metric (e.g., CTR, Revenue per Session, Clicks per User), you do **NOT** dive straight into the formula. You use this 3-step script to show you understand the *process*:
+
+**Step 1: Aggregate to the User Level First**
+> *"I will not average each user's individual ratio. I will compute the pooled ratio for the treatment group as \( \bar{R} = \frac{\sum X_i}{\sum Y_i} \) (Total Clicks / Total Sessions). This correctly weights heavy users."*
+
+**Step 2: Compute the Three Required Components**
+> *"Using my user-level dataset, I will compute three things:*
+> - *\( Var(X) \): How much Clicks vary across users.*
+> - *\( Var(Y) \): How much Sessions vary across users.*
+> - *\( Cov(X,Y) \): How much Clicks and Sessions move together (almost always positive)."*
+
+**Step 3: Apply the Delta Method Formula**
+> *"I plug these into the Delta Method formula to get the variance of the ratio, then divide by my sample size (N) to get the squared standard error:"*
+
+\[
+SE(\bar{R}) = \sqrt{ \frac{1}{N} \cdot \frac{1}{\bar{Y}^2} \left[ Var(X) + \bar{R}^2 Var(Y) - 2\bar{R} \cdot Cov(X,Y) \right] }
+\]
+
+> *"I now have a valid standard error to build my confidence interval and calculate my p-value."*
+
+---
+
+### Part 3: What happens if you DON'T use it? (The 3 Disaster Scenarios)
+
+This is the "killer app" of your interview answer. Interviewers ask this to see if you understand the *practical* consequences. There are **three** distinct ways to do it wrong:
+
+#### Disaster #1: Averaging the Individual Ratios (The Weighting Mistake)
+- **What you do:** You compute each user's CTR (e.g., User A has 1 click / 1 session = 100% CTR), average all 1,000 users' CTRs, and use the standard deviation of those 1,000 ratios.
+- **What happens:** A user with **1 session** gets the exact same statistical weight as a power user with **1,000 sessions**. Your variance explodes (huge standard errors), and you lose all statistical power. You will fail to detect a real 5% lift because the noise from tiny users drowns out the signal.
+
+#### Disaster #2: Forgetting the Covariance (The "Naive Delta" Mistake)
+- **What you do:** You correctly pool the ratio, but you use the *wrong* variance formula: \( Var(X) + \bar{R}^2 Var(Y) \) — completely ignoring the \( -2\bar{R}Cov(X,Y) \) term.
+- **What happens:** As shown in the chapter, if Clicks and Sessions are positively correlated (which they almost always are), **your variance estimate is exactly double what it should be**. Your confidence intervals are twice as wide as necessary. You tell the PM: *"This 8% lift isn't significant."* But if you had used the Delta Method correctly, it *would* be significant. You just cost the company millions by falsely killing a winning feature.
+
+#### Disaster #3: The "Washout" Effect (Negative Correlation)
+- **What you do:** Same as #2 (forget covariance).
+- **What happens:** *This is the hidden trap.* What if your metric is "Support Tickets per User"? Power users (high denominator) actually open *fewer* support tickets (low numerator). The correlation is **negative**. 
+- If you forget the covariance here, the \( -2\bar{R}Cov \) term should have *added* to your variance (because negative covariance increases the wobble of a ratio). By forgetting it, you artificially **shrink** your standard error. You tell the PM: *"This feature drastically cuts support tickets, p=0.001!"* You ship it, it does nothing, and you just committed a costly Type 1 error (False Positive).
+
+---
+
+### Part 4: The "Lazy" Alternative (The Bootstrap)
+
+If the interviewer pushes back and says: *"That formula is too complex for my engineers. How else can we do this?"*
+
+**Your Answer:**
+"We use the **Bootstrap** in practice. 
+
+- I resample my users (with replacement) 10,000 times. 
+- Each time, I compute the pooled ratio (Total Clicks / Total Sessions). 
+- I look at the standard deviation of those 10,000 bootstrapped ratios. 
+- That standard deviation *inherently* contains the covariance between Clicks and Sessions, because I resample the (Clicks, Sessions) pairs *together*. I get the exact same corrected standard error as the Delta Method, without scaring the engineers with a Taylor expansion."
+
+---
+
+### Part 5: The Ultimate Interview Cheat Sheet
+
+| Scenario | What you do | The Delta Method Formula |
+| :--- | :--- | :--- |
+| **Metric is "Avg. Clicks per User"** | **Do NOT use Delta Method.** Denominator (1 user) is fixed. Use standard \( \sigma / \sqrt{N} \). | N/A |
+| **Metric is "CTR" (Clicks/Impressions)** | **Use Delta Method.** Both numbers vary per user. | \( \frac{1}{\bar{Imp}^2}[Var(Clicks) + R^2 Var(Imp) - 2R \cdot Cov] \) |
+| **Positive Correlation (Clicks ↑, Impressions ↑)** | **Mandatory.** If you forget covariance, your SE is **too big** (false negatives). | The `- 2R*Cov` term *shrinks* the variance. |
+| **Negative Correlation (Revenue ↑, Returns ↑)** | **Mandatory.** If you forget covariance, your SE is **too small** (false positives). | The `- 2R*Cov` term *adds* to the variance. |
+| **Manager hates math** | **Use Bootstrap.** Resample users 10k times, compute ratio each time, take SD of results. | No formula needed; the algorithm handles the covariance implicitly. |
