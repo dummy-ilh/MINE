@@ -1,4 +1,4 @@
-27
+23
 
 1. 09_10_11_chisq_anova_nonparam.md
 2. 100day_abtesting_days1to50.md
@@ -12,10 +12,7 @@
 11. Chapter_06_Metrics_NorthStar_Guardrails_OEC.md
 14. Chapter_09_Sample_Size_Power_Calculations.md
 15. Chapter_10_Randomization_Mechanics.md
-22. Chapter_16_Sequential_Testing_Peeking_Problem.md
-23. Chapter_17_Network_Effects_Cluster_Randomization.md
-24. Chapter_18_Heterogeneous_Treatment_Effects_Simpsons_Paradox.md
-25. Chapter_19_Long_Term_Holdouts_Quasi_Experiments.md
+
 26. Chapter_20_Interleaving_Ranking_Experiments.md
 27. Chapter_21_Conflicting_Metrics_Ship_Decisions.md
 28. Chapter_22_Proxy_Metrics_Long_Term_Outcomes.md
