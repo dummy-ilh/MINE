@@ -1,4 +1,4 @@
-# Chapter 6 (Boosted): T-tests & Z-tests — Fully Framed for A/B Testing
+# Chapter 12: T-tests & Z-tests — Fully Framed for A/B Testing
 
 ## 1. Intuition
 
