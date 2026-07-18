@@ -1,4 +1,4 @@
-29
+27
 
 1. 09_10_11_chisq_anova_nonparam.md
 2. 100day_abtesting_days1to50.md
@@ -12,8 +12,6 @@
 11. Chapter_06_Metrics_NorthStar_Guardrails_OEC.md
 14. Chapter_09_Sample_Size_Power_Calculations.md
 15. Chapter_10_Randomization_Mechanics.md
-19. Chapter_13_Ratio_Metrics_Delta_Method.md
-20. Chapter_14_Variance_Reduction_CUPED_Stratification.md
 22. Chapter_16_Sequential_Testing_Peeking_Problem.md
 23. Chapter_17_Network_Effects_Cluster_Randomization.md
 24. Chapter_18_Heterogeneous_Treatment_Effects_Simpsons_Paradox.md
