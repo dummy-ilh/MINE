@@ -1,92 +1,458 @@
 # Chapter 15: Multiple Testing Correction (Bonferroni, FDR) Across Many Metrics
+# Chapter 15 — Multiple Testing Correction (Bonferroni, FDR)
+> **Interview tier:** Google / Meta / Apple DS / PM rounds  
+> **Core risk this prevents:** false discovery inflation from testing many metrics simultaneously  
+> **Prerequisite:** Chapter 8 (pre-registration) — understand why you separate primary from secondary metrics first
 
-## 1. Definition
+---
 
-Multiple testing correction adjusts significance thresholds when you're testing many hypotheses (metrics) simultaneously, to control the inflated risk of false positives that arises purely from running many tests at once.
+## 1. The One-Line Mental Model
 
-- **Family-Wise Error Rate (FWER):** the probability of making *at least one* Type I error (false positive) across the entire set of tests. **Bonferroni correction** controls FWER by dividing α by the number of tests (m): α_adjusted = α/m.
-- **False Discovery Rate (FDR):** the expected *proportion* of false positives among all tests declared significant (rather than the probability of any false positive at all). The **Benjamini-Hochberg (BH) procedure** controls FDR, and is generally less conservative than Bonferroni.
+> Testing 20 metrics at α = 0.05 each means you **expect 1 false positive by chance alone** — even if your treatment does absolutely nothing.
 
-## 2. Layman Explanation
+Multiple testing correction re-sets the bar so that the *family* of tests collectively maintains the error guarantee you actually care about.
 
-If you flip a fair coin once and get heads, that's unremarkable. But if you flip 20 fair coins simultaneously, getting at least one "unusual" run (like 5 heads in a row on some coin) becomes almost expected, purely by chance — not because any coin is rigged.
+---
 
-This is exactly the multiple testing problem: if you check 20 metrics in an experiment at the standard 5% significance threshold, you'd expect roughly 1 of them to look "significant" purely by chance even if the treatment does absolutely nothing. If you then report that one "significant" metric as a real finding without acknowledging you checked 19 others that didn't pan out, you're fooling yourself (and everyone else) about how much evidence you actually have.
+## 2. The Coin Flip Intuition
 
-**Bonferroni** is the strict, conservative fix: "if I'm testing 20 things, I'll only call something significant if it clears a much higher bar (α/20 instead of α) — because I want to be very sure I don't cry wolf on ANY of them."
+```
+  ONE COIN                          20 COINS SIMULTANEOUSLY
+  ────────                          ──────────────────────────
+  Flip once.                        Flip all 20 at once.
+  Get heads.                        At least one gives 5+ heads
+  Unusual? Maybe.                   in a row. Surprising?
 
-**FDR (Benjamini-Hochberg)** is a more practical, less strict fix: "I accept that among everything I call significant, some small percentage might be false alarms — but I want to control that percentage (say, keep it under 5%), rather than guaranteeing zero false alarms across the board." This is more forgiving when you're testing many metrics and can tolerate a controlled rate of mistakes among your "wins," rather than needing near-certainty on every single one.
+  P(unusual result) = small         P(at least one unusual result
+                                     somewhere) = much larger
 
-## 3. Formal Explanation
+  This is fine — one test,          THIS is the multiple testing
+  one chance to err.                problem. You have 20 chances
+                                    to get lucky.
+```
 
-**Bonferroni correction:**
+The same logic applies to p-values. Each individual test has a 5% false positive rate. Run 20 tests and the *family-wide* chance of at least one false positive explodes — up to 64% if all tests are independent.
 
-α_adjusted = α / m
+```
+  P(≥1 false positive | m independent tests, all null) = 1 - (1 - α)^m
 
-where m is the number of hypotheses (metrics) tested. A metric's p-value must fall below this stricter threshold to be declared significant. This guarantees P(at least one false positive across all m tests) ≤ α — a strong, conservative guarantee.
+  m=1   → 5%
+  m=5   → 23%
+  m=10  → 40%
+  m=20  → 64%
+  m=50  → 92%
+```
 
-**Downside:** Bonferroni becomes very conservative (low power) as m grows large — testing 50 metrics means each individual test needs p < 0.001 to be declared significant, which can cause you to miss real effects (increased Type II error rate) especially for weaker, but genuine, signals.
+---
 
-**Benjamini-Hochberg (BH) procedure for FDR control:**
+## 3. Two Error Rates — Know the Difference
 
-1. Rank the m p-values from smallest to largest: p₍₁₎ ≤ p₍₂₎ ≤ ... ≤ p₍ₘ₎
-2. Find the largest k such that p₍ₖ₎ ≤ (k/m) × α
-3. Declare all hypotheses with rank ≤ k as significant
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│               FWER vs. FDR — side by side                          │
+│                                                                     │
+│  FAMILY-WISE ERROR RATE (FWER)    FALSE DISCOVERY RATE (FDR)       │
+│  ──────────────────────────────   ──────────────────────────────    │
+│  "What is the probability of      "Of all the results I call        │
+│   making AT LEAST ONE false        significant, what fraction        │
+│   positive anywhere?"              are actually false positives?"    │
+│                                                                     │
+│  Answer: probability               Answer: expected proportion       │
+│  Binary: did any false             Rate: tolerate some false         │
+│   positive occur? (yes/no)          positives, control the rate      │
+│                                                                     │
+│  Appropriate when:                 Appropriate when:                 │
+│  • Any false positive is           • You're doing exploratory        │
+│    costly (safety, legal)            analysis across many metrics    │
+│  • High-stakes guardrail           • False discoveries are           │
+│    checks                            recoverable (future tests)      │
+│  • Binary ship/no-ship             • Better power matters more       │
+│    decision on each metric           than zero-false-positive        │
+│                                      guarantee                       │
+│  Controlled by: Bonferroni         Controlled by: Benjamini-         │
+│                                     Hochberg (BH)                   │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-This adapts the threshold based on rank — later-ranked (larger) p-values need to clear a progressively stricter bar, but the very smallest p-values get a much more lenient threshold than Bonferroni would give them.
+---
 
-**Why BH has more power than Bonferroni:**
-BH controls the *expected proportion* of false discoveries among your significant results, not the probability of any false positive at all — a fundamentally more lenient (but still principled) standard, which translates to higher power to detect true effects, especially when testing many metrics where some are truly non-null.
+## 4. Bonferroni Correction
 
-**When to use which:**
-- Bonferroni (FWER control): appropriate when even a single false positive is very costly — e.g., safety-critical guardrail metrics where shipping on a false "no harm" signal could be damaging.
-- BH/FDR: appropriate for exploratory analysis across many secondary metrics, where you're comfortable with a controlled rate of false discoveries in exchange for better power to catch real effects.
+### The formula
 
-## 4. Levers — What Controls It, What Moves It
+```
+  α_adjusted = α / m
 
-**Number of tests (m)**
-- More metrics tested simultaneously → stricter Bonferroni threshold (α/m shrinks) → lower power per test. This is why teams should limit the number of *primary*, decision-driving metrics (see Chapter 8 — pre-registration) rather than testing dozens simultaneously and correcting after the fact.
+  Where:
+    α = your original significance threshold (usually 0.05)
+    m = number of hypotheses (metrics) tested simultaneously
 
-**Choice of correction method**
-- Bonferroni is simple but overly conservative for large m; BH/FDR retains more power at the cost of a looser, probabilistic (rather than absolute) guarantee against false positives.
+  To declare a metric significant: p-value < α/m
+```
 
-**Independence vs. correlation among tests**
-- Both Bonferroni and the standard BH procedure are valid under independence; when metrics are highly correlated (common in product analytics — e.g., many engagement metrics move together), Bonferroni remains valid but overly conservative, while a modified BH procedure (BH under positive dependence) can be used to retain more power appropriately.
+### Visual intuition
 
-**Confirmatory vs. exploratory framing**
-- Metrics pre-registered as primary (Chapter 8) generally shouldn't need correction if there's only one — correction is specifically needed when multiple metrics could each independently trigger a "significant" conclusion. Clearly separating primary (confirmatory, no correction needed if truly singular) from secondary/exploratory (correction applied, or explicitly flagged as hypothesis-generating only) avoids over-correcting where it isn't needed.
+```
+  UNCORRECTED (m=10, α=0.05)        BONFERRONI (m=10, α=0.05)
+  ───────────────────────────        ───────────────────────────
+  Each test has its own              All tests share a single
+  5% false positive budget.          "family" budget of 5%.
+                                     Each test gets 5%/10 = 0.5%
 
-## 5. Worked Example
+  ←────── 5% ──────→                 ←── 0.5% ──→
+  ████████████████████               ████
+  0                0.05              0   0.005    0.05
 
-Suppose you test 10 metrics in an experiment, with the following p-values (already sorted):
+  Easy to clear.                     Much harder to clear.
+  High false positive rate.          Conservative but safe.
+```
 
-| Rank (k) | Metric | p-value |
+### Power trade-off
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  THE BONFERRONI POWER PROBLEM                                    │
+│                                                                  │
+│  m = 50 metrics → α_adj = 0.05/50 = 0.001                       │
+│                                                                  │
+│  A real, meaningful effect with p = 0.008 would be MISSED       │
+│  even though it's a genuine signal.                              │
+│                                                                  │
+│  This is why Bonferroni is too blunt for large exploratory       │
+│  metric sets — you'll miss real effects at the cost of           │
+│  maintaining a strict zero-false-positive guarantee.             │
+│                                                                  │
+│  Rule of thumb:                                                  │
+│  Bonferroni = right for HIGH-STAKES metrics (few of them)        │
+│  BH/FDR    = right for EXPLORATORY metrics (many of them)        │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 5. Benjamini-Hochberg (BH) Procedure
+
+### The algorithm — step by step
+
+```
+  SETUP: m tests, significance level α (e.g. 0.05)
+
+  STEP 1: Rank all p-values smallest to largest
+          p(1) ≤ p(2) ≤ p(3) ≤ ... ≤ p(m)
+
+  STEP 2: For each rank k, compute the BH threshold:
+          BH_threshold(k) = (k / m) × α
+
+  STEP 3: Find the LARGEST k where p(k) ≤ BH_threshold(k)
+          Call this k*
+
+  STEP 4: Declare ALL hypotheses with rank 1 through k* significant
+          (even if some intermediate ranks failed the check)
+```
+
+### Why BH is smarter than Bonferroni
+
+```
+  BONFERRONI                        BH
+  ──────────                        ──
+  Same threshold for every test     Adaptive threshold — smaller
+  α/m regardless of rank            p-values get a lenient bar,
+                                    larger ones get a stricter bar
+
+  Treats all tests equally          Rewards strong evidence
+  conservative for all              while still controlling
+                                    the false discovery rate
+```
+
+---
+
+## 6. Worked Example — Bonferroni vs. BH
+
+10 metrics, α = 0.05. P-values sorted:
+
+```
+┌──────┬──────────┬─────────┬──────────────┬──────────────┬──────────┬──────────┐
+│ Rank │  Metric  │ p-value │  Bonferroni  │ BH threshold │  BH pass?│  Result  │
+│  (k) │          │         │ (α/m=0.005)  │ (k/m × 0.05) │          │          │
+├──────┼──────────┼─────────┼──────────────┼──────────────┼──────────┼──────────┤
+│   1  │    A     │  0.002  │  0.005  ✓    │    0.005     │    ✓     │   SIG    │
+│   2  │    B     │  0.008  │  0.005  ✗    │    0.010     │    ✓     │   SIG    │
+│   3  │    C     │  0.015  │  0.005  ✗    │    0.015     │    ✓     │   SIG    │
+│   4  │    D     │  0.021  │  0.005  ✗    │    0.020     │    ✗     │   ---    │
+│   5  │    E     │  0.033  │  0.005  ✗    │    0.025     │    ✗     │   ---    │
+│   6  │    F     │  0.041  │  0.005  ✗    │    0.030     │    ✗     │   ---    │
+│   7  │    G     │  0.052  │  0.005  ✗    │    0.035     │    ✗     │   ---    │
+│   8  │    H     │  0.090  │  0.005  ✗    │    0.040     │    ✗     │   ---    │
+│   9  │    I     │  0.150  │  0.005  ✗    │    0.045     │    ✗     │   ---    │
+│  10  │    J     │  0.440  │  0.005  ✗    │    0.050     │    ✗     │   ---    │
+└──────┴──────────┴─────────┴──────────────┴──────────────┴──────────┴──────────┘
+
+  Bonferroni → 1 significant result (Metric A only)
+  BH         → 3 significant results (Metrics A, B, C)
+               Largest k where condition holds = k=3
+```
+
+The BH threshold line versus actual p-values visualised:
+
+```
+  p-value
+  0.05 │                                                    J
+       │                                           I
+  0.04 │                                   H
+       │                             G
+  0.03 │                         F  ← BH threshold line (diagonal)
+       │                    E   /
+  0.02 │               D   /  ← D falls ABOVE line (not sig)
+       │          C   /
+  0.01 │     B   /  ← C, B, A all fall BELOW line (sig)
+       │  A /
+  0.00 │ /
+       └─────────────────────────────────────────────────────
+         1    2    3    4    5    6    7    8    9   10   rank
+
+  Points BELOW the BH line = significant under BH
+  Points ABOVE the BH line = not significant
+```
+
+---
+
+## 7. When to Use Which — Decision Framework
+
+```
+                  How many metrics am I testing?
+                         /              \
+                      FEW              MANY
+                    (1-5)            (6-50+)
+                      │                  │
+           How high is the stake?    What's the goal?
+              /          \              /         \
+           HIGH           LOW      CONFIRM      EXPLORE
+        (guardrail,     (nice to   (ship on    (generate
+         safety)         know)      this)       leads)
+            │               │          │            │
+        BONFERRONI       NONE       SINGLE       BH / FDR
+        (or evaluate    needed      PRIMARY      (controlled
+         solo at own               + no MTC      discovery
+         threshold)                needed        rate)
+```
+
+### The critical insight most candidates miss
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│  A single, truly pre-registered primary metric does NOT need       │
+│  multiple testing correction.                                      │
+│                                                                    │
+│  MTC is about simultaneously tested hypotheses — not about        │
+│  every metric that exists on a dashboard.                          │
+│                                                                    │
+│  Pre-registration (Ch. 8) + single primary = no correction needed  │
+│  Multiple simultaneous primary candidates = correction needed      │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 8. The Guardrail Metric Special Case
+
+This is a favourite interview trap. Do you apply the same correction to guardrails as to exploratory metrics?
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  WRONG approach:                                                    │
+│  Lump crash rate + 14 engagement metrics under one BH correction   │
+│                                                                     │
+│  Why it fails:                                                      │
+│  BH trades some false positives for power. That trade is fine      │
+│  for engagement metrics where a false alarm costs little.          │
+│  But for a guardrail like crash rate, a false NEGATIVE             │
+│  (missing real harm) is catastrophic — you might ship something    │
+│  that damages users.                                               │
+│                                                                     │
+│  RIGHT approach:                                                    │
+│  • Evaluate guardrail metrics INDEPENDENTLY, outside the pool      │
+│  • Use FWER-style control (Bonferroni) or their own               │
+│    pre-committed thresholds                                        │
+│  • Treat exploratory engagement metrics separately under BH        │
+│                                                                     │
+│  The asymmetry: false negative on a guardrail >> false positive   │
+│  So you want high sensitivity (low threshold) for guardrails,     │
+│  not the diluted sensitivity from sharing a pool with 14 others   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 9. Correlation Among Metrics
+
+A subtlety that separates strong candidates:
+
+```
+  ASSUMPTION                        REAL WORLD
+  ──────────                        ──────────
+  Bonferroni and BH assume          In product analytics, metrics
+  tests are independent.            are often highly correlated.
+                                    (CTR, sessions, engagement
+                                     all move together)
+
+  EFFECT ON BONFERRONI:             EFFECT ON BH:
+  Remains valid — still             Standard BH still valid under
+  controls FWER — but               positive dependence (Benjamini
+  becomes even MORE                 & Yekutieli 2001), though
+  conservative than                 there's a BY variant for
+  necessary.                        arbitrary dependence.
+
+  If metrics are correlated,        Positive correlation =
+  you're doing fewer                BH standard procedure is
+  "effective" independent           conservative enough — use it.
+  tests than m suggests.
+```
+
+---
+
+## 10. How it Connects to the Rest of the Framework
+
+```
+  CH. 8 PRE-REGISTRATION
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  Commit to ONE primary metric before launch                     │
+  │  → eliminates the need for MTC on the primary test              │
+  │  → secondary/exploratory metrics still need MTC (Ch. 15)        │
+  └─────────────────────────────┬───────────────────────────────────┘
+                                 │ if multiple primaries or many
+                                 │ secondary metrics, apply:
+  CH. 15 MULTIPLE TESTING CORRECTION  ◄──────────────────────────────
+  ┌───────────────────────────────────────────────────────────────────┐
+  │  FEW high-stakes metrics → Bonferroni (FWER)                     │
+  │  MANY exploratory metrics → BH/FDR                               │
+  │  Guardrails → evaluated independently                            │
+  └─────────────────────────────┬─────────────────────────────────────┘
+                                 │
+  CH. 16 SEQUENTIAL TESTING ◄───┘  (separate issue — early stopping)
+  (peeking at results mid-experiment
+   is a time-series version of MTC)
+```
+
+---
+
+## 11. Red Flags — Spot the Error
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  RED FLAGS IN THE WILD                                              │
+│                                                                     │
+│  ✗ Testing 25 metrics at α=0.05 each, reporting the one           │
+│    that hit p=0.03 as a win — no correction applied               │
+│    → Expected 1.25 false positives by chance. This proves nothing. │
+│                                                                     │
+│  ✗ Applying Bonferroni to 50 exploratory metrics, finding          │
+│    nothing significant, concluding "no effect"                     │
+│    → Bonferroni at m=50 is so strict (α=0.001) that real but      │
+│      moderate effects are invisible. Use BH instead.              │
+│                                                                     │
+│  ✗ Guardrail metrics (crash rate, latency) lumped in the           │
+│    same FDR correction pool as engagement metrics                  │
+│    → Dilutes sensitivity for safety-critical checks.               │
+│                                                                     │
+│  ✗ "We only have one primary metric so we don't need correction"   │
+│    — said while also testing 8 secondary metrics and ready         │
+│    to ship on whichever one is significant                         │
+│    → Correction IS needed for the secondary metrics.              │
+│                                                                     │
+│  ✓ One pre-registered primary + BH on secondary metrics           │
+│  ✓ Guardrails evaluated at own threshold, outside the pool        │
+│  ✓ Communicating explicitly: "Metric X is exploratory only"       │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 12. Concept Summary — One Diagram
+
+```
+                    m hypotheses tested simultaneously
+                              │
+              ┌───────────────┴───────────────┐
+              │                               │
+        CONFIRMATORY                    EXPLORATORY
+        (pre-registered                 (secondary /
+         primary only)                   guardrail /
+              │                          discovery)
+              │                               │
+      No MTC needed                          │
+      (1 test = 1 chance          ┌──────────┴──────────┐
+       to err)                    │                     │
+                             HIGH-STAKES            MANY LOW-
+                             FEW METRICS            STAKES METRICS
+                             (guardrails)           (engagement,
+                                  │                  retention...)
+                                  │                     │
+                            BONFERRONI              BH / FDR
+                            α_adj = α/m          Rank p-values,
+                            FWER control         adaptive threshold
+                            "zero false          "controlled false
+                             positive            discovery rate"
+                             guarantee"
+```
+
+---
+
+## 13. Flash Cards — Interview Prep
+
+```
+Q: What does FWER stand for and what does Bonferroni control?
+A: Family-Wise Error Rate — probability of AT LEAST ONE false positive
+   across all tests. Bonferroni: α_adj = α/m
+
+Q: What does FDR stand for and what does BH control?
+A: False Discovery Rate — EXPECTED PROPORTION of false positives
+   among all results declared significant. BH controls this.
+
+Q: Why is BH more powerful than Bonferroni?
+A: BH controls a proportion (FDR), not a probability (FWER). A more
+   lenient standard → higher power to detect true effects.
+
+Q: Does a single pre-registered primary metric need MTC?
+A: No. MTC is for simultaneously tested hypotheses. One primary = one
+   test = no correction needed.
+
+Q: With m=25 metrics, what is the Bonferroni threshold at α=0.05?
+A: 0.05/25 = 0.002. A p=0.03 result does NOT clear this bar.
+
+Q: Should guardrail metrics share a BH pool with exploratory metrics?
+A: No. Evaluate guardrails independently — false negatives on safety
+   metrics are catastrophic; you need full sensitivity, not the
+   diluted sensitivity of a shared correction pool.
+
+Q: What is the BH procedure in 3 steps?
+A: (1) Rank p-values smallest to largest. (2) For each rank k, compute
+   threshold = (k/m)×α. (3) Find the largest k where p(k) ≤ threshold.
+   Declare all ranks 1 through k* significant.
+
+Q: Primary metric not significant, but a secondary metric is p=0.04
+   out of 8 secondary metrics. PM wants to ship. What do you say?
+A: Bonferroni threshold = 0.05/8 = 0.00625. p=0.04 doesn't clear it.
+   BH likely won't save it either with only one hit at rank ~4.
+   Treat as hypothesis-generating. Pre-register this secondary metric
+   as the primary in a new experiment.
+```
+
+---
+
+## 14. Connections to Other Chapters
+
+| Chapter | Topic | Connection |
 |---|---|---|
-| 1 | Metric A | 0.002 |
-| 2 | Metric B | 0.008 |
-| 3 | Metric C | 0.015 |
-| 4 | Metric D | 0.021 |
-| 5 | Metric E | 0.033 |
-| 6 | Metric F | 0.041 |
-| 7 | Metric G | 0.052 |
-| 8 | Metric H | 0.09 |
-| 9 | Metric I | 0.15 |
-| 10 | Metric J | 0.44 |
+| Ch. 8 | Pre-registration | Separating primary from secondary is what determines whether MTC applies |
+| Ch. 9 | Power calculations | Bonferroni lowers power per test — must account for this when sizing |
+| Ch. 16 | Sequential testing | Peeking mid-experiment is a temporal version of the same MTC problem |
+| Ch. 19 | Long-term holdouts | Long-horizon secondary metrics still need MTC if tested alongside short-term ones |
 
-**Bonferroni at α=0.05:** α_adjusted = 0.05/10 = 0.005. Only Metric A (p=0.002) clears this bar → only 1 metric declared significant.
+---
 
-**Benjamini-Hochberg at α=0.05:** Compute (k/m)×0.05 for each rank:
-- k=1: 0.005 → 0.002 ≤ 0.005 ✓
-- k=2: 0.010 → 0.008 ≤ 0.010 ✓
-- k=3: 0.015 → 0.015 ≤ 0.015 ✓ (exactly at threshold)
-- k=4: 0.020 → 0.021 > 0.020 ✗
-- k=5: 0.025 → 0.033 > 0.025 ✗
 
-Find the largest k where the condition holds: k=3 (Metric C) satisfies p₍₃₎ ≤ 0.015. Even though k=4 and k=5 fail individually, the rule is "find the LARGEST k where the condition holds" — checking further ranks confirms k=3 is the largest satisfying rank here (k=4 onward all fail). So BH declares Metrics A, B, and C significant (ranks 1-3).
 
-**Comparison:** Bonferroni found 1 significant metric; BH found 3. This illustrates BH's higher power — it's willing to accept a small, controlled rate of false discoveries among 3 "wins" rather than Bonferroni's much stricter standard that only lets through the single strongest result.
-
-## 6. Famous Q&A (Google / Apple style)
+## 15. Famous Q&A (Google / Apple style)
 
 **Q: Your experiment tracks 25 metrics, and one shows p=0.03. Should you declare it significant at the standard α=0.05 threshold?**
 A: Not without correction — if you're evaluating 25 metrics at α=0.05 each, you'd expect over 1 false positive by chance alone even with zero true effects (25 × 0.05 = 1.25 expected false positives), so a single p=0.03 result isn't strong evidence on its own. I'd apply a multiple testing correction — Bonferroni if this metric wasn't pre-registered as the single primary metric and you need a strict guarantee against any false positive, or Benjamini-Hochberg if you're comfortable with a controlled false discovery rate across several exploratory metrics. Under Bonferroni with m=25, the adjusted threshold would be 0.002 — p=0.03 wouldn't clear that bar.
