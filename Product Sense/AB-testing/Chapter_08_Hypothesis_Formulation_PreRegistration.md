@@ -1,7 +1,4 @@
 # Chapter 8: Hypothesis Formulation & Pre-Registration
-# Chapter 8 — Hypothesis Formulation & Pre-Registration
-> **Interview tier:** Google / Meta / Apple PM / DS rounds  
-> **Core risk this prevents:** post-hoc rationalization, inflated false-positive rates, p-hacking
 
 ---
 
@@ -437,3 +434,125 @@ Goal-post moving: Declaring a new success criterion after seeing the primary res
 Multiple testing correction (Bonferroni, Benjamini-Hochberg) handles the formal problem: you pre-specified multiple primary metrics simultaneously and need to control the family-wise error rate. Fix: adjust α per test.
 
 Yes, you need both. Pre-reg handles the undocumented analyst discretion; MTC handles the formally declared multiple endpoints. They're complementary, not substitutes.
+
+This is the **foundational bedrock** of A/B testing at Google, Meta, and Apple. 
+
+If Multiple Testing Correction is about *how* you analyze data, Hypothesis Formulation & Pre-Registration is about *how you stop yourself from cheating before you even see the data*. 
+
+At Meta/Facebook, this is drilled into DS interviews via the **"HARKing"** concept (Hypothesizing After the Results are Known). At Google, this ties directly into the **"Trusted Tester"** program. At Apple, this is about **privacy-preserving experimentation** (you *must* define your hypotheses before data leaves the device).
+
+Here is your definitive interview playbook for this topic.
+
+---
+
+### Part 1: The "Cold Call" Opening Question
+**Interviewer:** *"Your Product Manager runs a 2-week A/B test. On Day 3, they look at the dashboard, see a massive negative dip in retention, panic, and change the metric to 'Click-Through Rate' instead. On Day 14, CTR is flat, but they notice 'Revenue' went up slightly. They want to ship using Revenue. What is your reaction?"*
+
+**Your Instant Answer:** 
+**"This is textbook p-hacking and HARKing.** They moved the goalpost mid-game. By peeking at the data early, changing the primary metric, and retroactively choosing the one that looked best, they have completely invalidated the statistical inference. The p-value for 'Revenue' is no longer valid because it wasn't pre-registered as the primary success criterion. My answer is a hard 'No' to shipping, and we need to run a new, pre-registered experiment."
+
+---
+
+### Part 2: The Core Framework (The "3-Pillar" Hypothesis)
+
+To get a "Hire" signal, you cannot just say "pre-register the metric." You need to show extreme structural rigor. Break your hypothesis down into **three distinct tiers** before the test starts:
+
+| Tier | Name | Definition | Alpha (Significance) | Action if Significant |
+| :--- | :--- | :--- | :--- | :--- |
+| **1** | **Primary (OEC)** | The single, non-negotiable North Star metric the test is **powered** for. (e.g., LTV, 7-Day Retention, Ads Revenue). | **α = 0.05** (Uncorrected) | **Ship / No-Ship** decision depends entirely on this. |
+| **2** | **Guardrails** | Metrics that must **not** go negative. (e.g., Crash Rate, Uninstall Rate, Support Tickets). | **α = 0.01** (or Bonferroni-corrected) | **Veto power.** If this fails, we **do not ship**, even if the primary wins. |
+| **3** | **Secondary / Exploratory** | Diagnostic metrics to understand *why* the primary moved. (e.g., Funnel steps, Time-on-page, specific category purchases). | **α = 0.10 (FDR controlled)** | **Do not ship based on these.** Use them to generate hypotheses for *the next* test. |
+
+---
+
+### Part 3: The "Meta" Nuance (The Fixed-Effect vs. Random-Effect Hypothesis)
+
+Meta interviews love to test if you understand the *unit* of your hypothesis.
+
+**Interviewer:** *"You are testing a new Ranking Algorithm for News Feed. Your hypothesis is: 'This new algorithm increases user engagement.' You pre-register 'Daily Active Minutes' as your primary. But your test has millions of users. Is this hypothesis specific enough?"*
+
+**Your Advanced Answer:**
+"No. 'Engagement' is too vague. I need to pre-register a **directional** and **segmented** hypothesis. For example:
+
+- **Direction:** I hypothesize this increases *deep* engagement (time spent), not *shallow* engagement (scroll speed).
+- **Segments (Fixed Effects):** I hypothesize the effect is **larger for new users** (who need better content discovery) and **neutral/negative for power users** (who hate algorithm changes). 
+- **Pre-registration:** I will pre-register an **ANCOVA (Analysis of Covariance)** model where I explicitly state I will interact the treatment variable with a 'User Tenure' covariate. I am not data-dredging to find this segment; I am pre-declaring that this is the primary lens through which I will view the results."
+
+---
+
+### Part 4: The "Apple" Nuance (The Practical Constraints of Pre-reg)
+
+Apple cares deeply about implementation. They will throw a practical wrench into the theoretical ideal.
+
+**Interviewer:** *"Pre-registration sounds great in theory. But we move fast. We can't wait 3 weeks for a formal pre-registration document to be approved by 5 managers. How do you balance speed with rigor at a massive scale?"*
+
+**Your Answer (The "Lightweight Pre-Reg" Framework):**
+"I break pre-registration into **Mandatory** and **Flexible** components:
+
+- **Mandatory (Must be locked before Day 1):** The Primary Metric, the Guardrails, the Unit of Diversion (User-ID vs. Cookie), the Minimum Detectable Effect (MDE), and the Sample Size. These must go into a shared, read-only Google Doc or an internal experimentation tool (like Google's Overflow or Meta's PlanOut) that timestamps the lock.
+- **Flexible (Can be defined pre-analysis, but not pre-launch):** Secondary metrics and segment definitions. I can define these while the test is running (before I compute the final p-value), as long as I write them down *before* I stop the test.
+- **The Golden Rule:** I enforce a strict policy: **No peeking at the Primary metric until the pre-calculated sample size is reached.** We can look at Guardrails daily (for safety), but we cannot look at the OEC until the data collection is 100% complete."
+
+---
+
+### Part 5: The "Power & MDE" Follow-up (The Math Check)
+
+**Interviewer:** *"Fine. You pre-register '7-Day Retention' as your primary. You power the test to detect a **2% absolute lift**. After 4 weeks, the test ends. You see a **1.5% absolute lift** with a p-value of 0.04. It's statistically significant, but it's below your pre-registered MDE. Do you ship?"*
+
+**Your Answer:**
+**"No, I do not ship.** At least, not solely based on this test. 
+Here is the nuance: The p-value < 0.05 tells me the effect is *real* (not zero). But the MDE is about *practical significance*. I powered the test to detect 2% because anything less than 2% isn't worth the engineering cost/UX risk. A 1.5% lift might be statistically significant, but the confidence interval around that 1.5% likely includes 0.5%—which is economically meaningless. 
+
+I would tell the PM: *'We have statistical significance, but not practical significance. Let's ship it only if the engineering cost is zero. If it requires maintenance, we run a larger test to tighten the confidence interval and see if the true effect is actually above 2%.'*"
+
+---
+
+### Part 6: The "Stopping Early" Curveball (Peeking)
+
+**Interviewer:** *"Your test has been running for 2 out of the required 4 weeks. The p-value hits 0.001. The PM wants to stop the test early and ship immediately to 'capture the holiday quarter.' Why is this a bad idea, and what do you do?"*
+
+**Your Answer:**
+"This is the **peeking problem**. If we stop the test early, we have dramatically inflated our Type 1 error rate. Even though the p-value is 0.001 *right now*, if we had planned to stop at any random time between Week 1 and Week 4, the *effective* alpha is actually closer to 0.10 or 0.15.
+
+**My solution:** 
+If we *must* stop early for business reasons (e.g., holiday quarter), we must use **Sequential Testing (Group Sequential Design)** with **alpha-spending functions** (e.g., O'Brien-Fleming). We pre-register 4 checkpoints (Week 1, 2, 3, 4) and allocate our 0.05 alpha very stingily at the early checkpoints (e.g., 0.00001 at Week 1) and save most of the alpha (0.049) for the final Week 4 checkpoint. If the p-value at Week 2 is 0.001, but our pre-registered Week 2 alpha is 0.001, we *just* barely pass. But if we didn't pre-register this, it's invalid."
+
+---
+
+### Part 7: The "Surprising Negative" Scenario (The Critical Thinking Test)
+
+**Interviewer:** *"You pre-register that the new feature will increase 'Add-to-Cart' rate. The test concludes. 'Add-to-Cart' is flat (p=0.8), but 'Purchases' (a secondary, un-corrected metric) went up significantly (p=0.02). The PM is thrilled and wants to ship because revenue went up. Defend your position statistically."*
+
+**Your Answer (The Aha! Moment):**
+"I would actually push back and say **we might have broken the checkout flow**. 
+
+- If Add-to-Cart is flat, but Purchases went up, that mathematically implies the **Conversion Rate from Cart to Purchase** went up. 
+- Did we change the pricing? Did we change the payment UI? 
+- Because I pre-registered 'Add-to-Cart' as the primary mechanism, and it's flat, I cannot attribute the Purchase lift to our feature. It is likely a **coincidental external factor** (e.g., a competitor went down during the test, or a holiday weekend happened).
+- I will **not** ship. I will run a **validation test** (a 4-week holdback) where the only pre-registered metric is 'Purchases'. If it replicates in the holdback, then I'll believe it. But I will not trust a secondary metric that went against the causal logic of my pre-registered hypothesis."
+
+---
+
+### Part 8: The "Pre-Registration Template" (Cheat Sheet to mention)
+
+To sound like a Staff-level DS, summarize your pre-registration document structure in the interview:
+
+> *"My pre-registration document has exactly 6 locked sections before the test starts:"*
+1. **The Intervention:** Exactly what is changing in the treatment arm.
+2. **The Population:** Which users are included (e.g., US-only, iOS-only).
+3. **The Primary Hypothesis:** "Treatment will increase [Metric X] by [MDE]."
+4. **The Analysis Unit:** User-ID (not Pageviews) to avoid unit-of-analysis issues.
+5. **The Statistical Method:** Two-sample t-test? OLS with covariates (CUPED)? 
+6. **The Success/Failure Criteria:** "Ship if Primary is p<0.05 AND Guardrails are p>0.01. Do not ship otherwise."
+
+---
+
+### Summary Table for your Interview Cheat Sheet:
+
+| Interviewer's Trap | Your Get-Out-of-Jail-Free Card |
+| :--- | :--- |
+| "PM changed the metric mid-test." | "Invalid. We only look at the **pre-registered OEC** for the ship decision." |
+| "We don't have time to pre-register." | "We at least lock the **Primary, Power, and Guardrails** on Day 0. Everything else is exploratory." |
+| "Can we stop early for a low p-value?" | "Only with a **pre-registered alpha-spending function**. Otherwise, we are inflating false positives." |
+| "Can we ship a secondary metric that won?" | "No. Secondary metrics generate **hypotheses for Test #2**, they do not trigger a ship for Test #1." |
+| "The effect is significant but below the MDE." | "Statistically significant, but **practically insignificant**. Requires a cost-benefit analysis, not a statistical decree." |
