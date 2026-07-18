@@ -156,3 +156,86 @@ A: With small n, using the sample standard deviation to estimate σ introduces e
 
 ---
 *End of master tutorial — combines confidence interval construction, interpretation, the CI-hypothesis test duality, levers, worked example, and interview Q&A/traps.*
+
+
+---
+
+
+The confusing part is the word **"effect."** It just means **the quantity you're trying to measure**.
+
+Depending on the experiment, the effect could be:
+
+* A difference in means (e.g., users spend **5 more minutes** on a new app version).
+* A difference in conversion rates (e.g., **+2%** purchases).
+* An odds ratio, risk ratio, regression coefficient, etc.
+
+### Example
+
+Suppose you're A/B testing a new checkout page.
+
+* Control conversion rate: **10%**
+* Treatment conversion rate: **12%**
+
+The **effect** is:
+
+> **12% − 10% = +2 percentage points**
+
+Now imagine your statistical analysis gives:
+
+* p-value = **0.03**
+* 95% CI = **0.3% to 3.7%**
+
+Here's what each tells you:
+
+* **p-value:** If there were actually **no effect** (true difference = 0), seeing data this extreme would happen about 3% of the time. Since 0.03 < 0.05, you reject the null hypothesis.
+* **Confidence interval:** Based on your data, plausible values for the **true effect** range from **0.3% to 3.7%**.
+
+Notice how the CI is much more informative:
+
+* It says the effect is probably **positive** (the interval doesn't include 0).
+* It also tells you **how big** the improvement might realistically be.
+
+---
+
+### Why the "95%" statement is worded that way
+
+People often want to say:
+
+> "There is a 95% probability the true effect is in this interval."
+
+But that's **not** the frequentist interpretation.
+
+Instead, we say:
+
+> **If we repeated the experiment many times and constructed a 95% confidence interval from each sample, about 95% of those intervals would contain the true effect.**
+
+Why?
+
+In frequentist statistics:
+
+* The **true effect** is treated as a fixed (but unknown) number.
+* The **interval** changes from sample to sample because different samples give different estimates.
+
+So the **95%** refers to the **method's long-run success rate**, not to the probability that this particular interval contains the true value.
+
+---
+
+### A visual intuition
+
+Suppose the true effect is actually **+2%**, but you don't know that.
+
+You repeat the experiment 100 times:
+
+```
+Experiment 1:   [0.8%, 3.1%]   ✓
+Experiment 2:   [1.2%, 2.7%]   ✓
+Experiment 3:   [-0.4%, 1.8%]  ✗
+Experiment 4:   [0.5%, 3.8%]   ✓
+...
+```
+
+Each experiment produces a different confidence interval because the data differ.
+
+If you're using a 95% confidence interval procedure, then **about 95 of those 100 intervals will include the true effect (+2%)**, while about 5 will miss it entirely.
+
+---
