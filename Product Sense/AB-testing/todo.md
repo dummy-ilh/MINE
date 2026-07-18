@@ -1,31 +1,18 @@
-23
+16
 
 1. 09_10_11_chisq_anova_nonparam.md
 2. 100day_abtesting_days1to50.md
 3. 17_bayesian_hypothesis_testing.md
-5. Chapter_02_Central_Limit_Theorem.md
-6. Chapter_03_Confidence_Intervals.md
-7. Chapter_04.1_One_Sided_vs_Two_Sided_Testing.md
-8. Chapter_04.2_P_values.md
-9. Chapter_04_Hypothesis_Testing_Basics.md
-10. Chapter_05_Causal_Inference_vs_Correlation.md
-11. Chapter_06_Metrics_NorthStar_Guardrails_OEC.md
-14. Chapter_09_Sample_Size_Power_Calculations.md
-15. Chapter_10_Randomization_Mechanics.md
-
-26. Chapter_20_Interleaving_Ranking_Experiments.md
-27. Chapter_21_Conflicting_Metrics_Ship_Decisions.md
-28. Chapter_22_Proxy_Metrics_Long_Term_Outcomes.md
-29. Chapter_23__Simpsons_Paradox_Segment_Analysis.md
-30. Chapter_30_mock.md
-31. Cheat sheet.md
-32. Extras.md
-33. Trustworthy Online Controlled Experiments.md
-34. ab_testing_interview_qa.md
-35. faang_ab_testing_days1_50.md
-36. faang_ab_testing_days51_100.md
-
-
-p hacking
-harkig
-Sutva
+4. Chapter_05_Causal_Inference_vs_Correlation.md
+5. Chapter_06_Metrics_NorthStar_Guardrails_OEC.md
+6. Chapter_09_Sample_Size_Power_Calculations.md
+7. Chapter_10_Randomization_Mechanics.md
+8. Chapter_30_mock.md
+9. Extras.md
+10. Trustworthy Online Controlled Experiments.md
+11. ab_testing_interview_qa.md
+12. faang_ab_testing_days1_50.md
+13. faang_ab_testing_days51_100.md
+14. P-hacking
+15. HARKing (Hypothesizing After the Results are Known)
+16. SUTVA (Stable Unit Treatment Value Assumption)
