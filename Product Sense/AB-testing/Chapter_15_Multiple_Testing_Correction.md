@@ -462,6 +462,73 @@ A: I'd treat it differently — guardrail metrics like crash rate are typically 
 **Q: Your team ran an experiment, found no significant result on the primary metric, but a secondary metric was significant at p=0.04 out of 8 secondary metrics tested. A PM wants to ship based on this secondary win. What do you say?**
 A: I'd first check whether this passes a reasonable multiple-testing correction — with 8 secondary metrics, Bonferroni would require p < 0.00625, which p=0.04 doesn't clear, and even under the more lenient BH procedure, a single p=0.04 among 8 tests is unlikely to survive correction unless several other secondary metrics also show strong signal. Beyond the statistical correction, I'd also point out that shipping on a secondary metric when the pre-registered primary metric showed no effect is exactly the kind of post-hoc goalpost-moving that pre-registration (Chapter 8) is meant to prevent — I'd recommend treating this secondary result as hypothesis-generating for a future, properly powered follow-up test rather than a basis for shipping now.
 
+Two separate questions — let me take them one at a time.
+
+---
+
+## If 20 tests and 1 is significant after correction
+
+**Short answer: it's a real signal, but a weak one. Treat it as a lead, not a conclusion.**
+
+Here's why the "after correction" part actually matters a lot:
+
+Before correction, 1 out of 20 being significant is basically meaningless — you'd expect that by pure chance. But *after* Bonferroni (threshold = 0.05/20 = 0.0025), that one result had to clear a much higher bar. It's not noise. Something probably moved.
+
+The problem is **power**. To get 1 significant result out of 20 metrics after Bonferroni, you needed a fairly strong signal just to survive that strict threshold. The other 19 being null doesn't mean they have no effect — it means your test wasn't sensitive enough to detect smaller effects after the correction tightened the bar so hard.
+
+So the inference is:
+
+- The 1 significant metric probably has a real effect
+- The 19 null results are **uninformative** — they could be truly null, or they could have real effects you didn't have power to detect
+- If this metric was pre-registered as your primary → you can ship on it
+- If it was one of 20 exploratory metrics → treat it as a hypothesis to pre-register and retest properly
+
+The worst move is saying "19 things had no effect." Bonferroni at m=20 is so strict that moderate real effects simply don't show up.
+
+---
+
+## Why guardrail metrics stay out of the correction pool
+
+Simple version: **the correction trades sensitivity for safety against false alarms. Guardrails need the opposite trade.**
+
+Let's use a concrete example.
+
+Say you're testing a new checkout flow. You track:
+
+- 14 exploratory engagement metrics (time on page, scroll depth, etc.)
+- 1 guardrail: **crash rate**
+
+You pool all 15 under BH correction. BH's job is to say "among everything I flag as significant, keep false positives under 5%." To do that, it raises the bar for everything in the pool — including crash rate.
+
+Now suppose the new checkout flow causes crashes to go up by 15%. The p-value on crash rate comes back at p = 0.04. Under the shared BH correction with 14 other metrics, that might not survive — BH looks at where crash rate ranks among all 15 p-values and might decide 0.04 isn't strong enough given the pool size.
+
+**You just missed a real crash regression. You ship. Users crash.**
+
+That's the problem. BH is designed to tolerate some false positives in exchange for catching more true positives. That's a perfectly fine trade for engagement metrics — if you falsely flag "scroll depth increased" you've wasted some follow-up effort, no big deal.
+
+But for crash rate, the trade is backwards. You don't want to tolerate false *negatives* (missing real harm). You want maximum sensitivity — meaning a low, strict, independent threshold just for that metric.
+
+```
+  ENGAGEMENT METRICS          GUARDRAIL METRICS
+  ─────────────────           ─────────────────
+  False positive cost:        False positive cost:
+  Low — wasted follow-up      Low — you block a launch
+  work, that's it             unnecessarily. Annoying.
+
+  False negative cost:        False negative cost:
+  Low — missed a signal,      HIGH — you ship something
+  run another test            that crashes/harms users
+
+  So you want:                So you want:
+  Fewer false positives       Fewer false NEGATIVES
+  → raise the bar (BH)        → keep the bar LOW and
+                                separate from the pool
+```
+
+In practice: evaluate crash rate at its own pre-committed threshold (say p < 0.05, independently), completely separate from whatever correction you apply to the 14 engagement metrics. If crash rate flags, you halt — regardless of what BH says about the engagement pool.
+
+
+
 ## 7. Common Mistakes / Red Flags (Quick Review)
 
 - ❌ Testing many metrics at the standard α=0.05 without any correction, then reporting whichever one happened to be significant
@@ -472,4 +539,114 @@ A: I'd first check whether this passes a reasonable multiple-testing correction 
 - ✅ Do: use Bonferroni when a strict, zero-tolerance guarantee is needed; use BH/FDR when better power across many exploratory checks is more valuable
 
 ---
-*Next: Chapter 16 — Sequential Testing & the Peeking Problem (always-valid p-values).*
+This is a classic and high-stakes topic for Product/DATA/DS interviews at Google, Meta, and Apple. 
+
+When you run an A/B test, you are usually not looking at just one metric (e.g., "Revenue"). You are looking at **dozens, if not hundreds**, of secondary metrics (e.g., Click-Through Rate, Session Duration, Bounce Rate, specific funnel steps, and guardrail metrics like Crash Rate).
+
+Here is exactly how to structure your answer, the specific questions you will be asked, and how to handle the counter-arguments that interviewers love to throw at you.
+
+---
+
+### Part 1: The "Cold Call" Opening Question
+**Interviewer:** *"You ran an A/B test with 50 different success metrics. Your product manager says 3 metrics came back statistically significant at p < 0.05. Do you ship the feature?"*
+
+**Your Instant Answer:** 
+**"Absolutely not.** If we run 50 independent tests at α=0.05, the probability of seeing **at least one** false positive (Type 1 error) is \( 1 - (0.95)^{50} \approx 92\% \). We have almost certainly found noise. We need to correct for multiple comparisons before we make a shipping decision."
+
+---
+
+### Part 2: The Three Main Solutions (The "Framework")
+
+You need to clearly differentiate when to use each method. Here is the interview cheat sheet:
+
+| Method | What it does | Best used for | The Trade-off |
+| :--- | :--- | :--- | :--- |
+| **Bonferroni** | Divides your alpha (0.05) by the **number of metrics** (e.g., 0.05 / 50 = 0.001). | **Guardrail metrics** (Crashes, Revenue). Metrics where a false positive is **catastrophic** and you cannot afford to break anything. | Massively increases **False Negatives (Type II errors)**. If you have 50 metrics, you need a massive sample size to detect a tiny lift. |
+| **FDR (False Discovery Rate)** - specifically **Benjamini-Hochberg** | Ranks p-values from smallest to largest. Finds the largest p-value that is still below \((rank / total) * 0.05\). | **Exploratory metrics** (Click-through on secondary UI elements, country-specific breakdowns). You are looking for "signals" to generate new hypotheses. | You will ship a few things that are actually false positives, but you explicitly accept that risk (usually 5% or 10% FDR). |
+| **Hierarchical/Step-down** (e.g., Holm-Bonferroni) | Less conservative than Bonferroni. It sorts p-values and applies a sequentially less strict correction. | A "Goldilocks" compromise. Used when you have a primary metric (uncorrected) and secondary metrics (corrected). | More complex to explain to non-technical stakeholders. |
+
+---
+
+### Part 3: The "Meta/Google" Nuance (The Family-Wise Error Rate)
+
+At Meta and Google, you rarely just blindly apply Bonferroni to all 50 metrics. The interviewer will push back:
+
+**Interviewer:** *"But Bonferroni is too conservative. If I use it, I'll never ship anything because my sample size isn't big enough. What do we actually do in practice?"*
+
+**Your Advanced Answer (The "Meta Way"):**
+"We apply **metric hierarchy**:
+
+1. **Primary Metric (The North Star):** We **do NOT** correct this. We run this at α=0.05. The entire experiment is powered for this one metric. If it fails, we don't ship, regardless of secondary metrics.
+2. **Guardrail Metrics (Trust/Safety):** We correct these aggressively using **Bonferroni**, but we only have 2 or 3 of them (e.g., Revenue per User, Crash Rate). We must protect the user experience at all costs.
+3. **Exploratory/Diagnostic Metrics (the other 45):** We apply **FDR (Benjamini-Hochberg)** at a 10% or 20% level. We treat these as directional. We use them to understand *why* the primary metric moved, but we do not use them as the sole reason to ship."
+
+---
+
+### Part 4: The "Apple" Nuance (The FWER vs. FDR Debate)
+
+Apple cares deeply about user privacy and system stability. They will push you on the philosophical difference.
+
+**Interviewer:** *"Explain to me in plain English the difference between Family-Wise Error Rate (FWER) and False Discovery Rate (FDR). When would you choose one over the other?"*
+
+**Your Answer:**
+
+- **FWER (Bonferroni):** "The probability of making **even one** false discovery across all tests." 
+  - *Use when:* You are testing a new iOS update. If you are wrong about *any* battery-life metric, the press will destroy you. You need absolute certainty.
+- **FDR (Benjamini-Hochberg):** "The expected **proportion** of false discoveries among *only the rejected hypotheses*." 
+  - *Use when:* You are testing a new Search ranking algorithm. You are looking at 100 different search sub-queries. You expect 95 of them to be null (no change). You don't care if 3 out of the 10 that show improvement are actually false positives, because you just need to know which directions to iterate on next quarter.
+
+---
+
+### Part 5: The "Practical Execution" Question
+
+**Interviewer:** *"Walk me through how you would apply the Benjamini-Hochberg (FDR) procedure manually on a whiteboard."*
+
+**Your Script:**
+"Let’s say I have 5 metrics with p-values:
+`0.001, 0.008, 0.03, 0.045, 0.20`. I want to control FDR at 10% (q=0.10).
+
+1. I sort them from **smallest to largest** (they already are).
+2. I assign a rank (k) from 1 to 5.
+3. I calculate the **critical value** for each: \((k / 5) * 0.10\).
+   - Rank 1: \(0.2 * 0.10 = 0.02\) 
+   - Rank 2: \(0.4 * 0.10 = 0.04\)
+   - Rank 3: \(0.6 * 0.10 = 0.06\)
+   - Rank 4: \(0.8 * 0.10 = 0.08\)
+   - Rank 5: \(1.0 * 0.10 = 0.10\)
+4. **The Rule:** Find the **largest** p-value that is *still less than or equal to* its critical value.
+   - p=0.03 is less than 0.06 (Rank 3) → Significant.
+   - p=0.045 is less than 0.08 (Rank 4) → Significant.
+   - p=0.20 is NOT less than 0.10 (Rank 5) → Not significant.
+5. **Conclusion:** The metrics with p=0.001, 0.008, 0.03, and 0.045 are all declared significant. The p=0.20 is not."
+
+---
+
+### Part 6: The "Stakeholder" Curveball
+
+**Interviewer:** *"Your PM doesn't care about statistics. They see that 'Time on Site' went up with a p-value of 0.03, but Bonferroni says it's not significant. They want to ship it. What do you say?"*
+
+**Your Answer:**
+"I would reframe the risk in business terms. I would say: *'If we ship this based on Time on Site, there is a 90%+ chance that this lift is actually random noise from the other 49 metrics we looked at. If we ship this, and it actually hurts Retention (our primary metric) in the long run, we lose X million dollars. I recommend we run a follow-up, focused experiment—pre-registering only 'Time on Site' as the primary metric—to validate this finding before we commit engineering resources to a full rollout.'*"
+
+---
+
+### Part 7: The "Preregistration" Bonus Points (To sound Senior)
+
+Add this at the end to get a "Hire" signal:
+"To avoid this entire debate in the future, I always push the team to **pre-register our metrics** before the experiment starts. We specify:
+
+- **1 OEC (Overall Evaluation Criterion):** No correction needed.
+- **≤ 3 Guardrails:** Bonferroni correction.
+- **The rest:** We bucket them into a 'Signals Dashboard' where we explicitly label them as 'FDR-controlled, exploratory' and do not allow them to trigger a 'Ship' decision without a validation experiment."
+
+---
+
+### Summary Table for your Interview Cheat Sheet:
+
+| Scenario | What to apply |
+| :--- | :--- |
+| Testing a new Ads algorithm; breaking revenue is unacceptable. | **Bonferroni** on the 3 revenue guardrails. |
+| Testing a new UI layout; you want to see which of 50 micro-interactions improved. | **FDR (Benjamini-Hochberg)** at 10%. |
+| A regulatory/compliance test where the government fines you for any negative effect. | **Bonferroni** (or ideally, Sequential Testing with alpha-spending). |
+| A PM cherry-picked 1 metric out of 100 that went up. | Reject the request; demand a **Holdout Validation** or a new, powered experiment. |
+| You have a Primary Metric (Conversion) and 4 Secondary Metrics. | **Holm-Bonferroni** (step-down) for the secondaries, Primary stays at 0.05. |
