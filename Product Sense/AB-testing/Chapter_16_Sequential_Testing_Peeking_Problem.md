@@ -1,287 +1,112 @@
-# Chapter 16 (Rebuilt for Clarity): Multiple Testing Correction — FWER vs. FDR
+# Chapter 16 (continued): Sequential Testing & the Peeking Problem — Always-Valid P-Values
 
-*Quick note before starting: the source chapter's title says "Sequential Testing & the Peeking Problem," but the actual content is about a different (related) problem — testing many metrics/segments at once, not peeking at the same metric over time. This rebuild is titled to match the actual content: multiple testing correction. Sequential testing/peeking is its own topic (covered elsewhere in the curriculum) and isn't duplicated here.*
-
-Same rebuild approach as Ch13/14: intuition and diagrams first, formula second, a diagnosis section for when correction is even needed and which framework to pick, step-by-step plug-in walkthroughs for both Bonferroni and Benjamini-Hochberg, and a dedicated why/why-not section.
+> This picks up the thread the multiple-testing chapter opened with: *"Chapter 16 covered inflation of false-positive rate from looking at the same metric multiple times over time."* That's a different multiplicity problem from testing many metrics at once — this note explains why it happens, why it's worse than people expect, and how to actually fix it.
 
 ---
 
-## 1. Start Here: The Problem in One Picture
+## 1. Why this happens (the "why now")
 
-```
-   You run ONE test at α = 0.05.
-   If there's truly no effect, you have a 5% chance
-   of a false alarm. Feels safe.
+A standard p-value is only valid **at one pre-committed sample size**. The moment you check it *before* that sample size is reached — "let's just peek at day 3," "let's check again tomorrow" — you've silently run a new test. Check every day for two weeks and you haven't run one test, you've run fourteen, all on the *same* metric, all correlated with each other.
 
-              ● ── 5% false-alarm risk
+This is why it's tempting and dangerous in practice: nothing about the workflow looks like "multiple testing." No one deliberately tested 14 hypotheses — they just watched a dashboard. The multiplicity is hidden in the monitoring habit, not in the experiment design, which is exactly why it's an easy trap to walk into even for careful analysts.
 
+## 2. The formal problem
 
-   You run TWENTY tests at α = 0.05 each — say, 20
-   secondary metrics on the same experiment.
-   If NONE of them have a true effect, what's the
-   chance AT LEAST ONE looks "significant" anyway?
+Under the null hypothesis (no real effect), the p-value computed from an accumulating sample doesn't sit still — it behaves like a **random walk** that wanders up and down as more data arrives. A fixed threshold like p < 0.05 is a boundary in that walk's path, and a random walk that's allowed to run long enough will cross *any* fixed boundary eventually, with probability approaching 1 (this is a consequence of the Law of the Iterated Logarithm). 
 
-   ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●  ●
-   5% 5% 5% 5% 5% 5% 5% 5% 5% 5% 5% 5% 5% 5% 5% 5% 5% 5% 5% 5%
+In plain terms: **if you peek often enough and are willing to stop the moment p < 0.05, you are *guaranteed* to eventually see a "significant" result — even with zero true effect.** It's not a matter of if, only when.
 
-   Twenty independent 5%-risk rolls of the dice.
-   The chance that AT LEAST ONE comes up "false alarm"
-   stacks up fast — not 5%, but ~64%.
-```
+Even with a modest, discrete number of equally-spaced peeks, the inflation is severe. Approximate cumulative false-positive rates when peeking at a nominal α = 0.05 threshold each time (illustrative, from the repeated-significance-testing literature):
 
-That's the entire problem: **each individual test still looks "safe" at 5%, but the *family* of tests, taken together, is nowhere close to safe.** This is exactly the "we tested 15 metrics, one came back significant, let's call that our win" failure mode — that one winner is very plausibly just one of the dice rolls coming up false.
+| Number of peeks (K) | True cumulative false-positive rate (≈) |
+|---|---|
+| 1 (standard, no peeking) | 0.050 |
+| 2 | 0.083 |
+| 3 | 0.107 |
+| 5 | 0.142 |
+| 10 | 0.193 |
+| 20 | 0.248 |
 
----
+Two peeks nearly doubles your real error rate. Twenty peeks — a metric checked daily for three weeks — puts your *actual* false-positive rate near 25%, five times what the dashboard's "p < 0.05, ship it" implies.
 
-## 2. The Formula, Built From the Picture
+## 3. Three ways to actually fix it
 
-If each test independently has a $(1-\alpha)$ chance of NOT being a false alarm, then the chance that ALL $m$ tests avoid a false alarm is $(1-\alpha)^m$ (multiply the "safe" probabilities together, since they're independent). So the chance of **at least one** false alarm is just 1 minus that:
+### A. Fixed horizon (no peeking)
+Pre-commit to a sample size / duration, don't look at the p-value until you get there.
+- **Works when:** you can tolerate waiting; simplest possible guarantee.
+- **Fails when:** it's the least practical — teams *will* look, and it wastes the chance to stop early on a clear winner or a clear loser (bad for user harm and opportunity cost).
 
-$$P(\text{at least one false positive}) = 1-(1-\alpha)^m$$
+### B. Group sequential testing (alpha-spending)
+Pre-register a small number of planned looks (e.g., 25%, 50%, 75%, 100% of target sample), and spend your total α = 0.05 error budget across those looks using a spending function rather than using 0.05 at each one.
+- **Pocock boundaries:** roughly constant, slightly-stricter-than-0.05 threshold at every look. Good when you want reasonably equal power to stop early at any look.
+- **O'Brien-Fleming boundaries:** very strict early thresholds (nearly impossible to stop early), loosening toward something close to 0.05 near the final look. Good when you want to strongly discourage premature stopping but still preserve most of your power at the planned endpoint.
+- **Works when:** you know roughly how many times you want to check in advance (common in A/B testing platforms with weekly reviews).
+- **Fails when:** you actually want to check *continuously* (real-time dashboards) — you're locked into the specific look schedule you pre-registered; an unplanned extra peek re-breaks the guarantee.
 
-```
-STEP-BY-STEP for m=20, α=0.05:
+### C. Always-valid p-values / confidence sequences (anytime-valid inference)
+Built from a different mathematical object — a **test martingale** (or equivalently, a mixture sequential probability ratio test). The key property, from **Ville's inequality**, is:
 
-  chance ONE test is "safe"          = 1 - 0.05 = 0.95
-  chance ALL 20 tests are "safe"     = 0.95^20  ≈ 0.358
-  chance AT LEAST ONE is a false alarm = 1 - 0.358 = 0.642
-                                          ↑
-                            64% — worse than a coin flip
-```
+**P(the statistic ever exceeds 1/α, at *any* stopping time, under the null) ≤ α**
 
-This quantity — the probability of *any* false positive across the whole family — has a name: the **Family-Wise Error Rate (FWER)**.
+This is a much stronger guarantee than a normal p-value gives you: it holds no matter *when* or *how often* you look, including looking after every single new data point, with no pre-registered schedule at all.
+- **Works when:** you want a live dashboard where "p < 0.05, stop now" is always a safe decision, at any moment, without planning peeks in advance. This is the machinery behind modern "peeking-safe" experimentation platforms.
+- **Fails when:** for a *fixed*, non-peeked sample size, an always-valid p-value is more conservative (less powerful) than a standard p-value — you're paying a permanent power tax in exchange for the freedom to look whenever you want. If you genuinely never peek, it's the wrong tool.
 
----
+## 4. Comparison table
 
-## 3. Diagnosis: Do You Even Have a Multiple-Testing Problem?
+| Method | What it protects against | How | Best used when | Why it won't work / limitations |
+|---|---|---|---|---|
+| **Fixed horizon, no peeking** | Peeking inflation | Pre-commit sample size, check once | You can enforce discipline not to look early | Impractical — teams look anyway; can't stop early even for obviously harmful variants |
+| **Group sequential (Pocock)** | Peeking inflation across a *few* planned looks | Constant, slightly-stricter boundary per look | You know the number/timing of looks in advance | Breaks if you add an unplanned extra look; not built for continuous monitoring |
+| **Group sequential (O'Brien-Fleming)** | Same, but weighted to protect the final look | Very strict early thresholds, looser late | You want most of your power preserved at the planned endpoint, early stopping rare | Nearly impossible to stop early even with a real effect — slow to react |
+| **Always-valid p-values (test martingales / mSPRT)** | Peeking inflation at *any* stopping time, unplanned | Ville's inequality guarantee on a martingale statistic | Live dashboards, continuous monitoring, no fixed look schedule | Lower power than a standard p-value if you truly never peek — pays for flexibility you didn't use |
 
-This is the part most people skip, and it's the actual interview signal — recognizing the situation before reaching for a formula.
+## 5. Worked example
 
-```
-              How many things are you testing
-              AT THE SAME TIME on this experiment?
-              (metrics, segments, variants — anything
-               where you're checking "is this one
-               significant?" more than once)
-                          │
-              ┌────Just 1──┴──More than 1──────────┐
-              ▼                                      ▼
-     No multiple-testing problem.          You have a multiple-testing
-     A single, pre-specified primary       problem. Continue below.
-     OEC needs no correction — this
-     is exactly why pre-registering
-     ONE primary metric before the
-     experiment runs is the best
-     defense (Section 8).
+Say a metric has **no true effect**. A team checks the dashboard every day for 20 days, stopping the moment p < 0.05.
 
+- **Naive interpretation:** "we hit p = 0.04 on day 12, ship it" — treated as a normal 5%-risk decision.
+- **Reality:** with ~20 peeks, the true chance of hitting p < 0.05 at *some* point during the 20 days is roughly **25%**, not 5% — a fivefold understatement of risk.
+- **Fix with always-valid p-values:** the same 20-day monitoring stream, but using an anytime-valid statistic, guarantees the true false-stop probability stays at 5% *regardless* of how many days they checked or when they stopped — the dashboard-checking habit stops being a hidden liability.
 
-        (continuing from "more than 1" branch)
-                          │
-                          ▼
-              Is this a CONFIRMATORY, high-stakes
-              decision (e.g., "does this single
-              metric decide whether we ship a
-              multi-million-dollar feature")?
-                          │
-              ┌────Yes───┴───No (exploratory)───────┐
-              ▼                                       ▼
-     Use FWER control                       Use FDR control
-     (Bonferroni or Holm-Bonferroni)        (Benjamini-Hochberg)
-     — even ONE false positive here          — you expect and can
-     is costly, so be strict.                tolerate SOME false
-                                              leads, as long as most
-                                              flagged findings are real
-                                              (e.g., screening 50 user
-                                              segments for follow-up).
-```
+## 6. Production considerations
 
-**The one-sentence version**: if a single wrong "win" would be expensive, control FWER (strict). If you're casting a wide net and following up on whatever looks promising anyway, control FDR (lenient but still principled).
+- **This is a different multiplicity axis than the metrics/segments chapter** — that one was "many hypotheses at one time," this one is "one hypothesis, many times." Real experimentation systems need to guard against both simultaneously; correcting for one doesn't fix the other.
+- **Modern experimentation platforms increasingly default to always-valid p-values** for exactly this reason — it removes the operational burden of telling analysts "don't look until day 14," which is a rule people reliably break.
+- **Group sequential design is still preferred in some regulated / high-stakes settings** (e.g., clinical trials) because the look schedule is auditable and pre-registered — always-valid methods are powerful but relatively newer and less universally standardized in some domains.
+- **The two failure modes compound:** peeking on many metrics multiplies the inflation from both problems at once — this is the realistic worst case ("we checked 15 metrics every day for two weeks and one came back significant") and needs both a peeking-safe statistic *and* a multiple-comparison correction.
 
----
+## 7. Interview traps
 
-## 4. How to Plug In — Bonferroni (FWER)
+- **Trap 1:** Treating "we looked a few times and it was significant by the end" as a normal 5%-risk result — the actual risk compounds with every unplanned look.
+- **Trap 2:** Assuming a stricter fixed threshold (like Bonferroni) fixes peeking — it doesn't; Bonferroni corrects for *many simultaneous hypotheses*, not repeated looks at the *same* one over time. These are genuinely different problems needing different machinery.
+- **Trap 3:** Assuming always-valid p-values are "just a stricter p-value" — the mechanism (martingale + Ville's inequality) is structurally different from a corrected threshold, and it's what allows validity at *unplanned*, *arbitrary* stopping times, which no fixed correction can offer.
 
-**The idea, before the formula**: if you have $m$ tests and want the *whole family's* false-positive risk to stay at $\alpha$, just give each individual test a much stricter bar — divide the risk budget evenly across all $m$ tests.
+## 8. Comprehension check
+1. **Why does an accumulating p-value behave like a random walk, and why does that make any fixed threshold eventually crossable?**
 
-$$\text{per-test threshold} = \frac{\alpha}{m}$$
+Under the null hypothesis, each new batch of data contributes a small, roughly independent nudge to your cumulative test statistic — sometimes up, sometimes down, centered on "no effect." As you accumulate more data and keep recomputing the p-value at each new total, that sequence of p-values (or more precisely, the underlying test statistic) traces out a path that looks like a random walk: it wanders, with no persistent drift in either direction, but it doesn't stay put either. A standard p-value threshold (e.g., $p<0.05$) is calibrated assuming you check it exactly *once*, at a pre-committed sample size. But a random walk, given enough steps, will cross *any* fixed boundary eventually — this is a basic property of random walks (they're recurrent; with probability approaching 1, they hit any fixed level if you let them run long enough). So if you keep checking your p-value after every new data point and stop the moment it dips below 0.05, you're not testing "is there a real effect" — you're testing "did this random walk hit a boundary yet," which it will do with near certainty if you check often enough and for long enough, even when the null is exactly true.
 
-**Step-by-step, using this chapter's numbers** (10 secondary metrics, family-wise $\alpha=0.05$):
+2. **A team peeks 10 times before deciding to ship. Roughly how inflated is the true false-positive rate?**
 
-```
-STEP 1 — Divide your risk budget:
-    threshold = 0.05 / 10 = 0.005
+For continuous monitoring, the rule-of-thumb inflation is roughly the square root of the number of looks, though the exact number depends on the correlation structure between looks. A commonly cited approximation: with $k$ looks at $\alpha=0.05$ per look, the overall false-positive rate approaches something like $\alpha\sqrt{k}$ for smallish $k$ under Brownian-motion-style approximations, though this isn't exact — actual simulations for 10 independent-ish looks typically show the true FWER landing somewhere in the **25–35% range**, well over 5x the nominal rate. The precise number depends on how correlated consecutive looks are (looks close together in time are highly correlated, which dampens the inflation somewhat compared to 10 fully independent tests, which would give $1-(0.95)^{10}\approx 40\%$). The practical takeaway for an interview: don't worry about nailing the exact number — the important point is that peeking 10 times pushes your true false-positive rate from 5% into the **25–40% ballpark**, an order-of-magnitude-relevant inflation, not a rounding error.
 
-STEP 2 — Compare EACH metric's own p-value to 0.005,
-         independently (not sorted, not ranked — just
-         a flat bar every test must individually clear):
-
-    p-values (sorted for readability, not required):
-    0.001   0.008   0.015   0.021   0.033   0.041   0.09   0.15   0.31   0.52
-      ✓       ✗       ✗       ✗       ✗       ✗       ✗      ✗      ✗      ✗
-   (0.001 < 0.005)   (all the rest are ABOVE 0.005)
-
-STEP 3 — Result: only 1 metric (p=0.001) survives.
-```
-
-**Why it's "conservative"**: notice how brutal this was — 5 metrics would have looked significant at the naive, uncorrected $\alpha=0.05$ bar, but only 1 survives Bonferroni. That's the cost of guaranteeing the *whole family's* false-positive risk stays at 5% — you pay for it in lost power (real effects can get missed too, not just false ones filtered out).
-
-**Holm-Bonferroni, the slightly less brutal version**: instead of the same flat $\alpha/m$ threshold for every test, sort p-values smallest to largest and give the $k$-th smallest a slightly looser threshold, $\alpha/(m-k+1)$:
-
-```
-Sorted p-values (10 tests): 0.001, 0.008, 0.015, 0.021, 0.033, ...
-
-  k=1: threshold = 0.05/10 = 0.0050   →  compare to p=0.001  → ✓ survives
-  k=2: threshold = 0.05/9  = 0.0056   →  compare to p=0.008  → ✗ fails, STOP
-       (once one fails, everything after it also fails — you stop
-        checking further down the sorted list)
-
-Result: same as plain Bonferroni here (1 survivor), but Holm-Bonferroni
-would have given MORE metrics a chance to survive in other datasets,
-since only the 1st comparison uses the full α/m — every subsequent
-one gets a slightly loosened bar.
-```
-
----
-
-## 5. How to Plug In — Benjamini-Hochberg (FDR)
-
-**The idea, before the formula**: instead of protecting against ANY false positive (Bonferroni's strict goal), you're OK with some false positives, as long as they stay a controlled *fraction* of whatever you declare "significant." So the more tests you have, and the more of them look promising, the more lenient your bar becomes for the ones near the top.
-
-**Step-by-step, same 10 p-values:**
-
-```
-Sorted p-values (k = rank, 1 = smallest):
-  k    p-value    threshold = (k/m)×α = (k/10)×0.05
-  1    0.001      0.005              → 0.001 ≤ 0.005 ✓
-  2    0.008      0.010              → 0.008 ≤ 0.010 ✓
-  3    0.015      0.015              → 0.015 ≤ 0.015 ✓
-  4    0.021      0.020              → 0.021 > 0.020 ✗
-  5    0.033      0.025              → 0.033 > 0.025 ✗
-  6    0.041      0.030              → 0.041 > 0.030 ✗
-  7    0.09       0.035              → fails
-  8    0.15       0.040              → fails
-  9    0.31       0.045              → fails
-  10   0.52       0.050              → fails
-
-FIND THE LARGEST k WHERE THE ROW STILL PASSES.
-That's k=3 (rows 4 and 5 failed their OWN row's threshold,
-but that doesn't matter — you look for the largest k that
-passed, which is k=3, and declare EVERYTHING up to and
-including that k significant).
-
-Result: metrics 1, 2, and 3 (p = 0.001, 0.008, 0.015)
-are declared significant.
-```
-
-**The one subtle trap here, worth memorizing**: rows 4 and 5 individually failed their own threshold, but that's irrelevant — BH doesn't require every row up to your cutoff to pass its own row-specific threshold, it just requires you to find the *largest* k that passes, then take everything at or below that k. This is the single most common mechanical mistake people make when computing BH by hand.
-
----
-
-## 6. Side-by-Side: What Each Method Gives You on the Same Data
-
-```
-             Naive (no correction):  6 "significant" findings
-             Benjamini-Hochberg:     3 "significant" findings
-             Bonferroni:             1 "significant" finding
-                     │                        │                │
-                     ▼                        ▼                ▼
-              Most liberal,           Middle ground,      Most strict,
-              least trustworthy       tolerates SOME       guards against
-                                      false positives      even ONE
-                                      among discoveries     false positive
-```
+3. **Pocock vs. O'Brien-Fleming spending functions — which protects early stopping power, which protects the final look?**
 
-This ordering — naive ≥ FDR ≥ FWER, in number of things declared significant — holds generally. It's a useful sanity check: if your FDR-corrected count is somehow HIGHER than your naive count, you've made an arithmetic mistake somewhere.
+- **Pocock**: spends alpha roughly *evenly* across all looks — each interim look uses a similar, moderate significance threshold throughout. This makes it **easier to stop early** (you don't need overwhelming evidence at look 2 to declare significance), which is attractive if stopping early has real business value (e.g., saving cost, ending an experiment that's clearly a loser). The tradeoff: because you "spent" more alpha early, the threshold at the *final* look is stricter than a naive $\alpha=0.05$ would suggest, so Pocock has **less power at the final, full-sample-size look** relative to a design that saved its alpha budget for later.
 
----
+- **O'Brien-Fleming**: spends alpha very conservatively early on and saves most of the budget for later looks — early thresholds are extremely strict (nearly impossible to stop early unless the effect is enormous), while the final-look threshold ends up very close to the nominal $\alpha$ you'd use in a single fixed-sample test. This makes O'Brien-Fleming **protect final-look power much better**, at the cost of making early stopping nearly impossible except for very large effects.
 
-## 7. FWER vs. FDR — What Each One Is Actually Promising You
+**One-line summary**: Pocock trades final-look power for early-stopping flexibility; O'Brien-Fleming trades early-stopping flexibility for final-look power. If you expect the effect (if real) to be modest and want your last look to have the most punch, O'Brien-Fleming is the standard choice; if early operational savings matter more and you're comfortable with a stricter final bar, Pocock fits better.
 
-```
-   FWER (Bonferroni/Holm) promises:
-   "The probability that even ONE of my declared
-    findings is a false positive stays below 5%."
-                    │
-                    ▼
-   Very strict. Good when a single wrong call
-   is expensive — e.g., this one metric decides
-   whether a multi-million-dollar feature ships.
+4. **What guarantee does Ville's inequality give an always-valid p-value that a standard p-value doesn't?**
 
+A standard p-value only controls the false-positive rate at a *single, pre-specified* look — its validity guarantee is "if you check this exactly once, at the sample size you committed to in advance, the false-positive rate is $\alpha$." It says nothing about what happens if you check it again tomorrow.
 
-   FDR (Benjamini-Hochberg) promises:
-   "OF the findings I declare significant, the
-    EXPECTED FRACTION that are false positives
-    stays below 5%."
-                    │
-                    ▼
-   More lenient. Good for exploratory screening —
-   e.g., scanning 50 user segments for follow-up
-   investigation, where finding "several real leads,
-   with a controlled fraction of duds mixed in" is
-   an acceptable, even expected, outcome.
-```
+Ville's inequality (the mathematical backbone behind always-valid p-values / sequential testing frameworks like mSPRT) gives a much stronger guarantee: it bounds the probability that a certain nonnegative supermartingale (which the running "evidence" process is constructed to be) **ever** exceeds a threshold, at **any** stopping time — not just at one pre-chosen point. Concretely, it guarantees that $P(\exists t: M_t \geq 1/\alpha) \leq \alpha$ for a martingale $M_t$ starting at 1. Translated into practice: an always-valid p-value stays a valid, uninflated p-value **no matter when you look, no matter how many times you look, and no matter what stopping rule you use** (even a stopping rule that peeks at the data to decide when to stop). That's the guarantee a standard p-value fundamentally cannot offer — it's only honest at one specific, pre-committed moment.
 
-Confusing these two is one of the most common interview slips on this topic — they answer genuinely different questions, not two names for the same idea.
+5. **Is Bonferroni-correcting across 5 planned check-ins the right fix for peeking? Why or why not, and what would you recommend instead?**
 
----
+It's not the right tool, though it's a very understandable instinct since peeking *is*, structurally, a multiple-testing problem in disguise. The issue is that Bonferroni (and FWER correction generally) was built for testing several **distinct, separate hypotheses** at one point in time — it doesn't account for the fact that here, the 5 "tests" are the *same* hypothesis, tested on *increasingly overlapping data* (look 3 includes all the data from looks 1 and 2, plus more). That overlap creates strong correlation between consecutive looks that Bonferroni's independence-agnostic (and actually correlation-ignoring, conservative) correction doesn't properly exploit — it would work as a crude, overly conservative patch (dividing $\alpha$ by 5 does technically control the false-positive rate here too, in a worst-case sense), but it throws away a lot of power unnecessarily, and it doesn't give you the flexibility to stop at an *unplanned* time if something dramatic happens between check-ins.
 
-## 8. Why NOT to Apply Correction (or: When It's Unnecessary)
-
-```
-REASON 1 — You only have ONE pre-specified primary metric
-   If your experiment truly commits to a single OEC before
-   running, and that's the only thing you're testing to make
-   the ship decision, there's no multiple-testing problem for
-   THAT decision — applying Bonferroni to a single test is a
-   no-op (α/1 = α) and shows you don't understand what the
-   correction is for.
-
-REASON 2 — Over-correcting exploratory work kills useful signal
-   If you're screening 50 segments purely to decide which ones
-   deserve a follow-up look (not a final ship decision), applying
-   strict FWER control (Bonferroni) can bury real, worth-investigating
-   leads under an overly strict bar meant for high-stakes confirmatory
-   decisions. FDR is usually the better fit here — using FWER anyway
-   is a real cost, not just extra caution.
-
-REASON 3 — Correcting tests that aren't actually simultaneous
-   If you're looking at completely separate, previously-run,
-   independent experiments (not one experiment's family of
-   metrics), applying a joint correction across them may not
-   be the right frame — think carefully about what "family" of
-   tests you're actually correcting for before mechanically
-   applying either method.
-```
-
-**The honest summary**: correction is for *families of simultaneous tests within one analysis decision*. Applying it where there's truly only one test wastes nothing but also does nothing; applying the wrong flavor (FWER where FDR was appropriate, or vice versa) has a real cost in either missed discoveries or an inflated false-positive rate.
-
----
-
-## 9. Production Considerations
-
-- **Pre-registration is the best defense, not a correction formula**: pre-specify a single primary OEC before the experiment runs. Done properly, this mostly sidesteps the multiple-testing problem for your *ship decision* — it only becomes a live issue for secondary/exploratory metrics, which should be clearly labeled exploratory/hypothesis-generating, not confirmatory, in your writeup.
-- **Guardrail metrics are a related multiple-testing surface**: the more guardrails you add, the higher your chance some guardrail trips by pure chance — "guardrail proliferation" is a real risk, and this chapter's machinery (FWER/FDR) is exactly how you'd manage it if you have many guardrails.
-- **At Google-scale, thousands of experiments run concurrently across the company** — this raises a higher-level multiple-testing question (how many company-wide "wins" are actually noise), often handled via meta-analysis of experiment win-rates to sanity-check whether the observed rate of "significant" launches is consistent with a much lower true win rate.
-- **Segment analysis is a classic multiple-testing trap**: slicing data into 30 segments and looking for "which segment did the treatment help" is implicitly 30 tests — apply FDR/FWER correction rather than reporting the single most impressive-looking segment as if it were pre-specified.
-
----
-
-## 10. Q&A
-
-**Q: If you run 15 independent tests at α=0.05 each, and none have a true effect, what's the probability of at least one false positive?**
-A: $1-(0.95)^{15} \approx 1-0.463=0.537$ — about a 54% chance of at least one false positive across the family, even though each individual test looks "safe" at 5%.
-
-**Q: Explain the difference between what FWER controls and what FDR controls, and give a scenario for each.**
-A: FWER controls the probability of even a single false positive anywhere in the family of tests — appropriate for confirmatory, high-stakes decisions like "which one metric determines whether we ship this feature." FDR controls the expected *proportion* of false positives among your declared discoveries — appropriate for exploratory work like screening many user segments for follow-up, where you can tolerate some false leads as long as most flagged findings are real.
-
-**Q: A colleague slices experiment results by 25 different user segments, finds one segment with p=0.02, and wants to write it up as a key finding. What's your concern?**
-A: This is an implicit 25-test multiple-testing scenario, even though it wasn't framed that way — with 25 tests at α=0.05, you'd expect roughly one false positive by chance alone even if nothing real is happening. I'd recommend applying an FDR correction (Benjamini-Hochberg) across all 25 segment p-values before treating any single one as a real finding, and framing this as exploratory/hypothesis-generating rather than confirmatory unless the segment was pre-specified before looking at the data.
-
-**Q: Why does pre-specifying a single primary OEC protect you from the multiple-testing problem for your ship decision?**
-A: Because the multiple-testing problem only arises when you're testing more than one thing and treating any of them as a basis for a decision. If your ship decision rests on exactly one pre-committed metric, there's nothing to correct for on that decision — Bonferroni applied to $m=1$ is just $\alpha/1=\alpha$, a no-op. The problem re-emerges the moment you look at secondary metrics and start treating an interesting one as if it were the plan all along.
-
-**Q: When would applying Bonferroni actually be the wrong choice, even though you genuinely have multiple tests?**
-A: When the context is exploratory rather than confirmatory — e.g., screening many segments or many metrics purely to decide what deserves a closer look, not to make a final high-stakes call. Bonferroni's strict FWER control can bury real, worth-investigating signals under a bar that's calibrated for "even one false positive is very costly," which isn't the actual risk profile of exploratory screening. Benjamini-Hochberg's FDR control is the better-matched tool there.
-
----
-
+The better-fit tool is a **purpose-built sequential testing framework**: either a **group sequential design with a spending function** (Pocock or O'Brien-Fleming, question 3) if the 5 check-ins are pre-planned and fixed in number, or an **always-valid p-value / mSPRT-based approach** (question 4) if you want the flexibility to check literally whenever you want, however often you want, without pre-committing to exactly 5 looks. Both are specifically designed to exploit the correlation structure of accumulating data rather than treating each look as an independent test — giving you a properly calibrated false-positive rate with meaningfully more power than a blunt Bonferroni correction would allow.
