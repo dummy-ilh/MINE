@@ -1,4 +1,4 @@
-33
+32
 
 1. 09_10_11_chisq_anova_nonparam.md
 2. 100day_abtesting_days1to50.md
@@ -11,7 +11,6 @@
 9. Chapter_04_Hypothesis_Testing_Basics.md
 10. Chapter_05_Causal_Inference_vs_Correlation.md
 11. Chapter_06_Metrics_NorthStar_Guardrails_OEC.md
-12. Chapter_07_Unit_of_Randomization.md
 14. Chapter_09_Sample_Size_Power_Calculations.md
 15. Chapter_10_Randomization_Mechanics.md
 17. Chapter_12.1_T_tests_Z_tests.md
@@ -38,3 +37,4 @@
 p hacking
 harkig
 c1-q3
+Sutva
