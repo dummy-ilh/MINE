@@ -1,80 +1,80 @@
 # Chapter 16: Sequential Testing & the Peeking Problem (Always-Valid P-Values)
 
-## 1. Definition
 
-**The peeking problem:** repeatedly checking a test's p-value before the pre-planned sample size/duration is reached, and stopping early the moment it crosses the significance threshold, inflates the true Type I error rate far beyond the nominal α — even though each individual "look" uses a technically correct p-value formula.
+## 1. Intuition
 
-**Sequential testing:** a family of statistical methods specifically designed to allow valid, repeated interim analysis of accumulating data *without* inflating the false positive rate — using techniques like alpha-spending functions or **always-valid p-values**, which remain statistically valid no matter how many times (or when) you look at them.
+Chapter 16 covered inflation of false-positive rate from looking at the *same* metric *multiple times over time*. This chapter covers the closely related but distinct problem: inflation of false-positive rate from looking at *many different metrics* (or many different segments, or many different variants) *at the same time*.
 
-## 2. Layman Explanation
+The core intuition: if you test 20 metrics simultaneously, each at $\alpha=0.05$, and none of them actually have a real effect, you'd still expect **about 1 of them to show "significant" results purely by chance** ($20 \times 0.05 = 1$ expected false positive). This is exactly why a common experimentation failure mode is: "we tested 15 metrics, one came back significant, let's call that our win" — that single significant metric is very plausibly noise, not signal, if it wasn't the pre-specified primary OEC (this directly connects back to why the OEC chapter insisted on committing to a single OEC before running the experiment).
 
-Imagine flipping a fair coin and checking after every single flip whether you've gotten, say, 60% or more heads so far. Early on, with only a few flips, wild swings are common — you might hit 60%+ heads purely by chance in the first 5 flips, even though the coin is perfectly fair. If you stop the moment you see that streak and declare "this coin is biased!", you're much more likely to be wrong than if you'd committed to flipping it 1,000 times and checking only at the end.
+## 2. The Formal Problem
 
-This is exactly what happens when a team checks their A/B test dashboard every single day and stops the test the moment the p-value dips below 0.05 — even though the formal p-value calculation assumes you decided your sample size in advance and only looked once. Peeking repeatedly and stopping at the first "significant" moment is like a gambler who keeps playing until they're randomly ahead, then declares themselves a winning strategy — the early "win" is often just noise, not a real signal.
+If you run $m$ independent hypothesis tests, each at significance level $\alpha$, and the null hypothesis is true for all of them, the probability of **at least one false positive** across the whole family is:
 
-Sequential testing methods are the proper, honest version of "checking as you go" — they mathematically account for the fact that you're going to peek multiple times, adjusting the bar so that your overall false-positive rate stays at the level you intended, no matter how many times you check.
+$$P(\text{at least one false positive}) = 1-(1-\alpha)^m$$
 
-## 3. Formal Explanation
+For $\alpha=0.05$ and $m=20$: $1-(0.95)^{20} \approx 1-0.358 = 0.642$ — a **64% chance of at least one false positive** somewhere across those 20 tests, even though each individual test is nominally "safe" at 5%. This quantity, $P(\text{at least one false positive across the family})$, is called the **Family-Wise Error Rate (FWER)**.
 
-**Why peeking inflates Type I error:**
+## 3. Two Correction Frameworks
 
-A standard p-value calculation assumes a single, pre-specified sample size — the α=0.05 threshold guarantees a 5% false positive rate *for that one look*. But if you check the p-value at multiple points during data collection and stop as soon as it first crosses 0.05, you're effectively giving the null hypothesis multiple "chances" to randomly dip below the threshold. Under repeated peeking with no correction, the true Type I error rate can balloon well past 5% — sometimes to 20-30% or higher depending on how many times you peek, even though the null is true and there's no real effect.
+**Framework 1 — Controlling FWER (conservative, appropriate when even one false positive is costly)**:
 
-**Formal explanation via Brownian motion / random walk intuition:**
-The running p-value over time behaves like a random walk under the null hypothesis — and random walks are known to cross any fixed threshold with probability approaching 1 given enough time/looks, even with no true drift. This is why "checking until significant" is fundamentally different from "checking once at a pre-specified time."
+- **Bonferroni correction**: simplest approach — divide your significance threshold by the number of tests: use $\alpha/m$ as your per-test threshold instead of $\alpha$. For $m=20$ tests at family-wise $\alpha=0.05$: each individual test needs $p<0.0025$ to be declared significant. This is simple but conservative — it can substantially reduce power, especially as $m$ grows large, since it treats each test as if it needed to independently guard against the whole family's error budget.
+- **Holm-Bonferroni (step-down) correction**: a less conservative refinement — sort p-values from smallest to largest, and compare the $k$-th smallest p-value to $\alpha/(m-k+1)$ rather than a flat $\alpha/m$ for every test. This uniformly gives more power than plain Bonferroni while still controlling FWER, so it's generally preferred over plain Bonferroni whenever you specifically need FWER control.
 
-**Always-valid p-values / sequential testing solutions:**
+**Framework 2 — Controlling False Discovery Rate (FDR) (less conservative, appropriate when you can tolerate SOME false positives among many discoveries, as long as the *proportion* of false positives among your "significant" results stays controlled)**:
 
-1. **Alpha-spending functions (e.g., O'Brien-Fleming, Pocock boundaries):** pre-specify a small number of interim analysis points and allocate a "budget" of α across them, using progressively stricter thresholds at earlier looks so the *cumulative* false-positive rate across all looks stays at the target α.
-2. **Always-valid p-values (based on sequential probability ratio tests / mixture martingales):** a more modern approach (used by companies like Optimizely, and grounded in work by Johari, Koomen, Pekelis, Walsh) that allows *continuous* monitoring — you can check the p-value at literally any point, any number of times, and stop whenever you want, while the reported p-value remains statistically valid throughout. This works by constructing a test statistic that is a martingale under the null, guaranteeing the error rate stays bounded regardless of the stopping rule used.
+- **Benjamini-Hochberg procedure**: sort p-values ascending as $p_{(1)} \leq p_{(2)} \leq ... \leq p_{(m)}$. Find the largest $k$ such that $p_{(k)} \leq \frac{k}{m}\alpha$. Declare all tests with $p \leq p_{(k)}$ as significant. This controls the **expected proportion of false positives among your declared discoveries** (FDR), rather than the probability of ANY false positive at all (FWER) — a fundamentally more lenient and often more appropriate standard when you're doing exploratory analysis across many metrics/segments and can tolerate a controlled fraction of false leads among many true findings.
 
-**Key tradeoff:**
-Sequential testing methods that allow valid early stopping generally require slightly more total sample size to achieve the same power as a fixed-horizon test, in exchange for the flexibility of being able to stop early when a strong effect emerges (saving time in the common case) or stop for futility (saving traffic on a test that's clearly not going anywhere).
+**When to use which**: FWER control (Bonferroni/Holm) is appropriate for **confirmatory, high-stakes decisions** where even a single false positive is costly (e.g., "which single metric determines whether we ship this multi-million-dollar feature"). FDR control (Benjamini-Hochberg) is more appropriate for **exploratory analysis across many segments/metrics** where you expect and can tolerate some false leads, as long as most of your flagged findings are real (e.g., "which of these 50 user segments show a meaningfully different response to treatment, for follow-up investigation").
 
-## 4. Levers — What Controls It, What Moves It
+## 4. Worked Example
 
-**Number of interim looks**
-- More frequent peeking without correction inflates Type I error more severely — checking daily over an 8-week test is far riskier (in terms of false-positive inflation) than checking only once at the pre-planned end.
+You ran an experiment and are looking at 10 secondary metrics beyond your pre-specified primary OEC (which itself showed no significant effect). The 10 secondary metric p-values, sorted ascending: 0.001, 0.008, 0.015, 0.021, 0.033, 0.041, 0.09, 0.15, 0.31, 0.52.
 
-**Pre-specification of looks (for alpha-spending methods)**
-- Alpha-spending approaches require you to decide in advance how many interim looks you'll take and roughly when — deviating from this plan (adding extra unplanned looks) reintroduces the same inflation problem these methods are designed to prevent.
+**Naive approach (no correction)**: at $\alpha=0.05$, you'd declare the first 6 metrics "significant" (all p ≤ 0.041). This is almost certainly a substantial overstatement given you're testing 10 metrics.
 
-**Choice of method**
-- Alpha-spending functions are simpler to implement but require committing to a fixed number/timing of looks upfront; always-valid p-values (martingale-based) offer more flexibility (literally continuous monitoring) but are more complex to implement correctly and are typically provided via specialized experimentation platforms rather than hand-rolled.
+**Bonferroni correction**: threshold becomes $0.05/10 = 0.005$. Only the first metric (p=0.001) survives.
 
-**Organizational culture around "peeking"**
-- Teams that informally check dashboards constantly and stop tests opportunistically without any correction are the most exposed to this problem — the fix isn't "don't look at your dashboard," it's "use a method designed to allow looking safely," since telling people not to look at all is rarely realistic in practice.
+**Benjamini-Hochberg (FDR) correction**: for each $k$-th smallest p-value, compute $\frac{k}{10}\times0.05$:
+- $k=1$: threshold $=0.005$; $p_{(1)}=0.001 \leq 0.005$ ✓
+- $k=2$: threshold $=0.010$; $p_{(2)}=0.008 \leq 0.010$ ✓
+- $k=3$: threshold $=0.015$; $p_{(3)}=0.015 \leq 0.015$ ✓
+- $k=4$: threshold $=0.020$; $p_{(4)}=0.021 > 0.020$ ✗ (fails)
+- $k=5$: threshold $=0.025$; $p_{(5)}=0.033 > 0.025$ ✗ (fails)
 
-## 5. Worked Example
+Find the **largest** $k$ where the p-value is still under its threshold — here that's $k=3$. So under Benjamini-Hochberg, the first **3** metrics are declared significant (p=0.001, 0.008, 0.015), even though $k=4$ and $k=5$ individually failed their own thresholds — the BH rule uses the largest passing $k$, not a simple "each one independently passes" rule.
 
-Suppose a team runs a true null-effect experiment (no real difference between arms) and checks the p-value once per day over a 20-day test, stopping the moment p < 0.05 is observed, with no correction applied.
+**Comparison**: naive (uncorrected) → 6 "significant" findings; Bonferroni (FWER) → 1 finding; Benjamini-Hochberg (FDR) → 3 findings. This ordering (naive ≥ FDR ≥ FWER in number of declared discoveries) is generally true — FWER control is the strictest, FDR is a middle ground, and no correction is the most liberal (and least trustworthy).
 
-Simulation studies of this exact scenario (well-documented in the experimentation literature, e.g., from Optimizely's and Microsoft's published work) show that under this "peek daily, stop at first significance" behavior, the true probability of a false positive across the 20-day window is not 5% — it's commonly in the range of **20-30%+**, depending on the correlation structure of daily peeks. 
+## 5. Production Considerations
 
-To make this concrete with a simplified illustration: if each daily peek were treated as roughly independent (a simplification, since consecutive days' p-values are actually correlated, which somewhat tempers the inflation but doesn't eliminate it), the probability of NOT seeing any false positive across 20 independent looks at 5% each would be (0.95)²⁰ ≈ 0.358, meaning the probability of AT LEAST ONE false positive would be roughly 1 - 0.358 ≈ **64%** — dramatically higher than the intended 5%. Real-world sequential p-values are correlated (not independent), which reduces this from the naive 64% figure, but published empirical studies still consistently find inflation into the 20-30%+ range for daily peeking over multi-week tests — underscoring why this is a serious, not theoretical, problem.
+- **The best defense against multiple testing problems is pre-registration discipline**: pre-specify a single primary OEC before the experiment runs. If that's done properly, you mostly avoid the multiple-testing problem for your *ship decision* — it only becomes a live issue for secondary/exploratory metrics, which should be clearly labeled as exploratory/hypothesis-generating, not confirmatory, in your writeup.
+- **Guardrail metrics are a related multiple-testing surface**: the more guardrails you add, the higher your chance some guardrail trips by pure chance, which is why "guardrail proliferation" is a real risk — this chapter gives you the formal machinery (FWER/FDR correction) to actually manage that risk if you have many guardrails.
+- **At Google-scale, thousands of experiments run concurrently across the company** — this raises an even higher-level multiple-testing question (how many "wins" across the whole company are actually noise), which is part of why standing infrastructure often includes company-wide meta-analysis of experiment win-rates to sanity-check whether the observed rate of "significant" launches is consistent with what you'd expect if the true underlying win rate were much lower.
+- **Segment analysis (testing effect across many user segments) is a classic multiple-testing trap** — foreshadowing Simpson's Paradox & Segment Analysis: if you slice your data into 30 segments and look for "which segment did the treatment help," you're implicitly running 30 tests, and should apply FDR/FWER correction rather than reporting the single most impressive-looking segment as if it were pre-specified.
 
-## 6. Famous Q&A (Google / Apple style)
+## 6. Interview Traps
 
-**Q: Your team checks the experiment dashboard every day and plans to stop the test as soon as the p-value crosses 0.05. What's wrong with this approach, and what would you recommend instead?**
-A: This inflates the true Type I error rate well beyond the intended 5% — because you're giving the null hypothesis many "chances" to randomly dip below the threshold at some point during the monitoring period, even when there's no real effect. Published studies on this exact behavior (daily peeking, stop at first significance) show the true false-positive rate can commonly land in the 20-30%+ range rather than 5%. I'd recommend either committing to a single pre-planned analysis point (no interim peeking influencing the stop decision), or better, adopting a proper sequential testing method — like an alpha-spending boundary or an always-valid p-value approach — that's specifically designed to let you monitor results as often as you want while keeping the true error rate controlled at your target level.
+- **Trap #1**: Not recognizing a multiple-testing scenario when it's described indirectly (e.g., "we looked at 15 different user segments and found this one segment showed a huge effect" is a multiple-testing red flag, even if the word "multiple testing" never appears in the prompt).
+- **Trap #2**: Applying Bonferroni by default without knowing about Benjamini-Hochberg/FDR as a less conservative, often more appropriate alternative for exploratory analysis — many candidates only know one correction method.
+- **Trap #3**: Confusing FWER (probability of ANY false positive) with FDR (expected proportion of false positives among declared discoveries) — these answer genuinely different questions and are appropriate in different contexts, not interchangeable "the same idea, two names."
+- **Trap #4**: Applying correction to your single pre-specified primary OEC (unnecessary — if you truly only tested one pre-specified metric, there's no multiple-testing problem for that metric) while forgetting to apply it to the actual multiple-testing surface (secondary metrics, segments, guardrails).
 
-**Q: What's the difference between an alpha-spending approach and an "always-valid" p-value approach to sequential testing?**
-A: Alpha-spending methods (like O'Brien-Fleming boundaries) require you to pre-specify a fixed number of interim analysis points in advance, and they allocate a portion of your total α budget to each look, using stricter thresholds early on so the cumulative error rate stays controlled — but you can't add extra unplanned looks without violating the guarantee. Always-valid p-values, based on constructing a martingale test statistic, are more flexible — they remain statistically valid no matter how many times or when you check, including completely unplanned, continuous monitoring, at the cost of somewhat more implementation complexity and, similar to alpha-spending, some efficiency loss (slightly larger sample size needed) compared to a single fixed-horizon test.
+## 7. L5-Differentiating Talking Points
 
-**Q: A stakeholder asks, "if peeking is so risky, why not just tell everyone never to look at the dashboard until the test ends?" How would you respond?**
-A: In principle that would solve the statistical problem, but it's not realistic — teams need visibility into ongoing experiments for practical reasons, like catching a broken feature causing serious harm (a guardrail regression) as early as possible, or reallocating traffic if something looks badly wrong. Banning all monitoring trades one risk (inflated false positives from informal peeking) for another (failing to catch real harm quickly). The better solution is adopting a sequential testing method that's specifically built to allow safe, ongoing monitoring — giving teams the operational visibility they need without breaking the statistical guarantees.
+- Correctly identifying a described segment-slicing or many-secondary-metrics scenario as a multiple-testing problem, unprompted, rather than needing the interviewer to say "multiple testing" explicitly, shows pattern recognition over rote knowledge.
+- Being able to explain WHEN to prefer FWER control vs FDR control (confirmatory/high-stakes vs. exploratory/many-discoveries) rather than defaulting to one correction method universally, shows judgment about matching the statistical tool to the actual decision context.
+- Connecting this chapter explicitly to the OEC-discipline chapter (as the primary defense) and forward to the segment-analysis chapter shows you see multiple testing as a thread running through several parts of the curriculum, not an isolated formula.
+- Bringing up company-wide, meta-level multiple testing (thousands of concurrent experiments) shows systems-level thinking about experimentation infrastructure at Google's actual scale, beyond a single-experiment textbook framing.
 
-**Q: Your platform doesn't support always-valid p-values, but leadership wants the option to stop tests early if results look strong. How would you implement this without inflating false positives?**
-A: I'd use a pre-specified alpha-spending approach — for example, decide upfront that you'll look at the data at 3 fixed points (say, 25%, 50%, and 100% of planned sample size), and use a boundary function like O'Brien-Fleming that requires a very strict p-value threshold at the earliest look (e.g., p < 0.0001 at 25% completion) with progressively more lenient thresholds at later looks, such that the total false-positive budget across all 3 looks still sums to your target 5%. This gives leadership the ability to stop early on very strong, clear-cut results, while keeping the overall Type I error rate honest — the key discipline is committing to the number and timing of looks in advance and not deviating from that plan.
+## 8. Comprehension Check
 
-## 7. Common Mistakes / Red Flags (Quick Review)
-
-- ❌ Checking a test's p-value repeatedly and stopping the moment it crosses 0.05, without any sequential-testing correction
-- ❌ Assuming "we only peeked a couple of times, that's probably fine" — even a handful of unplanned peeks meaningfully inflates the true error rate
-- ❌ Adding extra, unplanned interim looks to an alpha-spending design after the fact — this breaks the method's guarantee
-- ❌ Conflating "monitoring for guardrail harm" (which is legitimate and should happen continuously) with "monitoring the primary metric to decide when to stop for a win" (which requires a proper sequential method)
-- ✅ Do: use always-valid p-values or a pre-specified alpha-spending plan if early stopping flexibility is genuinely needed
-- ✅ Do: separate "safety monitoring" (checking guardrails continuously is fine and encouraged) from "efficacy stopping" (deciding to end the test based on the primary metric, which needs a proper sequential method)
+1. If you run 15 independent tests at $\alpha=0.05$ each, and none have a true effect, what's the probability of at least one false positive? Compute it.
+2. Explain the difference between what FWER controls and what FDR controls, and give a scenario where you'd prefer each.
+3. Using the Benjamini-Hochberg procedure on p-values $[0.002, 0.009, 0.018, 0.024, 0.045]$ (5 tests, $\alpha=0.05$), which are declared significant? Show your work.
+4. Why does pre-specifying a single primary OEC mostly protect you from the multiple-testing problem for your ship decision, even though you might still compute many secondary metrics?
+5. A colleague slices experiment results by 25 different user segments and finds one segment with p=0.02, and wants to write it up as a key finding. What's your concern, and what would you recommend instead?
 
 ---
-*Next: Chapter 17 — Network Effects / Interference (Cluster Randomization, Switchback Tests).*
+*Next: Chapter 18 — Simpson's Paradox & Segment Analysis*
