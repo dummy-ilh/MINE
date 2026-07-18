@@ -1,4 +1,3 @@
-# Chapter 1: Probability Distributions for Product Metrics
 
 ## 1. Definition
 
