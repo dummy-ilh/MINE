@@ -1,57 +1,113 @@
-# Chapter 11: Novelty/Primacy Effects & Test Duration
+# Chapter 11 — Novelty & Primacy Effects + Test Duration
+> **Interview tier:** Google / Meta / Apple DS / PM rounds  
+> **Core risk this prevents:** shipping on a transient signal, killing a genuinely good feature too early  
+> **Key principle:** the effect you measure in week 1 may be a reaction to *change itself* — not the change being better
 
 ---
 
-## 1. Intuition
+## 1. The One-Line Mental Model
 
-An experiment that ran for exactly 7 days and showed a strong positive effect might be measuring something completely different from what you actually care about: **the effect of change itself, rather than the effect of the change being genuinely better.** Users often react to *any* change — positively (curiosity, novelty-seeking) or negatively (friction, unfamiliarity) — independent of whether the change is actually an improvement. These transient reactions fade as users adapt, and the metric you observe in week 1 can look nothing like the metric you'd observe in week 8.
+> You are not measuring whether the feature is good.  
+> You are measuring whether users have **finished reacting to the fact that something changed.**
 
-### Layman analogy
-Imagine a restaurant redesigns its menu. In the first week, regulars might order something new just because it's novel and catches their eye — sales of that new dish spike, but not because it's actually a better dish, just because it's unfamiliar and interesting. That's a **novelty effect**: a temporary bump that has nothing to do with the change being genuinely good.
-
-Now imagine instead the restaurant rearranges the entire menu layout. Regulars who knew exactly where their favorite dish was now have to search for it, feel annoyed, and some just order the first familiar thing they recognize instead. Sales of the "better" featured item might actually look worse for the first few weeks purely because people are frustrated by the change, not because it's a bad idea. That's a **primacy effect**: a temporary underperformance driven by resistance to change, which fades once people adjust.
-
-Test duration matters because if you only measure for 3 days, you might completely misjudge which of these you're seeing — and ship (or kill) something based on a transient reaction rather than the effect that will actually persist.
+Until that reaction settles, your metric is lying to you — in either direction.
 
 ---
 
-## 2. Definitions
+## 2. The Two Effects — Definitions
 
-- **Novelty effect**: treatment looks *better* than it truly is early on, because users are curious/excited about the new thing — they click, explore, or engage differently just because something looks different, independent of whether the change is actually better. This excitement fades over time as users habituate; the true steady-state effect is smaller than what you initially observe (or could even be negative once novelty wears off).
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                     │
+│  NOVELTY EFFECT                   PRIMACY EFFECT                   │
+│  ──────────────                   ─────────────                    │
+│  Treatment looks BETTER           Treatment looks WORSE            │
+│  than it truly is — early on      than it truly is — early on     │
+│                                                                     │
+│  Why: users are curious,          Why: existing users have         │
+│  excited, exploring the           muscle memory / habits           │
+│  new thing just because           baked into the OLD UI.           │
+│  it is new.                       Change = friction, confusion,    │
+│                                   slowing down — temporarily.      │
+│                                                                     │
+│  Time trend:                      Time trend:                      │
+│  Starts HIGH → decays             Starts LOW → climbs              │
+│  to true steady state             to true steady state             │
+│                                                                     │
+│  Risk if you stop early:          Risk if you stop early:          │
+│  Ship something that will         KILL something that would        │
+│  underperform its promise         have been genuinely good         │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-- **Primacy effect** (sometimes used with the more specific meaning: *the cost of unfamiliarity*): treatment looks *worse* than it truly is early on, because existing users are anchored to old habits/muscle memory and are confused, slowed down, or resistant to an unfamiliar interface — even if it's genuinely better long-term. This friction fades as they learn/adapt; the true steady-state effect is better (or less negative) than what you initially observe.
-
-Both are threats to validity because the treatment effect measured in the first few days of a test may not represent the **steady-state effect** you actually care about for a permanent launch decision.
+Both are threats to validity for the same reason: you are measuring a **transient reaction to change**, not the durable effect you care about for a permanent launch.
 
 ---
 
-## 3. Why This Matters for Ship Decisions
+## 3. The Restaurant Analogies
 
-If you only run a short experiment and ship (or kill) based on an unstabilized early read, you risk two opposite failure modes:
+These are the clearest intuition pumps for interviews.
 
-1. **Shipping a change that looked good but regresses to a neutral or negative long-run effect** once novelty wears off — you've made a worse long-term decision based on a misleadingly positive short-term signal.
-2. **Killing a change that looked bad early (primacy/learning cost) but would have become genuinely good** once users adapted — you've thrown away real long-term value because you didn't wait long enough to see past the initial friction.
+```
+  NOVELTY EFFECT — the new dish
+  ──────────────────────────────
+  Restaurant adds a new dish to the menu.
+  Week 1: regulars order it out of curiosity.
+  Sales spike. Looks like a hit.
 
-Both failure modes point to the same fix: **look at the time trend of the treatment effect, not just the pooled average over the whole experiment window**, to distinguish "this is a transient reaction" from "this is the true steady-state effect."
+  Month 2: novelty wears off.
+  Regulars go back to their usual order.
+  Sales settle at a much lower level.
+
+  The dish wasn't better. It was just new.
+  If you'd hired 3 extra chefs based on week 1 data → mistake.
+
+
+  PRIMACY EFFECT — the new menu layout
+  ──────────────────────────────────────
+  Restaurant rearranges the entire menu.
+  Week 1: regulars can't find their usual dish.
+  Frustrated, they order the first familiar thing they see.
+  Sales of the "better" featured item look WORSE.
+
+  Month 2: regulars have learned the new layout.
+  The featured item is now easier to find.
+  Sales recover and then exceed the old baseline.
+
+  The layout WAS better. It just looked broken for a while.
+  If you'd reverted based on week 1 data → wasted a good change.
+```
 
 ---
 
-## 4. Detection Methods
+## 4. Time-Trend Signatures — What to Look For
 
-**Method 1 — Plot the treatment effect by day/week (time-series decomposition).** Instead of reporting a single pooled effect size for the whole experiment duration, compute the treatment effect separately for each day (or week) and plot the trend.
-- A **novelty effect** shows up as: a large early effect that **decays toward a smaller, stable asymptote**.
-- A **primacy effect** shows up as: a negative or muted early effect that **grows toward a larger, stable asymptote**.
+The single most important diagnostic: **plot lift by day, not just the pooled average.**
 
-**Method 2 — Cohort-based analysis (new users vs. existing users).** Segment by whether a user is new to the product/feature versus an existing user who's had time to adapt. Novelty/primacy effects are fundamentally about *existing users reacting to change* — new users have no prior habits or expectations to be surprised by. So:
-- If the effect differs substantially between "just exposed" cohorts and "exposed for several weeks" cohorts, that's direct evidence of a novelty/primacy dynamic rather than a stable causal effect.
-- If the effect is stable for new users from day one but volatile/decaying specifically for existing users, that's strong confirmatory evidence you're looking at a genuine novelty/primacy pattern — rather than, say, a seasonal confound or an external factor that would affect both segments similarly.
-- Conversely, a real regression can look identical to a primacy effect in the early days — segmentation by tenure is what lets you tell them apart, since a true regression should show up in new users too.
+```
+  NOVELTY EFFECT SIGNATURE          PRIMACY EFFECT SIGNATURE
+  ────────────────────────          ────────────────────────
 
-**Method 3 — Holdout / long-running control comparison.** Keep a small, permanent holdout group (much longer duration than the standard experiment) that never receives treatment, allowing you to observe the treatment's effect over a much longer horizon on a rolling basis — well past the point where any initial novelty/primacy dynamics would have faded.
+  Lift                              Lift
+   │                                 │              ┌────────
+   │ *                               │             /
+   │  *                              │            /
+   │   **                            │           /
+   │     ***                         │          /
+   │        ****                     │─────────/
+   │            ─────────            │ *  *  *
+   │                                 │
+   └──────────────────── Day         └──────────────────── Day
 
-**Method 4 — Second-exposure or repeated-exposure experiments.** Specifically for novelty, some teams run a "re-expose the same treatment to a fresh randomized sample after the initial novelty period has plausibly worn off in the broader population" design, to isolate the steady-state effect from the initial-exposure effect.
+  Starts HIGH, decays to plateau    Starts LOW (or negative),
+                                    climbs to plateau
 
-**Method 5 — Time-since-exposure ("cohort") analysis.** Rather than comparing arms by calendar day, compare arms based on **days-since-first-exposure** for each user. This normalizes for the fact that users enter the experiment on different calendar days, letting you see the true per-user adaptation curve rather than a curve muddied by staggered entry.
+  Correct read: use the plateau     Correct read: use the plateau
+  NOT the early spike               NOT the early dip
+```
+
+If you use the pooled average across the whole experiment window, you blend the transient spike/dip with the true signal and get a number that accurately represents neither.
 
 ---
 
@@ -59,95 +115,381 @@ Both failure modes point to the same fix: **look at the time trend of the treatm
 
 ### Example A — Onboarding tutorial (novelty effect)
 
-Daily treatment effect on Day-1 retention, computed separately per day of the experiment:
+Daily treatment effect on Day-1 retention:
 
-| Experiment Day | Treatment Effect (pp) |
-|---|---|
-| Day 1-2 | +4.5pp |
-| Day 3-4 | +3.1pp |
-| Day 5-7 | +2.0pp |
-| Day 8-10 | +1.6pp |
-| Day 11-14 | +1.4pp |
-| Day 15-21 | +1.3pp |
+```
+  ┌─────────────────┬────────────────────────────────────────────┐
+  │  Experiment day │  Treatment effect  │  What's happening     │
+  ├─────────────────┼────────────────────┼───────────────────────┤
+  │   Day 1–2       │     +4.5pp         │  Users excited,       │
+  │   Day 3–4       │     +3.1pp         │  exploring, clicking  │
+  │   Day 5–7       │     +2.0pp         │  Novelty fading       │
+  │   Day 8–10      │     +1.6pp         │  Settling             │
+  │   Day 11–14     │     +1.4pp         │  Nearly stable        │
+  │   Day 15–21     │     +1.3pp         │  True steady state    │
+  └─────────────────┴────────────────────┴───────────────────────┘
 
-**Interpretation**: a textbook novelty effect signature — a large initial bump (+4.5pp) that decays and stabilizes around +1.3–1.4pp by week 3. If the experiment had only run for 4 days and been analyzed with a single pooled average, you'd have reported something like "+3.8pp lift" — nearly **3x the true steady-state effect** of ~+1.3pp. Shipping a broader rollout decision based on the 4-day pooled number would set unrealistic expectations and potentially misallocate resources based on an effect that was never going to persist.
+  Pooled 4-day average:  ~+3.8pp   ← what you'd report if you stopped early
+  True steady-state:      ~+1.3pp   ← what actually persists
 
-**The correct read**: the effect does appear to be stabilizing (not decaying all the way to zero), suggesting there IS a genuine, durable improvement — just meaningfully smaller than the early days suggested. Recommendation: extend the experiment (or trust the stabilized week-3 estimate) rather than using the inflated early numbers for planning.
+  Overestimate factor: ~3x
+```
 
-### Example B — Redesigned navigation menu (novelty effect, finer-grained)
+The effect IS real — it doesn't decay to zero. But reporting +3.8pp for a ship decision would set wildly unrealistic expectations. Every downstream model (revenue projections, headcount planning) built on that number would be wrong by 3x.
 
-Daily lift in "successful task completion rate" (treatment minus control):
+### Example B — Navigation redesign (novelty + primacy comparison)
 
-| Day | Lift |
-|---|---|
-| 1 | +8.5% |
-| 2 | +6.0% |
-| 3 | +4.5% |
-| 4 | +3.0% |
-| 5 | +2.2% |
-| 6 | +1.8% |
-| 7 | +1.7% |
-| 8 | +1.6% |
-| 9 | +1.7% |
-| 10 | +1.6% |
+```
+  ┌──────┬────────────────────────────────────────────────────────┐
+  │  Day │  Nav redesign lift  │  Interpretation                  │
+  ├──────┼─────────────────────┼──────────────────────────────────┤
+  │   1  │      +8.5%          │  Users actively exploring        │
+  │   2  │      +6.0%          │  new layout — novelty peak       │
+  │   3  │      +4.5%          │  Decay begins                    │
+  │   4  │      +3.0%          │                                  │
+  │   5  │      +2.2%          │  Rapid decay                     │
+  │   6  │      +1.8%          │                                  │
+  │   7  │      +1.7%          │  Plateau begins                  │
+  │   8  │      +1.6%          │  ← Stable region                 │
+  │   9  │      +1.7%          │  ← True steady-state ~1.6–1.7%  │
+  │  10  │      +1.6%          │                                  │
+  └──────┴─────────────────────┴──────────────────────────────────┘
 
-The lift decays from +8.5% down to roughly +1.6–1.7%, then flattens out around day 7-8 — another textbook novelty effect. If you'd stopped the test after 2 days and used the pooled average (~7.25%), you'd have massively overestimated the true long-run effect. The correct read: the feature does have a genuine positive steady-state effect (~1.6–1.7%), and you should report and make the ship decision based on the plateaued value, not the early inflated numbers — after confirming the curve has actually flattened (not still decaying).
+  2-day pooled average:  ~7.25%    ← 4.5x overestimate
+  True steady-state:      ~1.6%    ← what to report and ship on
+```
 
-*(Note both examples show the same qualitative shape: a sharp early spike decaying to a smaller-but-real plateau. A primacy effect would show the mirror image — starting negative/muted and climbing to a plateau, as in the Q&A below.)*
-
----
-
-## 6. Levers — What Controls the Size/Duration of These Effects
-
-**Magnitude of the UI/UX change**
-- Larger, more visually disruptive changes (full redesigns) tend to produce stronger novelty/primacy effects than subtle changes (small copy tweaks), simply because there's more "new" for users to react to or adjust around.
-
-**User tenure mix**
-- A test population with more new users (who have no old habits to unlearn) will show weaker primacy effects than a population dominated by long-tenured power users with deeply ingrained habits.
-
-**Test duration**
-- The primary lever to let novelty/primacy effects "burn off" — but this trades off against the cost of running experiments longer (opportunity cost, more traffic tied up, slower iteration speed for the team).
-- Novelty decay rates vary hugely by product surface: a homepage redesign might show novelty effects that fade within days; a fundamental workflow change might take months for users to fully adapt to, meaning a "stable" reading might not even be reached within a typical 2-4 week experiment window. This is a real practical constraint — don't assume a fixed, universal decay timeline.
-
-**Frequency of exposure**
-- Features encountered daily (e.g., a home feed layout) typically stabilize faster than features encountered rarely (e.g., an annual billing flow), simply because users get more repeated exposure per unit time to adapt.
+Stopping after 2 days here doesn't just inflate your number — it makes the feature look like a breakthrough when it's actually a moderate improvement. Stakeholder expectations get miscalibrated for months.
 
 ---
 
-## 7. Implication for Test Duration
+## 6. Detection Methods
 
-The test needs to run long enough for the novelty/primacy curve to **plateau** before the measured average effect can be trusted as representative of the long-run steady state.
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  METHOD 1 — Day-by-day lift plot (always do this first)            │
+│                                                                     │
+│  Compute treatment effect separately for each day (or week).       │
+│  Look for the curve shape: decaying → novelty, climbing → primacy  │
+│  Only trust the pooled number AFTER you've confirmed a plateau.    │
+└─────────────────────────────────────────────────────────────────────┘
 
-This is a **separate, additive constraint** on duration from the sample-size-driven duration calculation covered elsewhere (i.e., the power-analysis "how many users/days do I need to reach statistical significance" calculation). You may have enough *statistical power* after 3 days, but still need to run longer because the *effect itself* hasn't stabilized yet. Treat these as two independent minimums and **run for at least the longer of the two**:
-- Power-based minimum: enough n to detect your MDE at your target α and power.
-- Stabilization-based minimum: enough days/weeks for the novelty/primacy curve to plateau, estimated from day-over-day lift trends in the current test or historical data from similar past launches on this same surface.
+┌─────────────────────────────────────────────────────────────────────┐
+│  METHOD 2 — New vs. existing user segmentation (the key diagnostic)│
+│                                                                     │
+│  Novelty/primacy are fundamentally about EXISTING users reacting   │
+│  to change. New users have no old habits — nothing to unlearn.     │
+│                                                                     │
+│  Existing users: volatile early effect that stabilises over time   │
+│  New users:      flat, stable effect from day one                  │
+│                                                                     │
+│  If new users show a stable negative effect from day 1             │
+│  → this is a REAL regression, not a primacy effect                 │
+│  → primacy effect would only show in existing users                │
+│                                                                     │
+│  This is the only reliable way to distinguish primacy from         │
+│  a genuine regression. Both look identical in pooled data.         │
+└─────────────────────────────────────────────────────────────────────┘
 
-**Standard duration guidelines**: many companies recommend running experiments for a minimum of 1-2 full weeks (partly to average over day-of-week effects, partly as a baseline defense against novelty risk), and flag results from very short experiments (under a week) as provisional/unreliable specifically due to novelty risk.
+┌─────────────────────────────────────────────────────────────────────┐
+│  METHOD 3 — Days-since-first-exposure cohort analysis              │
+│                                                                     │
+│  Instead of plotting by calendar day, plot by days since each      │
+│  user first saw the treatment. Users enter the experiment on        │
+│  different days — calendar-day plots blur their adaptation curves  │
+│  together. This normalises for staggered entry.                    │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  METHOD 4 — Long-running holdout group                             │
+│                                                                     │
+│  A small permanent holdout (~1-5% of traffic) that never gets      │
+│  treatment, maintained well past experiment conclusion.            │
+│  Lets you compare treatment vs. control weeks or months later,     │
+│  long after any novelty/primacy dynamics have faded.               │
+│  Infrastructure investment — not a one-off trick.                  │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  METHOD 5 — Fresh re-exposure experiment (novelty only)            │
+│                                                                     │
+│  Expose a fresh randomised sample to the same treatment AFTER      │
+│  the initial novelty period has plausibly worn off in the          │
+│  broader population. If the effect is smaller for the fresh        │
+│  sample, the original lift was partly novelty-driven.              │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 8. Distinguishing Novelty/Primacy from Confounds
+## 7. Test Duration — Two Independent Constraints
 
-**Seasonality/day-of-week confounds**: a day-of-week or day-of-month pattern in the treatment effect could look superficially similar to novelty decay if you're not careful. Make sure your day-by-day decomposition accounts for calendar effects (e.g., compare Tuesday-to-Tuesday, not Day 1 to Day 15 if Day 1 was a weekend) before concluding it's a genuine novelty pattern.
+This is the most commonly missed insight in interviews. Duration is not one number — it is the **maximum of two separate minimums**.
 
-**Genuine regression vs. primacy effect**: a real regression can look identical to a primacy effect in the early days. Segmentation by tenure (Method 2 above) is what lets you tell them apart — a true regression should show up in new users too, whereas a pure primacy effect should be concentrated in existing users with old habits to unlearn.
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                     │
+│  CONSTRAINT 1                     CONSTRAINT 2                     │
+│  Statistical power                Effect stabilisation             │
+│  ──────────────────               ─────────────────────            │
+│  How long until you have          How long until the novelty/      │
+│  enough users to detect           primacy curve has plateaued      │
+│  your MDE at target α             and the effect is stable         │
+│  and power?                       enough to trust?                 │
+│                                                                     │
+│  Comes from the power             Comes from day-by-day trend      │
+│  calculation (Ch. 9)              analysis or historical data      │
+│                                   from similar past launches       │
+│                                                                     │
+│  Run for:  MAX(constraint 1, constraint 2)                         │
+│                                                                     │
+│  Common mistake: running until constraint 1 is met,                │
+│  declaring the experiment done, and never checking constraint 2    │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-**The peeking/optional-stopping trap**: the decision to extend an experiment because of a suspected novelty/primacy pattern should itself be **pre-specified as a possible outcome in the experiment design doc**. Deciding "let's just keep running it until the number we like appears" after the fact reintroduces the same p-hacking/peeking risk that governs stopping rules generally — extending a test because you're suspicious the early numbers look "too good" isn't legitimate unless the extension criterion was defined in advance.
+### What affects stabilisation time
+
+```
+  FASTER STABILISATION              SLOWER STABILISATION
+  ────────────────────              ────────────────────
+  Subtle change (small copy         Large visual redesign
+  tweak, minor layout shift)        (full page overhaul)
+
+  High exposure frequency           Low exposure frequency
+  (daily-use feature like           (annual billing flow,
+   a home feed)                      account settings)
+
+  Younger product / mostly          Mature product with
+  new users — no old habits          long-tenured power
+  to unlearn                         users with deep habits
+
+  Rule of thumb: 1-2 weeks          Rule of thumb: 4-8+ weeks
+```
+
+### The danger of a fixed default duration
+
+Many teams default to "2-week experiments." This is fine as a minimum floor against day-of-week effects, but it is not a substitute for checking whether the effect has actually stabilised. A fundamental workflow change might not plateau for 6–8 weeks — a 2-week experiment gives you a number in the middle of the decay curve, which is the worst place to measure.
 
 ---
 
-## 9. Common Mistakes / Red Flags (Quick Review)
+## 8. Distinguishing Novelty/Primacy from Other Confounds
 
-- ❌ Using the pooled average effect across the whole test window without checking the day-by-day trend first
-- ❌ Stopping a test early because day-1/day-2 results look great (or terrible) without confirming stabilization
-- ❌ Assuming all effects are "novelty" — a real regression can look identical to a primacy effect early on; segmentation by tenure is needed to tell them apart
-- ❌ Ignoring test-duration implications when a redesign is visually large — bigger changes need more time to stabilize, not the standard default duration
-- ❌ Concluding "novelty effect" from a day-by-day pattern without ruling out ordinary seasonality/day-of-week confounds first
-- ❌ Extending a test post-hoc "to see if the effect holds up" without a pre-specified rule for doing so
-- ✅ Plot lift by day (or by days-since-first-exposure) before trusting any pooled number
-- ✅ Segment new vs. existing users to help distinguish novelty/primacy from a genuine, stable effect (or from a genuine regression)
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  CONFOUND 1 — Day-of-week seasonality                              │
+│                                                                     │
+│  A weekly seasonal pattern in the treatment effect can look        │
+│  superficially like novelty decay.                                 │
+│                                                                     │
+│  Fix: compare same weekdays across weeks                           │
+│  (Tuesday week 1 vs Tuesday week 2, not Day 1 vs Day 8)           │
+│  before concluding it is a genuine novelty pattern.                │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  CONFOUND 2 — Genuine regression vs. primacy effect                │
+│                                                                     │
+│  Both look identical in pooled data:                               │
+│  early dip in the treatment arm.                                   │
+│                                                                     │
+│  KEY DIFFERENCE:                                                    │
+│  Genuine regression → shows up in NEW users too                    │
+│  Primacy effect     → concentrated in EXISTING users only          │
+│                                                                     │
+│  If new users show a stable negative from day 1 → real problem    │
+│  If only long-tenured users dip and new users are fine → primacy  │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│  CONFOUND 3 — External event (news, competitor launch, etc.)       │
+│                                                                     │
+│  If something external happened around day 3 of your experiment,   │
+│  it could shift both arms — or shift them asymmetrically.          │
+│                                                                     │
+│  Fix: compare the trend across both treatment AND control arms.    │
+│  A genuine novelty/primacy pattern shows up in the DIFFERENCE      │
+│  (treatment minus control). An external event usually shifts       │
+│  both arms and leaves the difference more stable.                  │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ---
+
+## 9. The Peeking Trap in Disguise
+
+A stakeholder sees the early +8% result and wants to "extend just a bit longer to see if it holds." This sounds reasonable. It is not — unless it was pre-specified.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  LEGITIMATE extension                ILLEGITIMATE extension        │
+│  ──────────────────────              ───────────────────────       │
+│  Extension criterion was             Extension decided AFTER       │
+│  written into the experiment         seeing early results          │
+│  design doc BEFORE launch:           because the number looks      │
+│                                      appealing and someone         │
+│  "If day-by-day lift has             hopes it will hold            │
+│   not plateaued by day 7,                                          │
+│   extend to day 14."                 This is optional stopping     │
+│                                      / p-hacking in disguise.     │
+│  The trigger is pre-specified.       The early data influenced     │
+│  Doesn't introduce bias.             a decision that should        │
+│                                      have been fixed in advance.   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+The principle: the criteria for extending an experiment are part of the experiment design. They belong in the pre-registration doc (Ch. 8). Deciding them reactively reintroduces all the same problems pre-registration was designed to prevent.
+
+---
+
+## 10. The Full Decision Flow
+
+```
+  Run experiment
+        │
+        ▼
+  Plot lift by day BEFORE looking at pooled average
+        │
+        ├── Monotone decay (starts high, falls) → NOVELTY EFFECT suspected
+        │         │
+        │         ▼
+        │   Has it plateaued?
+        │   YES → report plateau value, not pooled average
+        │   NO  → extend experiment (if pre-specified rule allows)
+        │         OR note result as provisional
+        │
+        ├── Starts low / negative, climbs → PRIMACY EFFECT suspected
+        │         │
+        │         ▼
+        │   Segment by new vs. existing users
+        │   Existing users dip, new users flat → confirmed primacy
+        │   Both dip → could be genuine regression, investigate
+        │
+        ├── Flat from day 1 → no novelty/primacy
+        │   Pooled average is trustworthy
+        │   Proceed to standard ship decision
+        │
+        └── Rule out seasonality (compare same weekdays)
+            Rule out external events (check both arms)
+```
+
+---
+
+## 11. Red Flags — Spot the Error
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  RED FLAGS IN THE WILD                                              │
+│                                                                     │
+│  ✗ Reporting a single pooled average without showing the           │
+│    day-by-day trend. Pooled average is meaningless until           │
+│    you know the curve has stabilised.                              │
+│                                                                     │
+│  ✗ Stopping the experiment after day 2 because results             │
+│    "look amazing." Day 2 is the peak of almost every              │
+│    novelty curve.                                                  │
+│                                                                     │
+│  ✗ Killing a feature after day 3 because of a dip,                │
+│    without checking if it is concentrated in existing users        │
+│    (primacy) vs. new users (genuine regression).                   │
+│                                                                     │
+│  ✗ Running a 2-week experiment on a fundamental workflow           │
+│    redesign and trusting the result as stable. Power ≠            │
+│    stabilisation. You can be powered and still mid-curve.          │
+│                                                                     │
+│  ✗ Concluding "novelty effect" from a day-by-day pattern           │
+│    without ruling out day-of-week seasonality first.               │
+│                                                                     │
+│  ✗ Deciding to extend the experiment after seeing early            │
+│    results without a pre-specified extension criterion.            │
+│                                                                     │
+│  ✓ Always plot lift by day before trusting pooled average          │
+│  ✓ Segment new vs. existing users to confirm the diagnosis        │
+│  ✓ Pre-specify extension criteria in the design doc               │
+│  ✓ Treat power duration and stabilisation duration as separate    │
+│    constraints, take the maximum                                   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 12. L5-Differentiating Talking Points
+
+Things that separate a strong answer from a great one in the room:
+
+**Naming both effects precisely** — most candidates say "novelty effect" for everything. Naming primacy as a distinct, opposite-signature phenomenon with a different causal story (habit/muscle-memory disruption vs. curiosity) shows genuine depth.
+
+**The two-constraint framing** — explicitly saying "statistical power and effect stabilisation are two separate minimums, and I take the maximum of the two" is not common. It signals practical experience, not just textbook knowledge.
+
+**Segmentation as the regression vs. primacy diagnostic** — saying you'd segment by user tenure to distinguish primacy from a genuine regression demonstrates you've thought about the confound, not just the pattern.
+
+**Proactively flagging seasonality** — before concluding a day-by-day pattern is novelty/primacy, mentioning that you'd rule out day-of-week effects first shows rigour.
+
+**Connecting extension decisions to pre-registration** — noting that the criterion for extending an experiment should be in the design doc before launch, and that deciding to extend after seeing early results is a form of peeking — shows you apply statistical discipline consistently across the experiment lifecycle, not just at the analysis stage.
+
+**Long-running holdout as infrastructure** — framing holdouts as a platform investment rather than a one-off analysis trick shows systems-level thinking.
+
+---
+
+## 13. Flash Cards — Interview Prep
+
+```
+Q: What is a novelty effect and what does its time-trend look like?
+A: Treatment looks better than it truly is early on because users
+   are curious about the change. Time trend: starts high, decays
+   to a smaller stable plateau.
+
+Q: What is a primacy effect and what does its time-trend look like?
+A: Treatment looks worse than it truly is early on because existing
+   users have old habits/muscle memory disrupted. Time trend: starts
+   low or negative, climbs to a stable plateau.
+
+Q: What are the two independent duration constraints?
+A: (1) Statistical power — enough n to detect MDE at target α.
+   (2) Effect stabilisation — long enough for novelty/primacy curve
+   to plateau. Run for MAX of the two. Power ≠ stabilisation.
+
+Q: How do you distinguish a primacy effect from a genuine regression?
+A: Segment by new vs. existing users. Primacy effect: concentrated
+   in existing users (they have habits to unlearn). Genuine regression:
+   shows up in new users too (they have nothing to unlearn).
+
+Q: Your test shows +8% on day 1, +1.6% by day 8. What do you report?
+A: Report the plateau (~1.6%) as the true steady-state effect — after
+   confirming the curve has actually flattened, not still decaying.
+   Do not report the pooled average. Do not report the day-1 number.
+
+Q: A -5% dip in first 3 days recovers to neutral by day 10. Ship?
+A: Don't kill it — looks like primacy. Confirm by checking: is the
+   dip concentrated in existing users? If yes → primacy, let it
+   run. If new users also dip → genuine regression, investigate.
+
+Q: When is extending an experiment legitimate vs. p-hacking?
+A: Legitimate only if the extension criterion was pre-specified in
+   the design doc before launch. Deciding to extend after seeing
+   early results is optional stopping — a form of peeking.
+
+Q: Why is plotting by calendar day sometimes misleading?
+A: Users enter the experiment on different calendar days. Plotting
+   by days-since-first-exposure normalises for staggered entry and
+   shows the true per-user adaptation curve.
+```
+
+---
+
+## 14. Connections to Other Chapters
+
+| Chapter | Topic | Connection |
+|---|---|---|
+| Ch. 8 | Pre-registration | Extension criteria must be pre-specified; detecting novelty post-hoc and extending without a rule reintroduces peeking risk |
+| Ch. 9 | Power & sample size | Power calculation gives duration constraint 1 — stabilisation gives constraint 2; take the max |
+| Ch. 16 | Sequential testing / peeking | Stopping early on a great day-2 result is exactly the peeking problem; novelty makes this worse because day-2 is the peak |
+| Ch. 19 | Long-term holdouts | The infrastructure solution to novelty/primacy — holdouts let you observe the true long-run effect well past experiment conclusion |
+
+---
+
+*Last updated: 2026 · Source: Chapter 11 notes + Google/Meta interview patterns*
 
 ## 10. Famous Interview Q&A
 
@@ -191,4 +533,137 @@ A: It's legitimate only if the possibility of extending — and the specific cri
 8. A redesign shows a -5% dip in the first three days but recovers to neutral by day 10. What would you recommend, and what additional analysis would strengthen your confidence in that recommendation?
 
 ---
-*This tutorial merges two chapters on novelty and primacy effects — one framed around definitions, detection methods, and a single onboarding-tutorial worked example; the other framed around a layman restaurant analogy, a navigation-redesign worked example, and duration-planning mechanics. No external chapter references are needed — the interaction with sample-size/power duration and with peeking/pre-registration is explained inline above.*
+This is the **silent killer** of A/B tests at scale. 
+
+At Google (Search/YouTube), Meta (News Feed/Reels), and Apple (iOS features), you are almost never dealing with a static user base. Users adapt, get bored, or get excited. If you run a 2-week test and ship based on that, you are often just measuring the **"Shiny Object" effect**—not the long-term value. 
+
+Interviewers love this topic because it separates "people who can run a t-test" from "people who understand human behavior over time." Here is your definitive playbook.
+
+---
+
+### Part 1: The "Cold Call" Opening Question
+**Interviewer:** *"You launch a new, highly visible feature on the Homepage. Week 1 shows a massive +8% lift in clicks. Week 2 shows the lift dropping to +2%. Week 3 shows it flat at 0%. The PM wants to ship based on the Week 1 data. What do you tell them?"*
+
+**Your Instant Answer:** 
+**"Absolutely not. We are observing a classic Novelty Effect.** Users are clicking on Day 1 simply because it's *new* and visually catches their eye, not because it's inherently more useful. By Week 3, the 'newness' wears off, and they revert to their habitual behavior. We cannot ship until we observe the metric **stabilize** and reach a steady state. We need to run this test for at least 2-3 full business cycles (e.g., 4 weeks) to separate the novelty spike from the true long-term causal effect."
+
+---
+
+### Part 2: The Core Framework (The 4 Phases of User Response)
+
+To get a "Hire" signal, draw this trajectory on the whiteboard. Explain that user behavior over time follows a non-linear curve:
+
+| Phase | Name | What happens | Action |
+| :--- | :--- | :--- | :--- |
+| **1** | **Novelty Effect** | **Short-term positive.** Users click/interact because it's new, shiny, or surprising. (e.g., A new notification badge). | **Do NOT ship.** This is temporary. |
+| **2** | **Primacy Effect** | **Short-term negative.** Users hate the change because it disrupts their muscle memory. They underperform while they "re-learn" the UI. (e.g., Moving the "Search" bar). | **Do NOT ship.** This is temporary. Wait for adaptation. |
+| **3** | **Habituation (Steady State)** | **The true causal effect.** Users have gotten used to it. Their behavior is now driven by utility, not novelty or confusion. | **This is the ONLY phase we use to make a ship/no-ship decision.** |
+| **4** | **Long-Term Maturation** | **Compound effects.** Does the feature change retention curves over 3-6 months? (e.g., Does it increase Lifetime Value?). | Requires a separate **Holdback / Retrospective Analysis**. |
+
+---
+
+### Part 3: The "Google" Nuance (The "Learning vs. Doing" Trap)
+
+Google interviewers will push you hard on search quality.
+
+**Interviewer:** *"We are testing a new Search algorithm that shows longer, more comprehensive snippets. In Week 1, Click-Through-Rate (CTR) drops by 5% because users are reading the snippet and not clicking. By Week 4, CTR recovers to flat. The PM says: 'See, it recovers, so it's safe to ship.' Do you agree?"*
+
+**Your Advanced Answer:**
+"No. The PM is conflating **recovery** with **improvement**. 
+
+- In Week 1, we saw a **Primacy Effect** (users were reading, not clicking).
+- In Week 4, we saw **Habituation** (they learned to read faster and resumed clicking). 
+
+But the goal of a Search engine isn't just CTR; it's *user satisfaction*. If they are reading the snippet and *not* clicking, that might actually be a **win** (they found their answer without leaving the page!). 
+
+**My pre-registered hypothesis** would have specifically broken this down:
+1. **Short-term (Week 1):** We expected a CTR dip (Primacy).
+2. **Long-term (Week 4+):** We expect **Search Exit Rate** (users leaving the search engine entirely) to drop, because they find answers faster. 
+If I only measured CTR, I would cancel a great feature. We need to define **behavioral adaptation metrics** *before* the test starts."
+
+---
+
+### Part 4: The "Meta" Nuance (Network Effects & Interference)
+
+Meta loves this because their products are social. They will throw a curveball about time.
+
+**Interviewer:** *"You test a new feature that encourages users to tag more friends in comments. In Week 1, engagement is up 10%. In Week 2, it drops to 2%. Is this strictly a Novelty Effect, or could something else be happening?"*
+
+**Your Answer:**
+"It could be **Novelty**, but given this is a *social* feature, it could also be **Network Saturation / Interference**. 
+
+- In Week 1, the treatment users tag their friends. Those friends (who are in the *Control* group) see the tags and log in more, contaminating the control group. 
+- By Week 2, the novelty of being tagged wears off, and the network effect stabilizes. 
+- The Week 1 lift was a combination of the feature *plus* the exogenous spillover effect on control users. The Week 2 flatline is the true effect.
+- **My solution:** We cannot use a standard user-randomized test here. We would need to run a **Cluster-Randomized Test** (randomizing by geographic region or social graph clusters) and run it for at least **4 to 6 weeks** to let the entire social graph reach a new equilibrium before we measure."
+
+---
+
+### Part 5: The "Apple" Nuance (The "Ugly" Primacy Effect)
+
+Apple focuses heavily on OS updates and hardware interactions. They will ask you about the *opposite* of novelty: the "First-Day Hate."
+
+**Interviewer:** *"We push a new iOS keyboard layout. Day 1, typing speed drops 20% and error rates spike 30%. The engineering team wants to revert the change immediately. How do you handle this?"*
+
+**Your Answer:**
+"This is a textbook **Primacy Effect** due to muscle memory. We *expect* this disruption. 
+
+**My strategy:**
+1. **Don't panic.** I pre-register this expectation. I explicitly state: *'We hypothesize a negative effect in the first 48 hours (learning curve), followed by a recovery to baseline within 7 days.'*
+2. **Segmented Analysis:** I look at the data by **User Tenure**. Power users (who type fast) will experience the worst Primacy effect, but they will adapt fastest. New users (who don't have muscle memory yet) might actually show an *immediate* improvement because the new layout is inherently better.
+3. **The Decision:** I do NOT look at the overall average for the first 3 days. I only look at the **Day 7 to Day 14** window (the steady state). If typing speed is back to baseline or better by Day 7, we ship. If it's still worse by Day 14, we revert."
+
+---
+
+### Part 6: The "Test Duration" Math Problem
+
+**Interviewer:** *"You calculate that you need 14 days to reach your required sample size. But you know there is a 7-day Novelty effect. How long do you actually run the test?"*
+
+**Your Answer:**
+"You don't run it for 14 days; you run it for **21 days (14 + 7)**. 
+Crucially, you **discard** the first 7 days of data from your *final analysis*, or you model them out using a **Time-Trend Interaction** (e.g., `Treatment * Day`). 
+
+However, discarding data reduces your power! You need to calculate your sample size based on the *variance* of the steady-state period (Days 8-21), not the full 21-day variance. Usually, this means you need to increase your sample size by ~20-30% to account for the fact that you are throwing away the first week."
+
+---
+
+### Part 7: The "Weekly Seasonality" Trap (The Counter-Argument)
+
+**Interviewer:** *"But wait. What if the drop from Week 1 to Week 2 isn't a Novelty effect? What if it's just weekly seasonality? (e.g., People browse more on weekends than weekdays). How do you prove it's Novelty?"*
+
+**Your Advanced Answer (The "Double-Diff" Method):**
+"You are absolutely right. To distinguish **Novelty** from **Seasonality**, I look at the **Control group's trend** over the same period.
+
+- If the Treatment's lift drops from +8% to +2%, but the Control group *also* drops by 6% during that same timeframe (due to seasonality), then **Novelty isn't the culprit**—the treatment lift is actually stable at +2% relative to the control.
+- If the Control group is perfectly flat at 0% over the 3 weeks, but the Treatment drops from +8% to 0%, then we have confirmed pure **Novelty**.
+- **The Rule:** I always plot the **Daily Treatment-Control Difference** over time. A *decaying* slope in that difference line is the definitive proof of a novelty/primacy effect, regardless of underlying seasonality."
+
+---
+
+### Part 8: The "Long-Term Holdback" (The Ultimate Meta/Google Solution)
+
+To sound like a Senior/Staff DS, you need to explain how you solve this problem *after* the test ends.
+
+**Interviewer:** *"We ship the feature based on a steady 4-week test. A year later, we realize retention dropped. How could we have caught this?"*
+
+**Your Answer:**
+"This is why we run **Long-Term Holdback (LTH) experiments** at scale. 
+
+- For 99% of users, we roll out the feature.
+- For a randomly selected 1% **Holdback** group, we intentionally *keep the feature off* for 3 to 6 months.
+- We compare the **Long-Term Retention** (e.g., 90-Day Active User rate) between the Holdback group and the Treatment group.
+
+Why does this solve Novelty/Primacy? Because by Month 6, the novelty has *completely* worn off for the treatment group. The Holdback group has also adapted to *not* having it. The difference between them at Month 6 is the true, durable, long-term causal effect. If that gap is negative, we revert the feature, even if our 4-week test said it was positive."
+
+---
+
+### Part 9: Summary Cheat Sheet for the Interview
+
+| Interviewer's Trap | Your Response Framework |
+| :--- | :--- |
+| *"Week 1 looks great, let's ship."* | "Wait for the **Habituation phase**. Discard the first N days." |
+| *"Users hate it on Day 1, let's revert."* | "That's the **Primacy Effect**. Let's wait for muscle memory to adapt." |
+| *"We hit sample size in 10 days."* | "Run it for **10 Days + Ramp-up period**. Don't use the ramp-up days in the final p-value calculation." |
+| *"How do I know if it's novelty or seasonality?"* | "Look at the **Control group's trend** and plot the **daily delta (T - C)**. Only a decaying delta proves novelty." |
+| *"How do I stop long-term degradation?"* | "Run a **1% Long-Term Holdback** group for 3–6 months post-launch." |
+| *"What's the minimum test duration?"* | **1 full business cycle** (e.g., 2 full weeks) **+** the estimated **adaptation period** (usually 3-7 days). Never less than 14 days." |
