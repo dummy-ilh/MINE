@@ -148,12 +148,52 @@ A: With small n, using the sample standard deviation to estimate σ introduces e
 
 1. State the correct interpretation of a 95% confidence interval, and explain precisely why the common "95% probability" phrasing is wrong.
 2. Prove the CI-hypothesis test duality in words: why does "0 is not in the 95% CI" imply "we reject H₀ at α=0.05"?
-3. If you quadruple your sample size, by what factor does your CI width shrink? Why?
-4. Why does CI construction use the unpooled standard error while a hypothesis test typically uses the pooled standard error?
-5. A stakeholder says "the CI is [-0.05%, +1.65%], so there's a 95% chance the true effect is positive." What's wrong with this statement, and what would you say instead?
-6. Two variants' CIs overlap — can you conclude there's no significant difference? What should you check instead?
-7. Why might a z-based CI be misleading with only 200 users per arm, and what's the fix?
+  A 95% CI contains exactly those parameter values that are not rejected by a two-sided hypothesis test at α = 0.05.
 
+Therefore:
+
+If 0 lies inside the CI, zero is a plausible value → fail to reject H₀.
+If 0 lies outside the CI, zero is not plausible → reject H₀.
+
+This works because both the CI and the hypothesis test are derived from the same sampling distribution and standard error
+
+3. If you quadruple your sample size, by what factor does your CI width shrink? Why?
+5. Why does CI construction use the unpooled standard error while a hypothesis test typically uses the pooled standard error?
+6. A stakeholder says "the CI is [-0.05%, +1.65%], so there's a 95% chance the true effect is positive." What's wrong with this statement, and what would you say instead?
+ What's wrong?
+
+The statement incorrectly assigns probability to the fixed true parameter.
+
+Also, since the interval contains 0, a zero effect is still plausible.
+
+Correct statement:
+
+The 95% confidence interval ranges from -0.05% to +1.65%. Because it includes 0, the data do not provide sufficient evidence at the 5% significance level to conclude the true effect is positive.
+7. Two variants' CIs overlap — can you conclude there's no significant difference? What should you check instead?
+No.
+
+Overlapping confidence intervals do not necessarily imply there is no statistically significant difference.
+
+This is because significance depends on the standard error of the difference, not simply whether two separate intervals overlap.
+
+Instead, check:
+
+the confidence interval for the difference, or
+the hypothesis test p-value comparing the two groups directly.
+8. Why might a z-based CI be misleading with only 200 users per arm, and what's the fix?
+The z-interval assumes:
+
+the sampling distribution is approximately normal, and
+the population standard deviation is known (or the sample is large enough for the approximation).
+
+With only about 200 users per arm, especially for binary outcomes with low conversion rates or skewed data, the normal approximation may be inaccurate.
+
+This can produce confidence intervals with incorrect coverage.
+
+Fix:
+
+For means: use a t-based confidence interval (uses the t-distribution to account for estimating the standard deviation).
+For proportions: use better methods such as the Wilson interval (or exact methods when appropriate) instead of the simple Wald (z-based) interval.
 ---
 *End of master tutorial — combines confidence interval construction, interpretation, the CI-hypothesis test duality, levers, worked example, and interview Q&A/traps.*
 
@@ -239,3 +279,76 @@ Each experiment produces a different confidence interval because the data differ
 If you're using a 95% confidence interval procedure, then **about 95 of those 100 intervals will include the true effect (+2%)**, while about 5 will miss it entirely.
 
 ---
+That's exactly the right question. **Why would someone compare two separate confidence intervals at all?**
+
+Because it's a **quick visual check**.
+
+Imagine you're looking at an A/B testing dashboard:
+
+| Variant | Conversion | 95% CI     |
+| ------- | ---------- | ---------- |
+| A       | 12%        | [10%, 14%] |
+| B       | 15%        | [13%, 17%] |
+
+A natural instinct is:
+
+> "The intervals overlap (13–14%), so maybe there's no real difference."
+
+People do this because it's easy to eyeball.
+
+### But here's the problem
+
+The question you care about is:
+
+> **Is A different from B?**
+
+The two individual CIs answer different questions:
+
+* A's CI: "What are plausible values for A's true conversion rate?"
+* B's CI: "What are plausible values for B's true conversion rate?"
+
+Neither directly answers:
+
+> **"What are plausible values for (B − A)?"**
+
+That's a **different quantity**.
+
+For example:
+
+* A: **12%** (CI: **10%–14%**)
+* B: **15%** (CI: **13%–17%**)
+
+The intervals overlap.
+
+But if you compute the **CI for the difference**:
+
+[
+B - A = 3%
+]
+
+you might get:
+
+[
+[0.5%,\ 5.5%]
+]
+
+Since this interval **doesn't include 0**, the difference **is statistically significant**, even though the individual CIs overlap.
+
+### Think of it like this
+
+Suppose two students have exam scores:
+
+* Alice: **85 ± 3** → **[82, 88]**
+* Bob: **89 ± 3** → **[86, 92]**
+
+The score ranges overlap (86–88), but that **doesn't tell you** whether Bob truly performs better than Alice. To answer that, you analyze the **difference in their scores** and its uncertainty.
+
+### Interview takeaway
+
+If asked:
+
+> **Why shouldn't we compare overlapping confidence intervals?**
+
+A good answer is:
+
+> *Because each confidence interval estimates uncertainty about one group independently. Statistical significance depends on the uncertainty of the **difference between the groups**, so we should compute the confidence interval for the difference (or perform a hypothesis test), rather than comparing the overlap of two separate confidence intervals.*
