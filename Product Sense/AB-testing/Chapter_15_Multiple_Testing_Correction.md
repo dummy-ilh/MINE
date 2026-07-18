@@ -1,8 +1,4 @@
 # Chapter 15: Multiple Testing Correction (Bonferroni, FDR) Across Many Metrics
-# Chapter 15 — Multiple Testing Correction (Bonferroni, FDR)
-> **Interview tier:** Google / Meta / Apple DS / PM rounds  
-> **Core risk this prevents:** false discovery inflation from testing many metrics simultaneously  
-> **Prerequisite:** Chapter 8 (pre-registration) — understand why you separate primary from secondary metrics first
 
 ---
 
