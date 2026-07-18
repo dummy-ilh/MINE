@@ -307,5 +307,191 @@ A: My first question: "could a treatment user's group-chat experience affect the
 8. What's the difference between an A/A test flagging a bug (SRM) versus an A/A test flagging genuine interference? How would you start to tell them apart?
 
 ---
-*This tutorial merges two chapters on unit of randomization and interference — one framed around definitions, common units, and product-scenario Q&A; the other framed around SUTVA formalism, the design-effect formula, and directional-bias reasoning with a referral worked example. Two flowcharts were added: (1) a decision flowchart for choosing the right unit of randomization given a feature's characteristics, and (2) interference/contamination flow diagrams showing exactly how spillover (referral) and cannibalization (marketplace) mechanisms bias the treatment effect in opposite directions.*
-*Next: Chapter 8 — Hypothesis Formulation & Pre-Registration.*
+# Chapter 7 Supplement: Complete Table of Randomization Units
+
+A reference table of every unit of randomization you might propose in an interview, what it's good for, and — most importantly — the specific failure mode that makes it break in a given scenario. Interviewers care less about you naming a unit and more about you catching *why it fails* before they have to point it out.
+
+---
+
+## Master Table
+
+| Unit | What it means | Best suited for | Why it fails / breaks down |
+|---|---|---|---|
+| **User ID (logged-in)** | Randomize on a stable account identifier; persists across devices/sessions | Default choice — purely individual features (UI tweaks, personal recs, personal settings) | Fails when the feature is inherently multi-user (referrals, chat, shared carts) — one user's treatment leaks into another user's outcome via direct interaction. Also fails if login isn't universal (logged-out traffic gets no consistent assignment). |
+| **Device ID** | Randomize on device/cookie identifier | Logged-out flows, device-specific UI features (e.g., mobile-only redesign) | Same user on multiple devices (phone + laptop) can land in *both* arms — inconsistent experience contaminates the "one clean treatment per unit" assumption. Cookie churn (clearing cookies, browser resets) also causes unit identity to drift mid-experiment. |
+| **Session ID** | Randomize per visit/session | Search/ranking experiments where each query is close to independent | Almost never safe for anything with memory or persistence — same user flips between treatment and control across sessions, so you can't attribute a stable "user-level" effect to either arm. Learning effects (users adapting to a UI) get muddled. |
+| **Cluster — geographic (city/DMA/country)** | Whole region assigned to one arm | Marketplace or pricing experiments where interference is geographically bounded (rideshare, delivery) | Fails if interference actually crosses the cluster boundary you drew (a driver working two adjacent cities). Also fails statistically if you pick too few clusters — degrees of freedom collapse and effective sample size shrinks (design effect), sometimes to the point the test can't detect anything but huge effects. |
+| **Cluster — social graph community** | Graph-clustering algorithm groups tightly-connected users, whole community assigned together | Social/network features — referrals, group chat, co-viewing, shared feeds | Fails if the graph-clustering step doesn't fully contain the interaction (edges still cross cluster boundaries — "leakage" at the seams). Also expensive/slow to compute at scale, and cluster sizes are uneven, which complicates the design-effect correction. |
+| **Cluster — marketplace/listing level** | Randomize whole marketplaces, listings, or supply pools | Two-sided marketplace features (matching, pricing) where a shared finite resource (drivers, ad inventory) is contested | Fails when the "marketplace" isn't cleanly separable — e.g., drivers or ad inventory pools already overlap across the clusters you defined, so contamination still occurs across the treatment/control boundary. |
+| **Switchback (time-based, same unit alternates)** | The *entire system* (e.g., one city) alternates between treatment/control across time blocks | Marketplace-wide interventions you can't cleanly split by user or geography (global pricing algorithm change) | Fails if there's **carryover** — the treatment's effect lingers into the next control block (e.g., driver repositioning takes hours to reverse), contaminating the "control" period. Also vulnerable to time-based confounds (day-of-week, time-of-day effects) if blocks aren't randomized carefully. |
+| **Query/impression-level** | Randomize per individual search query or ad impression, not per user | High-volume, stateless ranking/ads experiments where no persistent identity is needed | Fails the moment there's any session memory, personalization, or user-level learning — the same user can get inconsistent treatment across near-simultaneous queries, making user-level metrics (retention, satisfaction) impossible to attribute cleanly. |
+| **Content/item-level** | Randomize which *pieces of content* get a treatment (e.g., some videos get new thumbnails), not which users | Content-side experiments (thumbnail tests, item ranking boosts) where the same user sees both treated and untreated items | Fails when items compete for the same limited attention/slot budget — boosting some items necessarily displaces others, so "control" items are starved by the presence of "treatment" items in the same feed (shared exposure budget interference). |
+| **Budget-split (artificial shared-resource split)** | Deliberately split a shared finite resource pool itself, and measure market-level effects directly | When you actually *want* to measure the interference/market effect rather than avoid it | Not really a fix — it's a different research question (measuring the spillover, not eliminating it). Fails if used as a substitute for cluster randomization when your goal was actually a clean, interference-free point estimate. |
+
+---
+
+## Quick Diagnostic: Why a Naive Choice Fails, by Scenario
+
+| Scenario | Naive unit picked | Why it fails |
+|---|---|---|
+| "Invite a friend" referral feature | User ID | Treatment user's invite reaches a control user → control outcome contaminated → **underestimates** true effect |
+| New rideshare pricing algorithm | User ID | Shared driver supply pool → treatment riders "steal" drivers from control riders in the same city → **overestimates** true effect |
+| Group chat redesign | User ID | Mixed treatment/control membership in the *same* group → both arms' experience is contaminated by the other |
+| New search ranking model | User ID (if session-based product) | If usage is stateless/logged-out, no persistent ID exists — falls back to device/session, which risks the same-user-multiple-arms problem |
+| Global feed ranking change | Geo-cluster (too small, e.g., zip code) | Network effects (shared trending content, viral loops) span far beyond a zip code — cluster too small to contain interference |
+| Global feed ranking change | Geo-cluster (too large, e.g., country) | Contains interference well, but only ~20–30 independent clusters exist worldwide → tiny effective sample size → can't detect anything but massive effects, needs months of data |
+| Ad auction / ranking real estate test | User ID | Fixed inventory of ad slots/relevance budget — boosting treatment users' results can come at the direct expense of what's shown to control users sharing the same exposure budget |
+
+---
+
+## The One Filter Question
+
+Before picking any unit, ask:
+
+> **"Could this treatment plausibly affect the outcome of someone assigned to the *other* arm?"**
+
+- **No** → user-level (or device-level, if login is unavailable) is safe.
+- **Yes, through direct connections (referrals, chat, shared content)** → social-cluster randomization.
+- **Yes, through a shared finite resource (supply, inventory, ad slots)** → geographic cluster or switchback.
+- **Yes, but you actually want to measure the spillover itself** → budget-split design.
+
+Every cluster/switchback choice costs you sample size via the **design effect**:
+
+$$DEFF = 1 + (m-1)\rho, \qquad n_{eff} = \frac{n}{DEFF}$$
+This is the **most fundamental technical trap** in A/B testing. 
+
+You can have a perfect hypothesis, perfect pre-registration, and run the test for a month—but if you randomize at the wrong unit, **your p-values are completely invalid**. 
+
+At Google (Search/Ads), Meta (Social Graphs), and Apple (iCloud/Devices), the randomization unit determines *who* gets the treatment and *how* you analyze the data. Interviewers use this topic to test if you understand **variance**, **network interference**, and the **Unit of Analysis fallacy**. Here is your definitive interview playbook.
+
+---
+
+### Part 1: The "Cold Call" Opening Question
+**Interviewer:** *"You are testing a new checkout button color on an e-commerce app. You randomize at the User-ID level. You analyze the data at the Pageview level (because you have millions of pageviews). You get a highly significant p-value of 0.001. The PM wants to ship. What do you say?"*
+
+**Your Instant Answer:**
+**"Stop the presses. We have committed the Unit of Analysis Fallacy.** 
+We randomized at the **User level** (independent observations), but we analyzed at the **Pageview level** (dependent observations). One user who visits 100 times contributes 100 data points to the treatment group. These are not independent; they are correlated within the user. By treating them as independent, we have artificially inflated our sample size, drastically narrowed our standard errors, and created a **false positive**. Our effective sample size is the number of *users*, not the number of *pageviews*. We need to aggregate the metric to the user level (e.g., Average Click-Through-Rate per User) and re-run the analysis."
+
+---
+
+### Part 2: The Core Framework (The 4 Standard Units)
+
+To get a "Hire" signal, you must articulate the trade-offs of each randomization unit. Draw this table on the whiteboard:
+
+| Randomization Unit | Definition | Best Used For | The Fatal Flaw |
+| :--- | :--- | :--- | :--- |
+| **User-ID (or Cookie)** | Every user gets a consistent treatment across all their sessions. | **UI changes, Feed ranking, Onboarding flows.** (Standard for 90% of tests). | **Network Interference.** If users interact with each other (social), the control user gets contaminated by the treatment user. |
+| **Pageview / Session** | The treatment flips on/off each time a user visits a page. | **Low-risk changes** (e.g., testing 2 different ad placements on a travel search page). | **Carryover Effects.** A user sees Version A on Page 1, clicks 'Back', and sees Version B on Page 2. Their behavior on Page 2 is *contaminated* by their experience on Page 1. |
+| **Device-ID** | The treatment applies to a specific physical device. | **Push notifications, OS-level features, Hardware changes.** | **Multiple users per device** (family iPad) dilutes the treatment effect. |
+| **Cluster (Geographic / Social Graph)** | Entire cities or friend groups get the same treatment. | **Network products** (Messenger, Uber supply/demand, Marketplace liquidity). | **Massively reduced power.** You have far fewer independent clusters than you have users, so you need a huge test to detect small effects. |
+
+---
+
+### Part 3: The "Meta" Nuance (The Social Network Interference Problem)
+
+Meta *loves* this question because their entire product is a social graph.
+
+**Interviewer:** *"You are testing a new feature that encourages users to send more messages to their friends. You randomize by User-ID. The Treatment group sends 15% more messages. You ship it. Three weeks later, overall company-wide messaging drops. Why did this happen?"*
+
+**Your Advanced Answer:**
+"Because I violated the **Stable Unit Treatment Value Assumption (SUTVA)**. 
+
+- My Treatment users sent more messages, which means **Control users received more messages** (from their Treatment friends). 
+- Control users, annoyed by the spam, stopped sending messages themselves.
+- When I shipped to 100% of users, the 'positive' effect of sending more messages was completely offset by the 'negative' effect of *receiving* more messages. The net effect was zero (or negative).
+
+**My solution:** I should have run a **Cluster-Randomized Test** (randomizing by friend groups or geographic regions). The analysis metric would be **Messages Sent per Capita *within the cluster***. By keeping entire clusters in Treatment or Control, I eliminate the contamination between arms, and I measure the *true global equilibrium* effect."
+
+---
+
+### Part 4: The "Google" Nuance (The Cookie vs. User-ID vs. Device Hell)
+
+Google has users logging in/out across Chrome, Android, and Search. They will push you on identity resolution.
+
+**Interviewer:** *"We are testing a new Search feature. We randomize by Cookie. A user searches on their work laptop (Cookie A), gets Treatment. They go home, search on their personal phone (Cookie B), gets Control. They are the same human. How does this destroy our test?"*
+
+**Your Answer:**
+"This introduces **massive noise** and **dilution of the treatment effect**.
+
+1. **The Noise:** The same human is experiencing both Treatment and Control. Their behavior on Cookie B is influenced by what they saw on Cookie A (Carryover). We are comparing two experiences of the *same person*, which violates independence.
+2. **The Dilution:** If 30% of users have multiple cookies, our treatment effect is diluted by 30%. We are measuring the effect of the feature *plus* the effect of inconsistent user experience. 
+
+**My solution:** 
+- For critical tests, we randomize at the **Logged-in User-ID** level. Users who are logged out are excluded from the analysis.
+- If we *must* use cookies (for logged-out search), we use a **Device-Graph** (a statistical mapping of cookies belonging to the same user) and randomize at the *Device-Graph level*, ensuring all cookies for that human get the same treatment."
+
+---
+
+### Part 5: The "Apple" Nuance (The Hardware/OS Constraint)
+
+Apple cares about privacy and device performance. They will throw a practical, engineering-driven curveball.
+
+**Interviewer:** *"We are testing a new battery optimization algorithm. We can only apply the treatment at the **Device-ID** level, and the update is pushed via an OTA (Over-the-Air) software update. But families share iPads. How do we handle the analysis?"*
+
+**Your Answer:**
+"This is a classic **Device-level randomization with User-level outcomes**.
+
+- If a family shares an iPad (Device-ID), but we are measuring 'User Engagement' (e.g., App Store purchases), we have **multiple users per cluster**.
+- We cannot treat each user on that iPad as independent because they share the same treatment environment.
+- **My solution:** The analysis metric must be **aggregated to the Device-ID level** (e.g., 'Total App Store Spend per iPad per Week'). We lose the ability to segment by individual user behavior, but we maintain statistical validity.
+- **Alternative:** If we absolutely need user-level metrics, we must use a **Hierarchical Model (Mixed Effects Model)** with Device-ID as a random intercept to account for the within-device correlation. But frankly, in a fast-paced interview, aggregating to the device is the safest, cleanest answer."
+
+---
+
+### Part 6: The "Analysis Unit MUST Equal Randomization Unit" Rule
+
+This is the single most important sentence you will say in this interview. Memorize it.
+
+**Interviewer:** *"Okay, but what if I randomize by User-ID but analyze by Session, and I just use 'Robust Standard Errors' or 'Clustered Standard Errors' to fix it? Is that acceptable?"*
+
+**Your Answer:**
+"Yes, **Clustered Standard Errors (clustering by User-ID)** is the statistically rigorous way to fix this without aggregating your data. 
+
+- By clustering at the User-ID level, I tell the variance-covariance matrix that all sessions belonging to the same user are correlated (they share the same error term). 
+- This widens my confidence intervals appropriately. 
+- However, I must be careful: if I have 1 million sessions but only 10,000 users, clustering is *essential*; otherwise, my p-values will be wildly optimistic. 
+
+**The Golden Rule:** The **Unit of Diversion** (how you assign treatment) and the **Unit of Analysis** (how you aggregate your standard errors) must always be the same, **OR** you must explicitly account for the hierarchy via clustering or mixed-effects models. You can never treat lower-level units (sessions) as independent when randomization happened at a higher level (users)."
+
+---
+
+### Part 7: The "Carryover Effect" Scenario (The Time Dimension)
+
+**Interviewer:** *"You are testing a new recommendation algorithm on a streaming service. You randomize at the Session level. Session 1 gets Algorithm A; Session 2 gets Algorithm B. You see a huge lift in Session 2. Why might this be a false positive?"*
+
+**Your Answer:**
+"This is a **Carryover Effect**. 
+What if Algorithm A (in Session 1) recommended a highly engaging movie that takes 3 hours to watch? The user is still watching that movie during Session 2. When I measure Session 2, I'm actually measuring the *residual* engagement from Session 1's recommendation. 
+
+**My solution:** 
+- If I must randomize at the Session level (to test rapid iterations), I must build in a **Washout Period** (e.g., 24 hours) between sessions. I only compare Session 1 of User A to Session 1 of User B. 
+- Even better, I pre-register that I will **only analyze the first session of the day** for each user, completely eliminating the carryover from previous sessions."
+
+---
+
+### Part 8: The "Statistical Power" Trade-off (The Senior DS question)
+
+**Interviewer:** *"User-ID randomization gives me clean independent observations, but it takes 4 weeks to reach power. Session-level randomization gives me 10x more observations and reaches power in 2 days. Why don't we just always use Session-level randomization?"*
+
+**Your Answer:**
+"Because **Speed is useless if the answer is wrong**. 
+
+- Session-level randomization is incredibly noisy due to carryover and user-specific daily moods. 
+- While the sample size (sessions) is huge, the **effective sample size** is much smaller because of intra-user correlation. The intra-class correlation (ICC) for sessions within a user is often 0.3 to 0.5. 
+- Running a session-level test without clustering gives you a false sense of precision. When you cluster your standard errors, you'll find the 2-day test actually has very low power.
+- **My Rule:** I only use Session-level randomization for **very low-risk, highly symmetrical** tests (e.g., A/B testing two different ad banners that disappear after 1 second). For any feature that changes user behavior over time, I *always* use User-ID and accept the longer duration."
+
+---
+
+### Part 9: Summary Cheat Sheet for the Interview
+
+| Interviewer's Trap | Your Response Framework |
+| :--- | :--- |
+| *"We have 10M pageviews but only 50k users."* | "Effective sample size is **50k users**. Aggregate or cluster standard errors by User-ID." |
+| *"Treatment users talk to Control users."* | "**SUTVA violation.** Need Cluster-randomization (by geography or graph)." |
+| *"Same human, different cookies."* | "Stick to **Logged-in User-ID**. For logged-out, use a **Device-Graph**." |
+| *"Can I randomize by Session to go faster?"* | "Yes, but only if I analyze **First Session of the Day** to remove carryover." |
+| *"The PM aggregated to User level, but they randomized by Device."* | "Invalid. A shared iPad has 3 users. Analyze at the **Device level**." |
+| *"How do I fix correlated data without aggregating?"* | "Use **Clustered Standard Errors** at the randomization unit (e.g., User-ID)." |
+| *"What if I have a hierarchical test?"* | "**Mixed-Effects Model** with random intercepts for the randomization unit." |
