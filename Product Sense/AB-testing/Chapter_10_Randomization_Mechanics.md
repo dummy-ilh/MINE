@@ -214,4 +214,80 @@ A: I'd run a **covariate/composition balance check** — comparing the distribut
 8. A team wants to "fix" a significant SRM by re-weighting the analysis to account for the imbalance instead of investigating the root cause. What's wrong with this approach?
 
 ---
-*This tutorial merges two chapters — one on randomization mechanics (hashing, bucketing, salting, gradual rollouts) with a brief SRM introduction, and one that is a full deep-dive specifically on SRM (root causes, the chi-square test, a small-but-severe-imbalance worked example, and production/debugging guidance). All SRM content from both sources — including all three worked examples, the full root-cause list, and both Q&A sets — has been consolidated into unified SRM sections (4–11) alongside the hashing/bucketing mechanics that SRM checks are built on top of.*
+# Chapter 10 (addendum): Diagnosing, Detecting, and Scaling SRM Checks
+
+> Everything below is new material layered on top of the original chapter — nothing here replaces it. Use this alongside Sections 1–13, not instead of them.
+
+---
+
+## 1. Root-cause diagnostic table (symptom → likely cause → where to look)
+
+The chapter's Section 4 lists root causes; this turns that list into something you can actually run through when an SRM fires and you don't yet know why.
+
+| Symptom pattern | Most likely root cause | Where to look first |
+|---|---|---|
+| Imbalance concentrated on one platform (e.g., all iOS, no Android skew) | Bucketing or exposure logging applied inconsistently across platforms | Platform-specific assignment/logging code paths |
+| Imbalance concentrated on old devices / slow connections | Treatment experience loads slower, causing timeout/bounce before exposure logs | Load-time comparison between arms, timeout thresholds |
+| Imbalance grows over the course of the experiment rather than being constant from day one | A caching bug or race condition that worsens under load, or a rollout misconfiguration | Cache TTL settings, deployment timeline, traffic ramp schedule |
+| Imbalance appears only during specific time windows (e.g., weekends, peak traffic) | Bot/crawler traffic hitting one arm's code path differently under load | Traffic composition by time-of-day, known bot signatures |
+| Imbalance is stable and present from the very first hour | A structural bug in the assignment or bucket-to-arm mapping itself | Assignment logic code review, bucket boundary configuration |
+| Counts match overall, but a segment (e.g., new vs. returning users) looks skewed on manual inspection | Composition imbalance, not SRM — a distinct diagnostic | Run a covariate/balance check (Section 8 of the original chapter), not another SRM test |
+
+**How to use this table:** segment the SRM by platform, device, geography, and time first (as the original chapter recommends), then match the pattern you find against this table to jump straight to the most likely code path — this turns a broad "something's broken" into a specific, testable hypothesis in one step.
+
+## 2. How much SRM can you actually detect? (statistical power of the check)
+
+A natural follow-up question the chapter doesn't fully spell out: at a given sample size, how small a true imbalance can the chi-square test reliably catch at p < 0.001? Approximate minimum detectable ratio deviation (from 50/50) for the check to reliably flag it:
+
+| Total sample size (n) | Approx. minimum detectable deviation from 50/50 |
+|---|---|
+| 10,000 | ~2.0 percentage points (e.g., 52/48) |
+| 100,000 | ~0.65 percentage points (e.g., 50.65/49.35) |
+| 1,000,000 | ~0.2 percentage points (e.g., 50.2/49.8) |
+| 10,000,000 | ~0.065 percentage points |
+
+This is the same mechanic behind Example C in the original chapter (a 1.7-point gap at n=100,000 being overwhelmingly significant) generalized into a rule of thumb: **the check gets more sensitive, not less, as your experiment grows** — which is exactly the property you want from a pipeline-health check, but it also means that at very large n, you should expect to occasionally chase down real, fixable — if small — biases that would have been invisible at a smaller scale. That's a feature, not a nuisance: a small but real bias at 10 million users can still represent a meaningfully mis-assigned subpopulation in absolute terms.
+
+## 3. SRM test statistic — chi-square vs. the alternatives
+
+The chapter uses the chi-square goodness-of-fit test throughout, which is the right default. Worth knowing what else exists and why chi-square usually wins anyway:
+
+| Test | How it works | Why it's sometimes used instead | Why chi-square remains the default |
+|---|---|---|---|
+| **Chi-square goodness-of-fit** | Sum of squared deviations weighted by expected counts | — (this is the default) | Simple, well-understood, computationally trivial, works identically for 2-arm and multi-arm designs |
+| **G-test (likelihood-ratio test)** | Log-likelihood-ratio based alternative to chi-square | Slightly better behaved for very small expected cell counts | Rarely matters at typical experiment scale (expected counts are almost never small enough for this to bite) — added complexity without added value in practice |
+| **Exact binomial test** | Directly computes exact tail probability rather than a chi-square approximation | More precise at very small n, where the chi-square approximation can be unreliable | Experiments at meaningful traffic scale (thousands+) don't need this — the chi-square approximation is excellent well before that point |
+| **Sequential/always-valid SRM monitoring** | An anytime-valid statistic (same family as Chapter 16's peeking-safe methods) applied to the ratio itself, not just the outcome metric | Lets you monitor the split continuously without inflating false-alarm rate from repeated automated checks | More engineering complexity to build and maintain; most platforms accept periodic (not continuous) chi-square checks as good enough, reserving always-valid monitoring for the outcome metric itself |
+
+**Practical takeaway:** name chi-square as the default and correct answer. The other rows are for when you're asked "what if the expected cell counts are tiny" or "what if the SRM check itself is run continuously" — good depth to have, not the headline answer.
+
+## 4. Extended worked example — three-arm experiment (new)
+
+The original chapter's examples are all 2-arm. Multi-arm designs need the same test with more degrees of freedom.
+
+**Setup**: an experiment splits traffic across three arms intended at 34/33/33 (control, treatment A, treatment B). Observed after one week, total n = 90,000:
+- Control: 31,000 (expected 30,600)
+- Treatment A: 29,700 (expected 29,700)
+- Treatment B: 29,300 (expected 29,700)
+
+$$\chi^2 = \frac{(31{,}000-30{,}600)^2}{30{,}600} + \frac{(29{,}700-29{,}700)^2}{29{,}700} + \frac{(29{,}300-29{,}700)^2}{29{,}700}$$
+$$= \frac{400^2}{30{,}600} + 0 + \frac{400^2}{29{,}700} \approx 5.23 + 0 + 5.39 = 10.62$$
+
+With **2 degrees of freedom** (three groups), the critical χ² value at p=0.001 is about 13.82. Since 10.62 < 13.82, this does **not** clear the strict SRM threshold — worth monitoring but not an automatic stop. Contrast this with the original chapter's Example C: same rough magnitude of absolute deviation (a few hundred users), but the extra degree of freedom from a third arm changes the critical value you're comparing against, so the same-looking gap doesn't automatically mean the same verdict. This is the detail that trips people up when they memorize "χ² > 10.83 = stop" without registering that 10.83 was specifically the 1-degree-of-freedom threshold.
+
+## 5. Expanded do's/don'ts — engineering-specific additions
+
+Beyond the original chapter's list, a few practices specific to how bucketing gets implemented in real systems:
+
+- ✅ **Cache bucket assignments idempotently** — if a bucket assignment is computed once and cached, make sure cache misses or cache invalidation can't silently reassign a user mid-experiment.
+- ✅ **Assign buckets server-side when possible** — client-side bucketing (e.g., in JavaScript) is more exposed to ad blockers, script failures, and inconsistent client versions differentially affecting one arm's ability to even compute its assignment.
+- ❌ **Don't let feature-flag systems and experiment-assignment systems drift out of sync** — a common real-world SRM cause not listed in the original chapter's root-cause list: the feature flag rollout percentage and the experiment's own bucket boundaries silently disagree after an unrelated flag change, effectively re-randomizing a subset of users without anyone intending to.
+- ❌ **Don't assume mobile app releases propagate uniformly** — app store rollout pacing means a meaningful fraction of users may be on an old app version that doesn't have the current experiment's code path at all, which can look exactly like an SRM if not accounted for in the analysis population definition.
+
+## 6. Comprehension check (new questions, additive)
+
+1. An SRM check on a 3-arm experiment returns χ² = 12.5. Using the critical value from Section 4 above, is this significant at p < 0.001? What would your answer have been if you mistakenly used the 1-degree-of-freedom critical value instead?
+2. Using the detection-power table in Section 2, explain why a team running a 50,000-user experiment might reasonably see a 1-point ratio deviation pass cleanly, while the same 1-point deviation would fail decisively at 5,000,000 users.
+3. A colleague suggests switching from chi-square to a G-test because "it's more rigorous." Under what specific condition would that actually matter, and why is it unlikely to matter for a typical web-scale experiment?
+4. Feature-flag drift is proposed as a new root cause not in the original chapter's list. Describe how you'd distinguish this cause from a hashing/bucketing bug using the segmentation approach from Section 1 of this addendum.
+5. Why does caching bucket assignments non-idempotently risk creating an SRM that wouldn't show up as a bug anywhere in the hashing logic itself?
