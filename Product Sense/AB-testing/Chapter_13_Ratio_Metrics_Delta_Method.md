@@ -1,120 +1,316 @@
 # Chapter 13: Ratio Metrics & the Delta Method
----
+# Chapter 13 (Rebuilt for Clarity): Ratio Metrics & the Delta Method
 
-## 1. Intuition
-
-So far, most metrics discussed elsewhere in this curriculum are simple averages per randomization unit (mean conversion rate per user, mean session length per user). But many of the most important product metrics are **ratios of two random quantities**, both of which vary across users: click-through rate (clicks/impressions), revenue per session (revenue/sessions), average order value (revenue/orders), clicks per session, watch-time-per-view.
-
-**The core problem**: you cannot just treat a ratio metric as if it were a simple average and plug it into the standard SE-of-a-mean formula. The numerator and denominator are both random variables that vary user-to-user and are typically *correlated* with each other — and naively ignoring this gives you a **wrong** standard error (too small OR too large, depending on the correlation's sign), which means either false confidence and inflated false-positive rates, or an unnecessarily wide interval and lost power.
-
-### Layman analogy
-Imagine measuring "clicks per session" for two users:
-- User A: 10 clicks across 2 sessions → 5 clicks/session
-- User B: 3 clicks across 1 session → 3 clicks/session
-
-If User A logs in more (more sessions) AND clicks more per session, the numerator (clicks) and denominator (sessions) are moving together — they're correlated. If you treat "clicks per session" like a simple, independent measurement per user and compute variance the naive way, you completely ignore that correlation, and your estimated variance ends up wrong — potentially too small, making you overconfident (your confidence intervals look tighter than they should, and you might see "significant" results that are really just noise) — or too large, understating your power.
-
-The **Delta Method** is a mathematical trick that says: "since a ratio is a nonlinear function of two random things, let's approximate how it wobbles by looking at how small wobbles in the numerator and denominator translate into wobbles in the ratio — accounting for how those two things move together." It's like estimating how much a seesaw tips based on small pushes on both ends simultaneously, rather than assuming only one end is moving.
+This is a from-scratch rebuild of Chapter 13, built slowly with diagrams at every step. If the formula-first version didn't click, this version is designed to get you to the same place — being able to derive and explain the Delta Method — by building up from a very concrete example first, and only introducing the formula once the *shape* of the problem is obvious.
 
 ---
 
-## 2. Core Definitions
+## 1. Start Here: Two Completely Different Kinds of "Average"
 
-- **Ratio metric**: a metric expressed as one quantity divided by another, where **both** the numerator and denominator vary randomly across the randomization unit — e.g., "clicks per session," "revenue per visitor," "average watch time per view," CTR (clicks/impressions when impressions vary per user).
-- This **differs** from a simple average of a single per-user value (e.g., "average number of clicks per user," where each user contributes one fixed observation and the "denominator" — 1 user — isn't random at all).
-- **The Delta Method**: the standard statistical technique for approximating the variance of a ratio (or any nonlinear function of random variables) correctly, using a first-order Taylor expansion around the means.
+Before ratios, you need to see the distinction this whole chapter hinges on.
 
----
+**Type 1 — Simple mean.** "Average clicks per user." Each user contributes exactly ONE number (their click count). The "per user" part isn't random — there's always exactly 1 user per user.
 
-## 3. Why Simple Averaging Breaks for Ratios
+```
+User A: 5 clicks
+User B: 3 clicks
+User C: 8 clicks
+                    Average = (5+3+8)/3 = 5.33
+                    ↑
+            Only ONE random quantity here (the click count).
+            The denominator ("per user") is fixed = 1. Always.
+```
 
-### Problem 1 — Naive per-user-ratio averaging discards reliability information
-Consider CTR computed at the **user level**: for user $i$, $R_i = \frac{clicks_i}{impressions_i}$. If you naively average $R_i$ across users and run a standard t-test on those per-user ratios, you're treating each user's ratio as if it carries equal weight and equal reliability — but a user with 1 impression and 1 click has $R_i=1.0$, exactly like a user with 1,000 impressions and 1,000 clicks, even though the second user's ratio is a vastly more reliable estimate of their true click propensity. Naive per-user-ratio averaging throws away this information.
+**Type 2 — Ratio metric.** "Clicks per session." Now BOTH numbers are random and different per user — how many clicks, AND how many sessions.
 
-The more common (and more correct) approach computes the **aggregate/pooled ratio**: $R = \frac{\sum_i clicks_i}{\sum_i impressions_i}$ — the overall pooled ratio, not the average of individual ratios.
+```
+User A: 10 clicks / 2 sessions  = 5.0
+User B: 3 clicks  / 1 session   = 3.0
+User C: 16 clicks / 4 sessions  = 4.0
+                    ↑                ↑
+            random number 1    random number 2
+            (varies per user)  (ALSO varies per user)
+```
 
-### Problem 2 — The pooled ratio still needs the right variance formula
-Even using the pooled ratio, the standard error of a ratio of two summed random variables is **not** simply derived from the individual variances of numerator and denominator alone — you need to account for their **covariance** too, because the ratio itself is a *nonlinear* function of two random variables, so straightforward variance formulas for sums don't directly apply. This is exactly what the Delta Method solves.
-
-**When this matters most**: any metric that's a ratio *at the user level* where both parts vary — CTR (when impressions vary per user), revenue per session, avg items per cart. It does **NOT** apply to simple per-user averages like "average clicks per user," where the denominator (1 user = 1 observation) is fixed, not random — the standard mean-variance formula is already correct there, and applying the Delta Method would be unnecessary complexity.
-
----
-
-## 4. The Delta Method — Formal Derivation
-
-For a ratio metric $R = X/Y$ where $X$ (numerator, e.g., total/average clicks) and $Y$ (denominator, e.g., total/average impressions or sessions) are both random (varying by randomization unit, e.g., per-user), the delta method gives:
-
-$$Var(R) \approx \frac{1}{\bar{Y}^2}\left[Var(X) + \bar{R}^2 Var(Y) - 2\bar{R}\cdot Cov(X,Y)\right]$$
-
-where $\bar{X}, \bar{Y}$ are the means and $\bar{R}=\bar{X}/\bar{Y}$. (Equivalently, in relative terms: $\frac{Var(R)}{R^2} \approx \frac{Var(X)}{\bar{X}^2} - \frac{2\,Cov(X,Y)}{\bar{X}\bar{Y}} + \frac{Var(Y)}{\bar{Y}^2}$.)
-
-### Where this comes from
-This is a first-order Taylor expansion of $R=X/Y$ around $(\bar{X},\bar{Y})$, using the standard result that for a function $g(X,Y)$:
-
-$$Var(g(X,Y)) \approx \left(\frac{\partial g}{\partial X}\right)^2 Var(X) + \left(\frac{\partial g}{\partial Y}\right)^2 Var(Y) + 2\frac{\partial g}{\partial X}\frac{\partial g}{\partial Y}Cov(X,Y)$$
-
-with $\frac{\partial g}{\partial X}=\frac{1}{Y}$ and $\frac{\partial g}{\partial Y}=-\frac{X}{Y^2}$, evaluated at the means.
-
-### The critical, easy-to-miss term: covariance
-This is the single most common practical mistake to get wrong — either by omitting the covariance term entirely, or by wrongly assuming it always pushes variance in one direction:
-
-- **If X and Y are positively correlated** (numerator and denominator move together — very typically true, since users who get shown more impressions/sessions also tend to generate more clicks in absolute terms): the covariance term **reduces** the variance of the ratio relative to treating them as independent, because when the denominator goes up, the numerator tends to go up proportionally too, partially canceling out. **Ignoring this covariance term overstates the variance** — making your test overly conservative (CI too wide, test underpowered — you'd miss real effects), NOT overconfident.
-- **If X and Y are negatively correlated** (rarer, but possible — e.g., users who visit more often might convert at a lower rate per visit due to habituation): the covariance term **inflates** the true variance relative to naive estimates. Ignoring it makes your CI too narrow, meaning you could see false "significant" results — the overconfidence failure mode.
-- **If uncorrelated**, the covariance term drops to zero and the formula simplifies — but it's still not the same as the naive single-mean variance formula, since $Var(Y)$ still contributes.
-
-**The key takeaway**: the direction of the error from ignoring covariance depends entirely on the actual covariance structure of your specific metric — you can't skip this term and assume it's automatically "safe" or "conservative" in one particular direction.
+This is the entire problem in one picture: **a ratio metric has two moving parts, not one.** Every formula and every mistake in this chapter comes back to this picture.
 
 ---
 
-## 5. Worked Examples
+## 2. Why This Actually Breaks Things — The Seesaw Picture
 
-### Example A — CTR (clicks/impressions), positive covariance
+Here's the intuition for *why* two moving parts causes trouble, before any math.
 
-You're computing CTR = clicks/impressions at the user level, aggregated across 1,000 users in the treatment group.
+```
+        Simple mean:                    Ratio metric:
 
-Per-user statistics:
-- $\bar{X}$ (mean clicks per user) = 5
-- $\bar{Y}$ (mean impressions per user) = 50
-- $\bar{R} = 5/50 = 0.10$ (10% CTR)
-- $Var(X) = 20$, $Var(Y) = 400$, $Cov(X,Y) = 60$ (clicks and impressions positively correlated — more active users generate more of both)
+           ●                              ●━━━━━━━━━━●
+           │  (one thing wobbles,          A          B
+           │   you measure the             (numerator)(denominator)
+           │   wobble directly)            BOTH wobble — and if
+           ▼                               they wobble TOGETHER
+      just measure                         (correlated), the seesaw
+      Var(clicks)                          barely tips even though
+                                           each side is moving a lot
+```
 
-**Delta Method (correct):**
+If a user has more sessions (denominator goes up) AND that same user tends to click more overall (numerator goes up too), the two movements partially cancel out in the ratio. A user with 2x the sessions and roughly 2x the clicks still has almost the SAME ratio. The ratio is more *stable* than either raw number alone — but only if you correctly account for the fact that they move together. If you ignore that they move together, you'll think the ratio is wobblier than it really is.
 
-$$Var(R) \approx \frac{1}{50^2}\left[20 + (0.10)^2 \times 400 - 2(0.10)(60)\right] = \frac{1}{2500}\left[20 + 4 - 12\right] = \frac{12}{2500} = 0.0048$$
+---
+
+## 3. The Two Separate Mistakes People Make
+
+```
+MISTAKE #1: Computing each user's OWN ratio, then averaging those ratios
+
+  User A: 1 click / 1 impression   = 1.00  ←  based on tiny, unreliable sample
+  User B: 800 clicks / 1000 impr.  = 0.80  ←  based on huge, reliable sample
+
+  Naively averaging: (1.00 + 0.80) / 2 = 0.90
+                      ↑
+        User A's flimsy, 1-data-point ratio counts EXACTLY as much
+        as User B's rock-solid, 1000-data-point ratio. That's wrong.
+
+  FIX: Don't average individual ratios. Pool everything first:
+       total clicks / total impressions = (1+800) / (1+1000) = 0.80
+       ↑ this correctly lets big, reliable users carry more weight
+
+
+MISTAKE #2: Even using the correctly-pooled ratio, using the WRONG
+            variance formula — i.e., forgetting that numerator and
+            denominator move together (covariance)
+
+  This is the one the Delta Method exists to fix. Section 4 onward.
+```
+
+Mistake #1 is a weighting problem (fixed by pooling correctly). Mistake #2 is a variance-formula problem (fixed by the Delta Method). This chapter is mostly about Mistake #2.
+
+---
+
+## 4. Building the Delta Method From Nothing
+
+Forget the formula for a second. Here's the logic, step by step.
+
+**Step 1**: You have a ratio $R = X/Y$. You want to know how much $R$ wobbles (its variance) when $X$ and $Y$ both wobble.
+
+**Step 2**: If $X$ and $Y$ were completely unrelated to each other, you could just add up their separate wobbles (scaled appropriately). Easy case.
+
+**Step 3**: But usually $X$ and $Y$ move together — that's the covariance. If they move in the *same* direction (both up or both down together), the ratio is MORE stable than the "unrelated" case suggests, because a rise in $Y$ (denominator) is accompanied by a proportional rise in $X$ (numerator), and the two effects on the ratio partially cancel.
+
+**Step 4**: So the honest formula for the ratio's variance has to be: *(wobble from X) + (wobble from Y) − (a correction for how much they move together).*
+
+That "minus a correction" is the covariance term. That's it. That's the whole idea:
+
+```
+   Var(ratio)  =  [wobble from numerator]
+                + [wobble from denominator]
+                − [how much they move together] × 2
+                     ↑
+          this term is EXACTLY what people forget,
+          and forgetting it is the single most common mistake
+          in this entire topic
+```
+
+**Step 5 — now the actual formula**, which is just Step 4 written precisely (this comes from a first-order Taylor expansion of $R=X/Y$, if you ever need to derive it from scratch):
+
+$$Var(R) \approx \frac{1}{\bar{Y}^2}\Big[\,Var(X) + \bar{R}^2\,Var(Y) - 2\bar{R}\cdot Cov(X,Y)\,\Big]$$
+
+where $\bar X, \bar Y$ are the average numerator/denominator, and $\bar R = \bar X / \bar Y$.
+
+**Read it exactly like Step 4**: $Var(X)$ is "wobble from numerator," $\bar R^2 Var(Y)$ is "wobble from denominator" (scaled by $\bar R^2$ so the units match), and $-2\bar R \cdot Cov(X,Y)$ is "the correction for moving together."
+
+---
+
+## 5. 🧭 Diagram: Which Direction Does the Mistake Go?
+
+This is the part most people get backwards, so it gets its own diagram.
+
+```
+              Are numerator and denominator
+              POSITIVELY correlated?
+              (common case — e.g., users who have
+               more sessions also click more overall)
+                          │
+              ┌──────Yes──┴──No (negative)────────┐
+              ▼                                    ▼
+   The "moving together" term            The "moving together" term
+   SUBTRACTS from the naive              now ADDS to what naive
+   variance estimate.                    math would suggest.
+              │                                    │
+              ▼                                    ▼
+   If you FORGET this term,              If you FORGET this term,
+   your variance estimate               your variance estimate
+   comes out TOO BIG.                    comes out TOO SMALL.
+              │                                    │
+              ▼                                    ▼
+   Confidence interval too WIDE.         Confidence interval too
+   You become too CONSERVATIVE           NARROW. You become too
+   — you might miss a real              CONFIDENT — you might see
+   effect (lost power).                  a "significant" result
+                                          that's actually just noise.
+```
+
+**The one-sentence version**: forgetting the covariance term isn't automatically "safe" — whether it makes you overconfident or underconfident depends entirely on which way the correlation points. Positive correlation (the usual case) → you become too conservative. Negative correlation (rarer) → you become falsely confident.
+
+---
+
+## 6. Worked Example, Slowly — CTR (clicks / impressions)
+
+Same numbers as before, but every line explained.
+
+**Setup**: 1,000 users in the treatment group. For each user we know their clicks and impressions.
+- Average clicks per user, $\bar X = 5$
+- Average impressions per user, $\bar Y = 50$
+- So the pooled CTR, $\bar R = 5/50 = 0.10$ (10%)
+- How much clicks vary user-to-user: $Var(X) = 20$
+- How much impressions vary user-to-user: $Var(Y) = 400$
+- How much clicks and impressions move together: $Cov(X,Y) = 60$ (positive — busier users generate more of both)
+
+**Plug into the formula, term by term:**
+
+```
+Var(R) ≈ (1/Ȳ²) × [ Var(X)  +  R̄² × Var(Y)  −  2R̄ × Cov(X,Y) ]
+             │           │            │                │
+             │      "wobble from   "wobble from   "correction for
+             │       numerator"    denominator,     moving together"
+             │       = 20          scaled"          = 2×0.10×60 = 12
+             │                     = 0.10² × 400
+             │                     = 4
+             ▼
+        1/50² = 1/2500
+
+Var(R) ≈ (1/2500) × [ 20 + 4 − 12 ]  =  (1/2500) × 12  =  0.0048
+```
+
+Then, since this is a per-user variance and we have 1,000 users, the variance of the *average* ratio is $0.0048/1000$, so:
 
 $$SE(R) = \sqrt{0.0048/1000} \approx 0.00219$$
 
-(Dividing by $n=1000$ because $Var(X), Var(Y), Cov(X,Y)$ were per-user variances, and we need the variance of the *mean* ratio across the sample — the same logic as dividing a per-observation variance by n to get the SE of a sample mean.)
+**Now the mistake, side by side**: if you'd forgotten the covariance correction (the "−12" term):
 
-**Naive (wrong) approach**, ignoring the covariance term entirely:
+```
+Var(R)_naive ≈ (1/2500) × [20 + 4]  =  24/2500  =  0.0096
 
-$$Var(R)_{naive} \approx \frac{1}{2500}[20+4] = \frac{24}{2500}=0.0096$$
-
-This is **exactly double** the correct variance in this example — the naive approach overstates the SE by ignoring the positive covariance, making your CI unnecessarily wide and your test underpowered. This concrete numeric contrast (correct 0.0048 vs. naive 0.0096) is worth being able to reproduce live if asked "why does the delta method matter here."
-
-### Example B — Clicks per session, positive covariance (different numbers, same pattern)
-
-Per-user data (aggregated over a test period):
-- $\bar{X}$ (average clicks per user) = 8.0, $Var(X) = 16$
-- $\bar{Y}$ (average sessions per user) = 4.0, $Var(Y) = 4$
-- $Cov(X,Y) = 5$ (clicks and sessions move together — heavier users have both more clicks and more sessions)
-- $R = \bar{X}/\bar{Y} = 8.0/4.0 = 2.0$ clicks per session
-
-**Delta Method (correct):**
-
-$$Var(R) \approx \frac{1}{16}\left[16 - 2(2.0)(5) + (2.0)^2(4)\right] = \frac{1}{16}[16-20+16] = \frac{12}{16} = 0.75$$
-
-Notice the covariance term (−20) substantially reduced what would have been a larger variance (16 + 16 = 32 without it) down to 12 before dividing by $\bar{Y}^2$. This reflects that clicks and sessions move together — a user with an unusually high session count also tends to have proportionally more clicks, so the *ratio* itself is more stable than either raw number alone.
-
-**Naive (wrong) approach**, ignoring covariance and treating X, Y as independent:
-
-$$Var(R)_{naive} \approx \frac{1}{16}(16+16) = 2.0$$
-
-**2.0 vs. the correct 0.75 — nearly 3x too large**, producing an unnecessarily wide, overly conservative confidence interval and understating your true statistical power. (Note: this example's naive baseline still uses the ratio-formula structure with $\bar{Y}^2$ in the denominator, just omitting the covariance cross-term — a different, cruder mistake than Example A's naive approach, which also omitted covariance from the same formula structure. Either way, omitting covariance is the shared error.)
-
-**Takeaway from both examples**: whenever numerator and denominator are positively correlated (the common case), omitting the covariance term makes your variance estimate too large, not too small — the opposite of what many people instinctively assume "ignoring a complication" would do.
+     0.0096  is EXACTLY DOUBLE  the correct  0.0048
+                         ↑
+        Forgetting the covariance term here made the estimated
+        variance twice as large as it should be — an unnecessarily
+        wide confidence interval, and a test with less power than
+        it actually has. This matches the "positive correlation →
+        too conservative" branch of the Section 5 diagram.
+```
 
 ---
+
+## 7. Second Worked Example — Same Idea, Different Numbers, So the Pattern Sticks
+
+"Clicks per session": $\bar X = 8.0$ clicks, $Var(X)=16$; $\bar Y = 4.0$ sessions, $Var(Y)=4$; $Cov(X,Y)=5$ (positive again); $\bar R = 8.0/4.0 = 2.0$.
+
+```
+Var(R) ≈ (1/16) × [ 16 + (2.0)²×4 − 2(2.0)(5) ]
+        = (1/16) × [ 16 + 16 − 20 ]
+        = (1/16) × 12
+        = 0.75
+
+Naive (forgetting covariance):
+Var(R)_naive ≈ (1/16) × [16 + 16] = 2.0
+
+     2.0 vs. the correct 0.75  →  naive is ~2.7x too large
+```
+
+Same story, different metric: positive correlation → forgetting it inflates your variance estimate → overly conservative test.
+
+---
+
+## 8. When You DON'T Need Any of This
+
+Quick sanity check, since this is the most common place people over-apply the method:
+
+```
+Is the "denominator" of your metric actually a FIXED number
+(like "1 user"), not something that varies?
+                    │
+        ┌─────Yes───┴───No──────────┐
+        ▼                            ▼
+  This is just a SIMPLE MEAN.   This is a genuine ratio metric.
+  ("average clicks per user")   Use the Delta Method (or bootstrap).
+  Standard variance formula
+  is already correct. Stop here.
+```
+
+Example: "average clicks per user" — the denominator is always exactly 1 (one user per user), so it's not random at all. No Delta Method needed. But "clicks per session" — sessions-per-user is a random, varying count — so the Delta Method applies.
+
+---
+
+## 9. The Practical Alternative: Bootstrap
+
+If the Delta Method's approximation feels shaky — denominators near zero, very skewed data — there's a simulation-based escape hatch that needs no formula at all:
+
+```
+1. Take your 1,000 users' (clicks, impressions) pairs.
+2. Resample 1,000 users WITH REPLACEMENT (some users picked
+   twice, some not at all — that's the point).
+3. Compute the pooled ratio on this resample.
+4. Repeat steps 2-3 thousands of times.
+5. Look at the spread of all those resampled ratios —
+   that spread IS your variance estimate, no formula needed.
+```
+
+It's more computationally expensive, but it automatically captures the numerator/denominator covariance without you ever writing down $Cov(X,Y)$ explicitly — the resampling does it implicitly, because clicks and impressions are resampled together, per user, preserving whatever relationship they actually have.
+
+---
+
+## 10. Full Picture — One Diagram Tying It All Together
+
+```
+              You have a metric that looks like "A per B"
+                                 │
+                                 ▼
+              Is B fixed (e.g., always "1 user")?
+                    │                    │
+                   Yes                   No
+                    │                    │
+                    ▼                    ▼
+            Simple mean.          Genuine ratio metric.
+            Standard formula      Both A and B vary.
+            is correct. Done.              │
+                                            ▼
+                              Pool first: total A / total B
+                              (don't average individual
+                               per-user ratios — Mistake #1)
+                                            │
+                                            ▼
+                              Estimate Var(A), Var(B), Cov(A,B)
+                              from your data
+                                            │
+                                            ▼
+                              Apply Delta Method formula
+                              (Section 4, Step 5)
+                                            │
+                                            ▼
+                    Is the approximation trustworthy?
+                    (denominator not near zero, not
+                     wildly skewed)
+                          │                    │
+                         Yes                   No
+                          │                    │
+                          ▼                    ▼
+                   Use Delta Method       Use BOOTSTRAP instead
+                   result directly        (Section 9)
+```
+
+
+
+## 12. Comprehension Check — Try These Before Moving On
+
+1. Draw the "two moving parts" picture (Section 1) for a metric of your choosing that ISN'T clicks/impressions or clicks/sessions.
+2. In your own words (no formula), explain why positive correlation between numerator and denominator makes a ratio metric *more stable* than the two raw numbers alone.
+3. Using the Section 5 diagram, predict — before calculating anything — whether ignoring covariance in a metric with negative correlation will widen or narrow your confidence interval.
+4. Redo the Section 6 worked example by hand, but imagine $Cov(X,Y) = -60$ instead of $+60$. What does the corrected variance come out to, and is it bigger or smaller than the naive (no-covariance) estimate?
+5. Explain, using Section 8's flowchart, why "average session duration per user" does NOT need the Delta Method, but "average clicks per session" does.
+6. When would you reach for bootstrap over the Delta Method, and why does bootstrap not require you to explicitly compute Cov(X,Y)?
+
+---
+
 
 ## 6. Levers — What Controls Ratio-Metric Variance
 
@@ -182,6 +378,22 @@ A: When the denominator isn't actually random — e.g., "average clicks per user
 **Q: What's a practical, assumption-free alternative to the delta method when the ratio's denominator is close to zero or highly skewed?**
 A: Bootstrap resampling — repeatedly resample your randomization units (e.g., users) with replacement, recompute the pooled ratio on each resample, and use the empirical distribution of those resampled ratios to estimate variance/confidence intervals directly. It's more computationally expensive than the closed-form delta method, but it naturally captures the numerator-denominator covariance and doesn't rely on the delta method's linear (Taylor-expansion) approximation, which can break down for small or skewed denominators.
 
+
+**Q: Why can't you just use the standard "variance of a mean" formula on a ratio metric like clicks-per-session?**
+A: Because that formula assumes only one thing is random. A ratio has two random parts — numerator and denominator — and if you ignore that they move together (covariance), you get the wrong answer. Picture the seesaw in Section 2: both sides are moving, and how they move *together* determines how much the ratio itself actually wobbles.
+
+**Q: If numerator and denominator are positively correlated, does ignoring that make your test too conservative or too aggressive?**
+A: Too conservative. Positive correlation means the two sides partially cancel out (Section 5), so the true variance is smaller than naive math suggests. Ignoring the covariance term inflates your estimated variance, widens your confidence interval more than necessary, and can cause you to miss a real effect. This is exactly what happened in both worked examples (2x and ~2.7x too large).
+
+**Q: When would ignoring covariance make you *falsely* confident instead?**
+A: Only when numerator and denominator are negatively correlated — rarer, but it happens (e.g., users who visit more often convert at a lower rate each time, due to habituation). In that case the "moving together" correction goes the other way, and skipping it makes your variance estimate too small — narrower confidence interval, higher chance of a false "significant" result.
+
+**Q: A junior analyst averages each user's own clicks/impressions ratio and runs a t-test on those averages. What's wrong?**
+A: Two separate things could be wrong. First (Mistake #1, Section 3): if they're averaging individual per-user ratios rather than pooling total clicks / total impressions, they're giving equal weight to a user with 1 impression and a user with 1,000 impressions, even though the second is a far more reliable estimate. Second (Mistake #2, this whole chapter): even after pooling correctly, a standard t-test's variance formula doesn't know to account for the covariance between clicks and impressions — you need the Delta Method (or bootstrap) for that part.
+
+**Q: What do you do when the Delta Method's approximation seems unreliable?**
+A: Switch to bootstrap (Section 9) — resample your randomization units with replacement, recompute the pooled ratio each time, and read the variance directly off the spread of resampled ratios. It's more expensive computationally but makes no linear-approximation assumption, so it holds up better when denominators are near zero or the data is heavily skewed.
+
 ---
 
 ## 11. L5-Differentiating Talking Points
@@ -206,4 +418,4 @@ A: Bootstrap resampling — repeatedly resample your randomization units (e.g., 
 8. Compute, by hand, the delta-method variance for a ratio with $\bar{X}=10$, $\bar{Y}=20$, $Var(X)=25$, $Var(Y)=16$, $Cov(X,Y)=8$. Compare it to the naive estimate that omits the covariance term.
 
 ---
-*This tutorial merges two chapters on ratio metrics and the Delta Method — one framed around the CTR example and a Taylor-expansion derivation, the other framed around a layman clicks-per-session analogy and a second worked example with a ~3x naive/correct discrepancy. Both worked examples were kept since they illustrate the same underlying error (omitting covariance) with different metrics and different magnitudes of consequence. All levers, traps, and Q&A from both sources are consolidated with duplicates merged.*
+*
