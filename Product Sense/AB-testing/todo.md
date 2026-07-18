@@ -1,4 +1,4 @@
-36
+34
 
 1. 09_10_11_chisq_anova_nonparam.md
 2. 100day_abtesting_days1to50.md
@@ -12,7 +12,6 @@
 10. Chapter_05_Causal_Inference_vs_Correlation.md
 11. Chapter_06_Metrics_NorthStar_Guardrails_OEC.md
 12. Chapter_07_Unit_of_Randomization.md
-13. Chapter_08_Hypothesis_Formulation_PreRegistration.md
 14. Chapter_09_Sample_Size_Power_Calculations.md
 15. Chapter_10_Randomization_Mechanics.md
 16. Chapter_11_Novelty_Primacy_Effects_Test_Duration.md
@@ -20,7 +19,6 @@
 18. Chapter_12_Choosing_the_Right_Test.md
 19. Chapter_13_Ratio_Metrics_Delta_Method.md
 20. Chapter_14_Variance_Reduction_CUPED_Stratification.md
-21. Chapter_15_Multiple_Testing_Correction.md
 22. Chapter_16_Sequential_Testing_Peeking_Problem.md
 23. Chapter_17_Network_Effects_Cluster_Randomization.md
 24. Chapter_18_Heterogeneous_Treatment_Effects_Simpsons_Paradox.md
@@ -36,3 +34,8 @@
 34. ab_testing_interview_qa.md
 35. faang_ab_testing_days1_50.md
 36. faang_ab_testing_days51_100.md
+
+
+p hacking
+harkig
+c1-q3
