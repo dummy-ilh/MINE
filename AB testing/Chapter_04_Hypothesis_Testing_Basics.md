@@ -405,4 +405,89 @@ A: Trust the one-tailed result *only if* the directional hypothesis was genuinel
 8. A test on 5 million users shows p < 0.001 for a 0.02% lift. Should you ship it? Why or why not?
 
 ---
-*This tutorial merges: (1) a Type I/II error, p-value, and power overview; (2) a hypothesis-testing framework chapter with a full worked example; and (3) a deep-dive foundations guide covering one-/two-tailed tests, the "why test H₀" question, and interview traps.*
+If a Google interviewer asks **"Explain hypothesis testing"**, they are usually looking for your understanding of statistics, experimentation, and decision-making—not just definitions. A strong answer is structured, practical, and includes an example.
+
+Here's a good interview response:
+
+---
+
+**Hypothesis testing** is a statistical method used to determine whether there is enough evidence in sample data to support a claim about a population.
+
+The basic steps are:
+
+1. **State the hypotheses**
+
+   * **Null hypothesis (H₀):** Assumes no effect or no difference.
+   * **Alternative hypothesis (H₁):** Assumes there is an effect or a difference.
+
+2. **Choose a significance level (α)**
+
+   * Commonly 0.05.
+   * This is the maximum probability of making a Type I error that we're willing to accept.
+
+3. **Collect data** and calculate a test statistic (such as a t-statistic or z-statistic).
+
+4. **Compute the p-value**
+
+   * The p-value tells us how likely it is to observe the data (or something more extreme) if the null hypothesis is true.
+
+5. **Make a decision**
+
+   * If **p-value < α**, reject the null hypothesis.
+   * Otherwise, fail to reject the null hypothesis.
+
+It's important to say **"fail to reject"** rather than **"accept"** the null hypothesis because the data may simply be insufficient to detect a difference.
+
+---
+
+### Example (Google-style A/B Testing)
+
+Suppose Google wants to test whether a new search results page increases click-through rate.
+
+* **H₀:** The new design has the same click-through rate as the current design.
+* **H₁:** The new design increases click-through rate.
+
+Google randomly splits users into:
+
+* Control group (old design)
+* Treatment group (new design)
+
+After collecting enough data, suppose the statistical test gives:
+
+* **p-value = 0.02**
+* **α = 0.05**
+
+Since **0.02 < 0.05**, we reject the null hypothesis and conclude there is statistically significant evidence that the new design improves click-through rate.
+
+---
+
+### Common Interview Follow-ups
+
+**What is a p-value?**
+
+> The probability of observing data at least as extreme as what we observed, assuming the null hypothesis is true.
+
+**What is a Type I error?**
+
+> Rejecting a true null hypothesis (false positive).
+
+**What is a Type II error?**
+
+> Failing to reject a false null hypothesis (false negative).
+
+**What is statistical significance?**
+
+> Evidence strong enough that the observed result is unlikely to be due to random chance alone, based on the chosen significance level.
+
+**Does statistical significance mean practical significance?**
+
+> No. A result can be statistically significant but have a very small effect size that isn't meaningful in practice. It's important to evaluate both statistical and practical significance.
+
+---
+
+### 1-Minute Interview Answer
+
+> "Hypothesis testing is a statistical framework for determining whether observed differences are likely due to chance or represent a real effect. We start by defining a null hypothesis and an alternative hypothesis, choose a significance level such as 5%, collect data, compute a test statistic and its p-value, and compare the p-value to the significance level. If the p-value is below the threshold, we reject the null hypothesis; otherwise, we fail to reject it. For example, in an A/B test at Google, we might compare the click-through rates of a new search page versus the current one. If the p-value is 0.02 with α = 0.05, we'd conclude there's statistically significant evidence that the new design changes user behavior."
+
+This level of explanation is appropriate for data science, software engineering (with experimentation), product analytics, and machine learning interviews at companies like Google.
+
