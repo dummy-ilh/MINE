@@ -1,9 +1,8 @@
-32
+31
 
 1. 09_10_11_chisq_anova_nonparam.md
 2. 100day_abtesting_days1to50.md
 3. 17_bayesian_hypothesis_testing.md
-4. Chapter_01_Probability_Distributions.md
 5. Chapter_02_Central_Limit_Theorem.md
 6. Chapter_03_Confidence_Intervals.md
 7. Chapter_04.1_One_Sided_vs_Two_Sided_Testing.md
@@ -36,5 +35,4 @@
 
 p hacking
 harkig
-c1-q3
 Sutva
