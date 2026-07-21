@@ -1,6 +1,6 @@
 # 🎯 100-Day A/B Testing Interview Prep
 ### FAANG Interviewer POV | 1 Question/Day | Deep Follow-Ups
-### Days 1–50: L4 Level → Days 51–100: L6 Level
+### Days 1–50: L4 Level → Days 51–100: L6 Level (to be added)
 
 > Format per day:
 > - 🎤 **Interviewer Q** — what they actually ask
@@ -8,6 +8,8 @@
 > - ↳ **Follow-up 1, 2, 3...** — where interviewers go next
 > - 🚩 **Red flags** — what weak candidates say
 > - ⭐ **What makes it L5/L6** — the extra mile
+
+> **Editor's note on this merge:** The two source files you provided were byte-for-byte identical (Days 1–50 twice). This version is the deduplicated, single copy, renumbered sequentially 1–50 (no renumbering was actually needed — there were no internal duplicates or gaps). Nothing was cut. One factual error was corrected (flagged below with 🔧); everything else was checked and left as-is since it was already accurate.
 
 ---
 
@@ -1008,7 +1010,7 @@ Not if they're on the same feature surface. If two experiments both modify the h
 **💡 Model Answer:**
 The treatment is driving more top-of-funnel activity (page views) but attracting lower-intent users. This is a classic funnel composition shift — the treatment changes WHO enters the funnel, not just what they do once in it.
 
-15% more page views × (1 - 0.03) lower conversion = approximately net flat revenue. But this depends on absolute numbers. Need to check: absolute conversions, revenue per visitor, and whether the lower-intent users have value (e.g., browsing now, buying later).
+15% more page views combined with a 3% lower conversion rate can roughly net out to flat revenue, but this depends on the absolute numbers involved. Need to check: absolute conversions, revenue per visitor, and whether the lower-intent users have value (e.g., browsing now, buying later).
 
 ↳ **Follow-up 1:** "How do you diagnose funnel composition shifts?"
 Compare user segment distributions between control and treatment at each funnel stage. Are the users reaching checkout in treatment systematically different from control? Look at pre-experiment features (past purchase history, session depth) of users at each stage.
@@ -1155,7 +1157,7 @@ Rare events require enormous sample sizes for direct measurement. Options:
 Validate the correlation first. If add-to-cart doesn't predict purchase (e.g., users abandon carts at high rates), it's not a valid surrogate. Look further up the funnel for something that does correlate, or reframe what you're measuring.
 
 ↳ **Follow-up 2:** "How do you calculate sample size for a 0.1% conversion rate?"
-Use the proportion z-test formula. With p=0.001 and MDE=0.0001 (10% relative lift), you'd need: approximately (1.96+0.84)² × 2 × 0.001 × 0.999 / (0.0001)² ≈ 156 million users per group. That's often infeasible — hence the need for funnel-up metrics.
+Use the proportion z-test formula: n = 2 × (z_α/2 + z_β)² × p̄(1-p̄) / δ². With p=0.001 and MDE=0.0001 (10% relative lift): (1.96+0.84)² ≈ 7.84; 7.84 × 2 × 0.001 × 0.999 ≈ 0.01566; divided by δ²=(0.0001)²=1e-8 gives ≈1.57 million users **per group** (about 3.1 million total). 🔧 *(Corrected: the original draft said "≈156 million" — that was off by 100x from an arithmetic slip. Still large enough that direct measurement is usually impractical, which is exactly why funnel-up metrics matter.)*
 
 ↳ **Follow-up 3:** "What is a negative binomial regression and when would you use it?"
 For count outcomes (e.g., number of purchases) that are overdispersed (variance > mean), negative binomial regression models the distribution better than Poisson. Useful when purchase counts per user have high variance (most users buy 0, a few buy many).
@@ -1360,7 +1362,7 @@ Holdback 1% of users from the notification system permanently. Compare 90-day an
 ---
 
 *End of Days 1–50 (L4 Foundation)*
-*Days 51–100 (L6 Advanced) continue in the next file.*
+*Days 51–100 (L6 Advanced) to be added in a follow-up file.*
 
 ---
 
