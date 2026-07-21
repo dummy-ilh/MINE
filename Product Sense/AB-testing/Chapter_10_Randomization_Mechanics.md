@@ -291,3 +291,110 @@ Beyond the original chapter's list, a few practices specific to how bucketing ge
 3. A colleague suggests switching from chi-square to a G-test because "it's more rigorous." Under what specific condition would that actually matter, and why is it unlikely to matter for a typical web-scale experiment?
 4. Feature-flag drift is proposed as a new root cause not in the original chapter's list. Describe how you'd distinguish this cause from a hashing/bucketing bug using the segmentation approach from Section 1 of this addendum.
 5. Why does caching bucket assignments non-idempotently risk creating an SRM that wouldn't show up as a bug anywhere in the hashing logic itself?
+
+---
+---
+
+# PART 3 — FURTHER ADDITIONS (new)
+
+Nothing above is changed. This part adds a few more angles the chapter and its addendum don't yet cover: covariate balance checks in detail, interference/SUTVA violations, a pre-launch QA checklist, tooling notes, and more Q&A.
+
+---
+
+## 14. Covariate / composition balance checks — the diagnostic SRM can't do
+
+The original chapter mentions balance checks as "a related but distinct diagnostic" several times without fully spelling out how to run one. Here's the mechanics.
+
+### 14.1 What it checks
+SRM verifies **counts** match the intended ratio. A balance check verifies the **composition** of each arm looks statistically similar on variables measured *before* the experiment started (i.e., variables that could not possibly have been affected by treatment, since treatment hadn't happened yet). If pre-experiment covariates differ systematically between arms, randomization didn't actually produce comparable groups — even if the head-count ratio is perfect.
+
+### 14.2 How to run it
+For each candidate pre-period covariate (account age, prior 28-day engagement, platform, geography, subscription tier, prior spend, device type):
+- **Continuous covariate**: two-sample t-test (or, more robustly, compare means with a standardized mean difference — SMD — since with huge n even trivial differences become "significant" by p-value alone).
+- **Categorical covariate**: chi-square test of independence between arm and category (same statistical family as the SRM test, just applied to a *pre-period* attribute instead of arm counts).
+- **Standardized Mean Difference (SMD)** is generally preferred over raw p-values for balance checks at scale: $SMD = \frac{\bar{X}_{treatment}-\bar{X}_{control}}{\sqrt{(\sigma^2_{treatment}+\sigma^2_{control})/2}}$. A common rule of thumb: |SMD| < 0.1 is considered "well balanced," regardless of p-value significance — this avoids the same large-n-makes-everything-significant trap discussed for SRM itself.
+
+### 14.3 Why SMD instead of p-values here
+This is the direct analog of the "small-looking but severe" trap from Example C, but inverted: at huge n, a *balance* check will flag "significant" p-values for genuinely trivial covariate differences (e.g., average account age differs by 0.3 days) purely from statistical power, not because randomization actually failed. SMD gives a magnitude-based, sample-size-independent read on whether the imbalance is practically meaningful.
+
+### 14.4 When to run it
+- Always for high-stakes launches (revenue-impacting, irreversible decisions).
+- Always if SRM is borderline or segment-level SRM checks looked suspicious even though the topline passed.
+- As a standing automated check for any experimentation platform mature enough to have one (many large-scale platforms run this by default alongside SRM).
+
+---
+
+## 15. Interference and SUTVA violations — a randomization-adjacent failure mode
+
+Neither the chapter nor its addendum covers this, and it's a common follow-up in senior interviews once SRM is handled well.
+
+**SUTVA (Stable Unit Treatment Value Assumption)**: the assumption that one user's outcome depends only on *their own* treatment assignment, not on which arm other users were assigned to. Randomization mechanics (hashing/bucketing) guarantee a valid *split*, but they say nothing about whether SUTVA actually holds in the product — and if it doesn't, even a perfectly balanced, SRM-clean experiment can produce a biased effect estimate.
+
+**Common violations**:
+- **Social/network products**: if User A is in treatment and messages User B (in control), B's behavior may be indirectly affected by A's treatment exposure — contaminating the control group.
+- **Marketplace/two-sided products**: giving treatment sellers better placement can only come at the expense of control sellers' visibility (a fixed-supply constraint), so treatment and control aren't independent — this is a form of interference sometimes called "cannibalization bias."
+- **Shared infrastructure/capacity**: if treatment consumes more server resources and this degrades latency for control users on the same shared system, control's experience is contaminated by treatment's existence.
+
+**Mitigations** (worth knowing exist, not necessarily worth deriving on the spot):
+- **Cluster-level randomization** (randomize by geographic market, by social graph community, or by marketplace segment instead of by individual user) so interference happens *within* an arm, not *across* arms.
+- **Switchback designs** (alternate the entire system between treatment and control over time, rather than splitting users) — common for marketplace pricing/matching experiments.
+- **Ego-network / graph-cluster randomization** for social products, grouping tightly-connected users into the same arm.
+
+This connects back to the chapter's own cluster-randomization material (referenced in the sample-size chapter's design-effect discussion) — the same clustering tools used there for variance reasons are often *also* the fix for interference, which is why cluster randomization shows up in both contexts.
+
+---
+
+## 16. Pre-launch randomization QA checklist (new, practical)
+
+A condensed checklist combining the chapter's root-cause list, the addendum's engineering additions, and the balance-check material above — the kind of thing an experimentation platform team would actually run through before green-lighting a new experiment type or bucketing system change:
+
+1. Hash function is a standard, well-vetted implementation (not custom/ad hoc).
+2. Salt is unique to this experiment and not reused from any other active or past experiment.
+3. Bucket assignment happens as early as possible in the request path, before any platform-specific filtering or redirect logic.
+4. Bucketing is server-side where feasible; if client-side, failure modes (ad blockers, script errors) are logged and monitored per arm.
+5. Feature-flag rollout boundaries (if any) are reconciled against experiment bucket boundaries — no silent drift.
+6. SRM check is automated, runs at p<0.001, and blocks/warns before metric dashboards are trusted.
+7. Segment-level SRM (by platform, device, geo, time) is available, not just topline, so a fired SRM can be localized quickly.
+8. A covariate/SMD balance check runs alongside SRM for high-stakes experiments.
+9. Analysis population definition accounts for staged app/client rollout (old client versions that never got the code path aren't miscounted as SRM).
+10. If the product surface has plausible interference risk (social, marketplace, shared infra), randomization unit (user vs. cluster vs. switchback) has been explicitly chosen, not defaulted to per-user without consideration.
+
+---
+
+## 17. Tooling notes
+
+| Need | Typical approach |
+|---|---|
+| Hash function | MurmurHash3 or MD5 are the most commonly cited in industry practice — fast, well-tested, good uniformity |
+| SRM/chi-square computation | `scipy.stats.chisquare` (Python), or built directly into experimentation platforms (Statsig, LaunchDarkly, Optimizely, in-house systems at large tech cos) as an automatic dashboard check |
+| Balance/SMD checks | `tableone` (Python, popular in clinical trials, adapted for experimentation), or custom SMD computation alongside the chi-square balance test |
+| Cluster/switchback randomization | Usually custom-built per product surface — less standardized tooling than user-level A/B testing, since the "right" cluster definition is product-specific |
+
+---
+
+## 18. More Interview Q&A (new)
+
+**Q: Your SRM check passes cleanly, but you're evaluating a marketplace pricing experiment. Should you still worry about validity?**
+A: Yes — SRM only confirms the *count* split matches intent, and even a clean SRM doesn't rule out SUTVA violations. In a marketplace, treatment sellers getting better placement or pricing can mechanically reduce visibility or demand for control sellers, since supply/demand is shared and finite — that's interference, not a randomization bug, and no SRM or balance check will catch it. I'd want to know whether the randomization unit was individual users/sellers or something coarser like market or geography, since per-unit randomization is exactly what's vulnerable to this kind of cross-arm contamination.
+
+**Q: What's the difference between an SRM check and a covariate balance check, and when would you run each?**
+A: SRM checks whether the *count* of users in each arm matches the intended ratio — a pipeline/assignment-mechanism check. A covariate balance check verifies that pre-experiment characteristics (account age, prior engagement, platform) are similarly distributed across arms — a check on whether randomization actually produced *comparable* groups, not just correctly-sized ones. Both should ideally run automatically; SRM catches broken assignment/logging, balance checks catch a rarer failure mode where counts happen to be fine but who ended up in which arm wasn't actually random.
+
+**Q: Why do experienced practitioners prefer standardized mean difference (SMD) over a p-value when checking covariate balance?**
+A: At large sample sizes, a p-value-based balance check will flag statistically "significant" differences for covariate gaps that are practically meaningless, simply because the test has enormous power — the same phenomenon that makes SRM checks so sensitive at scale. SMD instead measures the *magnitude* of the difference relative to the pooled standard deviation, independent of sample size, so a threshold like |SMD|<0.1 tells you whether the imbalance is big enough to matter, not just whether it's detectable.
+
+**Q: A social-network product wants to test a new "friend suggestion" algorithm. Why might standard per-user randomization be a bad choice here, and what would you do instead?**
+A: Per-user randomization risks a SUTVA violation — if User A (treatment) gets better friend suggestions and connects with User B (control), B's network and behavior are indirectly affected by A's treatment exposure, contaminating the control group's outcomes. I'd consider cluster-level randomization instead, grouping tightly-connected users (e.g., by social graph community or ego-network) into the same arm so that most interference happens within an arm rather than leaking across arms, accepting the reduced effective sample size and added design-effect adjustment that comes with cluster randomization.
+
+---
+
+## 19. Extended Comprehension Check (Part 3, new)
+
+15. What does SUTVA stand for, and give one concrete example of a product surface where it's likely to be violated by simple per-user randomization.
+16. Why is a clean SRM result insufficient to guarantee a valid marketplace pricing experiment?
+17. Explain, in your own words, why SMD is preferred over p-values for covariate balance checks at large sample sizes — and name the rough threshold commonly used to call a covariate "balanced."
+18. Name two mitigations for interference/SUTVA violations, and describe a product scenario where each would be the more natural choice.
+19. Walk through the pre-launch QA checklist (Section 16) and identify which items are specifically aimed at *preventing* SRM versus which are aimed at catching problems SRM cannot detect on its own.
+
+---
+*
