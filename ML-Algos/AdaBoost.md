@@ -236,6 +236,252 @@ $$H(x) = \text{sign}\left(\sum_m \alpha_m h_m(x)\right)$$
 For a new point, run it through every stump, multiply each stump's vote (+1/-1) by its α, sum, and take the sign. A highly accurate stump (large α) can outvote several weak, low-α stumps.
 
 ---
+Here is a complete, step-by-step worked example with **10 samples** running through **3 full rounds** of AdaBoost.
+
+---
+
+## 1. Setup & Mathematical Rules
+
+We are classifying binary targets $y \in \{-1, +1\}$ based on a single continuous feature $x$ (`sessions_last_week`).
+
+### The 4 Core AdaBoost Formulas
+
+1. **Initial Sample Weights:** Equal distribution across $N=10$ samples:
+
+$$w_i^{(1)} = \frac{1}{N} = \frac{1}{10} = 0.10$$
+
+
+2. **Weighted Error Rate ($\text{err}_m$):** Sum of weights of misclassified samples:
+
+$$\text{err}_m = \sum_{i \in \text{misclassified}} w_i^{(m)}$$
+
+
+3. **Classifier Importance ($\alpha_m$):** Weight given to the decision stump $h_m$:
+
+$$\alpha_m = \frac{1}{2} \ln\left(\frac{1 - \text{err}_m}{\text{err}_m}\right)$$
+
+
+4. **Sample Weight Update & Normalization:**
+
+$$w_i^{\text{raw}} = w_i^{(m)} \cdot \exp\left(-\alpha_m \cdot y_i \cdot h_m(x_i)\right)$$
+
+
+$$w_i^{(m+1)} = \frac{w_i^{\text{raw}}}{\sum_{j=1}^N w_j^{\text{raw}}}$$
+
+
+
+*(Note: $y_i \cdot h_m(x_i) = +1$ when correct, and $-1$ when incorrect.)*
+
+---
+
+## 2. Dataset ($N = 10$)
+
+| Sample ($i$) | Feature ($x$) | Target ($y$) |
+| --- | --- | --- |
+| **1** | 1 | **+1** |
+| **2** | 2 | **+1** |
+| **3** | 3 | **-1** |
+| **4** | 4 | **+1** |
+| **5** | 6 | **-1** |
+| **6** | 7 | **-1** |
+| **7** | 8 | **+1** |
+| **8** | 9 | **-1** |
+| **9** | 10 | **-1** |
+| **10** | 12 | **-1** |
+
+---
+
+## Round 1
+
+### Step 1: Evaluate Candidate Split ($h_1$)
+
+We search for the decision threshold that minimizes weighted error.
+
+* **Chosen Split:** $x \le 2.5 \implies +1$, else $-1$.
+
+| $i$ | $x_i$ | True $y_i$ | Pred $h_1(x_i)$ | Status | Weight $w_i^{(1)}$ |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 1 | +1 | +1 | ✅ | 0.10 |
+| 2 | 2 | +1 | +1 | ✅ | 0.10 |
+| 3 | 3 | -1 | -1 | ✅ | 0.10 |
+| **4** | **4** | **+1** | **-1** | ❌ | **0.10** |
+| 5 | 6 | -1 | -1 | ✅ | 0.10 |
+| 6 | 7 | -1 | -1 | ✅ | 0.10 |
+| **7** | **8** | **+1** | **-1** | ❌ | **0.10** |
+| 8 | 9 | -1 | -1 | ✅ | 0.10 |
+| 9 | 10 | -1 | -1 | ✅ | 0.10 |
+| 10 | 12 | -1 | -1 | ✅ | 0.10 |
+
+### Step 2: Compute Error & $\alpha_1$
+
+* **Misclassified:** Samples $i = 4, 7$
+* **Weighted Error:**
+
+$$\text{err}_1 = w_4^{(1)} + w_7^{(1)} = 0.10 + 0.10 = \mathbf{0.20}$$
+
+
+* **Learner Weight:**
+
+$$\alpha_1 = \frac{1}{2} \ln\left(\frac{1 - 0.20}{0.20}\right) = \frac{1}{2} \ln(4) \approx \mathbf{0.6931}$$
+
+
+
+### Step 3: Update & Normalize Weights
+
+* **Multiplier (Correct):** $e^{-0.6931} = 0.50$
+* **Multiplier (Incorrect):** $e^{+0.6931} = 2.00$
+
+$$\text{Sum of raw weights } (Z_1) = (8 \times 0.10 \times 0.50) + (2 \times 0.10 \times 2.00) = 0.40 + 0.40 = 0.80$$
+
+* **Correct Samples ($i \neq 4, 7$):**
+
+$$w_i^{(2)} = \frac{0.10 \times 0.50}{0.80} = \mathbf{0.0625}$$
+
+
+* **Incorrect Samples ($i = 4, 7$):**
+
+$$w_i^{(2)} = \frac{0.10 \times 2.00}{0.80} = \mathbf{0.2500}$$
+
+
+
+---
+
+## Round 2
+
+### Step 1: Fit Weak Learner ($h_2$)
+
+Because samples 4 and 7 now carry **50% of the total dataset weight** combined ($0.25 + 0.25$), the algorithm selects a split to catch them.
+
+* **Chosen Split:** $x \le 8.5 \implies +1$, else $-1$.
+
+| $i$ | $x_i$ | True $y_i$ | Pred $h_2(x_i)$ | Status | Weight $w_i^{(2)}$ |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 1 | +1 | +1 | ✅ | 0.0625 |
+| 2 | 2 | +1 | +1 | ✅ | 0.0625 |
+| **3** | **3** | **-1** | **+1** | ❌ | **0.0625** |
+| 4 | 4 | +1 | +1 | ✅ | 0.2500 |
+| **5** | **6** | **-1** | **+1** | ❌ | **0.0625** |
+| **6** | **7** | **-1** | **+1** | ❌ | **0.0625** |
+| 7 | 8 | +1 | +1 | ✅ | 0.2500 |
+| 8 | 9 | -1 | -1 | ✅ | 0.0625 |
+| 9 | 10 | -1 | -1 | ✅ | 0.0625 |
+| 10 | 12 | -1 | -1 | ✅ | 0.0625 |
+
+### Step 2: Compute Error & $\alpha_2$
+
+* **Misclassified:** Samples $i = 3, 5, 6$
+* **Weighted Error:**
+
+$$\text{err}_2 = w_3^{(2)} + w_5^{(2)} + w_6^{(2)} = 0.0625 \times 3 = \mathbf{0.1875}$$
+
+
+* **Learner Weight:**
+
+$$\alpha_2 = \frac{1}{2} \ln\left(\frac{1 - 0.1875}{0.1875}\right) = \frac{1}{2} \ln\left(\frac{0.8125}{0.1875}\right) = \frac{1}{2} \ln(4.3333) \approx \mathbf{0.7332}$$
+
+
+
+### Step 3: Update & Normalize Weights
+
+* **Multiplier (Correct):** $e^{-0.7332} \approx 0.4804$
+* **Multiplier (Incorrect):** $e^{+0.7332} \approx 2.0817$
+
+$$Z_2 = (7 \text{ correct}) + (3 \text{ incorrect})$$
+
+$$Z_2 = \left(2 \times 0.0625 + 2 \times 0.2500 + 3 \times 0.0625\right) \times 0.4804 + (3 \times 0.0625 \times 2.0817) \approx 0.8107$$
+
+* **Samples 1, 2, 8, 9, 10 (Correct, low weight):**
+
+$$w_i^{(3)} = \frac{0.0625 \times 0.4804}{0.8107} \approx \mathbf{0.0370}$$
+
+
+* **Samples 4, 7 (Correct, high weight):**
+
+$$w_i^{(3)} = \frac{0.2500 \times 0.4804}{0.8107} \approx \mathbf{0.1481}$$
+
+
+* **Samples 3, 5, 6 (Incorrect):**
+
+$$w_i^{(3)} = \frac{0.0625 \times 2.0817}{0.8107} \approx \mathbf{0.1605}$$
+
+
+
+---
+
+## Round 3
+
+### Step 1: Fit Weak Learner ($h_3$)
+
+Now samples 3, 5, and 6 hold high weight ($0.1605 \times 3 \approx 0.4815$). The tree tries to fix these middle negative samples without ruining the ends.
+
+* **Chosen Split:** $2.5 < x \le 7.5 \implies -1$, else $+1$.
+
+| $i$ | $x_i$ | True $y_i$ | Pred $h_3(x_i)$ | Status | Weight $w_i^{(3)}$ |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 1 | +1 | +1 | ✅ | 0.0370 |
+| 2 | 2 | +1 | +1 | ✅ | 0.0370 |
+| 3 | 3 | -1 | -1 | ✅ | 0.1605 |
+| **4** | **4** | **+1** | **-1** | ❌ | **0.1481** |
+| 5 | 6 | -1 | -1 | ✅ | 0.1605 |
+| 6 | 7 | -1 | -1 | ✅ | 0.1605 |
+| 7 | 8 | +1 | +1 | ✅ | 0.1481 |
+| **8** | **9** | **-1** | **+1** | ❌ | **0.0370** |
+| **9** | **10** | **-1** | **+1** | ❌ | **0.0370** |
+| **10** | **12** | **-1** | **+1** | ❌ | **0.0370** |
+
+### Step 2: Compute Error & $\alpha_3$
+
+* **Misclassified:** Samples $i = 4, 8, 9, 10$
+* **Weighted Error:**
+
+$$\text{err}_3 = w_4^{(3)} + w_8^{(3)} + w_9^{(3)} + w_{10}^{(3)} = 0.1481 + 3(0.0370) = \mathbf{0.2591}$$
+
+
+* **Learner Weight:**
+
+$$\alpha_3 = \frac{1}{2} \ln\left(\frac{1 - 0.2591}{0.2591}\right) = \frac{1}{2} \ln(2.8595) \approx \mathbf{0.5253}$$
+
+
+
+---
+
+## 3. Final Ensemble Model Summary
+
+We have created a 3-stump committee:
+
+$$H(x) = \text{sign}\left(\sum_{m=1}^3 \alpha_m h_m(x)\right)$$
+
+$$H(x) = \text{sign}\Big( 0.6931 \cdot h_1(x) \;+\; 0.7332 \cdot h_2(x) \;+\; 0.5253 \cdot h_3(x) \Big)$$
+
+---
+
+## 4. Predicting on New Data Points
+
+Let's test two test points using our aggregated voting equation:
+
+### Test Point 1: $x = 4$ (True target $y = +1$)
+
+* **$h_1(4)$:** $4 \le 2.5 \implies \mathbf{-1}$
+* **$h_2(4)$:** $4 \le 8.5 \implies \mathbf{+1}$
+* **$h_3(4)$:** $2.5 < 4 \le 7.5 \implies \mathbf{-1}$
+
+$$\text{Vote Sum} = 0.6931(-1) + 0.7332(+1) + 0.5253(-1)$$
+
+$$\text{Vote Sum} = -0.6931 + 0.7332 - 0.5253 = -0.4852$$
+
+$$\text{Prediction} = \text{sign}(-0.4852) = \mathbf{-1}$$
+
+### Test Point 2: $x = 8$ (True target $y = +1$)
+
+* **$h_1(8)$:** $8 \le 2.5 \implies \mathbf{-1}$
+* **$h_2(8)$:** $8 \le 8.5 \implies \mathbf{+1}$
+* **$h_3(8)$:** $8 > 7.5 \implies \mathbf{+1}$
+
+$$\text{Vote Sum} = 0.6931(-1) + 0.7332(+1) + 0.5253(+1)$$
+
+$$\text{Vote Sum} = -0.6931 + 0.7332 + 0.5253 = +0.5654$$
+
+$$\text{Prediction} = \text{sign}(+0.5654) = \mathbf{+1}$$
 ---
 
 ## 7. Exponential Loss — The Hidden Objective
