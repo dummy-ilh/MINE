@@ -194,3 +194,136 @@ A: This is observational correlation, not a randomized comparison, so reverse ca
 
 ---
 *This tutorial merges two chapters on causal inference — one framed around the potential-outcomes formalism with a dark-mode/session-length worked example; the other framed around the counterfactual/correlation-vs-causation framing with a dark-mode/retention worked example and a broader quasi-experimental toolkit. Overlapping content (the potential-outcomes setup, the ATE identity, the dark-mode example) was merged rather than duplicated; both worked examples were kept since they illustrate different metrics and angles on the same bias.*
+
+---
+---
+
+# PART 2 — EXTENDED NOTES (added)
+
+Nothing above is changed. This part adds: deeper mechanics on each quasi-experimental method (with a worked numeric diff-in-diff example), heterogeneous treatment effects (CATE/HTE), Simpson's paradox as a causal trap, DAGs as a reasoning tool, a method-selection decision guide, more failure-mode examples, and additional interview Q&A.
+
+---
+
+## 13. Difference-in-Differences — worked numerically
+
+Diff-in-diff assumes **parallel trends**: absent treatment, the treated and comparison group would have moved in the same direction/magnitude over time. The estimator:
+
+$$DiD = (\bar{Y}_{treated,\,after} - \bar{Y}_{treated,\,before}) - (\bar{Y}_{control,\,after} - \bar{Y}_{control,\,before})$$
+
+**Example**: a company rolls out a pricing change in Market A but not in comparable Market B.
+
+| | Before | After | Change |
+|---|---|---|---|
+| Market A (treated) | \$40 avg order value | \$46 | +\$6 |
+| Market B (control) | \$38 avg order value | \$41 | +\$3 |
+
+$$DiD = (46-40) - (41-38) = 6 - 3 = \$3$$
+
+The naive before/after comparison in Market A alone would have claimed a +\$6 effect; diff-in-diff nets out the \$3 of "would have happened anyway" (general market growth, seasonality) captured by Market B's trend, isolating a more credible **+\$3 causal estimate**.
+
+**Where parallel trends can fail**: if Market A and Market B were already diverging *before* treatment (e.g., A was growing faster than B for unrelated reasons), diff-in-diff will misattribute that pre-existing divergence to the treatment. Best practice: plot pre-treatment trends for both groups and visually/statistically confirm they were roughly parallel before treatment, not just compare two snapshots.
+
+---
+
+## 14. Regression Discontinuity — the mechanics
+
+Used when treatment is assigned by a running variable crossing a threshold (e.g., "accounts with >$10K trailing revenue get a dedicated CSM"). Units just above and just below the cutoff are assumed to be nearly identical in every other way — the cutoff, not user choice, decided their treatment status, which is what recovers a locally randomized-like comparison.
+
+**Key assumption**: no ability to precisely manipulate the running variable to land on the desired side of the cutoff. If sales reps can nudge a customer's trailing revenue just over $10K to get them a CSM, that manipulation reintroduces selection bias exactly at the cutoff — a classic RD validity check is testing for a suspicious "bunching" of the running variable just on the favorable side of the threshold.
+
+**What you get**: a **local average treatment effect (LATE)** — valid only near the cutoff, not necessarily generalizable to units far from it (e.g., the effect of a CSM on a $10K account tells you little about its effect on a $500K account).
+
+---
+
+## 15. Instrumental Variables — the mechanics
+
+An instrument $Z$ must satisfy two conditions:
+1. **Relevance**: $Z$ is correlated with the treatment $T$.
+2. **Exclusion restriction**: $Z$ affects the outcome $Y$ *only* through $T$, not through any other path.
+
+**Classic product example**: estimating the causal effect of app notifications on engagement, where users self-select into high notification volume (confounded by underlying interest). If a server outage randomly delayed/dropped notifications for a subset of users unrelated to their engagement level, that outage could serve as an instrument — it affects how many notifications a user actually received (relevance) but has no other plausible path to affecting engagement (exclusion), assuming the outage was truly unrelated to user behavior.
+
+**Why IV is hard to use well in practice**: the exclusion restriction is *not testable* — it's an assumption you have to argue for qualitatively, since by definition you can't observe the "other path" you're claiming doesn't exist. This is why IV designs live or die on how convincing the instrument's story is, and why interviewers who bring up IV are often testing whether you'll propose a poor instrument without interrogating its exclusion restriction.
+
+---
+
+## 16. Propensity Score Matching — the mechanics
+
+Estimate $P(T_i=1 \mid X_i)$ (the propensity score) from observed covariates, then match treated and untreated units with similar propensity scores to construct a more comparable comparison group.
+
+**Core limitation**: PSM can only balance on *observed* covariates used to build the propensity model — it does nothing for unmeasured confounders, unlike randomization which balances everything (observed and unobserved) by construction. This is the single most important caveat to state whenever PSM comes up: it narrows observational comparisons, it doesn't fully solve them.
+
+---
+
+## 17. Heterogeneous Treatment Effects (CATE/HTE) — beyond the single ATE number
+
+The original chapter's Interview Trap #3 flags that ATE isn't the individual effect — this extends that point into its own toolkit.
+
+- **Conditional Average Treatment Effect (CATE)**: the average effect within a subgroup defined by covariates $X$, e.g., $E[Y_i(1)-Y_i(0) \mid X_i = \text{power user}]$.
+- **Why this matters practically**: an ATE of +2% conversion could hide a +8% effect for new users and a −3% effect for existing power users — shipping based on the aggregate ATE alone could quietly harm a valuable segment even while the topline looks like a clean win. This is the same Simpson's-Paradox-adjacent risk flagged in the metrics-framework material for OEC primary metrics, now shown at the causal-estimation level rather than just the descriptive-metrics level.
+- **Common methods**: interaction terms in a regression ($Y \sim T + X + T{\times}X$), causal forests / uplift modeling for more flexible, data-driven subgroup discovery.
+- **Caution**: hunting for subgroups with a large effect *after* seeing the data (subgroup fishing) is the causal-inference analog of p-hacking — pre-specify the subgroups you'll examine, or treat post-hoc subgroup findings as hypothesis-generating only, not confirmatory.
+
+---
+
+## 18. Simpson's Paradox as a causal trap
+
+A pattern present in aggregate data can reverse or vanish when the data is split by a relevant subgroup — a vivid illustration of confounding, and a favorite interview follow-up to the ATE/CATE discussion above.
+
+**Illustrative pattern**: a new onboarding flow shows *lower* overall conversion than the old flow. But split by acquisition channel, the new flow actually converts *better* within every single channel — the aggregate reversal happens because the new flow, during its rollout, was disproportionately shown to a lower-converting channel mix. Aggregating across a confounded mix of subgroups can flip the sign of an effect entirely, not just its magnitude.
+
+**Practical takeaway**: whenever an aggregate causal estimate is surprising or contradicts subgroup-level intuition, check whether the treatment and comparison groups have the same *composition* across a plausible confounding dimension — this is conceptually the same balance-check instinct used for SRM/covariate balance in randomized experiments, just applied to observational or rollout data instead.
+
+---
+
+## 19. DAGs (Directed Acyclic Graphs) as a reasoning tool
+
+A lightweight way to reason about confounding, mediation, and colliders without necessarily doing formal math — increasingly common in senior-level interview discussions.
+
+- **Confounder**: $Z \rightarrow X$ and $Z \rightarrow Y$ (Z causes both) — must control for Z to avoid bias, exactly the structure in Example A/B above (prior engagement → feature adoption, prior engagement → retention).
+- **Mediator**: $X \rightarrow M \rightarrow Y$ (M is on the causal pathway from X to Y) — controlling for M would be a mistake if you want the *total* effect of X on Y, since it would "block" part of the very effect you're trying to measure.
+- **Collider**: $X \rightarrow C \leftarrow Y$ (C is caused by both X and Y) — controlling for or conditioning on a collider (even accidentally, e.g., by filtering your analysis population on it) *induces* a spurious association between X and Y where none causally exists. This is a subtler and less well-known trap than confounding, and a good thing to mention if asked "can controlling for more variables ever make things worse?" — yes, controlling for a collider is a case where adding a covariate actively introduces bias rather than removing it.
+
+---
+
+## 20. Method-selection decision guide
+
+| Situation | Reach for |
+|---|---|
+| You can randomize | A/B test — always the first choice when feasible |
+| No randomization, but a comparable untreated group + pre/post data exists | Difference-in-differences (check parallel trends first) |
+| Treatment assigned by a threshold/cutoff on a running variable | Regression discontinuity (check for manipulation/bunching at the cutoff) |
+| A plausible variable affects treatment but not the outcome except through treatment | Instrumental variables (be honest about how testable the exclusion restriction really is) |
+| Rich observational covariates, no natural experiment available | Propensity score matching (caveat: only balances observed covariates) |
+| You suspect the aggregate effect hides subgroup variation | Estimate CATE / run pre-specified subgroup analysis, don't just report ATE |
+| An aggregate result contradicts subgroup-level intuition | Check for Simpson's Paradox — inspect composition/mix across the suspected confounding dimension |
+
+---
+
+## 21. More Interview Q&A (new)
+
+**Q: You run a diff-in-diff analysis on a pricing change and get a large effect. What's the first thing you'd check before trusting it?**
+A: Whether the parallel-trends assumption plausibly holds — I'd plot the treated and control markets' trends *before* the treatment period and check they were moving similarly. If the treated market was already diverging from the control market prior to the change (for unrelated reasons, like a differing local economy), diff-in-diff will misattribute that pre-existing divergence to the treatment, inflating or even fabricating an apparent effect.
+
+**Q: A team wants to use "whether a customer's account happened to get a system outage that delayed their notifications" as an instrument for notification volume's effect on engagement. What would you push on?**
+A: The exclusion restriction — whether the outage could have affected engagement through any path *other than* notification volume. If the outage also degraded other parts of the product experience at the same time (e.g., general app slowness), it violates exclusion, since it would affect engagement directly, not just through notifications. I'd also check relevance — does the outage actually meaningfully move notification volume, or is the effect on the "instrument" itself too weak to be useful (a weak-instrument problem).
+
+**Q: Your ATE shows a new feature improves conversion by 2% overall, but a colleague found it hurts a specific customer segment by 3%. Which number should drive the ship decision?**
+A: Neither number alone — this is exactly why relying only on the aggregate ATE can be misleading. I'd want the full CATE breakdown across meaningful, pre-specified segments before deciding, and treat this as a segmented-launch decision rather than a single yes/no: potentially shipping to the segments where the effect is positive or neutral while holding back or iterating for the segment showing harm, rather than let a positive aggregate number paper over a real subgroup regression.
+
+**Q: What's a collider, and why is "just control for more variables to be safe" not always good advice?**
+A: A collider is a variable caused by *both* your treatment and outcome variables (X→C←Y). Conditioning on it — even by something as innocuous as filtering your analysis to a subset defined by the collider — can create a spurious statistical association between X and Y where no causal link exists, essentially manufacturing bias rather than removing it. It's a case where "control for everything you can measure" is actively wrong advice; which variables to control for needs to be reasoned about causally (e.g., with a DAG), not just statistically.
+
+---
+
+## 22. Extended Comprehension Check (Part 2, new)
+
+9. Using the worked diff-in-diff numeric example (Section 13), explain what would happen to the estimated effect if Market B had been growing *faster* than Market A even before the treatment.
+10. What is a Local Average Treatment Effect (LATE), and why is a regression discontinuity result specifically a LATE rather than a general ATE?
+11. Give an example (product-related or otherwise) of a valid-sounding instrumental variable, and identify the specific way its exclusion restriction could plausibly be violated.
+12. Why can propensity score matching never fully substitute for randomization, no matter how many covariates you include in the propensity model?
+13. Describe, in your own words, a scenario where an aggregate treatment effect and a subgroup-level (CATE) effect point in opposite directions, and explain why this isn't a contradiction.
+14. Draw (in words) a DAG distinguishing a confounder, a mediator, and a collider, and state which one you should control for if you want the *total* causal effect of X on Y.
+
+---
+*Part 2 added: a numeric diff-in-differences walkthrough, deeper mechanics for regression discontinuity, instrumental variables, and propensity score matching (including their specific failure modes), a full CATE/heterogeneous-treatment-effects section, Simpson's Paradox as a causal trap, DAG-based reasoning (confounders/mediators/colliders), a method-selection decision guide, four new interview Q&As, and six new comprehension questions. Nothing from the original chapter was removed or altered.*
