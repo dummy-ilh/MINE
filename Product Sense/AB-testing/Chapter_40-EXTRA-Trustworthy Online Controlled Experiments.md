@@ -2397,3 +2397,139 @@ As sensitivity and re-identification risk increase, you must increase: data prot
 | Anonymized data | Processed to guarantee low/nonexistent re-identification risk (k-anonymity, differential privacy, Safe Harbor) |
 | IRBs | Institutional Review Boards — review human subjects research, assess risks/benefits, approve/deny studies |
 | Key data questions | Sensitivity, re-identification risk, purpose of collection, necessity, user understanding, safeguards |
+# 📘 Trustworthy Online Controlled Experiments (Kohavi, Tang, Xu) — Interview Notes
+
+*The canonical practitioner's reference for A/B testing — written by experimentation leaders from Microsoft, Google, and LinkedIn (companies each running 20,000+ experiments/year).* The book is organized into five parts; these notes follow that structure and pull out what's actually asked in interviews.
+
+---
+
+## The Book's Structure (know this — interviewers sometimes ask "have you read X")
+
+| Part | Focus | What it's for |
+|---|---|---|
+| **I — Introductory Topics for Everyone** | Why experiment, the scientific method applied to products, running your first test | Foundational vocabulary |
+| **II — Selected Topics for Everyone** | Metrics, OEC, institutional memory, ethics | The "how to think about it" layer — most interview questions live here |
+| **III — Complementary/Alternative Techniques** | What to do when you *can't* randomize | Quasi-experimental methods |
+| **IV — Advanced: Building a Platform** | Architecture, APIs, ramping, alerting | For platform/infra-focused roles |
+| **V — Advanced: Analyzing Experiments** | Interference, SRM, peeking, triggering, variance reduction | Deep statistical rigor — most of your existing 100-day curriculum lives here |
+
+If an interviewer says "this is straight out of the Kohavi book" — it usually means they're testing Part I/II concepts (mindset and OEC), since Part V overlaps heavily with generic A/B testing fundamentals you already have covered.
+
+---
+
+## Part I — Foundations
+
+### The Core Argument of the Book (one sentence)
+**Getting numbers is easy; getting numbers you can *trust* is hard.** The book's whole thesis is that most orgs run experiments badly — trusting results that are secretly compromised by bugs, bias, or misinterpretation — and trustworthiness has to be actively engineered, not assumed.
+
+### HiPPO
+"Highest Paid Person's Opinion" — Kohavi's shorthand for decisions made by seniority/authority rather than data. The book's implicit challenge throughout: **replace HiPPO-driven decisions with experiment-driven ones**, but not naively — sometimes the HiPPO is right, and the point of experimentation is to find out cheaply when they're wrong.
+
+**Interview framing:** if asked "how do you get organizational buy-in for experimentation," the HiPPO framing is the fastest way to name the cultural problem you're solving, not just the statistical one.
+
+### The Scientific Method, Applied to Products
+Experimentation is just the scientific method (hypothesis → test → measure → conclude) applied at product scale. The book stresses: an A/B test is not "trying stuff and seeing what sticks" — it's confirmatory, not exploratory, once it's running. The hypothesis and metrics are fixed *before* you look at data (this is the same pre-registration idea from your curriculum's Day 42 on governance).
+
+---
+
+## Part II — Metrics, OEC, and Institutional Memory
+
+### Overall Evaluation Criterion (OEC) — the book's signature concept
+A single (often composite) metric that the organization agrees represents "success," measurable in the short term, but predictive of long-term value. The OEC exists to solve a specific organizational failure mode: **teams optimizing for a metric that's easy to move but doesn't reflect real user value** (e.g., raw clicks — you can always increase clicks by making things worse, e.g. more confusing navigation).
+
+**Book's own definition, paraphrased:** the OEC should be something you can measure in the duration of an experiment, but that you have good reason to believe **causally drives** the long-term goal — not just correlates with it.
+
+**Case study the book leans on heavily:** search engine result pages. If you optimize for "clicks on results," a *worse* ranking algorithm can win — it might force users to click more links before finding what they want. The OEC has to penalize that, e.g. via **session success rate** or **time-to-successful-click**, not raw click count.
+
+### Twyman's Law
+**"Any figure that looks interesting or different is usually wrong."** This is one of the book's most quoted ideas and shows up constantly in interviews. The intuition: extraordinary results (a huge lift, a huge regression) are *far* more likely to be caused by a bug, a logging error, or an SRM than by a real, huge effect. The book's advice: **the more surprising or exciting the result, the more scrutiny it deserves before you believe it** — treat a 50% lift as a bug report, not a win, until proven otherwise.
+
+**Interview framing:** if asked "your experiment shows an unusually large lift, what do you do?" — lead with Twyman's Law by name, then walk the actual checklist (SRM check, data pipeline audit, segment consistency, compare against historical variance) that follows from taking it seriously.
+
+### The Bing Ad-Title Bug (the book's headline case study)
+A famous story used throughout the book (and in Kohavi's talks): a bug in Bing's ad-serving code caused ad **titles to render incorrectly** for a specific set of ads. It was a tiny, easy-to-miss code change. The A/B test caught a massive, statistically enormous revenue swing — so large the engineer initially wanted to *dismiss it as a bug in the experiment system itself* (a perfect Twyman's Law moment). It turned out the code bug really was causing a huge real revenue loss, and this became one of the most valuable single bugs ever caught by an A/B test at Microsoft, worth many tens of millions of dollars annually. **Lesson the book draws:** small code changes can have outsized business impact, and controlled experiments are sometimes the *only* thing standing between a subtle bug and enormous unnoticed harm — this is presented as the strongest argument for running experiments even on "boring" changes.
+
+### Institutional Memory & Meta-Analysis
+The book argues individual experiments are undervalued in isolation — the real compounding value comes from **accumulating a corpus of past experiment results** so you can:
+- Estimate priors for new experiment designs (what's a plausible effect size for "this kind of change"?)
+- Detect drift in the platform's false-positive rate over time (rolling A/A monitoring, from your Day 9 material)
+- Avoid re-testing ideas that already failed for known reasons
+- Build calibration for "does this team's intuition about winners tend to be right?" (spoiler: usually no better than a coin flip for surprising ideas — the book cites the widely-known Microsoft statistic that roughly **1 in 3 ideas** tested show a positive result on the OEC, meaning most ideas, even ones leadership is confident about, don't pan out).
+
+**Interview framing:** this is the "why do we need an experimentation platform, not just ad hoc scripts" answer — meta-analysis and institutional memory are impossible without a centralized, consistent logging and metrics infrastructure.
+
+### Ethics
+The book devotes real space to this (echoing your Day 29 material): informed consent norms, minimal-risk experimentation, avoiding experiments that could cause meaningful harm to a subset of users, and the tension between "we're just testing a button color" (trivial) vs. "we're testing something that could affect someone's mental health, finances, or safety" (not trivial). The Facebook emotional contagion study is the canonical cautionary tale referenced across this literature.
+
+### "Speed Matters" — the other headline case studies
+The book collects several famous **latency experiments** as a genre of their own, because they show causal, board-room-legible numbers for something engineers instinctively believe but rarely get to *prove*:
+- **Amazon:** every 100ms of added page-load latency was tied to roughly a **1% drop in sales** in internal experiments — a number Greg Linden (an early Amazon engineer) has publicly discussed, and which the book uses as the canonical "speed = money" story.
+- **Bing:** slowing down search results by small increments (measured in milliseconds) produced measurable, monotonic revenue and engagement declines, and Microsoft used these experiments to set internal latency SLOs.
+- **Google:** similar results — small increases in search latency reduced query volume and revenue.
+
+**Interview framing:** "speed matters" experiments are a good example to cite whenever an interviewer asks "give me an example of an A/B test result that was actually acted on and had large business impact" — because these are real, well-documented, and reflect exactly the "small technical change, large measurable causal effect" story the whole book is selling.
+
+---
+
+## Part III — When You Can't Randomize
+
+The book acknowledges controlled experiments aren't always possible (an entire feature can't be split, legal/regulatory constraints, or the change is a full platform migration) and surveys quasi-experimental alternatives — the same toolkit as your curriculum's Day 43:
+- Interrupted time series
+- Difference-in-differences
+- Regression discontinuity
+- Propensity score matching / synthetic controls
+
+**Book's framing, worth repeating verbatim in an interview:** these methods are valuable **because** RCTs aren't always feasible, but they rely on untestable assumptions (parallel trends, no unmeasured confounders) and should be held to a higher standard of scrutiny — never treated as equivalent evidence to a proper controlled experiment.
+
+---
+
+## Part IV — Building an Experimentation Platform
+
+This part is aimed at engineers building the *infrastructure*, but a few concepts show up in DS/MLE interviews too:
+
+### Ramping
+Gradually increasing the percentage of users exposed to a treatment (e.g., 1% → 5% → 20% → 50%) rather than jumping straight to 50/50. Purposes:
+1. **Risk mitigation** — catch a catastrophic bug while it only affects 1% of users, not 50%.
+2. **Statistical efficiency at scale** — for very high-traffic surfaces, you often don't need a full 50/50 split to reach your required sample size; a smaller treatment allocation with tight monitoring lets you run more concurrent experiments.
+
+### Alerting & Automated Guardrails
+The book advocates building **automated checks that run before a human ever looks at a metric dashboard** — SRM detection, guardrail metric monitoring, anomaly detection on core business metrics — because relying on a human analyst to remember to run every check, every time, at scale (thousands of experiments/year) doesn't work. This is the platform-engineering answer to the "how do you prevent p-hacking at scale" governance question from Day 42.
+
+### APIs and Self-Service
+A recurring theme: the *marginal cost* of running one more experiment should approach zero. If every experiment requires a data scientist to hand-write a custom analysis script, the org will run far fewer experiments than it should. Self-service platforms (define hypothesis → configure metrics → auto-generate dashboard) are what let companies like Bing/Google/LinkedIn run tens of thousands of experiments a year.
+
+---
+
+## Part V — Advanced Analysis (heaviest overlap with your existing 100-day curriculum)
+
+This part covers, in the book's own framing, the same material you already have deep coverage of:
+- **Triggering / exposure analysis** — restricting analysis to actually-exposed users (Day 37)
+- **Leakage and interference between variants** — the book's term for SUTVA violations and spillover (Day 18/19, and your SUTVA deep-dive doc)
+- **Sample Ratio Mismatch** — the book popularized SRM as a named, checkable diagnostic that should be automated into every platform (Day 13)
+- **Peeking / sequential testing** — the always-valid inference problem (Day 15)
+- **Variance reduction** (CUPED originates from a Microsoft paper the book cites extensively) (Day 17/33)
+
+**What's genuinely book-specific here, beyond what you've already studied:** the book frames all of these not as isolated statistical tricks, but as instances of a single principle — **"trustworthiness" is a checklist you run *before* you're allowed to interpret a result**, not something you assume by default. The mental model: every experiment result comes with an implicit burden of proof, and the burden is *on the surprising or favorable result*, not on the skeptic (this is Twyman's Law generalized into an institutional practice).
+
+---
+
+## Quick-Fire Interview Answers (things you should be able to say cold)
+
+**Q: "What's the one-sentence thesis of the Kohavi book?"**
+A: Getting a number is easy; getting a number you can trust requires actively engineered rigor — pre-registered hypotheses, automated pre-checks (SRM, guardrails), skepticism toward surprising results (Twyman's Law), and organizational infrastructure (OEC, institutional memory) that makes trustworthy experimentation cheap enough to do constantly.
+
+**Q: "What's Twyman's Law and why does it matter?"**
+A: Any statistic that looks interesting or surprising is probably wrong — verify before you believe. It matters because the intuitive reaction to a huge win is excitement, but the correct reaction is suspicion; most huge, surprising effects trace back to bugs, SRM, or logging errors rather than real product impact.
+
+**Q: "Give a real example of an A/B test catching a bug with outsized business impact."**
+A: The Bing ad-title rendering bug — a small code change broke how ad titles displayed for a subset of ads, and the resulting A/B test showed such a large revenue swing that engineers initially assumed the experiment pipeline itself was broken. It turned out to be real, and became one of the highest-value bugs ever caught by an online experiment.
+
+**Q: "What is an OEC and why not just use one obvious metric like clicks or revenue?"**
+A: A single north-star metric is often gameable in ways that don't reflect real value — e.g., raw clicks can go up because a worse UI forces more clicks to accomplish the same task. An OEC is deliberately designed (often as a composite) to be measurable in a short experiment window while still being causally tied to long-term user and business value, so teams can't win by degrading the actual product experience.
+
+**Q: "Why does institutional memory matter for an experimentation program?"**
+A: Individual experiments are cheap to run but expensive to interpret in isolation. A corpus of past results lets you calibrate priors (most "obviously good" ideas fail — the book cites roughly 1-in-3 as a typical positive-result rate), detect when your testing pipeline's false-positive rate is drifting, and avoid re-litigating ideas that already failed.
+
+---
+
+*Companion reference to your 100-Day A/B Testing curriculum and the SUTVA deep-dive — this covers the book's own framing and case studies (OEC, Twyman's Law, HiPPO, institutional memory, speed-matters experiments) that sit alongside, rather than duplicate, your existing Day-by-Day material.*
