@@ -228,4 +228,324 @@ A: This is exactly the metric-selection version of p-hacking / post-hoc rational
 10. Your primary OEC shows a strong, statistically significant win, but one guardrail metric shows a small regression that's technically outside its pre-agreed tolerance. What do you recommend, and why?
 
 ---
-*This tutorial merges three chapters into one self-contained reference: (1) an overview chapter introducing North Star metrics, guardrails, and OEC together; (2) a deep-dive on OEC design (the three construction approaches, Goodhart's Law, pre-registration); and (3) a deep-dive on guardrail metrics specifically (non-inferiority testing, worked latency example, threshold-setting governance). No external chapter references are needed — all cross-referenced concepts (pre-registration/one-sided testing, statistical vs. practical significance, multiple-testing correction, proxy metrics) are explained inline above.*
+# North Star, Guardrail & OEC Metrics — Exhaustive Reference
+
+---
+
+## 0. How the three concepts relate
+
+```
+                    ┌─────────────────────┐
+                    │   NORTH STAR METRIC  │   ← company/product-level, long-term
+                    └──────────┬───────────┘
+                               │ decomposes into
+                    ┌──────────▼───────────┐
+                    │   INPUT / DRIVER      │   ← the "metric tree"
+                    │   METRICS             │
+                    └──────────┬───────────┘
+                               │ operationalized per experiment as
+                    ┌──────────▼───────────┐
+                    │        OEC            │   ← the metric(s) a specific
+                    │ (Overall Evaluation   │     A/B test is judged on
+                    │  Criterion)           │
+                    └──────────┬───────────┘
+                               │ composed of
+       ┌───────────────┬───────┴────────┬────────────────┐
+       ▼                ▼                ▼                ▼
+   PRIMARY          SECONDARY        GUARDRAIL       DIAGNOSTIC /
+   METRIC(S)        METRICS          METRICS         SUPPORTING METRICS
+```
+
+- **North Star** = the one metric the *whole org* rallies around (quarters/years).
+- **OEC** = the metric(s) a *single experiment or feature* is judged by (days/weeks). Every OEC should trace back to the North Star, but not every OEC-moving change moves the North Star directly.
+- **Guardrails** apply at *both* levels — company guardrails protect the North Star; experiment guardrails protect the OEC decision from being a false "win."
+
+---
+
+## 1. NORTH STAR METRIC (NSM)
+
+### 1.1 Definition
+A single metric that best captures the core value your product delivers to customers, chosen as a proxy for long-term, sustainable business success. Popularized by Sean Ellis / growth teams; central to the "North Star Framework" (Amplitude).
+
+### 1.2 Criteria for a good North Star (the checklist)
+| Criterion | What it means |
+|---|---|
+| **Expresses value delivered**, not value extracted | "Weekly active collaborative documents" not "revenue" |
+| **Leading, not lagging** | Predicts future revenue/retention rather than reporting past revenue |
+| **Reflects customer + business success jointly** | Should correlate with both retention and monetization |
+| **Actionable** | Teams can influence it through concrete input metrics |
+| **Understandable** | Non-technical stakeholders can grasp it instantly |
+| **Measurable in near-real-time** | Not a quarterly-lagging survey number |
+| **Resistant to gaming** | Hard to inflate without delivering real value |
+| **Single metric, not a bundle** | Composite indices are for OEC, not NSM (though some orgs use a "constellation") |
+
+### 1.3 Structure: the North Star + Metric Tree
+- **North Star Metric** — the headline number.
+- **Input Metrics / Driver Metrics** — 3–6 metrics that mechanically roll up into the NSM (e.g., breadth × depth × frequency × efficiency).
+- **Sub-input metrics** — team-level metrics feeding each input metric; this is where individual squads find their KPIs.
+
+Common decomposition patterns:
+- **Breadth × Depth**: (# of users engaging) × (intensity of engagement per user)
+- **Acquisition × Activation × Retention × Referral × Revenue (AARRR / Pirate Metrics)** used as an input framework feeding the NSM
+- **Frequency × Adoption**: how often, by how many
+
+### 1.4 Canonical examples by company/industry
+| Company/type | North Star Metric |
+|---|---|
+| Airbnb | Nights booked |
+| Spotify | Time spent listening |
+| Facebook (historic) | Daily active users (DAU), later refined to "meaningful social interactions" |
+| Slack | Messages sent between teammates (later: weekly active teams sending 2,000+ messages) |
+| WhatsApp | Messages sent |
+| LinkedIn | (Historic) daily active users engaging in professional actions |
+| Netflix | Hours streamed |
+| Amazon | Purchases (or, more precisely, "customer lifetime value" style proxies) |
+| Uber/Lyft | Completed rides |
+| Dropbox | Files saved / shared via Dropbox |
+| Duolingo | Daily learners / streaks maintained |
+| SaaS B2B (generic) | Weekly active accounts with ≥1 core workflow completed |
+| Marketplace (generic) | Successful transactions (both sides matched) |
+| Media/content | Engaged time / completion rate |
+
+### 1.5 Nuances and failure modes
+- **Vanity-metric trap**: signups, downloads, pageviews look good but don't reflect delivered value — avoid as NSM.
+- **Single-sided marketplace bias**: picking a metric that only reflects supply or only demand (e.g., "listings created" ignores whether they get booked).
+- **Metric myopia / Goodhart's Law**: once a metric becomes a target, people optimize the metric, not the value ("ships sent" vs. "messages read and replied to").
+- **Lagging disguised as leading**: revenue and NPS are often lagging — poor NSM choices.
+- **One-size-fits-all fallacy**: multi-product companies often need a **North Star per product line** plus a company-level "constellation" or portfolio view, since one number can't represent unrelated product value.
+- **Novelty/seasonality distortion**: NSM can spike from external effects unrelated to product changes (e.g., COVID spikes in streaming) — needs cohort-normalized tracking.
+- **Should evolve over life stage**: pre-PMF (activation-focused), growth stage (engagement-focused), maturity (monetization/retention-focused) — NSM sometimes gets redefined at each stage (Slack's NSM changed over time).
+- **Doesn't replace P&L**: NSM is a *leading proxy*, not a substitute for financial reporting.
+
+### 1.6 Choosing between competing NSM candidates — a scoring method
+When a team has shortlisted 2–4 candidate metrics, score each 1–5 against every criterion in 1.2, then sanity-check with three questions:
+1. If this metric doubled next quarter, would leadership genuinely believe the company is twice as healthy?
+2. Can this metric be moved by a bad actor internally (growth hacking, dark patterns) without real value delivered?
+3. Does at least one full team's roadmap map cleanly onto an input metric for this candidate?
+If the answer to (3) is "no" for every team, the NSM is too abstract to be actionable.
+
+### 1.7 North Star vs. mission/vision statements
+NSM is often confused with mission statements. A mission statement ("connect the world") is not measurable; the NSM operationalizes a *sliver* of that mission into a trackable number. Expect the NSM to feel narrower and slightly reductive compared to the mission — that's a feature, not a bug, because it forces trade-off clarity.
+
+### 1.8 Multi-sided and platform businesses
+Platforms with distinct user types (buyers/sellers, riders/drivers, creators/viewers) often need a **paired NSM** or a single metric that only counts when *both* sides participate (e.g., "completed transactions" implicitly requires both a buyer and seller), which avoids the single-sided bias noted in 1.5. Some platforms maintain a secondary "health metric" per side (e.g., driver utilization, creator payout velocity) that acts as a semi-guardrail on the primary NSM.
+
+### 1.9 Cadence and reporting nuances
+- **Rolling windows** (7-day or 28-day rolling active metrics) are usually preferred over strict calendar week/month cuts to smooth weekday/weekend and month-boundary noise.
+- **Cohort-normalized NSM**: reporting NSM per cohort-month-of-signup avoids conflating growth-driven increases with genuine per-user engagement increases.
+- **NSM should have an owner** (often a VP of Product or Growth) accountable for the trend, distinct from feature-team leads who own input metrics.
+
+---
+
+## 2. GUARDRAIL METRICS
+
+### 2.1 Definition
+Metrics that must **not regress** (beyond a tolerance) as a side effect of a change, even if the primary/OEC metric improves. They exist to catch "you won the battle, lost the war" outcomes — e.g., engagement went up because you added dark patterns, but trust and long-term retention silently eroded.
+
+### 2.2 Taxonomy of guardrail types
+| Category | Purpose | Example metrics |
+|---|---|---|
+| **Trust / quality guardrails** | Protect user experience & brand trust | Complaint rate, unsubscribe rate, crash rate, spam-report rate, "regret" surveys, uninstall rate |
+| **Business / revenue guardrails** | Protect monetization while optimizing engagement | Revenue per user, ARPU, refund rate, churn rate, contract renewal rate |
+| **Organizational / company-wide guardrails** | Metrics every team must respect regardless of what they're testing | Overall DAU/MAU, page-load latency SLA, support-ticket volume, NPS |
+| **Ethical / legal / compliance guardrails** | Non-negotiable constraints | Accessibility compliance, privacy/data-handling metrics, regulatory thresholds, fairness/bias metrics across user segments |
+| **Technical / performance guardrails** | Protect system health | Latency (p50/p95/p99), error rate, crash-free sessions, server cost per request, battery/data usage on mobile |
+| **Sample-ratio / data-quality guardrails** | Protect experiment validity itself (a "meta-guardrail") | Sample Ratio Mismatch (SRM) checks, instrumentation/logging completeness, bucketing balance |
+| **Cannibalization guardrails** | Ensure a win in one surface isn't just moving activity from another | Cross-feature substitution metrics, organic vs. paid channel mix |
+| **Ecosystem / two-sided guardrails** | In marketplaces, protect the "other side" | Seller/creator retention when optimizing for buyer/consumer metrics, ad-load tolerance |
+
+### 2.3 Statistical nuance: how guardrails are tested differently
+- **Primary/OEC metrics** are usually tested with a **superiority test** (is treatment significantly better?).
+- **Guardrail metrics** are usually tested with a **non-inferiority test**: define an acceptable degradation margin (e.g., "latency may not worsen by more than 50ms") rather than requiring "no difference," because true zero-change is statistically unfalsifiable.
+- **Directionality**: guardrails are typically one-sided tests (only care about the "bad" direction), whereas primary metrics are often two-sided or one-sided in the "good" direction.
+- **Multiple-comparison correction**: because orgs track many guardrails simultaneously, false-positive "guardrail breach" alarms multiply — corrections (Bonferroni, Benjamini-Hochberg / FDR) or Bayesian shrinkage are commonly applied, or guardrails are monitored with wider confidence intervals / higher significance bar than the primary metric.
+- **Power considerations**: guardrails often need larger samples to detect small regressions confidently — teams sometimes accept lower power on guardrails and instead monitor them continuously post-launch (sequential testing / always-valid p-values).
+- **Auto-abort / kill-switch rules**: some orgs configure experiments to auto-halt if a guardrail breaches a hard threshold mid-flight (used heavily for latency, crash rate, revenue).
+
+### 2.4 Nuances and failure modes
+- **Guardrail sprawl**: tracking too many guardrails dilutes focus and increases false alarms — best practice is a short, curated "company guardrail list" (5–10 metrics) plus optional team-specific ones.
+- **Static thresholds go stale**: guardrail tolerance bands need periodic recalibration as baseline traffic/behavior shifts.
+- **Guardrails vs. counter-metrics**: related but distinct — a **counter-metric** is an *expected* trade-off you're willing to accept in exchange for the primary win (e.g., slight increase in cost-per-user is fine if LTV rises); a **guardrail** is something you are *not* willing to trade away.
+- **Local vs. global guardrails**: a guardrail could be fine to violate locally (one team's feature) but not globally (company-wide threshold) — clarity on scope avoids false positives.
+- **Guardrails must be pre-registered**: adding guardrails after seeing results is p-hacking; the list should be locked before the experiment starts.
+
+### 2.5 Extended guardrail catalog by function
+| Function | Guardrails commonly used |
+|---|---|
+| **Growth/Marketing** | Organic-to-paid traffic ratio, CAC (customer acquisition cost), channel mix concentration |
+| **Search/Ranking** | Query abandonment rate, "reformulation" rate (user had to re-search), position-bias-adjusted CTR |
+| **Ads/Monetization** | Ad load (ads per session), ad blindness/banner-blindness proxies, advertiser churn, fill rate |
+| **Notifications/Messaging** | Opt-out rate, notification fatigue score, unsubscribe rate, spam-complaint rate |
+| **Mobile** | App size growth, battery drain, cold-start time, crash-free session %, data usage per session |
+| **Infrastructure/Cost** | Cost per 1,000 requests, compute cost per active user, storage growth rate |
+| **Support/CS** | Ticket volume per 1,000 users, average handle time, first-contact resolution rate |
+| **Legal/Privacy** | Consent opt-in rate, data-deletion request volume, PII exposure incidents |
+| **Fairness/Responsible AI** | Outcome parity across demographic segments, false-positive/negative rate gaps across groups |
+| **Content/Trust & Safety** | Policy-violating content view rate, report rate, moderator action volume |
+
+### 2.6 Guardrail governance
+- **Tiering guardrails**: "hard" guardrails (auto-block ship, e.g., legal/safety) vs. "soft" guardrails (require sign-off/justification to override, e.g., a small latency regression with a documented remediation plan).
+- **Escalation path**: define who can approve an override when a soft guardrail is breached (typically a metrics/experimentation review board, not the shipping team itself, to avoid conflict of interest).
+- **Guardrail dashboards vs. per-experiment checks**: company-wide guardrails are usually monitored continuously (weekly business review) *in addition to* being checked per-experiment — a metric can pass every individual experiment's guardrail check yet drift company-wide through accumulation of many small regressions ("death by a thousand cuts"), so an aggregate trend view is necessary alongside per-experiment gates.
+- **Guardrail decay/review cadence**: revisit the guardrail list and thresholds quarterly or semi-annually; stale guardrails calibrated to an old baseline produce false alarms or fail to catch real regressions as usage patterns shift.
+
+---
+
+## 3. OEC — OVERALL EVALUATION CRITERION
+
+### 3.1 Definition (Kohavi/Microsoft origin)
+The metric, or small weighted set of metrics, that operationally defines "success" for a specific experiment or product decision — distinct from the North Star (which is directional/strategic) and distinct from a raw dashboard of everything you happen to track.
+
+Key idea: the OEC should reflect **long-term** value even though experiments run short-term, because short-term metrics can be gamed easily (e.g., email spam increases short-term clicks but destroys long-term trust). Kohavi calls this "predicting the long-term from the short-term."
+
+### 3.2 OEC construction approaches
+| Approach | Description | Trade-off |
+|---|---|---|
+| **Single metric OEC** | One clear metric (e.g., "sessions per user per week") | Simple, interpretable, but may miss trade-offs |
+| **Composite/weighted OEC** | Weighted combination of multiple signals into one score (e.g., Bing's use of weighted query share + revenue + satisfaction proxies) | Captures trade-offs in one number, but weighting is subjective and opaque |
+| **Multi-metric decision matrix** | No single number; a *scorecard* of primary + secondary + guardrails reviewed together with a decision rule | Most common in practice; avoids false precision of composite scores |
+| **Proxy/short-term surrogate for long-term OEC** | Because true long-term value (e.g., lifetime retention) can't be measured in a 2-week test, a short-term proxy validated to correlate with long-term outcomes is used | Requires periodic revalidation that the proxy still tracks the real long-term metric |
+
+### 3.3 The full metric hierarchy used in an experiment "scorecard"
+
+| Tier | Purpose | Decision weight | Example |
+|---|---|---|---|
+| **Primary metric(s)** | The metric(s) the ship/no-ship call is made on — usually 1, at most 2–3 | Must move in the right direction with statistical significance | Conversion rate, task-completion rate |
+| **Secondary metrics** | Explain *why* the primary moved; diagnostic, not decisive alone | Informative, not decisive | Time-on-task, funnel step drop-off, click-through rate |
+| **Guardrail metrics** | Must not regress beyond tolerance (see Section 2) | Veto power — can override a primary win | Latency, crash rate, revenue, complaint rate |
+| **Quality / data-integrity metrics** | Confirm the experiment itself is trustworthy | Gate to even reading the results | Sample Ratio Mismatch, instrumentation coverage, bucket balance |
+| **Exploratory / supporting metrics** | Hypothesis-generation for future experiments, not used for this decision | Informational only | Segment cuts, novel behavior patterns, heatmap/qual signals |
+
+### 3.4 Primary metric selection nuances
+- **Should be pre-registered** before the experiment launches (avoid HARKing — Hypothesizing After Results are Known).
+- **Should be sensitive enough** to detect a meaningful effect within the available sample size/time (a metric that needs 10x current traffic to reach significance is a bad primary choice).
+- **Should minimize variance** where possible — e.g., ratio metrics or capped/Winsorized metrics reduce noise from outliers (particularly relevant for revenue-based primaries).
+- **One primary metric per decision is the safest default** — multiple co-primary metrics require a pre-defined resolution rule (e.g., "both must be positive," "at least one significant and none negative").
+- **Directionality must be specified up front**: is this a one-tailed or two-tailed test?
+
+### 3.5 Secondary metric nuances
+- Used to build a causal story ("why did the primary move?"), catch unexpected mechanisms, and inform iteration.
+- Should NOT be cherry-picked post-hoc to justify a ship decision when the primary metric failed ("secondary metric fishing").
+- Often organized as a **funnel** (each step from exposure → primary outcome) so a regression can be localized to a specific step.
+
+### 3.6 Composite OEC weighting nuances
+- Weights should reflect genuine business value trade-offs, ideally validated against outcomes (e.g., "does a +1 point OEC composite score historically predict +X% revenue 6 months later?").
+- Weighting schemes need periodic revalidation — business priorities shift (e.g., growth-stage weighting vs. monetization-stage weighting).
+- Risk: composite scores can mask which underlying metric actually moved — always publish the decomposition alongside the composite.
+
+### 3.7 Common OEC/primary-vs-secondary failure modes
+- **Optimizing a short-term proxy that diverges from long-term value** (classic case: optimizing clicks leads to clickbait; optimizing session length can encourage addictive, low-value engagement).
+- **HiPPO override**: ignoring guardrail vetoes because "the primary metric looks great" (Highest Paid Person's Opinion problem).
+- **Simpson's paradox**: an OEC can improve in aggregate while regressing in every major segment (or vice versa) — always check segment-level cuts before trusting an aggregate primary metric.
+- **Novelty effect**: primary metric spikes initially then decays — long-running or holdout experiments are used to check persistence.
+- **Metric misalignment across teams**: Team A's primary metric is Team B's guardrail — requires a shared, org-wide metric dictionary/registry to avoid contradictory optimization.
+
+---
+
+## 4. Putting it together: a worked example (B2B SaaS collaboration tool)
+
+| Layer | Example |
+|---|---|
+| **North Star** | Weekly Active Teams completing ≥1 shared workflow |
+| **Input/driver metrics** | New team activation rate, invite-to-teammate conversion, workflow completion frequency, cross-team document shares |
+| **Experiment**: "New onboarding checklist" | |
+| — OEC / Primary metric | % of new teams completing 3+ workflows in week 1 |
+| — Secondary metrics | Checklist completion rate, time-to-first-workflow, step-level drop-off |
+| — Guardrails | Support ticket rate (must not rise >5%), app latency (must not rise >100ms), 30-day churn (non-inferiority margin: -1pt) |
+| — Data-quality checks | SRM check on bucketing, event logging completeness |
+| — Counter-metric (accepted trade-off) | Slightly longer time-to-first-value is acceptable if week-4 retention improves |
+
+---
+
+## 5. Statistical deep dive
+
+### 5.1 Non-inferiority testing (the guardrail workhorse)
+Standard superiority test: H0: Δ = 0 vs. H1: Δ ≠ 0.
+Non-inferiority test: H0: Δ ≤ −m vs. H1: Δ > −m, where **m** is the pre-agreed non-inferiority margin (the maximum acceptable degradation). The guardrail "passes" if the confidence interval's lower bound stays above −m, even if the point estimate is slightly negative. Choosing **m** is itself a product/business judgment call, not a purely statistical one — too tight and every experiment gets blocked on noise; too loose and real regressions slip through.
+
+### 5.2 Sample size and minimum detectable effect (MDE)
+- Primary metrics: size the experiment for the smallest effect that's *decision-relevant* (not the smallest effect statistically detectable — those aren't the same thing).
+- Guardrails: since you're trying to rule out harm, guardrail MDE is often set smaller (more sensitive) than the primary MDE, requiring either larger samples or longer runtimes, or accepting a wider non-inferiority margin as a trade-off.
+- Underpowered guardrails are a common silent failure — teams report "no guardrail regression" when the test simply couldn't have detected one.
+
+### 5.3 Sequential and always-valid testing
+Because guardrails are often monitored continuously (peeking daily), naive fixed-horizon p-values inflate false-positive rates. Sequential testing methods (e.g., mSPRT, always-valid confidence sequences) let teams monitor safely without inflating Type I error — increasingly standard on experimentation platforms for guardrail dashboards.
+
+### 5.4 Variance reduction techniques for primary/OEC metrics
+- **CUPED (Controlled-experiment Using Pre-Experiment Data)**: uses pre-period behavior as a covariate to reduce variance and shrink confidence intervals without more traffic.
+- **Stratification**: bucketing by known high-variance segments (e.g., country, device) before randomization.
+- **Winsorization/capping**: bounding extreme values (common for revenue-per-user metrics, which are heavy-tailed) so a few whales don't dominate the estimate.
+- **Ratio metrics vs. average of ratios**: define metrics as (sum of numerator)/(sum of denominator) across users rather than averaging per-user ratios, to avoid divide-by-zero and small-denominator instability.
+
+### 5.5 Bayesian vs. frequentist framing
+Some orgs run OEC decisions with Bayesian methods (posterior probability that treatment beats control by more than X%, expected loss framing) instead of p-values/confidence intervals — this makes "probability of guardrail harm" more directly interpretable to non-statisticians, at the cost of requiring agreed-upon priors.
+
+---
+
+## 6. Governance & process
+
+### 6.1 Metric Definition Document (MDD) — recommended fields
+Every primary, guardrail, and North Star metric should have a single-source-of-truth definition doc containing: metric name, precise SQL/computation logic, owner, numerator/denominator definition, inclusion/exclusion filters (bots, internal traffic, test accounts), time window/grain, known caveats, historical baseline + seasonality notes, and last-reviewed date. Without this, "conversion rate" silently means five different things across five teams.
+
+### 6.2 Metric registry / catalog
+A centralized, searchable registry (not just docs scattered in wikis) prevents duplicate or contradictory metric definitions and lets an experimenter check "is this already someone else's guardrail?" before finalizing an OEC.
+
+### 6.3 Experiment review board / metrics council
+Larger orgs use a lightweight review step before high-impact launches: confirms primary metric was pre-registered, guardrails weren't quietly dropped, and segment cuts were checked. This is a process guardrail against the *organizational* failure modes (HiPPO override, p-hacking) as much as a statistical one.
+
+### 6.4 RACI sketch for the metric hierarchy
+| Metric layer | Typically Responsible | Typically Accountable |
+|---|---|---|
+| North Star | Growth/Product leadership | CPO/CEO |
+| Input/driver metrics | Feature-area product leads | VP Product |
+| OEC / Primary metric per experiment | Experiment owner (PM/eng) | Team lead |
+| Guardrails | Data science / experimentation platform team | Metrics council |
+| Data-quality checks | Experimentation platform / data eng | Platform lead |
+
+---
+
+## 7. Anti-pattern catalog (illustrative, generalized cases)
+
+| Anti-pattern | What happens | Why it's dangerous |
+|---|---|---|
+| **Metric whack-a-mole** | Team ships a change, primary metric flat, so they retroactively promote a secondary metric to "primary" post-hoc | Classic HARKing; inflates false-positive ship rate org-wide |
+| **Guardrail shopping** | Team quietly narrows the guardrail list before a risky launch | Removes the very check meant to catch the risk |
+| **Composite score gaming** | Team optimizes the weighted sub-component with the most "give" rather than genuine value | Composite OECs are especially vulnerable since improving any weighted input raises the score |
+| **Engagement/dark-pattern trap** | Primary metric (session count) rises because of increased friction/notifications, guardrail (opt-out rate) creeps up slowly and is ignored because each individual experiment's guardrail move is "not significant" | "Death by a thousand cuts" — needs aggregate trend monitoring, not just per-experiment gates |
+| **Local optimum trap** | Every team's OEC improves, North Star stagnates or declines | Poor input-metric-to-North-Star mapping, or metrics that trade off against each other across teams |
+| **Segment-blind shipping** | Aggregate primary metric improves; one large segment (e.g., a country, an OS version) regresses sharply | Simpson's Paradox — always slice primary + guardrails by major segments before shipping |
+| **Novelty-effect false win** | Metric spikes in week 1, launch is called a win, metric decays to baseline (or below) by week 4 | Needs longer holdouts or persistence checks before declaring long-term success |
+
+---
+
+## 8. Quick-reference glossary
+
+| Term | One-line definition |
+|---|---|
+| North Star Metric | Single long-term value metric for the whole product/company |
+| Input/Driver Metric | Metric that mechanically feeds the North Star |
+| OEC | The metric(s) an experiment/decision is actually judged on |
+| Primary Metric | The metric the ship/no-ship call hinges on |
+| Secondary Metric | Diagnostic metric explaining the primary's movement |
+| Guardrail Metric | Metric that must not regress; has veto power |
+| Counter-Metric | An accepted, expected trade-off metric |
+| Composite/Weighted OEC | Multiple metrics combined into one score |
+| Non-inferiority test | Statistical test used for guardrails (bounded degradation, not zero-change) |
+| Sample Ratio Mismatch (SRM) | A data-quality guardrail catching broken randomization |
+| Novelty effect | Temporary metric spike/dip that fades over time |
+| Simpson's Paradox | Aggregate trend reversing when segmented |
+| HARKing | Choosing/adjusting metrics after seeing results (a bias to avoid) |
+| Non-inferiority margin (m) | Max acceptable degradation allowed before a guardrail is considered breached |
+| CUPED | Variance-reduction technique using pre-experiment covariate data |
+| MDE (Minimum Detectable Effect) | Smallest effect size an experiment is powered to detect |
+| Sequential/always-valid testing | Statistical methods allowing safe continuous monitoring without inflated false positives |
+| Metric Definition Document (MDD) | Single-source-of-truth spec for how a metric is computed |
+| Metric registry | Centralized catalog of all official metric definitions |
+| Death by a thousand cuts | Many individually-insignificant regressions accumulating into a real aggregate harm |
+| Winsorization | Capping extreme outlier values before computing a metric, to reduce variance |
+| Holdout group | A long-running control group kept out of a launched feature to detect long-term/novelty-decay effects |
+| Cohort-normalized metric | Metric reported by signup cohort to separate growth effects from per-user behavior change |
+
+---
+
+*Frameworks referenced: Sean Ellis / Amplitude's North Star Framework; Ron Kohavi et al., "Trustworthy Online Controlled Experiments" (OEC, guardrail, non-inferiority testing concepts); standard A/B testing practice at large-scale experimentation platforms (Microsoft, Google, Booking.com, LinkedIn, Netflix, Airbnb).*
