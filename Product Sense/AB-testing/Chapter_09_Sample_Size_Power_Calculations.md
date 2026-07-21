@@ -220,3 +220,139 @@ A: Precision (CI width, and correspondingly your ability to resolve smaller effe
 
 ---
 *This tutorial merges two chapters on sample size and power analysis (one framed around Type I/II error mechanics and business Q&A, one framed around formula derivation and a full worked numeric example), plus an added section mapping how these levers ripple into confidence intervals, hypothesis testing, business prioritization, variance reduction, and test validity.*
+
+---
+---
+
+# PART 2 — EXTENDED NOTES (added)
+
+Everything above is unchanged from the original. Everything below extends it: more formula variants, more worked examples, tooling, pitfalls, and a bigger Q&A bank.
+
+---
+
+## 12. Beyond the Basic Two-Proportion Formula
+
+### 12.1 One-sided vs. two-sided tests
+The base formulas above use $z_{\alpha/2}=1.96$ (two-sided, α=0.05). If you only care about detecting an improvement (not a regression) and are willing to use a one-sided test, $z_\alpha = 1.645$ instead — a smaller critical value, which **reduces** required n for the same power. In practice:
+- Two-sided is the safer default for primary/OEC metrics (you generally do want to know if you made things *worse*, not just whether you failed to make them better).
+- One-sided tests are more common for guardrails, where you specifically care about one direction of harm (see Chapter on guardrail non-inferiority testing).
+- Switching from two-sided to one-sided "for free sample size" without a principled reason is a well-known way researchers quietly inflate power — reviewers/interviewers will probe whether the one-sided choice was justified by the actual decision being made, not just chosen after the fact to hit a smaller n.
+
+### 12.2 Unequal allocation ratios (k:1 splits)
+Not every test is 50/50. If treatment:control = k:1 (e.g., 90/10 to limit exposure to a risky feature), the per-arm sample size formula generalizes to:
+
+$$n_{\text{control}} = \frac{(z_{\alpha/2}+z_\beta)^2 \left[p_1(1-p_1)/k + p_2(1-p_2)\right]}{\delta^2}, \quad n_{\text{treatment}} = k \cdot n_{\text{control}}$$
+
+**Key nuance**: unequal splits always require a *larger total* sample size than an equal 50/50 split to achieve the same power — 50/50 is the variance-minimizing allocation. So the "limit exposure" strategy (e.g., 90/10) is a deliberate trade: slower time-to-significant-result (more total users needed) in exchange for less population exposed to unproven treatment at any given moment. This is exactly the risk/speed tradeoff flagged in Section 5 under "Traffic allocation," now with the formula behind it.
+
+### 12.3 Multiple treatment arms & multiple-comparison correction
+Testing several variants (A/B/C/D...) against one control means running multiple simultaneous comparisons, which inflates the family-wise false-positive rate. Common fixes (Bonferroni, Holm, Benjamini-Hochberg/FDR) effectively **shrink your usable α per comparison** (e.g., 0.05/3 ≈ 0.0167 for 3 treatment arms under Bonferroni), which **raises $z_{\alpha/2}$** and therefore **increases required n per arm** to hold the same power. Practical implication: the more variants you test at once, the more traffic each one needs — testing 4 variants isn't "free" just because they share a control group.
+
+### 12.4 Cluster-randomized designs & the design effect
+When randomization happens at a level *above* the individual (e.g., by store, by market, by school, by household) rather than per-user, observations within a cluster are correlated, not independent — violating the i.i.d. assumption baked into the formulas above. The required sample size must be inflated by the **design effect**:
+
+$$DE = 1 + (m-1)\rho$$
+
+where $m$ = average cluster size and $\rho$ = intraclass correlation (ICC), the fraction of variance explained by cluster membership. Required $n_{\text{cluster-adjusted}} = n_{\text{naive}} \times DE$. Even a small ICC (e.g., 0.02) can meaningfully inflate required sample size when cluster sizes are large — this is a frequent gotcha in geo-experiments and household-level randomization, and a common place naive sample-size calculators silently give wrong (too-small) answers.
+
+### 12.5 Ratio metrics and the delta method
+Many product metrics are ratios of two random variables (e.g., revenue per session = total revenue / total sessions), where both numerator and denominator vary per user/cluster. The naive variance formula for a simple mean doesn't apply directly. The **delta method** approximates the variance of a ratio metric:
+
+$$\text{Var}\left(\frac{\bar{X}}{\bar{Y}}\right) \approx \frac{1}{\bar{Y}^2}\left[\text{Var}(\bar{X}) - 2\frac{\bar{X}}{\bar{Y}}\text{Cov}(\bar{X},\bar{Y}) + \frac{\bar{X}^2}{\bar{Y}^2}\text{Var}(\bar{Y})\right]$$
+
+Plugging this variance into the standard means-based sample-size formula (in place of σ²) gives a correctly-sized experiment for ratio metrics. Skipping this and treating a ratio metric like a simple mean is a common source of mis-powered experiments on metrics like "revenue per visitor" or "click-through rate defined at the session level."
+
+### 12.6 Sequential testing's effect on sample size planning
+Fixed-horizon formulas (everything above) assume you pick n once and don't peek. **Sequential/always-valid methods** (mSPRT, group sequential designs, alpha-spending) instead let you monitor continuously and stop early when evidence is strong — trading a modest increase in *expected* sample size under the null for the ability to stop early under a real effect, without inflating Type I error. When planning, always-valid methods typically require specifying a *maximum* sample size (an upper bound) even though the *actual* number used will usually be smaller. This is the direct bridge from this chapter's "fixed n" world into the guardrail-monitoring "continuous peeking" world described elsewhere in this curriculum.
+
+---
+
+## 13. Practical Tools & Calculators
+
+| Tool | Notes |
+|---|---|
+| `statsmodels.stats.power` (Python) | `NormalIndPower`, `TTestIndPower` — direct implementations of the formulas above; good for scripting power curves |
+| R `pwr` package | `pwr.2p.test`, `pwr.t.test` — classic academic-stats equivalent |
+| Evan Miller's online A/B calculator | Fast sanity-check tool for two-proportion tests, widely used informally in industry |
+| Optimizely / commercial experimentation platforms | Built-in sample-size calculators, usually pre-wired to your account's historical baseline variance per metric |
+| G*Power | Standalone academic tool, supports a very wide range of designs (ANOVA, cluster, etc.) beyond simple two-arm tests |
+
+A quick sanity habit: compute the answer with the closed-form formula by hand *and* cross-check with a calculator/library — mismatches usually mean a wrong $\bar p$, wrong $z$-value, or a units mistake (percentage points vs. proportions is the single most common bug).
+
+---
+
+## 14. More Worked Examples
+
+### 14.1 Continuous metric example (revenue per user)
+Baseline average revenue per user (ARPU) = \$50/month, baseline standard deviation σ = \$120 (revenue is heavy-tailed). You want to detect a \$2 lift (δ = 2), α = 0.05 two-sided, 80% power.
+
+$$n = \frac{2\sigma^2(z_{\alpha/2}+z_\beta)^2}{\delta^2} = \frac{2\times120^2\times7.84}{2^2} = \frac{2\times14{,}400\times7.84}{4} = \frac{225{,}792}{4} \approx 56{,}448 \text{ per arm}$$
+
+Note how much larger this is than the earlier conversion-rate example — high-variance continuous metrics like raw revenue are expensive to power precisely *because* of that heavy tail, which is exactly why Winsorization/capping (mentioned in the guardrail statistics material) is such a commonly used variance-reduction step before running the power calculation, not just before analysis.
+
+### 14.2 Unequal split example (90/10)
+Same conversion scenario as Section 4 (10%→11%, δ=0.01) but now treatment:control = 9:1 instead of 1:1. Using the unequal-allocation formula from 12.2, the *control* arm requires roughly the naive 50/50 n multiplied by a factor of $(1+k)/(2k)$ relative to treatment sizing considerations, and total combined sample size ends up meaningfully higher than the ~29,480 total needed at 50/50 — illustrating concretely why "just give treatment less exposure" isn't a free risk-reduction move; it's a real slow-down in time-to-signal that has to be weighed against the exposure benefit.
+
+### 14.3 Three treatment arms vs. one control (Bonferroni-adjusted)
+Same conversion scenario, but now three variants (B, C, D) are each compared to control A. Bonferroni-adjusted per-comparison α = 0.05/3 ≈ 0.0167, giving $z_{\alpha/2} \approx 2.39$ instead of 1.96. Recomputing:
+
+$$n = \frac{2\times(2.39+0.84)^2\times0.094}{0.0001} = \frac{2\times10.43\times0.094}{0.0001} \approx 19{,}600 \text{ per arm}$$
+
+That's about **33% more traffic per arm** than the two-arm case (14,740 → ~19,600) purely from testing three variants at once instead of one — a concrete number to cite when a PM asks "can't we just test all four ideas together instead of picking one?"
+
+---
+
+## 15. Common Pitfalls Checklist
+
+- ❌ Computing power *after* the experiment using the observed effect size (post-hoc power) — always circular, never valid.
+- ❌ Mixing up percentage points and relative percentages when specifying δ (a "10% lift" on a 10% baseline is either 1pp absolute or 11pp absolute depending on which you meant — this single ambiguity silently breaks more sample-size calculations than any formula error).
+- ❌ Using the naive per-user formula on cluster-randomized or ratio-metric designs without adjusting for design effect / delta-method variance.
+- ❌ Treating a 90/10 (or other skewed) allocation as "cheap" — it always costs more total sample size than 50/50 for the same power.
+- ❌ Testing many variants against one control without correcting α, then being surprised the "significant" result doesn't replicate.
+- ❌ Setting MDE to whatever number makes the required sample size feel achievable, rather than to the smallest business-relevant effect.
+- ❌ Continuously peeking at a fixed-horizon test and stopping early the moment p < 0.05 — inflates false positive rate unless you're using a sequential/always-valid method designed for that.
+- ❌ Forgetting that halving MDE quadruples n (assuming it merely doubles).
+
+---
+
+## 16. Additional Interview Q&A
+
+**Q: How does testing 5 variants instead of 1 against a shared control change your sample size planning?**
+A: With a shared control, you're running multiple simultaneous hypothesis tests, which inflates the family-wise Type I error rate unless corrected (Bonferroni, Holm, or FDR). Correcting shrinks the usable per-comparison α, which raises the required $z_{\alpha/2}$ and therefore increases the required sample size per arm — so more variants against one control isn't "free," it's a real tax on both traffic and duration.
+
+**Q: If randomization happens at the store level instead of the customer level, how does that change your sample size calculation?**
+A: I'd need to account for the design effect from clustering — customers within the same store are correlated (through shared local factors like regional demand, staffing, promotions), which violates the independence assumption in the standard formula. I'd inflate the naive per-unit sample size by $1+(m-1)\rho$, where m is average cluster size and ρ is the intraclass correlation, otherwise I'd be systematically underpowering the test and overstating confidence.
+
+**Q: Your metric is "revenue per visitor," a ratio of two random quantities. Can you just plug its mean and variance into the standard formula?**
+A: Not directly — a ratio metric's variance isn't the same as a simple mean's variance, because both numerator and denominator vary together. I'd use the delta method to approximate the ratio's variance (accounting for the covariance between numerator and denominator) and plug that into the standard means-based sample-size formula, rather than naively treating it like a simple continuous metric.
+
+**Q: When would you deliberately choose a one-sided test to reduce required sample size, and what's the risk of doing that?**
+A: One-sided tests make sense when a regression in the "wrong" direction genuinely isn't an actionable outcome you'd act differently on — e.g., some guardrail checks that only care about harm in one direction. The risk is using it opportunistically just to shrink the required n after the two-sided calculation looked too expensive; that's a form of p-hacking-adjacent behavior, since it silently reduces your standard of evidence and should only be chosen for principled reasons decided before seeing any data.
+
+---
+
+## 17. Formula Cheat Sheet
+
+| Scenario | Formula |
+|---|---|
+| Two proportions, equal allocation | $n = \dfrac{2(z_{\alpha/2}+z_\beta)^2\bar p(1-\bar p)}{\delta^2}$ |
+| Two means, equal allocation | $n = \dfrac{2\sigma^2(z_{\alpha/2}+z_\beta)^2}{\delta^2}$ |
+| Unequal allocation (k:1) | $n_{\text{control}} = \dfrac{(z_{\alpha/2}+z_\beta)^2[p_1(1-p_1)/k+p_2(1-p_2)]}{\delta^2}$, $n_{\text{treatment}}=k\,n_{\text{control}}$ |
+| Cluster design effect | $DE = 1+(m-1)\rho$; $n_{\text{adj}} = n_{\text{naive}}\times DE$ |
+| Ratio-metric variance (delta method) | $\text{Var}\!\left(\frac{\bar X}{\bar Y}\right)\approx\frac{1}{\bar Y^2}\!\left[\text{Var}(\bar X)-2\frac{\bar X}{\bar Y}\text{Cov}(\bar X,\bar Y)+\frac{\bar X^2}{\bar Y^2}\text{Var}(\bar Y)\right]$ |
+| CI width / precision | $\propto \dfrac{1}{\sqrt n}$ |
+| Common z-values | $z_{0.05/2}=1.96$ (two-sided 95%), $z_{0.05}=1.645$ (one-sided 95%), $z_\beta=0.84$ (80% power), $z_\beta=1.28$ (90% power) |
+
+---
+
+## 18. Extended Comprehension Check (added)
+
+9. Why does an unequal 90/10 allocation always require more *total* sample size than a 50/50 split for the same power?
+10. What is the design effect, and why does ignoring it in a cluster-randomized experiment lead to overconfident (falsely narrow) results?
+11. Why can't you plug a ratio metric's naive mean/variance into the standard sample-size formula, and what technique fixes this?
+12. If you test 4 variants against a single control with Bonferroni correction, does each variant's required sample size go up, down, or stay the same compared to a single A/B test — and why?
+13. Give one legitimate reason to use a one-sided test, and one illegitimate reason someone might be tempted to use it.
+14. Why is "percentage points vs. relative percent" ambiguity in the MDE such a common practical bug, and how would you avoid it when writing a metric definition?
+
+---
+*Part 2 added: allocation-ratio and multi-arm formulas, cluster/design-effect adjustment, ratio-metric (delta method) variance, sequential-testing implications for sample-size planning, a tools table, two new worked examples, a pitfalls checklist, additional interview Q&A, a formula cheat sheet, and extended comprehension questions. Nothing from the original chapter was removed or altered.*
