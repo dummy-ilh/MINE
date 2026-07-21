@@ -2,7 +2,6 @@
 
 2. 100day_abtesting_days1to50.md
 4. Chapter_05_Causal_Inference_vs_Correlation.md
-5. Chapter_06_Metrics_NorthStar_Guardrails_OEC.md
 6. Chapter_09_Sample_Size_Power_Calculations.md
 7. Chapter_10_Randomization_Mechanics.md
 8. Chapter_30_mock.md
