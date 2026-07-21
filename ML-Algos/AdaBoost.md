@@ -159,6 +159,83 @@ $$H(x) = \text{sign}\left(\sum_m \alpha_m h_m(x)\right)$$
 
 For a new point, run it through every stump, multiply each stump's vote (+1/-1) by its α, sum, and take the sign. A highly accurate stump (large α) can outvote several weak, low-α stumps.
 
+
+
+## 6. Full Worked Example (By Hand)
+
+### Setup
+
+Binary classification. Predict whether a user churns (+1) or stays (-1) based on `sessions_last_week`.
+
+| User | sessions_last_week | y (true) |
+|---|---|---|
+| A | 1 | +1 (churn) |
+| B | 2 | +1 (churn) |
+| C | 8 | -1 (stay) |
+| D | 9 | -1 (stay) |
+
+4 users, so initial weight per user = 1/4 = 0.25.
+
+---
+
+### Round 1
+
+**Weights:** wA = wB = wC = wD = 0.25
+
+**Fit stump.** Try split: sessions ≤ 5 → predict +1 (churn), sessions > 5 → predict -1 (stay).
+
+| User | sessions | h₁(x) | y | Correct? |
+|---|---|---|---|---|
+| A | 1 | +1 | +1 | ✅ |
+| B | 2 | +1 | +1 | ✅ |
+| C | 8 | -1 | -1 | ✅ |
+| D | 9 | -1 | -1 | ✅ |
+
+All correct! err₁ = 0. In practice we'd cap this (err can't be exactly 0 in real implementations, to avoid α = ∞), but let's instead make it realistic — suppose the split is imperfect:
+
+**Realistic split:** sessions ≤ 4 → +1, sessions > 4 → -1, but user B has sessions=2 mislabeled by noise in a harder dataset. Let's use a version where one point is wrong:
+
+| User | sessions | h₁(x) | y | Correct? |
+|---|---|---|---|---|
+| A | 1 | +1 | +1 | ✅ |
+| B | 2 | +1 | +1 | ✅ |
+| C | 8 | -1 | -1 | ✅ |
+| D | 3 (relabel D's sessions to 3 for this example) | +1 | -1 | ❌ |
+
+**Weighted error:**
+$$err_1 = \frac{w_D \cdot \mathbb{1}}{\sum w_i} = \frac{0.25}{1.0} = 0.25$$
+
+**Learner weight:**
+$$\alpha_1 = 0.5 \ln\left(\frac{1 - 0.25}{0.25}\right) = 0.5 \ln(3) \approx 0.549$$
+
+**Update weights:**
+
+- A (correct): $w_A = 0.25 \cdot e^{-0.549} \approx 0.25 \times 0.577 = 0.144$
+- B (correct): $w_B \approx 0.144$
+- C (correct): $w_C \approx 0.144$
+- D (wrong): $w_D = 0.25 \cdot e^{+0.549} \approx 0.25 \times 1.732 = 0.433$
+
+**Normalize** (sum = 0.144+0.144+0.144+0.433 = 0.865):
+
+- wA ≈ 0.166, wB ≈ 0.166, wC ≈ 0.166, wD ≈ 0.500
+
+D's weight jumped from 0.25 to 0.50 — the next learner is now forced to get D right, essentially at the expense of anything else.
+
+---
+
+### Round 2
+
+The next stump is fit on this reweighted data. Because D now dominates the weight mass, whatever split best separates D from the pack will be favored — even if it slightly hurts A, B, or C. Suppose learner 2 correctly classifies D this time (and maybe misclassifies something with tiny weight). Its α₂ is computed the same way, and weights update again.
+
+---
+
+### Final Prediction
+
+$$H(x) = \text{sign}\left(\sum_m \alpha_m h_m(x)\right)$$
+
+For a new point, run it through every stump, multiply each stump's vote (+1/-1) by its α, sum, and take the sign. A highly accurate stump (large α) can outvote several weak, low-α stumps.
+
+---
 ---
 
 ## 7. Exponential Loss — The Hidden Objective
