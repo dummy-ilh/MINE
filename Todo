@@ -2,7 +2,6 @@
 ## ML Foundations
 1. [ ] **ML Basics** — bias-variance tradeoff, overfitting, underfitting, cross-validation (k-fold, stratified, LOOCV), evaluation metrics (precision, recall, F1, AUC-ROC, AUC-PR), class imbalance handling
 2. [ ] **Prob & Stats** — probability distributions (Gaussian, Bernoulli, Poisson, Beta), Bayes theorem, MLE vs MAP, hypothesis testing, CLT, confidence intervals, law of large numbers
-3. [ ] **A/B Testing** — experiment design, p-values, statistical power, Type I/II errors, sample size calculation, multiple testing correction (Bonferroni, FDR), novelty effects, network effects, common pitfalls
 
 ## Classical ML
 4. [ ] **Regression** — linear regression assumptions (LINE), ridge/lasso/elastic net regularization, multicollinearity, VIF, heteroscedasticity
