@@ -1,8 +1,4 @@
-Here is a streamlined, visually structured, and interview-ready version of your **Module 8 — Evaluation Metrics Deep Dive** notes.
 
-Key math formulas are rendered in clear LaTeX, key takeaways are highlighted with visual callouts, and an interactive **Confusion Matrix & Metric Calculator** tool is embedded below to test class imbalance scenarios in real time.
-
----
 
 # Module 8 — Evaluation Metrics Deep Dive
 
