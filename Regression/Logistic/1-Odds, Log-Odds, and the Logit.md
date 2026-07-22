@@ -1,424 +1,194 @@
-# Module 1 — Odds, Log-Odds, and the Logit
+# Module 1 — Odds, Log-Odds, and the Logit Link
 
 ## 1. WHY
 
-We just established: we can't model probability directly with a straight line, because probability is trapped between 0 and 1, and a straight line refuses to stay trapped anywhere.
+In Module 0, we established that we cannot model probability directly using a straight line ($y = \mathbf{w}^T \mathbf{x} + b$) because probabilities are trapped inside $[0, 1]$, while linear equations naturally range across $(-\infty, +\infty)$.
 
-So here's the trick statisticians came up with: **don't model probability directly. Model something else — something that CAN range from −∞ to ∞ — and then translate it back into a probability at the very end.**
+Statisticians solved this with an elegant trick: **do not model probability directly. Model a transformation of probability that spans $(-\infty, +\infty)$, and then reverse the transformation at the very end.**
 
-## 2. INTUITION — What are "odds"?
+---
 
-You've heard this in a betting context: *"The odds of that horse winning are 3 to 1."*
+## 2. INTUITION — What Are "Odds"?
 
-That sentence means: **for every 1 time the horse loses, we expect it to win 3 times.** Or: winning is 3 times more likely than losing.
+You are likely familiar with odds from sports betting: *"The odds of that team winning are 3 to 1."*
 
-Odds is just a **ratio**: 
+That means: **for every 1 time they lose, we expect them to win 3 times.** Winning is 3 times more likely than losing.
 
-**odds = (chances something happens) / (chances it doesn't happen)**
+$$\text{Odds} = \frac{\text{Probability event happens}}{\text{Probability event does NOT happen}} = \frac{p}{1 - p}$$
 
-Compare this to probability, which is:
+Compare this to **probability**:
 
-**probability = (chances something happens) / (all possible outcomes)**
+$$\text{Probability} = \frac{\text{Favorable outcomes}}{\text{Total possible outcomes}} = p$$
 
-Probability is "wins out of total races." Odds is "wins compared to losses." Same underlying data, different way of expressing it.
+* **Probability** asks: *"Wins out of total races."* Bounds: $[0, 1]$
+* **Odds** asks: *"Wins compared to losses."* Bounds: $[0, +\infty)$
 
-**Why does this matter for us?** Because probability is stuck in [0, 1], but odds can go much higher — all the way up to +∞ (if something is nearly certain, wins vastly outnumber losses). That's progress — we've unlocked one side of the number line. But odds still can't go negative — it stops at 0 (if something never happens). We need one more step to unlock the *other* side (negative numbers). That's what "log" will do, in a moment.
+By moving from probability to odds, we unlock the upper half of the number line — odds can shoot up to $+\infty$ when an event becomes nearly certain. However, odds still stop at $0$ when an event never happens. We are halfway to an unbounded scale.
 
-## 3. SIMPLE FORMULA — Odds
+---
 
-**In words:**
-> Odds of an event = (probability the event happens) divided by (probability the event does NOT happen)
+## 3. FORMULA — Odds
 
-**In simple notation:**
+$$\text{Odds}(p) = \frac{p}{1 - p}$$
 
-```
-odds = p / (1 - p)
-```
+Where:
 
-- `p` = probability the event happens (a number between 0 and 1)
-- `1 - p` = probability the event does NOT happen
-- `odds` = the ratio between the two
+* $p \in [0, 1]$ is the probability of the event occurring.
+* $1 - p$ is the probability of the event **not** occurring.
+
+---
 
 ## 4. WORKED NUMERIC EXAMPLE — Odds
 
-Say a customer has a **p = 0.75** (75%) probability of churning.
+If a customer has a probability of churn $p = 0.75$:
 
-```
-odds = 0.75 / (1 - 0.75)
-odds = 0.75 / 0.25
-odds = 3.0
-```
+$$\text{Odds} = \frac{0.75}{1 - 0.75} = \frac{0.75}{0.25} = 3.0$$
 
-**In plain English:** "This customer is 3 times more likely to churn than to stay." That matches the horse-racing intuition — "3 to 1."
+In plain English: *"This customer is 3 times more likely to churn than to stay."*
 
-Let's do a couple more, so the pattern sticks:
+| Probability ($p$) | $1 - p$ | $\text{Odds} = \frac{p}{1-p}$ | Plain English Interpretation |
+| --- | --- | --- | --- |
+| **0.50** | 0.50 | **1.0** | Equally likely to happen or not |
+| **0.90** | 0.10 | **9.0** | 9x more likely to happen than not |
+| **0.10** | 0.90 | **0.111** | 9x more likely **not** to happen |
+| **0.99** | 0.01 | **99.0** | Extremely likely to happen |
 
-| Probability (p) | 1 - p | Odds = p / (1-p) | Plain English |
-|---|---|---|---|
-| 0.50 | 0.50 | 1.0 | Equally likely to happen or not |
-| 0.90 | 0.10 | 9.0 | 9x more likely to happen than not |
-| 0.10 | 0.90 | 0.111 | About 9x more likely NOT to happen |
-| 0.99 | 0.01 | 99.0 | Extremely likely |
+---
 
-Notice something: probability only moves between 0 and 1, but odds can shoot up toward infinity (as p approaches 1) or shrink toward 0 (as p approaches 0). We've stretched out one side of the ruler. But it still can't go negative — the smallest odds can ever be is 0. **We're halfway to an unbounded scale.**
+## 5. LOG-ODDS (The "Logit")
 
-## 5. NOW — the log-odds (the "logit")
+To extend our domain down to $-\infty$, we apply the natural logarithm ($\ln$) to the odds:
 
-**WHY:** Odds solved half our problem (it can now go up to infinity), but it's still stuck at a floor of 0 — it can never be negative. We want a number that can be truly unbounded in *both* directions, so a straight-line model can predict it freely without breaking.
+$$\text{logit}(p) = \ln\left(\frac{p}{1 - p}\right)$$
 
-**INTUITION:** Take the **logarithm** of the odds. Here's the plain-English reason logs help: odds between 0 and 1 (meaning the event is less likely than not) become *negative* numbers once you take their log. Odds above 1 (event is more likely than not) become *positive* numbers. And odds of exactly 1 (50/50) become exactly 0. That's exactly the symmetric, unbounded number line we wanted!
+### Why the Logarithm Works:
 
-**SIMPLE FORMULA:**
+* **Odds $> 1$** (more likely than not) become **positive numbers** under the log.
+* **Odds $< 1$** (less likely than not) become **negative numbers** under the log.
+* **Odds $= 1$** ($50/50$ chance) becomes **exactly $0$**.
 
-**In words:**
-> Log-odds = the natural logarithm of the odds
+This gives us a perfectly symmetric, completely unbounded scale from $-\infty$ to $+\infty$.
 
-**In simple notation:**
-
-```
-logit = log(odds) = log( p / (1-p) )
-```
-
-- `p` = probability the event happens
-- `odds` = p / (1-p), as computed above
-- `log(...)` = natural logarithm (log base e) — don't worry about "why base e" yet, just think of it as "the standard log button"
-- `logit` = just a shorter name for "log-odds" — it's the name mathematicians gave this specific quantity
+---
 
 ## 6. WORKED NUMERIC EXAMPLE — Log-Odds
 
-Continuing our churn example, where **p = 0.75**, so **odds = 3.0**:
+Continuing our churn example where $p = 0.75$ and $\text{Odds} = 3.0$:
+
+$$\text{logit}(0.75) = \ln(3.0) \approx 1.0986$$
+
+Now test the complement: $p = 0.25$ (25% churn probability):
+
+$$\text{Odds} = \frac{0.25}{0.75} = 0.3333 \implies \text{logit}(0.25) = \ln(0.3333) \approx -1.0986$$
+
+### Full Transformation Mapping
+
+| Probability ($p$) | Odds ($\frac{p}{1-p}$) | Logit ($\ln(\text{Odds})$) | State |
+| --- | --- | --- | --- |
+| **0.01** | 0.0101 | **-4.60** | Highly unlikely |
+| **0.10** | 0.1111 | **-2.20** | Unlikely |
+| **0.25** | 0.3333 | **-1.10** | Moderately unlikely |
+| **0.50** | 1.0000 | **0.00** | $50/50$ decision boundary |
+| **0.75** | 3.0000 | **+1.10** | Moderately likely |
+| **0.90** | 9.0000 | **+2.20** | Likely |
+| **0.99** | 99.0000 | **+4.60** | Highly likely |
+
+```text
+PROBABILITY WORLD           ODDS WORLD              LOG-ODDS (LOGIT) WORLD
+    [0, 1]          --->     [0, +∞)       --->         (-∞, +∞)
 
 ```
-logit = log(3.0)
-logit = 1.0986
-```
 
-Let's also compute the flip side — what if p = 0.25 (25% chance of churning)?
+---
 
-```
-odds = 0.25 / 0.75 = 0.333
-logit = log(0.333)
-logit = -1.0986
-```
+## 7. WHAT IS A "LINK FUNCTION"?
 
-**Notice the symmetry:** p = 0.75 gives logit = +1.0986. p = 0.25 (the mirror image) gives logit = **−1.0986** — same magnitude, flipped sign. That's the unbounded, symmetric number line we were after.
+In Generalized Linear Models (GLMs), a **link function** $g(\cdot)$ bridges the gap between the expected value of our bounded outcome and our linear combination of features:
 
-And the midpoint check: p = 0.50 →
+$$g(p) = \mathbf{w}^T \mathbf{x} + b$$
 
-```
-odds = 0.50 / 0.50 = 1.0
-logit = log(1.0) = 0
-```
+For logistic regression, our link function is the **logit function**:
 
-Log-odds of exactly 0 means "totally undecided, 50/50." Positive logit = "more likely than not." Negative logit = "less likely than not." This is a clean, intuitive number line.
+$$\text{logit}(p) = \ln\left(\frac{p}{1 - p}\right) = \mathbf{w}^T \mathbf{x} + b$$
 
-Here's the full picture as a table:
+Once we map probabilities into "straight-line world" via the logit link, standard linear operations work seamlessly without violating probability constraints.
 
-| p | odds | logit = log(odds) |
-|---|---|---|
-| 0.01 | 0.0101 | -4.60 |
-| 0.10 | 0.111 | -2.20 |
-| 0.25 | 0.333 | -1.10 |
-| 0.50 | 1.0 | 0.00 |
-| 0.75 | 3.0 | +1.10 |
-| 0.90 | 9.0 | +2.20 |
-| 0.99 | 99.0 | +4.60 |
+---
 
-Now you can see it end to end: **p is squeezed into [0,1]... odds stretches that to [0, ∞)... and log(odds) stretches that further into (−∞, +∞).** We've built a fully unbounded scale, one step at a time, starting from a bounded probability.
+## 8. MATHEMATICAL DEEP DIVE: Anti-Symmetry & Sigmoid Mirroring
 
-## 7. So what IS a "link function"?
+### 1. Proof of Log-Odds Anti-Symmetry
 
-Now the payoff — the term you said trips you up.
+Let us prove that $\text{logit}(1 - p) = -\text{logit}(p)$:
 
-**A link function is just the name for the math operation that translates between "probability world" (bounded, 0 to 1) and "straight line world" (unbounded, −∞ to ∞).**
+$$\text{logit}(1 - p) = \ln\left(\frac{1 - p}{p}\right) = \ln\left(\left(\frac{p}{1 - p}\right)^{-1}\right)$$
 
-In our case, the link function is exactly what we just built: **logit(p) = log(p / (1-p))**. That's it. That's the whole mystery. "Link function" is just formal vocabulary for "the translator function." Logistic regression's specific translator is called the **logit link**.
+Using the natural logarithm identity $\ln(x^{-1}) = -\ln(x)$:
 
-Here's the mental model to keep forever:
+$$\text{logit}(1 - p) = -\ln\left(\frac{p}{1 - p}\right) = -\text{logit}(p) \quad \blacksquare$$
 
-```
-PROBABILITY WORLD  --[link function: logit]-->  STRAIGHT-LINE WORLD
-   (0 to 1)                                          (−∞ to +∞)
-```
+### 2. Sigmoid Symmetry Derivation
 
-Once we're in "straight-line world," we CAN do ordinary linear regression math (weighted sum of features) without breaking anything — because that world has no boundaries to violate. Then, at the end, we need a way to translate *back* from straight-line world to probability world so we get a usable prediction. That "un-translator" is the **sigmoid function** — which is exactly what Module 2 covers next.
+The **sigmoid function** $\sigma(z)$ is the inverse of the logit function, mapping linear outputs $z = \mathbf{w}^T \mathbf{x} + b$ back to probabilities:
 
-## 8. INTERPRETATION
+$$\sigma(z) = \frac{1}{1 + e^{-z}}$$
 
-In real terms: when you fit a logistic regression model, internally it's predicting **log-odds**, not probability directly. A coefficient in the model tells you "how much does the log-odds change when this feature increases by 1 unit" —
+Given $z = \text{logit}(p) \implies \sigma(z) = p$:
+
+$$\sigma(-z) = \frac{1}{1 + e^z} = \frac{e^{-z}}{e^{-z}(1 + e^z)} = \frac{e^{-z}}{1 + e^{-z}} = \frac{(1 + e^{-z}) - 1}{1 + e^{-z}} = 1 - \frac{1}{1 + e^{-z}} = 1 - \sigma(z)$$
+
+$$\sigma(-z) = 1 - \sigma(z)$$
+
+This confirms that the sigmoid curve is point-symmetric around $(0, 0.5)$.
+
+---
 
 ## 9. FAANG L5 ANGLE
 
-**Common interview question:** *"What is a link function, and why does logistic regression use the logit link?"*
+### Common Interview Questions & High-Impact Answers
 
-Strong answer: "A link function maps the bounded probability space to an unbounded real-number space so we can model it linearly. Logistic regression uses the logit — log-odds — because it's the natural link that comes out of assuming the data follows a Bernoulli/binomial distribution" (you don't need the distributional theory yet, just know this phrase exists).
+> **Q1: What is a link function, and why does logistic regression use the logit link?**
+> * **Answer:** A link function transforms a bounded target space into an unbounded continuous space so it can be modeled via a linear combination of features. Logistic regression uses the logit link because it is the **natural (canonical) link function** for the Bernoulli/Binomial distribution in the Exponential Family. It directly maps log-odds to linear predictor space while ensuring natural mathematical properties (like concave cross-entropy loss optimization).
+> 
+> 
 
-**Common follow-up:** *"Why not just use log(p) directly as the link, instead of log(p/(1-p))?"*
-Good answer: log(p) alone is only bounded on one side — it still can't exceed 0 no matter what p is (since p ≤ 1 means log(p) ≤ 0), so it never becomes unbounded on the positive side. You need the *odds ratio* first (which stretches things toward +∞), and only then log gives you full two-sided unboundedness.
+> **Q2: Why not use $\ln(p)$ directly as the link function instead of $\ln\left(\frac{p}{1-p}\right)$?**
+> * **Answer:** $\ln(p)$ is only unbounded on one side. Since $p \le 1$, $\ln(p) \le 0$, ranging from $(-\infty, 0]$. This leaves the upper bound at $0$, meaning a large positive linear dot product $\mathbf{w}^T \mathbf{x} + b$ would still produce invalid probabilities. Taking the ratio $p / (1-p)$ first stretches the upper bound to $+\infty$, allowing $\ln$ to create a truly unbounded scale $(-\infty, +\infty)$.
+> 
+> 
 
-**Common trap:** Candidates memorize "logit = log(p/(1-p))" as a formula but can't explain *why* each step (odds, then log) is necessary. Interviewers at L5 want you to justify the construction, not just recite it.
+---
 
-## 10. QUICK PYTHON CHECK
+## 10. PYTHON VERIFICATION
 
 ```python
 import numpy as np
 
-def odds(p):
+def odds(p: float | np.ndarray) -> float | np.ndarray:
     return p / (1 - p)
 
-def logit(p):
+def logit(p: float | np.ndarray) -> float | np.ndarray:
     return np.log(odds(p))
 
-# verify our table
-for p in [0.01, 0.10, 0.25, 0.50, 0.75, 0.90, 0.99]:
-    print(f"p={p:.2f}  odds={odds(p):.3f}  logit={logit(p):.3f}")
-```
+def sigmoid(z: float | np.ndarray) -> float | np.ndarray:
+    return 1 / (1 + np.exp(-z))
 
-## 11. CHECK — before Module 2
+probs = np.array([0.01, 0.10, 0.25, 0.50, 0.75, 0.90, 0.99])
+for p in probs:
+    o = odds(p)
+    l = logit(p)
+    p_rec = sigmoid(l)
+    print(f"p = {p:.2f} | Odds = {o:7.3f} | Logit (z) = {l:6.3f} | Sigmoid(z) = {p_rec:.2f}")
 
-1. If a feature's odds ratio is 2.0, what does that mean in plain English about the event happening?
-Odds of 2.0 = the event is twice as likely to happen as not happen. ✓
-2. Why can't we stop at "odds" and skip taking the log — what specifically would still be broken if we tried to model raw odds with a straight line?
-Odds is bounded at 0 on the low end (can never go negative), so it's only "half-unbounded" — that's precisely why we needed the log step to get a truly symmetric, unbounded number line. ✓
-
-## Additional
-
-p: bounds [0, 1], why sigmoid enforces this
-
-Odds: p/(1-p), bounds [0, ∞), interpretation as "ratio of probabilities"
-
-Log-odds (logit): ln(p/(1-p)), bounds (-∞, ∞), why this is the natural parameter for Bernoulli
-
-Emphasize that linear layers output logits (unbounded), and sigmoid maps to probabilities
-
-
-
-
-
-
-# Log-Odds Anti-Symmetry and Sigmoid Symmetry
-
-Excellent! Let's break this down step by step.
-
----
-
-# 1. The Mathematical Derivation
-
-The **log-odds** of a probability `p` is defined as:
-
-```text
-log-odds(p) = ln(p / (1 - p))
-```
-
-Now consider the complement probability `1 - p`:
-
-```text
-log-odds(1 - p) = ln((1 - p) / p)
-```
-
-We want to prove:
-
-```text
-ln((1 - p) / p) = -ln(p / (1 - p))
 ```
 
 ---
 
-## Step 1: Rewrite the Fraction
+## 11. CONCEPT CHECK
 
-Notice that:
+1. **If a feature increases the odds of an event by a factor of 2.0 (Odds Ratio = 2.0), what does that mean?**
+* *Answer:* The event is now twice as likely to happen relative to not happening compared to baseline.
 
-```text
-(1 - p) / p = 1 / (p / (1 - p))
-```
 
-So,
-
-```text
-ln((1 - p) / p)
-= ln(1 / (p / (1 - p)))
-```
-
----
-
-## Step 2: Apply the Logarithm Rule
-
-Recall:
-
-```text
-ln(1/x) = -ln(x)
-```
-
-Let
-
-```text
-x = p / (1 - p)
-```
-
-Then,
-
-```text
-ln(1 / (p / (1 - p)))
-= -ln(p / (1 - p))
-```
-
----
-
-## Step 3: Conclusion
-
-Therefore,
-
-```text
-ln((1 - p) / p) = -ln(p / (1 - p))
-```
-
-or
-
-```text
-log-odds(1 - p) = -log-odds(p)
-```
-
-This property is called **anti-symmetry**.
-
----
-
-# 2. Why This Makes the Sigmoid Symmetric
-
-The sigmoid function is
-
-```text
-σ(z) = 1 / (1 + e^(-z))
-```
-
-where
-
-```text
-z = log-odds(p)
-```
-
-From the previous result,
-
-```text
-log-odds(1 - p) = -z
-```
-
-Therefore,
-
-```text
-σ(z) = p
-```
-
-implies
-
-```text
-σ(-z) = 1 - p
-```
-
-or
-
-```text
-σ(-z) = 1 - σ(z)
-```
-
-This means the sigmoid is symmetric around the point **(0, 0.5)**.
-
----
-
-# 3. Concrete Example
-
-Let
-
-```text
-p = 0.75
-```
-
-### Log-Odds of 0.75
-
-```text
-log-odds(0.75)
-= ln(0.75 / 0.25)
-= ln(3)
-≈ 1.0986
-```
-
----
-
-### Log-Odds of 0.25
-
-```text
-log-odds(0.25)
-= ln(0.25 / 0.75)
-= ln(1/3)
-= -ln(3)
-≈ -1.0986
-```
-
----
-
-### Verify Anti-Symmetry
-
-```text
-1.0986 = -(-1.0986) ✓
-```
-
----
-
-### Verify the Sigmoid
-
-```text
-σ(1.0986) ≈ 0.75
-σ(-1.0986) ≈ 0.25
-```
-
-Notice that
-
-```text
-0.25 = 1 - 0.75
-```
-
-Therefore,
-
-```text
-σ(-z) = 1 - σ(z)
-```
-
----
-
-# Visual Intuition
-
-```text
-Probability
-
-1.0 |
-    |
-0.8 |                ●
-    |             /
-0.5 |-----------●-----------
-    |         /
-0.2 |      ●
-    |
-0.0 +---------------------------->
-       -z      0         +z
-
-σ(-z) = 1 - σ(z)
-```
-
----
-
-# Key Takeaways
-
-- Swapping `p` and `1 - p` flips the odds ratio.
-- Taking the logarithm of a reciprocal changes the sign.
-- Therefore:
-
-```text
-log-odds(1 - p) = -log-odds(p)
-```
-
-- Since the sigmoid is the inverse of the log-odds function:
-
-```text
-σ(-z) = 1 - σ(z)
-```
-
-This is why the sigmoid curve is symmetric about **(0, 0.5)**.
+2. **Why is raw odds alone insufficient as a target for linear regression?**
+* *Answer:* Raw odds is bounded below by $0$. A standard linear regression line can still output negative values for small inputs, violating the domain of odds. We need the logarithm to map $[0, +\infty)$ to $(-\infty, +\infty)$.
