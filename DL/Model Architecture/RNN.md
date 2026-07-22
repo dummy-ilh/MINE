@@ -557,3 +557,226 @@ $$\#params = D_{in}D_{out} + D_{out}^2 + D_{out} + D_{out}K + K$$
 5. **Effective memory ≈ 5-10 steps** — know this number cold, it's asked constantly.
 6. **LSTM/GRU fix vanishing via additive (not multiplicative) recurrence** — you don't need their internals for this doc, but you must be able to say this sentence correctly.
 7. Always be able to **derive BPTT by hand for a 2-3 step toy example** — this is the single highest-leverage whiteboard exercise for this topic.
+
+
+
+# Vanilla RNN — Q&A Bank Answer Key
+
+*Companion to `vanilla_rnn_interview_reference.md`. Answers are written at whiteboard-interview depth — concise but complete, with the derivation shown wherever the question asks for one.*
+
+---
+
+# Module 1 — Answers
+
+## Tier 1
+
+**1. Why can't a standard feedforward network process a variable-length sequence directly?**
+A feedforward net's input layer has a fixed number of weights, one set per input position — the architecture is literally $y=f(Wx+b)$ with $W$ shaped for a specific $x$ dimensionality. A 5-word input and a 50-word input can't share that $W$ unless you pad/truncate to a fixed length, which throws away the variable-length structure and still gives the network no mechanism for treating "word 3" consistently regardless of what came before it — it has no notion of order or state carried across positions.
+
+**2. What does "weight sharing across time steps" mean, and why does the RNN need it?**
+The *same* physical tensors $W_{xh}, W_{hh}, W_{hy}$ are reused at every time step $t=1,\dots,T$, rather than learning a distinct set of weights per position. This is what makes the parameter count independent of sequence length — the model can process a 10-step or 10,000-step sequence with the exact same weights, which is a hard requirement for variable-length input.
+
+**3. What is the role of the hidden state $h_t$? Is it a fixed-size vector, and does its size depend on sequence length?**
+$h_t$ is a compressed running summary of everything the network has seen up through step $t$ — it's the mechanism by which past information influences future predictions. It's a fixed-size vector of dimension $D_{out}$ (the hidden dimension you choose), and critically, that size is **independent of sequence length** — a 1000-step sequence and a 5-step sequence both produce an $h_t \in \mathbb{R}^{D_{out}}$.
+
+**4. Why is $\tanh$ the default nonlinearity in vanilla RNNs rather than ReLU or sigmoid?**
+Two reasons: (1) $\tanh$ is bounded in $(-1,1)$, so purely additive accumulation of the recurrence doesn't blow up the hidden state the way unbounded ReLU can; (2) $\tanh$ is zero-centered (sigmoid is not), which tends to give better-conditioned gradients since outputs aren't systematically biased positive. ReLU-based RNNs exist but require much more careful initialization to avoid exploding hidden states, since there's no saturating ceiling.
+
+**5. Given $D_{in}=10, D_{out}=64, K=1$, parameter count?**
+$$\#params = D_{in}D_{out} + D_{out}^2 + D_{out} + D_{out}K + K = (10)(64) + 64^2 + 64 + (64)(1) + 1$$
+$$= 640 + 4096 + 64 + 64 + 1 = \mathbf{4865}$$
+
+## Tier 2
+
+**1. Derive every intermediate tensor shape: $B=32, T=20, D_{in}=8, D_{out}=128$.**
+- Input batch $X$: $(32, 20, 8)$
+- Slice at step $t$, $x_t$: $(32, 8)$
+- $W_{xh}$: $(8, 128)$ → $x_t W_{xh}$: $(32, 128)$
+- $h_{t-1}$: $(32, 128)$
+- $W_{hh}$: $(128, 128)$ → $h_{t-1}W_{hh}$: $(32, 128)$
+- $b_h$: $(128,)$, broadcasts over batch
+- $h_t = \tanh(\cdot)$: $(32, 128)$ — same shape every step
+- If $K=1$ output: $W_{hy}$: $(128, 1)$ → $\hat y_t$: $(32, 1)$
+
+**2. Show numerically that $h_2$ has nonzero gradient w.r.t. $x_1$.**
+Using §1.4's numbers ($W_{xh}=0.5, W_{hh}=0.8$, $h_0=0$): $h_1 = \tanh(0.5 x_1)$, $h_2=\tanh(0.5x_2 + 0.8h_1)$. Then
+$$\frac{\partial h_2}{\partial x_1} = \frac{\partial h_2}{\partial h_1}\cdot\frac{\partial h_1}{\partial x_1} = \big[(1-h_2^2)\cdot W_{hh}\big]\cdot\big[(1-h_1^2)\cdot W_{xh}\big]$$
+Plugging in $h_1=0.462, h_2=0.878$: $(1-0.878^2)\times0.8 = 0.1832$, and $(1-0.462^2)\times0.5=0.3933$. Product $= 0.1832\times0.3933 \approx 0.0720 \ne 0$.
+This proves $x_1$ has a real, nonzero causal influence on $h_2$ — mathematically, this *is* what "memory" means in an RNN: not a discrete storage slot, but a nonzero partial derivative connecting an early input to a later state.
+
+**3. Why is $h_t$ a "compressed summary" — what's necessarily lost?**
+$h_t \in \mathbb{R}^{D_{out}}$ is fixed-size regardless of how many tokens preceded it, but the information contained in $t$ raw inputs generally grows with $t$ (in the worst case, arbitrarily). Squeezing an unboundedly growing amount of information into a fixed-size vector necessarily means older or less-reinforced information gets overwritten/blended away — there's no architectural mechanism (no separate memory slots, no selective gating) to protect specific past information from being diluted by new updates. This is structural, not a training failure — it holds even with a perfectly trained model, and is exactly why gated architectures add a separate cell state / gating mechanism.
+
+**4. If $D_{out}$ doubles, how does parameter count scale? Which matrix dominates?**
+$W_{hh}$ scales as $D_{out}^2$ (quadratic), while $W_{xh}$ scales as $D_{in}D_{out}$ and $W_{hy}$ as $D_{out}K$ (both linear in $D_{out}$). So doubling $D_{out}$ roughly **quadruples** the $W_{hh}$ term while only doubling the others. As $D_{out}\to\infty$, $W_{hh}$ dominates total parameter count — this is why hidden-dim growth is the primary lever affecting model size in RNNs.
+
+## Tier 3
+
+**1. Edge device, hidden dim = 16 — tradeoffs?**
+A hidden dim of 16 severely limits the amount of information $h_t$ can retain — you're compressing sensor history into a 16-dimensional vector, which will bottleneck accuracy on any task needing to track multiple correlated signals (e.g., temperature + humidity + pressure trends simultaneously) or longer-range patterns. The tradeoff is: latency and memory are excellent (parameter count and per-step compute scale with $D_{out}^2$, so 16 is tiny), but you should expect to need either (a) strong feature engineering to hand-supply what the small hidden state can't learn to retain, or (b) a shorter effective lookback window matched to what a 16-dim state can realistically encode, since pushing for long-range dependencies here will just underfit.
+
+**2. RNN time-sharing vs. 1D CNN space-sharing — when is each more natural?**
+An RNN's parameter sharing assumes the *same transformation* is appropriate regardless of *how far into the sequence* you are — a natural fit when the underlying process is stationary over time (e.g., the rule "combine current input with running state" doesn't change whether you're at step 5 or step 500). A 1D CNN's parameter sharing assumes a *local, position-invariant pattern* (a kernel detects the same feature wherever it appears in the input) — natural when the signal has local structure that recurs at different spatial locations (e.g., detecting a spike pattern in a sensor stream regardless of where it occurs), but the CNN's fixed receptive field means it doesn't naturally model *unbounded* long-range dependency the way an RNN's recurrence conceptually can. Prefer RNN-style recurrence when you need a running summary that persists indefinitely; prefer CNN-style sharing when the relevant patterns are local and translation-invariant and you care about parallelizable training.
+
+**3. Why does fixed-size $h_t$ impose a hard theoretical limit, regardless of training quality?**
+Information-theoretically, $h_t \in \mathbb{R}^{D_{out}}$ under finite-precision arithmetic can represent only a bounded number of distinguishable states — roughly $O(D_{out})$ bits of information at reasonable precision. If the "true" information content of an arbitrarily long input sequence grows without bound (e.g., you need to exactly recall a token from thousands of steps back, and *many* such tokens could matter), no amount of training can make a fixed $D_{out}$-dimensional vector losslessly encode an unboundedly growing quantity of information — this is a pigeonhole-style capacity ceiling baked into the architecture, not something optimization can train around. This is the deepest reason attention-based architectures (which retain access to *all* past positions individually, rather than compressing them into one vector) scale better to long contexts.
+
+---
+
+# Module 2 — Answers
+
+## Tier 1
+
+**1. What is BPTT, and how does it differ from standard backprop in a feedforward net?**
+BPTT (Backpropagation Through Time) is standard backpropagation applied to the *unrolled* computational graph of an RNN, where each time step is treated like a layer. The key difference from a normal feedforward net: because the *same* weight matrices are reused at every time step, the true gradient w.r.t. a weight is the **sum of that weight's gradient contributions from every time step**, not just one layer's contribution.
+
+**2. In one sentence, what causes vanishing gradients in vanilla RNNs?**
+Backpropagating through $T$ time steps requires multiplying together $T-1$ copies of $\text{diag}(1-\tanh^2(z_j))W_{hh}$, and since $\tanh'\le 1$ always shrinks the product, gradients from distant time steps decay roughly geometrically toward zero.
+
+**3. What does gradient clipping do, and which problem does it solve?**
+It rescales the gradient vector so its norm never exceeds a threshold $c$: if $\|\mathbf g\| > c$, replace $\mathbf g$ with $c\cdot\mathbf g/\|\mathbf g\|$. It solves **exploding** gradients — it caps how large a single update step can be, preventing NaN/divergence. It does nothing for vanishing gradients (there's no floor being imposed, only a ceiling).
+
+**4. Why must we cache all intermediate hidden states before running BPTT?**
+Every backward-pass gradient term (e.g., $\partial h_j/\partial h_{j-1}$) depends on the pre-activation/hidden-state values computed during the forward pass at that specific step (through the $\tanh'$ term). Without caching $h_1,\dots,h_T$, you'd have no way to evaluate those local Jacobians during the backward sweep — you'd have to redo the forward pass, which is exactly why BPTT memory cost scales as $O(TH)$.
+
+## Tier 2
+
+**1. Derive $\partial h_T/\partial h_1$ symbolically; why a product, not a sum?**
+$$h_T = f(h_{T-1}), \quad h_{T-1}=f(h_{T-2}), \ \dots\ , h_2 = f(h_1)$$
+By the chain rule applied repeatedly:
+$$\frac{\partial h_T}{\partial h_1} = \frac{\partial h_T}{\partial h_{T-1}}\cdot\frac{\partial h_{T-1}}{\partial h_{T-2}}\cdots\frac{\partial h_2}{\partial h_1} = \prod_{j=2}^{T}\frac{\partial h_j}{\partial h_{j-1}}$$
+It's a **product** because each $h_j$ is a *function composition* applied to $h_{j-1}$ (not an independent additive contribution) — the chain rule for composed functions multiplies local derivatives together, it doesn't add them. (Sums appear elsewhere — e.g., total loss gradient across time steps — but the path from $h_1$ to $h_T$ through the recurrence is a single composed function, hence a product of Jacobians.)
+
+**2. Why does $\text{diag}(1-\tanh^2(z))$ have entries in $[0,1]$, and why does that mean $\tanh$ contributes to but doesn't singlehandedly cause vanishing?**
+$\tanh'(z) = 1-\tanh^2(z)$, and since $\tanh(z)\in(-1,1)$ for all real $z$, $\tanh^2(z)\in[0,1)$, so $1-\tanh^2(z)\in(0,1]$ — it's maximal (equal to 1) only at $z=0$ and shrinks toward 0 as $|z|$ grows. This factor is *always* $\le 1$, so it never amplifies, only shrinks or preserves. But it doesn't *singlehandedly* cause vanishing — the other factor in the product is $W_{hh}$ itself, and if $W_{hh}$'s eigenvalues are large enough, the combined product $D_jW_{hh}$ could still have spectral norm $>1$ at some steps (leading to exploding, not vanishing). It's the **combination** of the always-shrinking $D_j$ term and $W_{hh}$'s spectral properties that determines the actual regime — you can't diagnose which one wins from $\tanh$ alone.
+
+**3. $W_{hh}$ eigenvalues $\{0.9, 1.3, -0.5\}$ — what happens over 50 steps, and why does the largest-magnitude eigenvalue dominate?**
+The largest-magnitude eigenvalue here is $1.3$ (magnitude 1.3, versus $0.9$ and $|-0.5|=0.5$). As you repeatedly apply $W_{hh}$ (i.e., raise it to higher powers via the recurrence), the component of any vector aligned with the eigenvector for $\lambda=1.3$ grows as $1.3^{50} \approx 4.97\times10^5$, while components aligned with $0.9$ or $-0.5$ shrink toward zero ($0.9^{50}\approx0.0052$, $0.5^{50}\approx8.9\times10^{-16}$). Over many repeated multiplications, whichever eigenvalue has the largest magnitude comes to dominate the matrix power $W_{hh}^{50}$ entirely (in the limit, $W_{hh}^n \approx \lambda_{max}^n \cdot(\text{rank-1 projector onto its eigenvector})$) — so you should expect the **exploding** regime to dominate the gradient dynamics here, even though two of the three eigenvalues are $<1$.
+
+**4. Numeric example: gradient w.r.t. $W_{hh}$ accumulates over all time steps.**
+See the full worked example in §2.5 of the reference doc: $\partial L/\partial W_{hh} = \sum_t \partial L_t/\partial W_{hh}\big|_{\text{via path through } h_t}$. Concretely there, $\partial L/\partial W_{hh}\big|_{t=2} = -0.0516$ and $\partial L/\partial W_{hh}\big|_{t=1}=0$ (since $h_0=0$ kills that term), summing to $-0.0516$ total — showing explicitly that the total gradient is a **sum across time steps' local contributions**, not just the final step's.
+
+**5. Why does truncated BPTT reduce compute/memory but not solve vanishing over the untruncated horizon?**
+Truncated BPTT caps backprop at $k$ steps, so you only ever compute gradients over a $k$-step window — this bounds memory ($O(kH)$ instead of $O(TH)$) and avoids ever forming a product of more than $k$ Jacobians, which controls compute and prevents *extreme* explosion over very long unrolls. But it doesn't change the *underlying* mathematics of the recurrence — if information genuinely needs to flow from step $t-50$ to affect step $t$, and $k<50$, truncated BPTT simply **never even attempts** to learn that dependency; it's not solving vanishing gradients so much as giving up on gradients beyond the truncation window by construction.
+
+## Tier 3
+
+**1. Loss oscillates then NaNs after a few hundred steps — debugging process?**
+Step-by-step: (1) log the raw gradient norm (pre-clipping) every step — a sharp spike right before the NaN confirms exploding gradients. (2) Check whether gradient clipping is actually enabled and where in the loop it's called (must be after `backward()`, before `optimizer.step()`). (3) Check learning rate — an LR too high can push $W_{hh}$'s effective spectral radius over 1 during training even if it started well-initialized. (4) Check $W_{hh}$ initialization — verify it's orthogonal/identity-scaled rather than default random init, which can start with spectral radius already >1. (5) Check for exploding *inputs* (e.g., unnormalized time series features) — a huge $x_t$ can itself drive $z_t$ into a large-gradient regime independent of $W_{hh}$. (6) If clipping is present and correctly placed but the norm is still erratic, reduce max_norm and/or lower LR as an immediate fix, then longer-term consider switching to LSTM/GRU if the sequence length genuinely requires long-range dependencies.
+
+**2. Vanishing gradients in deep feedforward nets vs. RNNs — same and different?**
+Same: both stem from repeatedly multiplying together Jacobians whose norm is $\le1$ (per-layer/per-step), causing the product to shrink geometrically with depth/sequence length — the *mathematical mechanism* (product of sub-unity-norm matrices) is identical. Different: in a deep feedforward net, **each layer has its own distinct weight matrix**, so in principle you could initialize/scale each layer differently to counteract the compounding shrinkage (this is part of why techniques like careful per-layer initialization, batch norm, and eventually residual connections helped). In an RNN, **the same $W_{hh}$ is reused at every step** — you can't independently tune "step 47's transformation" separately from "step 3's," because they're the literal same matrix; this makes the RNN's vanishing gradient problem structurally more rigid; the fix space is smaller (initialization of one shared matrix, or architectural changes like gating) rather than being solvable per-layer.
+
+**3. Why does orthogonal init help only at initialization, not throughout training?**
+Orthogonal initialization sets $W_{hh}$'s singular values (hence its eigenvalue magnitudes, for the purposes of this analysis) to exactly 1 at $t=0$, so early in training the Jacobian product neither shrinks nor grows. But gradient descent updates $W_{hh}$ every step based on the loss landscape, with no explicit constraint keeping it orthogonal — nothing prevents the optimizer from pushing $W_{hh}$'s eigenvalues away from magnitude 1 as it fits the data (unless you explicitly re-project onto the orthogonal manifold after each update, which is rarely done in vanilla RNN training). So the orthogonality is a *starting point* that gradient steps are free to drift away from — it delays the problem but doesn't structurally prevent it from recurring mid-training.
+
+**4. Streaming inference system — vanilla RNN vs. Transformer?**
+For strict one-token-at-a-time streaming with no re-computation, the vanilla RNN has a real structural advantage at **inference** time: producing $h_t$ from $h_{t-1}$ and $x_t$ is $O(1)$ additional work per new token, with no need to re-attend over the whole history — a causal Transformer, absent a KV-cache, would need to reprocess/attend over all past tokens for a truly naive streaming implementation (with KV-caching this gap narrows substantially in practice, but the RNN's per-token cost stays flat regardless). However, at **training** time, the RNN pays for that streaming-friendliness with an inherently sequential (non-parallelizable across time) BPTT process, while the Transformer trains with full parallelism across positions. So: argue for vanilla RNN if training-time cost is not the bottleneck (e.g., small models, short sequences), inference latency/memory dominate the requirement, and long-range dependency isn't critical; argue for Transformer (with KV-cache) if you need both strong long-range modeling and can afford the training-time parallelism tradeoff, which is why Transformers dominate in practice for most large-scale streaming systems despite the RNN's simpler per-token update.
+
+---
+
+# Module 3 — Answers
+
+## Tier 1
+
+**1. Why reframe raw time series into (X, y) windows?**
+An RNN training step (with standard supervised loss) needs a defined input and a defined target for each example. Raw time series is just one long undifferentiated sequence of numbers with no explicit "input" vs "label" split — sliding-window framing manufactures the supervised pairs (past $L$ steps → next value) that let you compute a loss and batch multiple training examples together at all.
+
+**2. Difference between many-to-one and many-to-many?**
+Many-to-one uses only the *final* hidden state $h_T$ to produce a single prediction (e.g., forecast tomorrow's value from the past $L$ days). Many-to-many produces a prediction at *every* time step (e.g., each day's hidden state feeds its own output), useful when you need continuous predictions aligned with each input position rather than one summary prediction at the end.
+
+**3. Why is gradient clipping applied after `backward()` but before `step()`?**
+`loss.backward()` populates `.grad` on every parameter with the *raw*, unclipped gradients. Clipping needs to see and modify those raw gradient values before they're used to update weights — `optimizer.step()` is what actually applies `.grad` to the parameters. So the order must be: compute raw gradients → clip them in place → apply the (now-clipped) gradients via `step()`. Clipping before backward would have nothing to clip yet; clipping after step would be too late, the update already happened.
+
+## Tier 2
+
+**1. Many-to-many synchronized: gradient at intermediate hidden state as a sum of two terms.**
+At an intermediate step $t$, $h_t$ influences the network in two ways: (a) directly, through its own local output/loss $L_t$, giving a term $\partial L_t/\partial h_t$; and (b) indirectly, because $h_t$ also feeds forward into $h_{t+1}, h_{t+2}, \dots$, each of which has its own loss, giving a term $\big(\partial L_{later}/\partial h_{t+1}\big)\cdot\big(\partial h_{t+1}/\partial h_t\big)$ carried backward from the future. The total gradient reaching $h_t$ during BPTT is the sum: $\partial L_t/\partial h_t + (\text{carried-back term from } h_{t+1})$. This is exactly the mechanism in the manual BPTT worked example in the reference doc (§2.5), generalized beyond 2 steps.
+
+**2. Lookback window $L$ too small — failure mode and diagnosis?**
+If $L$ is smaller than the true dependency length in the data (e.g., weekly seasonality but $L$ only spans 3 days), the model structurally cannot see the information it needs to make an accurate prediction — no amount of training fixes this, since the relevant past values are outside the input window entirely. You'd diagnose this from validation metrics by noticing that **increasing $L$ continues to improve validation loss** even as training loss for the current $L$ has plateaued (suggesting a capacity/information ceiling rather than an optimization problem) — and specifically that error is systematically worse on inputs where the true signal (e.g., a weekly pattern) falls outside the current window.
+
+**3. Non-stationary series (trend+seasonality) preprocessing, and interaction with vanishing gradients over long seasonal periods.**
+Preprocess by removing trend (e.g., differencing, or explicit detrending) and normalizing/removing seasonal effects where possible (e.g., seasonal decomposition, or supplying seasonal indicators as extra input features) before feeding into the RNN — this reduces the burden on the *recurrence itself* to memorize long-period patterns, letting the RNN focus on residual dynamics. This matters directly because of vanishing gradients: if the true signal requires remembering something from 365 steps back (yearly seasonality at daily granularity), and vanilla RNN effective memory is only ~5-10 steps, the model architecturally cannot learn that dependency through the recurrence alone — you must either supply seasonality as an explicit feature (sidestepping the need for the recurrence to carry it) or accept the RNN will miss it.
+
+## Tier 3
+
+**1. Lookback needs 500 steps, but effective memory is ~10 steps. What would you propose?**
+Options in order of typical practicality: (a) **explicit feature engineering** — precompute aggregate/lag features (rolling means, past values at known important lags, seasonal indices) covering the full 500-step history and feed them as *additional input features* at each step, rather than relying on the recurrence to "remember" them; (b) **hierarchical/dilated framing** — downsample or chunk the 500-step history into coarser summary blocks (e.g., daily→weekly aggregates) so the effective sequence length the RNN needs to traverse shrinks; (c) **switch to a gated architecture** (LSTM/GRU) which has meaningfully longer effective memory (~50-100 steps) — helps but may still fall short of 500; (d) **switch to an attention-based model**, which doesn't rely on sequential decay at all and can directly attend to any of the 500 steps regardless of distance — the most structurally sound fix if 500-step dependencies are genuinely critical and compute budget allows.
+
+**2. Many-to-many synchronized RNN forecasting vs. direct multi-step (separate model per horizon) — error accumulation.**
+Autoregressive multi-step forecasting (feeding the model's own prior predictions back in as input for future steps) compounds errors: any inaccuracy at step $t$ propagates into the input for step $t+1$, and those errors can accumulate/amplify over the forecast horizon, especially since the model was trained on ground-truth inputs (teacher forcing) but at inference must consume its own noisy outputs (the same exposure-bias issue as Module 4's teacher-forcing question). Direct multi-step forecasting trains a **separate model or output head per horizon** (e.g., one model for $t+1$, another explicitly for $t+7$), so there's no compounding — each horizon's prediction is made directly from the same ground-truth input window, with no dependency on the model's own earlier predictions. The tradeoff: direct multi-step needs $H$ times the parameters/models for $H$ horizons and doesn't share statistical strength across horizons the way the autoregressive approach does, but it avoids error compounding entirely and is often more robust for longer horizons in practice.
+
+---
+
+# Module 4 — Answers
+
+## Tier 1
+
+**1. Why embeddings instead of one-hot vectors?**
+One-hot vectors are extremely high-dimensional (vocab-size length) and sparse, and critically treat every pair of distinct tokens as **equally dissimilar** — there's no notion that "cat" and "dog" are more related than "cat" and "bicycle." A learned embedding maps each token to a dense, lower-dimensional vector whose geometry is trained to reflect actual semantic/usage similarity, and it's vastly more parameter- and compute-efficient for large vocabularies (an embedding lookup is $O(1)$; a one-hot vector times a weight matrix is $O(V)$ per step for vocab size $V$).
+
+**2. Why is the target the input shifted by one position in char-level LM?**
+The task is next-token prediction — at each step $t$, given everything up through $x_t$, predict $x_{t+1}$. Framing it as "input = characters 1..T-1, target = characters 2..T" directly encodes that objective: the model's prediction at position $t$ is trained against the character that actually came next, position $t+1$, which is exactly the shift-by-one setup.
+
+**3. Standard loss for next-token prediction, and why vs. MSE?**
+Cross-entropy loss (applied to the softmax output over vocabulary at each step) is standard, because next-token prediction is a **classification** problem over discrete categories (which token comes next), not a regression over continuous values. MSE assumes the output is a continuous quantity where "close" numerically means "close" in meaning — that assumption is meaningless for token indices (index 3 isn't "closer" to index 4 than to index 100 in any semantic sense), whereas cross-entropy directly measures how much probability mass the model assigned to the actual correct token, which is exactly the quantity you want to optimize.
+
+## Tier 2
+
+**1. Why are $(B,T,E)$ for text and $(B,T,D_{in})$ for time series structurally identical, and what does that imply?**
+In both cases, the RNN cell only ever consumes a tensor of shape $(B, D_{feature})$ at each time step, regardless of what that feature vector semantically represents — whether it's a dense word embedding or a vector of sensor readings, the recurrence equation $h_t=\tanh(x_tW_{xh}+h_{t-1}W_{hh}+b_h)$ doesn't care about the *meaning* of the feature dimension, only its size. This implies the **RNN cell implementation is entirely domain-agnostic** — the exact same `CustomVanillaRNN` class works for both time series and text, and the only domain-specific piece is what comes *before* the RNN (an embedding layer for text vs. raw/normalized features for time series) — code reuse is total for the recurrence itself.
+
+**2. Sampling vs. argmax during generation; effect of temperature.**
+Always taking argmax makes generation fully deterministic and tends to produce repetitive, generic text (it always picks the single most likely token, collapsing the diversity the model's probability distribution actually encodes). Sampling from the full softmax distribution lets lower-probability-but-plausible tokens occasionally get chosen, producing more varied and often more natural-sounding output. Temperature $\tau$ rescales the logits before softmax ($\text{softmax}(z/\tau)$): $\tau<1$ sharpens the distribution (more confident, closer to argmax, less diverse), $\tau>1$ flattens it (more uniform, more diverse but riskier/less coherent), giving a tunable knob between determinism and diversity.
+
+**3. Why do vanilla RNNs underperform on long reviews (200+ tokens) for many-to-one sentiment classification?**
+The prediction depends only on the final hidden state $h_T$, which must have accumulated the relevant sentiment-bearing signal from potentially anywhere in the 200+ token review. But vanilla RNN effective memory is only ~5-10 steps (Module 5, §5.1) — by the time the recurrence reaches $h_T$, information from early parts of the review (e.g., an important qualifier or sentiment-flipping clause near the start) has been gradient-wise and representationally washed out by the repeated $\tanh$-and-$W_{hh}$ compression. So the model effectively "forgets" most of the review and bases its classification largely on only the last ~5-10 tokens, which is a poor proxy for overall sentiment in a long document.
+
+## Tier 3
+
+**1. On-device char-level generator — vanilla RNN vs. small Transformer?**
+Vanilla RNN advantages here: per-token inference is $O(1)$ extra work (no growing attention computation as generated length increases) and requires only 1 matmul/step vs. more for gated or attention-based alternatives, which matters directly under a strict latency budget; parameter/memory footprint is also minimal. The catch is the effective-memory-horizon limitation (~5-10 steps) — if the generation task genuinely needs longer-range coherence (e.g., staying consistent with something established 50 characters back), the vanilla RNN will structurally fail at that regardless of latency wins. A small Transformer (even with KV-caching to make its own per-token inference efficient) retains direct access to all prior positions, so it won't have the same memory ceiling, at the cost of higher per-step compute and larger memory footprint for the cache. The right call depends on whether the required coherence window is inside or outside that ~5-10 step horizon — for very short, local-pattern generation (e.g., simple character-level patterns, tinyML applications) the vanilla RNN's latency advantage wins; for anything requiring longer coherent context, the memory ceiling makes it the wrong choice regardless of latency benefits.
+
+**2. Teacher forcing and exposure bias — why is this general to autoregressive models, not RNN-specific?**
+During training, teacher forcing feeds the *ground-truth* previous token $y_{t-1}^*$ as input to predict $y_t$, rather than the model's own (possibly wrong) prediction $\hat y_{t-1}$. At inference time, there's no ground truth available — the model must consume its *own* generated output as the next input. This creates a train/inference mismatch: the model never learned to recover gracefully from its own mistakes, since during training it was always shown the correct history regardless of what it had predicted a step earlier. This is called **exposure bias**, and it's a property of *any* autoregressive sequence model that uses teacher forcing during training — it applies just as much to an autoregressive Transformer decoder as to an RNN, because the root cause is the training/inference input distribution mismatch inherent to teacher forcing, not anything about the recurrence mechanism specifically. (Mitigations like scheduled sampling — occasionally feeding the model's own predictions during training — apply equally across architectures for the same reason.)
+
+---
+
+# Module 5 — Answers
+
+## Tier 1
+
+**1. Why is effective memory only ~5-10 steps despite theoretically unbounded recurrence?**
+Because BPTT's backward gradient signal decays geometrically with distance — it's the product of $T-1$ Jacobian terms $D_jW_{hh}$, each of magnitude $\le1$ in the typical (non-exploding) regime, so after roughly 5-10 multiplications the gradient magnitude has already shrunk to a level that provides negligible learning signal for that dependency. The forward-pass hidden state can *theoretically* carry information indefinitely, but if the *gradient* needed to teach the network to actually preserve and use that information vanishes after ~5-10 steps, the network never learns to exploit longer dependencies in practice — theoretical capacity and trainable capacity diverge.
+
+**2. Concrete symptom of exploding (not vanishing) gradients?**
+Loss suddenly spikes to very large values or becomes NaN/Inf during training, typically after gradient norms have been growing rather than staying flat-near-zero — a monitored raw gradient norm that shoots above, say, 10-100+ right before the loss diverges is the diagnostic signature (contrast with vanishing, where gradient norms for early time steps sit near zero throughout, with no divergence, just stalled learning on long-range dependencies).
+
+**3. One scenario where vanilla RNN beats LSTM as the engineering choice?**
+Ultra-low-latency streaming inference on a resource-constrained edge/tinyML device (e.g., a microcontroller-based sensor doing real-time short-horizon anomaly detection), where the required context is genuinely short (well within the ~5-10 step effective memory) — here the vanilla RNN's 1-matmul-per-step cost and minimal parameter footprint directly translate to real latency/memory/power savings, and the LSTM's extra gating machinery (3-4x the compute) buys no accuracy benefit since long-range memory isn't needed for the task anyway.
+
+## Tier 2
+
+**1. In one sentence, why do LSTM/GRU mitigate vanishing gradients structurally?**
+They introduce an **additive** update path for the memory/cell state (gated by learned scalars close to identity when appropriate) instead of vanilla RNN's purely **multiplicative** recurrence through $W_{hh}$, and additive paths let gradients flow backward largely unchanged (rather than repeatedly multiplied by a sub-unity factor) whenever the relevant gate is "open."
+
+**2. Lightweight diagnostic to catch vanishing gradients before validation reveals the problem.**
+Add a hook that logs $\|\partial L/\partial h_t\|$ (the gradient norm arriving at each cached hidden state) for every $t$ during a backward pass on a sample batch, and periodically plot/print this against $t$ — a healthy model shows gradual decay moving backward from $T$; a vanishing-gradient model shows the norm collapsing to near-zero within just a handful of steps back from the final step, which you'd catch within the first few training iterations, well before waiting for validation-set performance to reveal the model's inability to use long-range context.
+
+**3. Latency budget 1.5× vanilla RNN's per-step compute — can you fit a GRU?**
+No — from §5.4, a GRU costs roughly 3 matmuls per step versus the vanilla RNN's 1, i.e., roughly 3× the per-step compute (not accounting for gate-specific overhead, which is directionally similar in order of magnitude). A 1.5× budget falls short of the ~3× needed for a GRU; you'd need to either accept the vanilla RNN, look at a stripped-down/simplified gated variant, or find additional latency budget before a full GRU would fit.
+
+## Tier 3
+
+**1. Inherited underperforming vanilla RNN on long documents — incremental fix plan, and when to escalate?**
+Order of incremental fixes to try first (cheapest / fastest to test): (a) verify gradient clipping is correctly configured and check gradient norms are healthy — sometimes "underperforming" is actually a training instability bug, not a fundamental capacity issue; (b) check $W_{hh}$ initialization (switch to orthogonal if not already) and try a lower learning rate — cheap changes that can meaningfully affect the achievable eigenvalue-spectrum stability; (c) add explicit feature engineering to reduce the *effective* dependency length the recurrence must carry (e.g., summary/lag features, truncating to the most relevant recent context) — this can often recover much of the gap without touching the architecture at all; (d) if none of that closes the gap and the task genuinely needs long-range dependencies beyond ~5-10 steps that can't be feature-engineered away, that's the signal to escalate: propose swapping in an LSTM/GRU (a comparatively contained code change, reusing the same training pipeline) as the next sprint's work, and reserve a full Transformer re-architecture for if even the gated RNN doesn't close the gap.
+
+**2. Live whiteboard decision tree starting from "loss just went to NaN."**
+1. **Check raw (pre-clip) gradient norm** → if very large/growing → exploding gradients → apply/tighten gradient clipping, lower LR, check $W_{hh}$ init.
+2. If gradient norm looks fine but loss is NaN → **check for numerical issues in the data/inputs** (unnormalized features, div-by-zero in a custom loss, log(0) in cross-entropy from an unclipped probability) — these are common non-gradient sources of NaN that shouldn't be misattributed to the recurrence.
+3. If gradients are stable and small → but training is stalled/plateaued rather than actually NaN → check for **vanishing gradients** instead (per-time-step gradient norm), not the NaN issue — a different branch entirely, since vanishing produces stalled-not-diverged training.
+4. Once stabilized, if long-range dependency performance is still poor after all of the above → this is the point to argue for a gated architecture rather than continuing to patch the vanilla RNN's training dynamics.
+
+**3. Why doesn't "just use a bigger hidden dimension" solve vanishing gradients?**
+Increasing $D_{out}$ changes the *size* of $W_{hh}$ (making it $D_{out}\times D_{out}$ instead of smaller), and while a larger matrix has more eigenvalues to potentially work with, **nothing about increasing dimensionality inherently pushes those eigenvalues' magnitudes toward 1** — the eigenvalue spectrum is determined by how $W_{hh}$ is initialized and how it's updated during training, not by how large the matrix is. A larger $W_{hh}$ initialized the same (naive) way is just as likely to have eigenvalues $<1$ (or $>1$) as a smaller one — you've added capacity (more directions in which information *could* be stored) without addressing the actual multiplicative-decay mechanism that governs whether gradients survive the backward pass along the time axis. What actually helps is controlling the eigenvalue spectrum directly (orthogonal initialization) or changing the recurrence structure entirely (gating) — dimension size and gradient-decay rate are orthogonal concerns.
