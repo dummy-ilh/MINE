@@ -1,4 +1,37 @@
-# Chapter 7: Weight Initialization
+# Chapter 7: Weight Initialization — FAANG Interview Master Notes
+### 🔥 Boosted Edition: Master Notes + Full Interview Q&A Bank
+
+> **How to use this document:** Nothing from the original chapter has been removed. Every original section, diagram, formula, derivation, and Q&A is intact below. On top of that, this edition adds: (1) a rapid-review cheat sheet at the top, (2) an expanded interview Q&A bank at the end of the chapter, (3) "rapid-fire flashcards" for last-minute review, and (4) a combined formula/pitfall sheet at the very end. Look for the 🆕 marker to spot everything that's new.
+
+---
+
+## 🆕 MASTER CHEAT SHEET — Chapter 7 at a glance
+
+| Method | Formula | Best for | Year |
+|---|---|---|---|
+| Zero init | W = 0 | Never — symmetry problem | — |
+| Naive random | W ~ N(0, 0.01) | Shallow nets only | — |
+| LeCun | σ² = 1/nᵢₙ | Sigmoid (linear approx near 0) | 1998 |
+| Xavier/Glorot | σ² = 2/(nᵢₙ+nₒᵤₜ) | Tanh, Sigmoid | 2010 |
+| He/Kaiming | σ² = 2/nᵢₙ | ReLU, Leaky ReLU | 2015 |
+| Orthogonal | W = orthogonal matrix (via SVD) | RNNs, very deep nets | — |
+
+| Key fact | Detail |
+|---|---|
+| Core goal of init | Preserve activation variance AND gradient variance across layers |
+| Why not zero? | Symmetry problem — all neurons in a layer stay identical forever |
+| Why He needs factor 2 vs LeCun's 1 | ReLU zeroes ~half the signal: E[ReLU(z)²] = ½Var(z) |
+| Xavier's blind spot | Assumes symmetric activation around 0 — wrong for ReLU |
+| Bias default | 0, except: LSTM forget gate (→1-2), imbalanced-class output layer (→ log-odds), regression output (→ mean(y)) |
+| Does BatchNorm remove need for good init? | Reduces sensitivity, doesn't eliminate it — first forward pass still vulnerable |
+| Orthogonal init property | ‖Wx‖₂ = ‖x‖₂ exactly — ideal for RNN recurrent weights across many timesteps |
+| NaN on first forward pass (no gradient step yet) | Always an init/architecture/numerics issue, never an optimizer/LR issue |
+| Output layer's special role | Controls the *initial prediction* (matches base rate) — separate from hidden-layer signal propagation |
+
+---
+
+<a name="chapter-7"></a>
+## Chapter 7: Weight Initialization
 
 ---
 
@@ -687,4 +720,81 @@ For linear output:  b = E[y]
 
 ---
 
+## 🆕 7.12 EXPANDED INTERVIEW Q&A BANK — Chapter 7
+
+**Q4 🆕: "Xavier initialization averages the fan-in and fan-out conditions (σ² = 2/(nᵢₙ+nₒᵤₜ)) rather than just picking one. What would go wrong if you used only the fan-in condition (σ²=1/nᵢₙ) throughout a very deep, non-square-layer network?"**
+
+**Answer:** The fan-in condition (`σ²=1/nᵢₙ`, LeCun init) is derived purely to preserve *forward-pass activation variance* — it says nothing about what happens to gradients flowing backward. Backward-pass gradient variance is governed by the symmetric relation using `nₒᵤₜ` (since `∂L/∂x = Wᵀδ` sums over `nₒᵤₜ` terms, not `nᵢₙ`). If a network has layers where `nᵢₙ ≠ nₒᵤₜ` significantly (e.g., a bottleneck architecture: 1024 → 64 → 1024), using only the fan-in condition keeps forward activations well-scaled but leaves the backward pass unbalanced — gradients can systematically shrink or grow layer-by-layer purely due to the mismatched fan-out, even though the forward activations look perfectly healthy. This is exactly the discrepancy Xavier's compromise addresses: it accepts a slightly imperfect variance-preservation in *both* directions rather than a perfect one in only one direction, which empirically works better across typical architectures with asymmetric layer widths.
+
+---
+
+**Q5 🆕: "You initialize an RNN's recurrent weight matrix with He initialization (designed for ReLU feedforward nets) instead of orthogonal initialization. What specifically breaks, and why doesn't the 'preserve variance per layer' argument that works for feedforward nets transfer cleanly to RNNs?"**
+
+**Answer:** He/Xavier-style init is calibrated so that, on average across many *independently drawn* weight matrices (one per feedforward layer), variance is preserved. An RNN instead applies the **same** weight matrix `W` repeatedly, once per timestep, so instead of "variance preserved on average across many different matrices," what matters is the actual spectral norm (largest singular value) of that one specific matrix `W`, raised to the power `T` (number of timesteps). A random Gaussian matrix scaled to have the "right" variance for a feedforward layer will typically still have some singular values above 1 and some below 1 — for a single layer this averages out fine, but composing the *same* matrix `T` times means any singular value `>1` grows exponentially (`σᵀ`) and any `<1` shrinks exponentially, regardless of how carefully the variance was tuned. Orthogonal initialization sidesteps this entirely by forcing **every** singular value to exactly 1, so `‖Wᵀx‖ = ‖x‖` exactly for any `T` — there's no exponential drift because there's no singular value to drift. This is why orthogonal (not He/Xavier) is the standard choice specifically for RNN recurrent weight matrices.
+
+---
+
+**Q6 🆕: "A teammate says: 'Since He init already prevents NaN, we don't need to worry about output bias initialization for our imbalanced classifier — it's a nice-to-have, not a correctness issue.' Do you agree?"**
+
+**Answer:** Partially — they're conflating two different failure modes that this chapter treats separately. He init (§7.4) solves a **numerical stability** problem: preventing activation/gradient explosion or collapse through the *hidden* layers so the network doesn't produce `nan`/`inf` and can actually compute gradients at all. Output bias initialization (§7.11 Q3) solves a **training efficiency / convergence-speed** problem: without it, the network is numerically fine, trains normally, and will *eventually* converge — but it wastes potentially hundreds of gradient steps first learning the trivial base-rate prior before it can start learning genuinely discriminative features, as shown by the ~0.88 nats of avoidable initial loss in the worked example. So: He init is closer to a "correctness/does it train at all" issue, while output bias init is a "how many GPU-hours do you want to burn re-deriving something you already know (the class prior) from scratch" issue — both matter in production, but for different reasons, and calling one a strict subset of the other is not accurate.
+
+---
+
+**Q7 🆕: "Why does GPT-style initialization use a small fixed constant (σ=0.02) rather than a fan-in/fan-out-dependent formula like He or Xavier?"**
+
+**Answer:** Transformers have two properties that break the assumptions behind He/Xavier's per-layer variance-preservation derivation: (1) they use **LayerNorm** (not BatchNorm) after most sub-blocks, which explicitly renormalizes activations regardless of what the raw pre-normalization variance was — so the precise fan-in-dependent scaling that matters most for *unnormalized* deep stacks (the He/Xavier setting) is far less load-bearing once LayerNorm is guaranteed to reset the distribution anyway; and (2) transformers rely heavily on **residual connections** around every sub-block (`x + Sublayer(x)`), and empirically, keeping the *initial* contribution of each sublayer's output small (via a small fixed σ) helps the residual stream start out dominated by the stable identity path rather than by a large, noisy transformation — similar in spirit to this chapter's Fix 3 for ResNets (scaling the last layer of each residual block by `1/√(2L)`). A small constant like 0.02 is essentially a simplified, empirically-tuned version of that same "keep each block's initial perturbation small relative to the residual stream" principle, calibrated once for the specific depth/width regime GPT models are trained in, rather than re-derived per-layer from fan-in/fan-out.
+
+---
+
+## 🆕 7.13 RAPID-FIRE FLASHCARDS — Chapter 7
+
+| Prompt | Answer |
+|---|---|
+| LeCun init? | σ² = 1/nᵢₙ |
+| Xavier/Glorot init? | σ² = 2/(nᵢₙ+nₒᵤₜ) |
+| He/Kaiming init? | σ² = 2/nᵢₙ |
+| Why does He need 2× LeCun's variance? | ReLU halves the second moment: E[ReLU(z)²] = ½Var(z) |
+| Xavier's hidden assumption? | Activation symmetric around 0 (breaks for ReLU) |
+| Default bias value? | 0 |
+| LSTM forget gate bias exception? | Init to 1–2 to encourage remembering by default |
+| Imbalanced-classifier output bias? | b = log-odds of class frequency, e.g. log(p/(1-p)) |
+| Regression output bias? | b = mean(y_train) |
+| Orthogonal init guarantees? | ‖Wx‖₂ = ‖x‖₂ exactly (all singular values = 1) |
+| Why orthogonal for RNNs specifically? | Same W applied T times — any singular value ≠1 compounds exponentially |
+| Does BatchNorm make init irrelevant? | No — reduces sensitivity but first forward pass & non-BN nets (transformers) still care |
+| NaN on first forward pass (before any update) implicates? | Init/architecture/numerics — never LR or optimizer |
+| GPT init strategy? | Small fixed σ=0.02, relies on LayerNorm + residual stream stability |
+| ResNet deep-net trick beyond He init? | Scale last layer of each residual block by 1/√(2L) |
+
+---
+
 *End of Chapter 7. Chapter 8 (Optimizers) coming next.*
+
+---
+
+## 🆕 CHAPTER 7 FORMULA SHEET
+
+```
+Variance propagation (general):    Var(z) = n · σ²_w · Var(x)
+LeCun:                              σ²_w = 1/nᵢₙ
+Xavier/Glorot:                      σ²_w = 2/(nᵢₙ+nₒᵤₜ)
+He/Kaiming:                         σ²_w = 2/nᵢₙ
+Leaky ReLU generalized He:          σ²_w = 2/((1+α²)·nᵢₙ)
+Orthogonal property:                ‖Wx‖₂ = ‖x‖₂  (all singular values = 1)
+
+Output bias — sigmoid:              b = log(p/(1-p))
+Output bias — softmax:              bₖ = log(p(y=k))
+Output bias — linear/regression:    b = E[y]
+```
+
+## 🆕 "TOP 5 THINGS THAT TRIP PEOPLE UP" — Chapter 7
+
+1. Using Xavier init with ReLU networks "because it's the classic default" — Xavier's symmetric-activation assumption is specifically violated by ReLU.
+2. Assuming BatchNorm makes initialization a non-issue — it helps a lot, but the very first forward pass (before any BN statistics exist) is still exposed.
+3. Applying feedforward-style (He/Xavier) init to an RNN's recurrent weights — the *same* matrix applied across many timesteps needs orthogonal init, not a per-layer variance formula.
+4. Treating output-bias initialization as cosmetic — on an imbalanced dataset it can cost hundreds of wasted gradient steps re-deriving the class prior.
+5. Diagnosing a NaN-on-first-forward-pass as a learning-rate problem — if no gradient step has happened yet, the learning rate cannot possibly be the cause.
+
+---
+
+*This document preserves 100% of the original Chapter 7 content and adds interview-focused expansions marked with 🆕. Ready for Chapter 8 (Optimizers) whenever you want it boosted the same way.*
