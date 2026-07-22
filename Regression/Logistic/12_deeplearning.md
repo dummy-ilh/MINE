@@ -1,8 +1,4 @@
-Here is the revised, structured, and interview-ready version of **Module 12 — Deep Learning Reframing**.
 
-All mathematical extensions, vocabulary mappings, and computation steps are rendered using LaTeX, with an interactive **Single Neuron vs. Multi-Layer Neural Network Simulator** embedded below.
-
----
 
 # Module 12 — Deep Learning Reframing
 
