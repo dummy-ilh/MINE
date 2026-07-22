@@ -2309,4 +2309,248 @@ Leakage types:         target | temporal | group/entity | preprocessing
 
 ---
 
-*End of merged reference. Cross-references throughout (e.g. "§21," "Part D") point to sections within this same document — all three source conversations have been consolidated here with duplicate treatments (the Wald/LRT/GoF/Calibration material that appeared more than once, and the MLE/decision-boundary/calibration content that appeared across multiple source documents) merged into single, most-complete versions rather than repeated.*
+# Multinomial Logistic Regression — Deep Dive (Robot Classifier Edition)
+
+**Interview target:** L4–L6 ML/DS loops (Google, Meta, Apple style)
+**Running example:** A robot with two sensors (vibration `v`, reflectivity `r`) must classify the terrain under it into one of three classes: **Gravel (G)**, **Grass (Gr)**, **Ice (I)**.
+
+---
+
+## 1. Why Binary Logistic Regression Isn't Enough
+
+Binary logistic regression models one probability with the sigmoid:
+
+```
+P(y=1|x) = 1 / (1 + e^{-(w·x + b)})
+```
+
+This only works for two classes. The robot has **three** terrain classes. Two broken extensions people wrongly reach for first:
+
+- **One-vs-Rest (OvR):** train 3 independent binary classifiers ("Gravel vs not-Gravel", etc.), then normalize scores. Works reasonably but the probabilities aren't guaranteed to be coherent (they don't have to sum to 1 before normalization), and the decision regions can behave oddly in ambiguous zones.
+- **Ad hoc score comparison:** just compare 3 unrelated sigmoid outputs — mathematically incoherent, no proper joint likelihood.
+
+**Multinomial logistic regression (a.k.a. softmax regression)** fixes this by modeling all K class probabilities *jointly* with one consistent model, trained with one joint likelihood.
+
+---
+
+## 2. The Model: Linear Scores → Softmax
+
+Each class `k` gets its own weight vector `w_k` and bias `b_k`. For the robot's feature vector `x = [v, r]`:
+
+```
+z_k = w_k · x + b_k        (k = 1, ..., K)
+```
+
+These `z_k` are called **logits** — unnormalized scores. Convert to probabilities with **softmax**:
+
+```
+P(y=k | x) = e^{z_k} / Σ_{j=1}^{K} e^{z_j}
+```
+
+Properties worth stating out loud in an interview:
+- Every `P(y=k|x) ∈ (0,1)`, and they sum to exactly 1 — a valid probability distribution.
+- Softmax is *shift-invariant*: adding the same constant `c` to every `z_k` doesn't change the output (`e^{z_k+c}/Σe^{z_j+c} = e^{z_k}/Σe^{z_j}`). This is why the model is **overparameterized** — see §3.
+- With K=2, softmax reduces exactly to sigmoid. Proof: set `z_1 = w·x`, `z_2 = 0`. Then `P(y=1) = e^{z_1}/(e^{z_1}+1) = 1/(1+e^{-z_1})`. Multinomial logistic regression is the strict generalization of binary logistic regression, not a different model family.
+
+---
+
+## 3. Identifiability: Why We Fix a Reference Class
+
+Because softmax is shift-invariant, the parameters `{w_k, b_k}` are **not uniquely identifiable** — you can add any constant vector to every `w_k` and get identical predictions. This is a classic interview trap.
+
+**Fix:** designate one class as the reference (say, Gravel, k=0) and fix `w_0 = 0, b_0 = 0`. Then:
+
+```
+P(y=k|x) = e^{z_k} / (1 + Σ_{j=1}^{K-1} e^{z_j})   for k = 1,...,K-1
+P(y=0|x) = 1 / (1 + Σ_{j=1}^{K-1} e^{z_j})
+```
+
+Now only K−1 weight vectors are estimated (this is exactly how `statsmodels` MNLogit and R's `nnet::multinom` parameterize it). This also connects directly to **log-odds relative to the reference class**:
+
+```
+log( P(y=k|x) / P(y=0|x) ) = w_k · x + b_k
+```
+
+This is the natural multiclass generalization of the binary logit and is worth stating verbatim in interviews — it's the "aha" that makes the whole thing click.
+
+---
+
+## 4. Worked Numerical Example
+
+Robot features: `v` = vibration (0–10 scale), `r` = reflectivity (0–10 scale).
+Reference class = Gravel. Suppose training has already converged to these weights:
+
+| Class | w_v | w_r | b |
+|---|---|---|---|
+| Gravel (ref) | 0 | 0 | 0 |
+| Grass | -0.8 | 0.3 | 0.2 |
+| Ice | 0.5 | 1.4 | -1.0 |
+
+The robot senses `v = 2, r = 8` (low vibration, high reflectivity — classic ice signature).
+
+**Step 1 — compute logits:**
+```
+z_Gravel = 0
+z_Grass  = -0.8(2) + 0.3(8) + 0.2 = -1.6 + 2.4 + 0.2 = 1.0
+z_Ice    =  0.5(2) + 1.4(8) - 1.0 = 1.0 + 11.2 - 1.0 = 11.2
+```
+
+**Step 2 — exponentiate:**
+```
+e^0     = 1
+e^1.0   ≈ 2.718
+e^11.2  ≈ 73,130
+```
+
+**Step 3 — normalize:**
+```
+denom = 1 + 2.718 + 73,130 ≈ 73,133.7
+
+P(Gravel) ≈ 1 / 73,133.7        ≈ 0.0000137
+P(Grass)  ≈ 2.718 / 73,133.7    ≈ 0.0000372
+P(Ice)    ≈ 73,130 / 73,133.7   ≈ 0.99995
+```
+
+The robot is essentially certain it's on ice — sensible given near-zero vibration and near-max reflectivity, and it required no manual thresholding logic; the softmax did it via the learned weights. This is the kind of walkthrough worth reproducing on a whiteboard: show the logits, show that Ice's logit dominates additively before exponentiation even matters much, then show exponentiation making the dominance almost total.
+
+**Interview-useful observation:** because `e^x` grows so fast, a logit gap of ~10 already means near-total confidence — this is why logit magnitudes, not just their ranks, matter for calibration.
+
+---
+
+## 5. Loss Function: Categorical Cross-Entropy
+
+For one training example with true class `y` (one-hot encoded as `t_1,...,t_K`, all zero except `t_y=1`):
+
+```
+L(w) = - Σ_{k=1}^{K} t_k log P(y=k|x) = -log P(y=true class | x)
+```
+
+Over `N` training examples:
+
+```
+NLL(W) = - Σ_{i=1}^{N} Σ_{k=1}^{K} t_{ik} log( softmax(z_i)_k )
+```
+
+This is the **negative log-likelihood** under a categorical (Multinoulli) distribution — multinomial logistic regression *is* maximum likelihood estimation for a categorical response, exactly as binary logistic regression is MLE for a Bernoulli response.
+
+**Robot example:** suppose the true label was Ice. Loss contribution = `-log(0.99995) ≈ 0.00005` — almost no penalty, as expected for a confident correct prediction. If the true label had actually been Grass, loss = `-log(0.0000372) ≈ 10.2` — a massive penalty, correctly punishing a confident wrong answer. This asymmetry (confident+right ≈ free, confident+wrong ≈ very expensive) is the whole point of cross-entropy over something like 0/1 loss.
+
+---
+
+## 6. Gradient Derivation (the part interviewers love to probe)
+
+This is the single most important derivation to have cold. Let `t_k` be the one-hot true label and `p_k = P(y=k|x)` the softmax output. The gradient of the loss w.r.t. the logit `z_k` has a remarkably clean closed form:
+
+```
+∂L/∂z_k = p_k - t_k
+```
+
+**Derivation sketch** (know this, don't just memorize the result):
+```
+L = -Σ_j t_j log p_j,   p_k = e^{z_k}/Σ_m e^{z_m}
+
+∂p_k/∂z_k = p_k(1 - p_k)
+∂p_j/∂z_k = -p_j p_k     (j ≠ k)
+
+∂L/∂z_k = -Σ_j t_j (∂log p_j/∂z_k) = -Σ_j (t_j/p_j)(∂p_j/∂z_k)
+        = -(t_k/p_k)·p_k(1-p_k) - Σ_{j≠k} (t_j/p_j)·(-p_j p_k)
+        = -t_k(1-p_k) + p_k Σ_{j≠k} t_j
+        = -t_k + t_k p_k + p_k(1 - t_k)     [since Σ_j t_j = 1]
+        = p_k - t_k
+```
+
+Then, by the chain rule, since `z_k = w_k·x + b_k`:
+
+```
+∂L/∂w_k = (p_k - t_k) · x
+∂L/∂b_k = (p_k - t_k)
+```
+
+**This is identical in form to binary logistic regression's gradient** `(σ(z)-y)x`. That's the elegant unifying fact: softmax + cross-entropy always reduces to "(predicted probability − actual) × input," no matter how many classes. This is a favorite thing to point out unprompted in an L5/L6 interview — it signals you understand the derivation isn't a coincidence but a property of exponential-family GLMs with their natural (canonical) link function.
+
+**Full-batch gradient descent update:**
+```
+w_k ← w_k - η Σ_{i=1}^N (p_{ik} - t_{ik}) x_i
+```
+
+---
+
+## 7. Hessian and Newton's Method / IRLS
+
+For completeness (L6-level): the Hessian blocks are
+
+```
+H_{k,l} = Σ_i p_{ik}(δ_{kl} - p_{il}) x_i x_i^T
+```
+
+where `δ_{kl}` is the Kronecker delta. This is positive semi-definite (it's a proper covariance-like structure of the categorical distribution), which is *why the cross-entropy loss for softmax regression is convex* — a guaranteed unique global optimum, no local minima to worry about (unlike a neural net). This convexity guarantee is a clean differentiator between "multinomial logistic regression" and "a shallow softmax neural network with one hidden layer," which otherwise look deceptively similar.
+
+IRLS (iteratively reweighted least squares) applies here exactly as in binary logistic regression, just block-wise across the K−1 free classes — this is how R's `multinom` and statsmodels converge in a handful of iterations rather than thousands of SGD steps.
+
+---
+
+## 8. Decision Boundaries
+
+The boundary between any two classes `k` and `l` is where `z_k = z_l`, i.e., `(w_k - w_l)·x + (b_k - b_l) = 0` — a **hyperplane**, same as binary logistic regression. With K classes you get up to `K(K-1)/2` pairwise hyperplanes, but only the ones that are actually "adjacent" in probability space show up as visible boundaries in the final partition of feature space — the rest are dominated everywhere by a third class. In the robot's 2D (v, r) plane, expect to see three linear regions meeting at a point, like a pie sliced by three lines through roughly one location.
+
+---
+
+## 9. Softmax Regression vs. One-vs-Rest vs. Independent Binary Models
+
+| Property | Multinomial (softmax) | One-vs-Rest (OvR) |
+|---|---|---|
+| Probabilities sum to 1 by construction | Yes | No (needs renormalization) |
+| Single joint likelihood | Yes | No — K separate likelihoods |
+| Parameter count | (K−1) × (d+1) | K × (d+1) |
+| Assumes classes mutually exclusive & exhaustive | Yes | Not enforced |
+| Handles class correlations in the loss | Yes | No — each binary problem trained in isolation |
+| Common in practice for large K (e.g. word classes) | Less common (softmax over huge K is expensive) | Common (easy to parallelize/shard) |
+
+**Interview line:** OvR is a reasonable, embarrassingly-parallel *approximation*; true multinomial logistic regression is the statistically correct MLE treatment when classes are mutually exclusive.
+
+---
+
+## 10. The IIA Assumption (a favorite L6 gotcha)
+
+Multinomial logit implies **Independence of Irrelevant Alternatives**: the *relative* odds between any two classes don't depend on what other classes exist.
+
+```
+P(y=k|x)/P(y=l|x) = e^{z_k - z_l}
+```
+
+This ratio has no dependence on any other class `m`. This is fine if terrains are truly distinct alternatives, but breaks down if you add a near-duplicate class — e.g., adding "Wet Ice" alongside "Ice" when they're nearly indistinguishable to the sensors will pull probability mass roughly evenly from Ice, distorting the Gravel-vs-Ice odds in a way that doesn't reflect reality (the classic textbook version is the "red bus / blue bus" paradox). If your classes aren't truly independent alternatives, consider **nested logit** or a **hierarchical softmax** instead — knowing to say this unprompted is a strong L6 signal.
+
+---
+
+## 11. Evaluation Metrics for Multiclass
+
+- **Multiclass log loss** (mean of `-log p_{i,true class}`) — the training objective itself, most sensitive to calibration.
+- **Accuracy** — crude, hides per-class failure and is misleading under class imbalance (e.g., if 90% of terrain is Gravel, always predicting Gravel gets 90% accuracy).
+- **Confusion matrix** — essential first diagnostic; look at which off-diagonal cells dominate (e.g., is the robot systematically confusing Grass ↔ Ice at boundary humidity?).
+- **Macro-F1 vs micro-F1** — macro treats every class equally (good when rare classes like "Ice" matter a lot despite being infrequent); micro is accuracy-like and dominated by frequent classes.
+- **Top-k accuracy** — relevant when K is large (e.g., 1000-way classification) and being "close" has operational value.
+
+---
+
+## 12. Practical / Production Considerations
+
+- **Numerical stability:** always compute softmax as `e^{z_k - max(z)} / Σ e^{z_j - max(z)}` (the "log-sum-exp trick") to avoid overflow — this is a basic but frequently-tested implementation detail.
+- **Class imbalance:** rare classes (e.g., Ice, if the robot rarely operates in winter) get underweighted in vanilla MLE; use class-weighted loss (`t_k` scaled by inverse frequency) or resampling.
+- **Regularization:** add `λ‖w_k‖²` (L2) per class exactly as in binary logistic regression; it's especially needed here since more classes means more parameters and higher variance.
+- **Calibration:** softmax outputs are *not* automatically well-calibrated probabilities, especially after regularization or with a poorly-specified feature set — temperature scaling (dividing logits by a learned scalar `T` before softmax) is the standard multiclass fix, directly generalizing Platt scaling from the binary case.
+- **When K is huge** (e.g., predicting next word from a 50,000-token vocabulary): full softmax is too slow; use hierarchical softmax, negative sampling, or sampled softmax as approximations.
+
+---
+
+## 13. Quick Self-Check (say these cold in an interview)
+
+1. Write the softmax formula and show it collapses to sigmoid at K=2.
+2. Explain *why* the model is overparameterized and how fixing a reference class resolves it.
+3. Derive `∂L/∂z_k = p_k - t_k` from scratch.
+4. State the IIA assumption and give a concrete example of when it fails.
+5. Explain why the loss is convex (PSD Hessian) and why that's a meaningfully different guarantee than for a neural softmax classifier.
+6. Compare multinomial softmax vs. OvR: which one has a single coherent likelihood, and why does that matter statistically?
+7. Name two calibration techniques for multiclass probabilities.
+
+---
+*Companion reference — pairs with your existing Logistic Regression Parts 1 & 2 (binary case, Newton-Raphson/IRLS derivation, calibration methods). This document extends that foundation to K > 2 classes.*
