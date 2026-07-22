@@ -1,22 +1,34 @@
-# The Complete Deep Learning Course
-### From First Principles to Production — No Other Resource Needed
+# The Complete Deep Learning Course — FAANG Interview Master Notes
 
 ---
 
-## Table of Contents
-1. [Chapter 1: What is Machine Learning vs Deep Learning](#chapter-1)
-2. Chapter 2: Perceptron & Neurons *(coming next)*
-3. Chapter 3: Activation Functions
-4. Chapter 4: Forward Propagation
-5. Chapter 5: Loss Functions
-6. Chapter 6: Backpropagation & Gradient Descent
-7. Chapter 7: Weight Initialization
-8. Chapter 8: Optimizers
-9. Chapter 9: Regularization
-10. Chapter 10: CNNs
-11. Chapter 11: CNN Architectures
-12. Chapter 12: Sequence Models & RNNs
-13. Chapter 13: LSTM & GRU
+## 🆕 HOW TO USE THIS FOR INTERVIEW PREP
+
+1. **First pass:** Read each chapter fully, work through every worked numeric example by hand (don't just read it — recompute it).
+2. **Second pass:** Cover the "Answer" sections of the Q&A and try to answer from the question alone.
+3. **Night before an interview:** Only read the 🆕 Cheat Sheets and 🆕 Rapid-Fire Flashcards.
+4. **In the interview:** If asked something not verbatim here, notice which *category* it falls into (definitions, failure-mode diagnosis, "why does X break", "design a network for Y") — the patterns repeat across almost all FAANG DL interviews.
+
+---
+
+## 🆕 MASTER CHEAT SHEET (Chapters 1–2 at a glance)
+
+| Concept | One-line definition | Formula / Key Fact |
+|---|---|---|
+| AI | Any machine behavior perceived as intelligent | Superset of ML; includes rule-based systems |
+| ML | System improves from data without explicit rules | Supervised / Unsupervised / Reinforcement |
+| DL | ML using multi-layer neural nets | Automatic feature learning, scales with data+compute |
+| Parameter | Learned during training | w, b, embeddings — found by gradient descent |
+| Hyperparameter | Set before training by engineer | LR, batch size, #layers, dropout rate |
+| Overfitting | High train acc, low test acc | Large train/test gap → reduce capacity or regularize |
+| Bias² | Error from an overly simple model | High bias = underfitting |
+| Variance | Error from sensitivity to training data | High variance = overfitting |
+| Perceptron | Single neuron, step activation | ŷ = step(wᵀx + b), only linearly separable problems |
+| XOR problem | Not linearly separable | Needs ≥2 layers (depth) to solve |
+| Modern neuron | Perceptron + smooth activation | a = σ(wᵀx + b), differentiable → enables backprop |
+| Universal Approx. Theorem | 1 wide hidden layer can approximate any continuous fn | Existence proof only — doesn't guarantee gradient descent finds it |
+| Zero-init bug | All neurons identical forever | Symmetry never breaks → effectively 1 neuron/layer |
+| Linear-only network collapse | Stacking linear layers = one linear layer | ŷ = (WₙWₙ₋₁...W₁)x — no expressivity gain from depth |
 
 ---
 
@@ -429,6 +441,70 @@ Complex model: Low         High        High (overfitting)
 **The punchline:** On small datasets, model complexity must be controlled aggressively. A 100-layer network on 1,000 examples is almost always a mistake without heavy regularization or transfer learning (using pretrained weights from a large-data training run). The 3-layer network is likely the better choice — not because it's "smarter," but because the data volume doesn't justify more capacity.
 
 This is why ImageNet (1.2M images) could support AlexNet (8 layers, 2012) and later ResNet-152 (152 layers, 2015), but a dataset of 1,000 images cannot.
+
+---
+
+## 🆕 1.10 EXPANDED INTERVIEW Q&A BANK — Chapter 1
+
+**Q4 🆕: "Is AI = ML = DL? Draw the relationship and give one example that is AI but NOT ML."**
+
+**Answer:** No — they are nested subsets: `AI ⊃ ML ⊃ DL`. AI is the broadest category (any intelligent-seeming machine behavior); ML is AI systems that improve from data; DL is ML using multi-layer neural networks specifically.
+
+Example of AI-but-not-ML: a chess engine like early Deep Blue that evaluates board positions using **handcrafted heuristics and minimax search** — it exhibits intelligent behavior but never "learns" from data; its evaluation function is hand-tuned by engineers, not fit to a dataset via an objective function.
+
+---
+
+**Q5 🆕: "Why do scaling laws hold for deep learning but only weakly for classical ML like random forests?"**
+
+**Answer:** Deep networks are (near-)universal function approximators whose effective capacity grows smoothly with parameter count and data — more data lets a bigger network carve a more refined decision surface without immediately overfitting, because the network's inductive biases (e.g., convolution, weight sharing, depth) let it exploit hierarchical structure in the data at every added layer. Classical ML models like random forests have a capacity ceiling baked into their algorithmic structure (e.g., number of trees × tree depth); beyond a certain data volume, adding more data means the same decision splits get more precisely estimated, but the *functional form* the forest can represent doesn't fundamentally get richer. This is why DL benchmarks show log-linear improvement with data/compute (empirically documented in the "scaling laws" literature), while classical ML curves plateau.
+
+---
+
+**Q6 🆕: "You're given a 300-row tabular dataset (structured columns: age, income, etc.) to predict loan default. Would you reach for a deep neural network? Justify your answer using the three pillars from this chapter."**
+
+**Answer:** No — reach for gradient-boosted trees (XGBoost/LightGBM) or logistic regression first. Justification via the three pillars:
+- **Data pillar:** 300 rows is far below the "thousands to millions" a DL model needs to generalize; a network with even modest capacity will overfit almost immediately.
+- **Compute pillar:** irrelevant here — a bigger point is that the *return* on GPU compute is near zero at this data scale.
+- **Algorithms pillar:** the algorithmic advances DL relies on (residual connections, batch norm, dropout) exist to manage huge, deep architectures; they don't help a shallow net starving for data.
+Tabular data also lacks the strong spatial/sequential structure (edges→shapes, phonemes→words) that lets DL's hierarchical feature learning pay off — so classical ML's inductive biases (axis-aligned splits) are actually a *better* fit here, not just a cheaper one.
+
+---
+
+**Q7 🆕: "Write out the empirical risk minimization formula from memory and explain what changes between training and inference."**
+
+**Answer:**
+```
+L(θ) = (1/N) Σᵢ loss(f(xᵢ; θ), yᵢ)
+```
+During **training**, we have access to `(xᵢ, yᵢ)` pairs and use gradient-based optimization to adjust `θ` to minimize `L(θ)` averaged over the training set. During **inference**, `θ` is frozen (no further updates); we only compute `f(x_new; θ)` for a new input with no known `y`, and there is no loss term involved at all — the loss function exists purely to guide training, not to run in production.
+
+---
+
+**Q8 🆕: "Give a concrete example where deep learning's lack of interpretability would actually be disqualifying, and one where it wouldn't matter at all."**
+
+**Answer:** Disqualifying: a bank's credit-approval model in a jurisdiction requiring "right to explanation" (e.g., adverse action notices under the U.S. Equal Credit Opportunity Act) — a black-box DL model can't produce a legally defensible, human-readable reason for denial the way a decision tree or logistic regression coefficient table can. Doesn't matter: a photo app's "suggested album cover" feature — if the model picks a slightly suboptimal photo, there's no regulatory or safety consequence, so raw accuracy/user engagement is all that matters, not explainability.
+
+---
+
+**Q9 🆕: "What's the difference between 'the model underfits' and 'the model has high bias' — are these the same statement?"**
+
+**Answer:** Yes, essentially — they describe the same phenomenon from two angles. "Underfitting" is the *observable symptom* (both training and test error are high, and the model doesn't do well on data it has already seen). "High bias" is the *statistical/mathematical explanation* for why — the model's assumed function class (e.g., linear) is too restrictive to represent the true underlying pattern, so its predictions are systematically off, independent of which particular training sample it saw. In interviews, be precise: bias/variance is the diagnostic *framework*; overfitting/underfitting are the *labels* for the two failure regimes it explains.
+
+---
+
+## 🆕 1.11 RAPID-FIRE FLASHCARDS — Chapter 1
+
+| Prompt | Answer |
+|---|---|
+| AI vs ML vs DL relationship? | AI ⊃ ML ⊃ DL (nested subsets) |
+| 3 ML paradigms? | Supervised, Unsupervised, Reinforcement |
+| What does "deep" mean in deep learning? | Number of layers (depth), not sophistication |
+| 3 pillars enabling DL's 2012 rise? | Data, Compute (GPUs), Algorithms |
+| DL's biggest structural weakness vs classical ML? | Interpretability + data hunger |
+| When does classical ML beat DL? | Small / tabular datasets |
+| ERM formula? | L(θ) = (1/N) Σ loss(f(xᵢ;θ), yᵢ) |
+| Train↑ Test↓ gap means? | Overfitting (high variance) |
+| Both train & test low & equal, both bad? | Underfitting (high bias) |
 
 ---
 
@@ -968,4 +1044,109 @@ W = np.random.randn(n_out, n_in) * np.sqrt(2.0 / (n_in + n_out))
 
 ---
 
+## 🆕 2.12 EXPANDED INTERVIEW Q&A BANK — Chapter 2
+
+**Q4 🆕: "Derive the Perceptron weight update rule from the intuition of 'move the decision boundary toward misclassified points.' Then explain why this rule fails to converge on non-separable data."**
+
+**Answer:** The update is `w ← w + η·δ·x` where `δ = y - ŷ ∈ {-1, 0, +1}`. Intuition: if the perceptron predicted 0 but the true label is 1 (δ=+1), we want `wᵀx` to increase next time this input (or a similar one) is seen — adding `η·x` to `w` does exactly that, since `(w + ηx)ᵀx = wᵀx + η‖x‖²`, which is strictly larger. Symmetric logic applies for the opposite mistake (δ=-1), where we subtract `x` to push `wᵀx` down.
+
+On **non-separable data**, no single hyperplane classifies all points correctly. Because every update is driven purely by whichever misclassified point the algorithm currently sees, fixing one point's error routinely re-breaks a different point that was previously correct — the weight vector perpetually oscillates chasing an unreachable target, and the algorithm never reaches a fixed point (unlike gradient descent on a smooth loss, which can settle at a compromise minimum).
+
+---
+
+**Q5 🆕: "Why can two neurons in a hidden layer solve XOR, but one neuron plus a non-linear activation on the SAME single neuron cannot?"**
+
+**Answer:** A single neuron — no matter its activation function — computes `σ(wᵀx + b)`, which is a *monotonic transformation of a single linear combination* `wᵀx + b`. Its decision boundary (where `σ(wᵀx+b) = 0.5`) is always the hyperplane `wᵀx + b = 0`; squashing that hyperplane through sigmoid/tanh/ReLU doesn't change where the boundary sits, only how confidently the neuron reports distance from it. XOR requires a boundary that's genuinely non-linear (it needs to separate two diagonal corners from the other two), which is not achievable by any single line. Two neurons in a hidden layer, by contrast, each draw their *own* line (e.g., "x₁ OR x₂" and "x₁ AND x₂"), and a downstream output neuron combines these two half-plane decisions into a new, non-linear composite region. The non-linearity that matters for XOR comes from **composition across neurons**, not from the shape of a single activation function.
+
+---
+
+**Q6 🆕: "What is the geometric meaning of the weight vector w in a single neuron? What does increasing ‖w‖ (its magnitude) do to the decision boundary?"**
+
+**Answer:** `w` is the vector **normal (perpendicular) to the decision boundary hyperplane** `wᵀx + b = 0`; it points in the direction of steepest increase of `z = wᵀx+b`, i.e., toward the class-1 region. The bias `b` controls the hyperplane's offset from the origin along that normal direction. Increasing `‖w‖` while keeping its direction fixed does **not** move the boundary's location (the boundary is still `wᵀx+b=0`), but it makes `z` grow faster as you move away from the boundary — after a sigmoid/tanh, this makes the output **saturate to 0/1 more sharply**, i.e., the neuron becomes more confident more quickly near the boundary. This is directly relevant to weight-decay/regularization (Chapter 9): penalizing large `‖w‖` keeps decision boundaries "softer" and less overconfident, which usually improves generalization.
+
+---
+
+**Q7 🆕: "Compare the Perceptron learning rule to gradient descent on logistic regression's cross-entropy loss. Are they the same algorithm?"**
+
+**Answer:** Not the same, though closely related. The **Perceptron rule** only updates on misclassified points (`δ ∈ {-1,0,1}`) and uses a hard step activation, so there's no notion of "how wrong" a correct-but-low-confidence prediction is. **Logistic regression via gradient descent** minimizes cross-entropy loss `-[y·log(ŷ) + (1-y)·log(1-ŷ)]` using the smooth sigmoid, and its gradient update `w ← w - η·∂L/∂w` turns out to have the *same functional form*, `w ← w + η·(y - ŷ)·x` — but here `ŷ` is a continuous probability, not a hard 0/1, so *every* training example contributes an update proportional to its error magnitude, not just the misclassified ones. Practically: logistic regression gradient descent converges to a well-defined minimum even on non-separable data (because cross-entropy is a smooth, convex loss with a finite minimum), whereas the Perceptron rule can cycle forever on the same data.
+
+---
+
+**Q8 🆕: "If you replace the sigmoid in a neuron with ReLU, does the 'symmetry problem' from zero-initialization still occur? Does the fix change?"**
+
+**Answer:** Yes, the symmetry problem is independent of which activation function you use — it's a property of the **linear pre-activation** `z = Wx+b`, not of `σ`. With `W=0`, every neuron in a layer still receives `z=0` regardless of activation (ReLU(0)=0, sigmoid(0)=0.5, tanh(0)=0 — the exact value differs but *all neurons in the layer still produce an identical value to each other*), and the backward-pass argument (identical gradients → identical updates → permanent symmetry) applies unchanged. The fix is the same in spirit — random initialization — but the specific *scale* recommended differs: Xavier/Glorot init (`√(2/(n_in+n_out))`) is designed for sigmoid/tanh, while **He initialization** (`√(2/n_in)`) is the standard choice for ReLU networks, because ReLU zeroes out roughly half its inputs and needs a larger variance to keep signal magnitude stable across layers (previewed here, covered fully in Chapter 7).
+
+---
+
+**Q9 🆕: "You're told a hidden layer has a weight matrix W of shape (128, 64). What do these two numbers mean, and what's the input/output dimensionality of this layer?"**
+
+**Answer:** By this course's convention, `W ∈ ℝ^(n_out × n_in)`, so shape `(128, 64)` means **n_out = 128** (128 neurons in this layer) and **n_in = 64** (each neuron receives 64 input features). The computation is `z = Wx + b` where `x ∈ ℝ⁶⁴` (a 64-dim input vector) and `z ∈ ℝ¹²⁸` (a 128-dim pre-activation vector) — so this layer maps a 64-dimensional representation up to a 128-dimensional one. Note: some frameworks (e.g., PyTorch's `nn.Linear(in_features, out_features)`) display this the other way in their constructor arguments even though the underlying weight tensor is still stored as `(out_features, in_features)` — this reversal is the single most common source of shape-mismatch bugs, so always check which convention a specific framework/diagram is using.
+
+---
+
+**Q10 🆕: "The Universal Approximation Theorem says one hidden layer with enough neurons can approximate any continuous function. So why do practitioners use deep (many-layer) networks instead of wide (one huge layer) ones?"**
+
+**Answer:** Three reasons, all previewed in §2.9's caveat and worth stating explicitly in an interview:
+1. **Parameter efficiency:** some functions provably require *exponentially* more neurons in a single wide layer than they would need across a modest number of layers — depth lets the network reuse and compose intermediate features (e.g., "edge → shape → object") instead of re-deriving every combination from scratch in one flat layer.
+2. **Optimization, not just representation:** the theorem is an *existence* proof; it says the right weights exist, not that gradient descent will find them. In practice, extremely wide shallow networks are harder to optimize well and don't train to the same quality as moderately deep ones on real data.
+3. **Inductive bias alignment:** real-world data (images, language, audio) has hierarchical/compositional structure, and deep architectures' layer-by-layer feature hierarchy matches that structure directly — a wide shallow net has to fit the same structure through brute-force parameter count rather than through architectural shape.
+
+---
+
+## 🆕 2.13 RAPID-FIRE FLASHCARDS — Chapter 2
+
+| Prompt | Answer |
+|---|---|
+| Neuron computation (2 steps)? | z = wᵀx+b, then a = σ(z) |
+| Perceptron activation? | Hard step function (0 or 1) |
+| Perceptron update rule? | w ← w + η·δ·x, b ← b + η·δ |
+| Perceptron Convergence Theorem condition? | Only guaranteed if data is linearly separable |
+| Why can't 1 neuron solve XOR? | XOR isn't linearly separable — needs a curved/composite boundary |
+| Minimum layers to solve XOR? | 2 (one hidden layer + output) |
+| Why smooth activations over step function? | Step has zero/undefined gradient → can't backprop |
+| Single sigmoid neuron = what classical model? | Logistic regression |
+| All-zero weight init causes? | Symmetry problem — neurons stay identical forever |
+| Is zero-init OK for biases? | Yes, as long as weights are randomly initialized |
+| Why do stacked linear layers collapse to one layer? | Product of matrices is still just one matrix: ŷ = W*x |
+| W matrix shape convention (this course)? | (n_out × n_in) |
+| Universal Approximation Theorem guarantees existence, not...? | ...findability via gradient descent, or parameter efficiency |
+| Xavier/Glorot init used with? | sigmoid/tanh |
+| He init used with? | ReLU |
+
+---
+
 *End of Chapter 2. Chapter 3 (Activation Functions) coming next.*
+
+---
+
+## 🆕 COMBINED MASTER FORMULA SHEET (Chapters 1–2)
+
+```
+Empirical Risk:        L(θ) = (1/N) Σᵢ loss(f(xᵢ;θ), yᵢ)
+
+Perceptron:             ŷ = step(wᵀx + b)
+Perceptron update:      w ← w + η·δ·x,   δ = y - ŷ
+
+Modern neuron:           z = wᵀx + b
+                          a = σ(z)
+
+Layer (vectorized):      z = Wx + b
+                          a = σ(z)          [W ∈ ℝ^(n_out × n_in)]
+
+Batch layer:              Z = WX + b        [X ∈ ℝ^(n_in × m), m = batch size]
+                           A = σ(Z)
+
+Bias-Variance:            Expected Test Error = Bias² + Variance + Irreducible Noise
+
+Linear-network collapse:  ŷ = (Wₙ...W₂W₁)x = W*x   (no non-linearity ⇒ 1 effective layer)
+```
+
+## 🆕 COMBINED "TOP 5 THINGS THAT TRIP PEOPLE UP" (Chapters 1–2)
+
+1. Confusing AI ⊃ ML ⊃ DL as separate, non-overlapping fields instead of nested subsets.
+2. Saying "the model overfit" when what's actually meant is a *specific, quantified* train/test gap — always cite the numbers.
+3. Forgetting the bias term and not being able to explain geometrically why it matters (shifts the hyperplane off the origin).
+4. Thinking a "smarter" activation function alone fixes what only *depth* (composition across neurons) can fix — e.g., XOR.
+5. Mixing up `(n_out, n_in)` vs `(n_in, n_out)` weight-matrix shape conventions across frameworks — always sanity-check against a known dimension.
+
+---
