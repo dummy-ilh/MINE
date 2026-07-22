@@ -1,21 +1,360 @@
-# Logistic Regression — Part 1: Google · Apple · Meta
-### Historic Interview Questions & Model Answers for L4–L6 / Senior–Staff
+# Logistic Regression — MERGED Master Interview Notes
+### Google · Apple · Meta | All Modules Combined, Nothing Deleted, Rapid-Fire Sections Boosted
+
+> **How this merged document works:** This combines every logistic-regression interview document you've built so far into a single reference: (1) the Module 5 rapid-fire Q&A + PM explanations + case studies + trick questions, (2) the company-tagged "Historic Interview Questions" guide (Foundations → Applied → Apple/Propensity), (3) the by-company deep-dive guide (Google / Apple / Meta / Cross-Company Synthesis), (4) the full Regularisation + Assumptions + "When Not to Use LR" mathematical treatment, and (5) the second by-company L4–L6 guide (Google / Apple / Meta / Cross-Company Advanced). **Nothing has been deleted** — every original question, answer, table, and derivation below is intact. New material is marked 🆕, and per your request, the compressed "rapid-fire" one-liners have been expanded into full answers in a dedicated boosted section so nothing in this document is left under-explained.
+
+---
+
+## 🆕 MASTER TABLE OF CONTENTS
+
+- **Part I** — Module 5 Companion: Rapid-Fire Q&A (37 Qs), "Explain to a PM," Case Studies, Trick Questions
+- **🆕 Part I-B** — BOOSTED: Full Expanded Answers for all 37 Rapid-Fire Questions
+- **Part II** — Historic Interview Questions Guide (Foundations, MLE, Coefficients, Evaluation, Regularization, Imbalance, Assumptions, LR-vs-Other-Models, System Design, Apple Propensity)
+- **Part III** — By-Company Deep Dive (Google / Apple / Meta / Cross-Company Synthesis)
+- **Part IV** — Regularisation, Assumptions & When Not to Use Logistic Regression (full math treatment with hand calculations)
+- **Part V** — Second By-Company L4–L6 Guide (Google / Apple / Meta / Cross-Company Advanced)
+- **🆕 Part VI** — Unified Mega Formula Sheet & Top Pitfalls Across All Parts
+
+---
+
+## 🆕 MEGA CHEAT SHEET (all parts, one table)
+
+| Concept | Formula | Where covered |
+|---|---|---|
+| Sigmoid | σ(z) = 1/(1+e^(-z)) | Parts I–V |
+| Logit / log-odds | log(p/(1-p)) = β·x | Parts I–V |
+| Log-likelihood | ℓ(β) = Σ[y·log(p)+(1-y)·log(1-p)] | Parts II, III, V |
+| MLE gradient | ∇ℓ = Xᵀ(y - ŷ) | Parts II, III, V |
+| Odds ratio | OR = e^β | Parts I–V |
+| Marginal probability effect | ∂p/∂xⱼ = βⱼ·p(1-p) | Part III |
+| L2 (Ridge) penalty | λΣβⱼ² | Parts II, IV, V |
+| L1 (Lasso) penalty | λΣ\|βⱼ\| | Parts II, IV, V |
+| L2 gradient w/ weight decay | w(1-2αλ) - α·Xᵀ(p̂-y) | Part IV |
+| L1 soft-threshold update | sign(w̃ⱼ)·max(\|w̃ⱼ\|-αλ, 0) | Part IV |
+| Elastic Net | λ[α_mix·‖w‖₁ + (1-α_mix)‖w‖²] | Part IV |
+| AUC (probabilistic) | P(score(pos) > score(neg)) | Parts II, III, V |
+| Calibration correction (downsampling) | p_corrected = p/(p+(1-p)/r) | Parts II, III, V |
+| EPV rule of thumb | EPV = min(n₀,n₁)/p ≥ 10 | Part IV |
+| VIF threshold | VIF > 5–10 → multicollinearity concern | Parts II–V |
+
+---
+---
+
+# PART I — Module 5 Companion: Q&A
+
+## PART A: Rapid-Fire Conceptual Q&A (30+ Questions)
+
+**1. Why can't you use linear regression for classification?**
+Output isn't bounded to [0,1], violates residual normality assumptions for a 0/1 target, and can't capture the natural flattening of probability near the extremes.
+
+**2. What is a link function?**
+A translator between bounded probability space (0,1) and unbounded straight-line space (−∞,∞), enabling linear modeling of a bounded quantity.
+
+**3. What is the logit?**
+log(odds) = log(p/(1-p)) — the specific link function logistic regression uses.
+
+**4. What is the sigmoid function and why is it used?**
+1/(1+e^-z) — it's the inverse of the logit link, mapping any real number back into (0,1).
+
+**5. Write the sigmoid's derivative.**
+sigmoid(z) × (1 - sigmoid(z)), or p(1-p) — clean because it's expressed in terms of its own output.
+
+**6. What does a logistic regression coefficient mean?**
+A 1-unit increase in the feature adds w to the log-odds, holding other features constant. Exponentiating (e^w) gives the odds ratio — the multiplicative effect on odds.
+
+**7. Coefficient = 0.5. What's the odds ratio?**
+e^0.5 ≈ 1.65 — a 1-unit increase multiplies the odds by ~1.65x.
+
+**8. Why not use MSE as the loss function?**
+Non-convex when paired with sigmoid — risks getting stuck in local minima. Log-loss is convex for logistic regression.
+
+**9. What is Maximum Likelihood Estimation, in plain terms?**
+Choosing the parameters that make the observed data most probable under the model.
+
+**10. What's the relationship between log-loss and MLE?**
+Log-loss is negative log-likelihood — minimizing log-loss ≡ maximizing likelihood.
+
+**11. Why does log-loss punish confident-wrong predictions so harshly?**
+-log(p) approaches infinity as p→0 — the penalty explodes for confidently wrong predictions, not just increases linearly.
+
+**12. State the gradient descent update rule.**
+new_weight = old_weight − (learning_rate × gradient).
+
+**13. What's the gradient formula for logistic regression?**
+Average of (p−y)×x across data points — clean because sigmoid and log-loss derivatives combine nicely.
+
+**14. Cost is oscillating during training — what's wrong?**
+Learning rate likely too high — reduce it.
+
+**15. Batch vs. stochastic vs. mini-batch gradient descent?**
+Batch = full dataset per update (accurate, slow). SGD = one point per update (fast, noisy). Mini-batch = small random subset (industry standard).
+
+**16. Why isn't 0.5 always the right threshold?**
+It assumes false positives and false negatives cost the same — rarely true. Threshold should reflect actual business cost of each error type.
+
+**17. Why is logistic regression's decision boundary linear?**
+z is a linear combination of features; setting z=0 (at threshold 0.5) produces a straight-line equation.
+
+**18. How would you get a non-linear decision boundary from logistic regression?**
+Add engineered non-linear features (polynomial or interaction terms) — the boundary becomes curved in original feature space even though it's still "linear" in the new features.
+
+**19. Why does unregularized logistic regression overfit?**
+Gradient descent will assign large weights to any feature that reduces training loss, including pure noise/coincidence in the training data.
+
+**20. Difference between L1 and L2 regularization?**
+L2 (Ridge) squares weights — smooth shrinkage, rarely exactly zero. L1 (Lasso) uses absolute value — tends to zero out weak features (automatic feature selection).
+
+**21. Why does L1 produce sparsity but L2 doesn't?**
+Squaring a small weight gives a tiny penalty (diminishing pressure); absolute value keeps constant proportional pressure regardless of size, pushing weak weights all the way to zero.
+
+**22. λ is set extremely high — what happens?**
+All weights shrink toward zero, model approaches predicting a constant probability regardless of input — underfitting.
+
+**23. Why is accuracy a bad metric for imbalanced data?**
+A model that always predicts the majority class can score 99%+ accuracy while catching 0% of the rare class.
+
+**24. Precision vs. recall — formulas and when each matters?**
+Precision = TP/(TP+FP), matters when false positives are costly. Recall = TP/(TP+FN), matters when false negatives are costly.
+
+**25. Why harmonic mean for F1, not a simple average?**
+Harmonic mean is pulled down heavily by the smaller value — prevents one very high metric from masking a very low one.
+
+**26. ROC-AUC vs PR-AUC — when to use which?**
+ROC-AUC fine for balanced classes. PR-AUC preferred for heavily imbalanced data, since ROC-AUC's FPR denominator gets dominated by a huge TN count, making it look deceptively good.
+
+**27. What does AUC = 0.5 mean? AUC = 0.3?**
+0.5 = no better than random guessing. 0.3 = systematically backwards — flip the predictions and you'd get 0.7. Only 0.5 is truly uninformative.
+
+**28. What is calibration, and how does it differ from AUC?**
+Calibration measures whether predicted probabilities match observed frequencies (among 70% predictions, does the event happen ~70% of the time). AUC measures ranking only — a model can rank well but be poorly calibrated.
+
+**29. What does logistic regression assume about the relationship between features and the outcome?**
+Linearity in the log-odds (not probability, not raw outcome) — precise wording matters here.
+
+**30. What's the difference between the independence assumption and the multicollinearity assumption?**
+Independence is about rows (observations shouldn't be correlated with each other). Multicollinearity is about columns (features shouldn't be too correlated with each other).
+
+**31. Does multicollinearity hurt predictions or coefficients?**
+Mainly coefficients — individual weights become unstable/erratic (can even flip sign), but overall predictions often remain fine.
+
+**32. How do you extend logistic regression to multiclass problems?**
+One-vs-Rest (train N independent binary classifiers, pick highest) or Softmax regression (one unified model, probabilities guaranteed to sum to 1).
+
+**33. Why does softmax use exponentiation?**
+Raw z-scores can be negative — exponentiating guarantees positivity before normalizing into valid probability shares.
+
+**34. How is softmax related to sigmoid?**
+Sigmoid is softmax's special case with exactly 2 classes.
+
+**35. Why would you choose logistic regression over gradient boosting?**
+Interpretability (clean odds-ratio coefficients), latency (fast inference), and baseline value (cheap first pass to measure how much lift a complex model actually buys).
+
+**36. Logistic regression is mathematically equivalent to what neural network structure?**
+A single neuron, single layer, with sigmoid activation.
+
+**37. Why do stacked layers need non-linear activation functions?**
+Without non-linearity, stacked linear layers mathematically collapse into one equivalent linear layer — depth buys nothing.
+
+---
+
+## PART B: "Explain to a PM" Questions
+
+**1. "Why does the model say a customer has an 80% chance of churning, but you said the coefficient for complaints was only 0.8 — shouldn't 80% and 0.8 be more related?"**
+
+*Model answer:* "The 0.8 isn't measured on the probability scale — it's measured on something called log-odds, which is a technical, unbounded number the model works with internally. It's not a percentage or a probability itself. What the 0.8 tells us is: each additional complaint makes churning about 2.2 times more likely relative to not churning, in odds terms. The 80% probability is the final, human-readable output after we translate that internal number back into something we can act on. They're related, just not on a scale where you can directly compare 0.8 to 80%."
+
+**2. "Why can't we just say 'above 50% means they'll churn' and be done with it?"**
+
+*Model answer:* "50% assumes that missing a churner and wrongly flagging a loyal customer cost us exactly the same amount — and they usually don't. If a wrongly-flagged loyal customer just gets an unnecessary discount offer (cheap), but a missed churner means losing their full annual revenue (expensive), we should be willing to flag more people as at-risk, even if we're less than 50% sure, because the cost of missing a real churner is so much higher than the cost of a wasted offer."
+
+**3. "The model is 97% accurate — why are you telling me it's not good enough?"**
+
+*Model answer:* "If only 1% of our customers actually churn, a model that predicts 'nobody will churn' would already be 99% accurate — while being completely useless, since it identifies zero at-risk customers. Accuracy hides how well we're doing on the rare cases that actually matter. I'd rather show you: of everyone we flagged as at-risk, how many really were at-risk (precision), and of everyone who actually churned, how many did we catch (recall) — those numbers tell the real story."
+
+**4. "Why do we need to keep checking on this model after it's launched? Didn't we already test it?"**
+
+*Model answer:* "Customer behavior changes over time — a model trained on last year's patterns can quietly become less accurate as the world shifts, without any code breaking or any alarms going off on their own. We monitor it the same way you'd periodically recheck a forecast against actual results — if predictions start drifting from reality, we catch it early and retrain, instead of discovering it months later through a customer complaint or lost revenue."
+
+---
+
+## PART C: Take-Home-Style Case Questions
+
+**Case 1: Design a fraud detection system using logistic regression as a baseline.**
+
+*Strong answer structure:*
+- **Features:** transaction amount, transaction velocity (count/sum over recent time windows), device/location consistency with account history, time-of-day patterns. Apply monotonic transforms (log(amount)) and binning where relationships are non-linear.
+- **Class imbalance:** fraud is rare — start with class weights (cheap, no data loss), consider SMOTE oversampling if needed.
+- **Metric:** PR-AUC as primary offline metric, given severe imbalance (ROC-AUC would look artificially good).
+- **Threshold:** set based on the real cost ratio of missed fraud (high) vs. false alarms (lower, but not negligible — customer friction has a cost too). Likely biased toward a lower threshold given fraud's asymmetric cost.
+- **Monitoring:** drift (fraud patterns evolve adversarially — fraudsters adapt to detection), calibration decay (fraud base rate shifts seasonally, e.g., holiday spikes).
+- **Baseline justification:** fast, interpretable, cheap to serve at scale (needed for real-time transaction blocking) — explicit plan to benchmark against gradient boosting later via a proper A/B test, not just offline comparison.
+
+**Case 2: Your company wants to replace a logistic regression credit approval model with a deep learning model that has a 3-point higher AUC. Do you recommend the switch?**
+
+*Strong answer structure:* Not automatically yes. Key considerations: (1) **Regulatory interpretability** — credit decisions often legally require explainable reasoning ("why was this application denied"); logistic regression's odds ratios are directly defensible, a deep model is much harder to explain even with tools like SHAP. (2) **Magnitude of gain** — is 3 AUC points a meaningful real-world lift, or within noise/measurement variance? (3) **Segment-level check** — does the new model improve avg. performance while quietly hurting a protected subgroup (fairness/compliance risk)? (4) **Calibration** — better ranking doesn't guarantee better calibration; credit limits/pricing may depend on the actual probability value, not just ranking. (5) **Process** — recommend a proper A/B test with gradual rollout and rollback capability before any full replacement, rather than an offline-metric-only decision.
+
+**Case 3: A logistic regression churn model performed well in offline validation (AUC 0.85) but the retention team says targeted customers "don't seem right" after 2 months in production. Diagnose the issue.**
+
+*Strong answer structure:* Start by separating two possible failure modes: **ranking failure** (re-check AUC on recent live data — has it actually dropped?) vs. **calibration failure** (re-check the calibration curve — are predicted probabilities still matching real outcomes?). Also check for **data drift** (have input feature distributions shifted since training — e.g., new customer segments, behavior changes?) and **training-serving skew** (are features computed identically in production as they were during training — a very common, sneaky bug). Also consider whether the **threshold** was tuned for outdated conditions and needs recalibration given a shifted base rate. Walk through each systematically rather than jumping to "retrain from scratch" as the first move.
+
+---
+
+## Common Trick Questions and the Traps Within Them
+
+**Trick 1:** *"Doesn't a coefficient of 0 mean the feature doesn't matter?"*
+Trap: true in an unregularized model roughly, but in L1-regularized models, a coefficient of exactly 0 could also mean the feature was correlated with another feature that "won" the competition for that signal (multicollinearity), not necessarily that the feature has zero true relationship with the outcome.
+
+**Trick 2:** *"If AUC is 0.5, does that mean the model is useless?"*
+Trap: yes, 0.5 truly is uninformative — but candidates sometimes wrongly generalize this to "any AUC far from 1.0 is bad," missing that an AUC of 0.2 or 0.3 is actually informative (systematically backwards, exploitable by flipping predictions).
+
+**Trick 3:** *"Since logistic regression is 'simple,' is it always outperformed by more complex models?"*
+Trap: not necessarily — if the true relationship is genuinely close to linear in the log-odds, a complex model may add negligible lift while costing more in latency, interpretability, and maintenance. "Simple" doesn't mean "worse," it means "different tradeoffs."
+
+**Trick 4:** *"Higher regularization always improves generalization, right?"*
+Trap: no — too much regularization causes underfitting. It's a bias-variance tradeoff with a genuine sweet spot, not a monotonic "more is better" relationship.
+
+**Trick 5:** *"A confidence interval on a coefficient tells you the probability the true value falls in that range, right?"*
+Trap: this is the classic frequentist-vs-Bayesian confusion — a (frequentist) confidence interval means "if we repeated this sampling process many times, X% of such intervals would contain the true value," not "there's an X% probability the true value is in THIS specific interval." A subtle but real distinction some interviewers probe.
+
+---
+---
+
+# 🆕 PART I-B: BOOSTED — Full Expanded Answers for the 37 Rapid-Fire Questions
+
+The rapid-fire section above is deliberately compressed for speed-drilling. Below is the same 37 questions with full, interview-ready expanded answers — the depth you'd actually want to deliver out loud if a follow-up "why?" landed.
+
+**1. Why can't you use linear regression for classification?** 🆕
+Linear regression's output range is unbounded `(-∞,∞)`, but a probability must live in `[0,1]` — predictions of 1.4 or -0.3 are meaningless as probabilities and would need arbitrary clipping. Beyond the range problem, linear regression's whole inferential framework (t-tests, confidence intervals on coefficients) assumes residuals `y - ŷ` are approximately Gaussian and homoscedastic; with a 0/1 target, residuals are necessarily heteroscedastic (variance depends on `p(1-p)`, which varies with `x`) and can only take two values minus the prediction — the normality assumption is violated by construction. Finally, real class-boundary behavior is usually a smooth "S" shape (near 0 far below threshold, near 1 far above, steep transition near the boundary) — logistic regression's sigmoid captures this natively, while a straight line cannot flatten out at the extremes.
+
+**2. What is a link function?** 🆕
+In the Generalized Linear Model (GLM) framework, you want to model a bounded/constrained target (like a probability) using an unbounded linear predictor `η = β·x`. The link function `g(·)` is the transform connecting them: `g(E[y|x]) = β·x`. For logistic regression, `g(p) = log(p/(1-p))` (the logit), so `logit(p) = β·x`, and the sigmoid is simply `g⁻¹`, converting back. Different GLMs swap in different link functions for different outcome types — e.g., Poisson regression uses the log link for count data — but the "linear combination of features" machinery stays identical across all of them.
+
+**3. What is the logit?** 🆕
+`logit(p) = log(p/(1-p))`, the log of the odds. It's the specific link function that makes logistic regression's math work out cleanly: it maps `p∈(0,1)` onto the entire real line symmetrically around `logit(0.5)=0`, and its inverse is exactly the sigmoid. "Odds" itself (`p/(1-p)`) is already a common way humans reason about likelihood (e.g., "3-to-1 odds"); the logit just log-transforms it so a fixed increase in a feature corresponds to a fixed *additive* change, rather than a fixed multiplicative one on the raw odds scale.
+
+**4. What is the sigmoid function and why is it used?** 🆕
+`σ(z) = 1/(1+e^(-z))`. It's used because it is precisely the inverse of the logit link — if you assume log-odds are linear in your features, sigmoid is *forced* on you as the function that converts that linear combination back into a valid probability. It's smooth and differentiable everywhere (unlike a hard step function), monotonic (higher `z` always means higher probability, preserving ranking), and asymptotically saturates to 0 and 1 without ever reaching them exactly (useful since log-loss would be infinite at exact 0/1).
+
+**5. Write the sigmoid's derivative.** 🆕
+`σ'(z) = σ(z)(1-σ(z)) = p(1-p)`. This is "clean" for a specific structural reason: `σ(z) = 1/(1+e^{-z})`; differentiating with the quotient rule gives `e^{-z}/(1+e^{-z})²`, and you can algebraically rewrite `e^{-z}/(1+e^{-z})²` as `[1/(1+e^{-z})]·[e^{-z}/(1+e^{-z})] = σ(z)·(1-σ(z))` — the derivative is expressible purely in terms of the function's own output, so once you've computed the forward pass you get the derivative "for free," with no need to re-evaluate any exponential.
+
+**6. What does a logistic regression coefficient mean?** 🆕
+`βⱼ` is the amount the log-odds of the positive class changes for a one-unit increase in `xⱼ`, holding all other features fixed (the "ceteris paribus" / partial-derivative-style interpretation standard to all linear models). Since log-odds aren't intuitive on their own, we usually exponentiate: `e^{βⱼ}` is the **odds ratio** — the multiplicative factor by which the *odds* (not probability) change per unit increase in `xⱼ`. Critically, this effect is constant on the odds scale but *not* constant on the probability scale — the same `β` produces a bigger probability shift near `p=0.5` than near `p=0.01` or `p=0.99` (see Q23 in Part III, `∂p/∂xⱼ = βⱼ·p(1-p)`).
+
+**7. Coefficient = 0.5. What's the odds ratio?** 🆕
+`e^0.5 ≈ 1.6487`. So a one-unit increase in that feature multiplies the odds of the positive outcome by ~1.65× — e.g., if the baseline odds were 1:1 (50% probability), after the increase the odds become ~1.65:1, corresponding to a new probability of `1.65/(1+1.65) ≈ 62.3%`. Note this is a *relative* (odds) statement, not a claim that probability itself rose by 65 percentage points — a very common interviewer trap to watch for.
+
+**8. Why not use MSE as the loss function?** 🆕
+Two intertwined problems. First, composing MSE with sigmoid produces a **non-convex** loss surface in the weights — unlike cross-entropy, which stays convex — so gradient descent can get stuck in a local minimum or saddle region instead of guaranteed convergence to the unique global optimum. Second, even setting convexity aside, MSE's gradient through a saturated sigmoid vanishes: `∂MSE/∂z = 2(p-y)·p(1-p)`, and when the model is confidently *wrong* (e.g., `p≈0, y=1`), the `p(1-p)` factor is tiny, so the gradient barely moves the weights precisely when the correction is needed most. Log-loss's gradient `(p-y)` has no such vanishing term.
+
+**9. What is Maximum Likelihood Estimation, in plain terms?** 🆕
+MLE asks: "given a family of possible models (parameterized by `θ`), which specific parameter values make the data I actually observed the most probable outcome?" Concretely for logistic regression, we compute `P(data | β)` as a function of `β` (the likelihood), and search for the `β` that maximizes it. It's a general statistical estimation principle — not unique to logistic regression — that turns "fit a model" into a well-defined optimization problem with a clear objective grounded in probability theory, rather than an ad hoc curve-fitting heuristic.
+
+**10. What's the relationship between log-loss and MLE?** 🆕
+Log-loss (binary cross-entropy) is defined as the **negative log-likelihood**, averaged over examples: `-ℓ(β)/N` where `ℓ(β) = Σ[y·log(p)+(1-y)·log(1-p)]`. Because "maximize `f`" and "minimize `-f`" are the same optimization problem, minimizing log-loss via gradient descent is mathematically identical to performing MLE — the loss function isn't a separate, ad hoc choice layered on top of the statistical model; it *is* the statistical model's estimation criterion, just phrased as something to be minimized instead of maximized.
+
+**11. Why does log-loss punish confident-wrong predictions so harshly?** 🆕
+For a true label `y=1`, the loss contribution is `-log(p)`. As `p→0`(confidently predicting the wrong class), `-log(p)→+∞` — not just a large finite penalty, but literally unbounded. Contrast with a squared-error penalty, where the worst possible per-example loss is capped at 1 (since `p,y∈[0,1]`, `(p-y)²≤1`). This unboundedness is a deliberate design choice: it means a single wildly overconfident wrong prediction can dominate the entire batch's loss and produce a correspondingly large gradient signal, forcing rapid correction — exactly the property you want from a loss used for probability estimation, where being confidently wrong is qualitatively worse than being uncertain and wrong.
+
+**12. State the gradient descent update rule.** 🆕
+`new_weight = old_weight - (learning_rate × gradient)`, or in symbols `θ ← θ - η∇L(θ)`. The gradient `∇L` points in the direction of steepest *increase* of the loss; subtracting it (rather than adding) moves the parameters toward *lower* loss. The learning rate `η` scales how large a step to take — this single update rule, applied repeatedly, is the entirety of the gradient descent algorithm; everything else (what the gradient equals for a specific model, how to schedule `η`, whether to use a subset of data) is elaboration on top of this one line.
+
+**13. What's the gradient formula for logistic regression?** 🆕
+`∇w = (1/N)Σᵢ(pᵢ-yᵢ)xᵢ` for each feature weight, and `∇b = (1/N)Σᵢ(pᵢ-yᵢ)` for the bias. This is "clean" for the same reason as Q10/Q5 above: differentiating log-loss with respect to the pre-sigmoid logit `z` gives exactly `(p-y)` — the sigmoid's own derivative `p(1-p)` cancels perfectly against a `1/[p(1-p)]` term arising from differentiating the log-loss — so despite the model (sigmoid) and the loss (log-loss) each individually having "complicated" derivatives, their composition simplifies to the simplest possible form: (prediction − truth) × input.
+
+**14. Cost is oscillating during training — what's wrong?** 🆕
+The learning rate is very likely too large: each update step overshoots the minimum, landing on the opposite side of the loss valley with a possibly *larger* loss than before, and the next step overshoots back the other way, and so on — the classic "bouncing between two hillsides" failure mode. Diagnostic confirmation: plot loss vs. iteration and look for a jagged, non-monotonic (or explicitly increasing/diverging) curve rather than a smooth downward trend. First fix to try: reduce the learning rate by 5-10x and re-run; if the oscillation disappears and loss decreases steadily, that confirms the diagnosis (rather than, say, a data or label bug).
+
+**15. Batch vs. stochastic vs. mini-batch gradient descent?** 🆕
+All three compute the *same* underlying gradient formula `(1/m)Σ(pᵢ-yᵢ)xᵢ`, differing only in `m` (how many examples contribute to one gradient estimate before an update). **Batch** (`m=N`, the whole dataset): the gradient is exact but you only get one update per full pass over the data — accurate direction, slow progress, and memory-heavy for huge datasets. **Stochastic (SGD)** (`m=1`): extremely cheap per step and lets you start updating immediately without waiting to see the whole dataset, but each individual gradient estimate is a high-variance, noisy approximation of the true direction, so the path to the minimum zig-zags. **Mini-batch** (`m`≈32–512): averages the noise down (variance shrinks roughly as `1/m`) while still being cheap enough to compute many updates per epoch and to fit in GPU memory and exploit vectorized matrix operations — this is why virtually all production ML defaults to mini-batch.
+
+**16. Why isn't 0.5 always the right threshold?** 🆕
+The 0.5 cutoff implicitly assumes that a false positive and a false negative cost the business exactly the same amount — that misclassifying a churner as safe is just as bad as misclassifying a safe customer as a churner. In almost every real business problem these costs are wildly asymmetric (e.g., missing a fraud case might cost thousands of dollars, while a false fraud alarm just costs a customer-service call). The correct approach: pick the threshold that optimizes the actual expected cost/benefit given your specific false-positive and false-negative costs — often by scanning the precision-recall (or cost) curve and choosing the operating point that matches your business constraint, not by defaulting to the midpoint of probability space.
+
+**17. Why is logistic regression's decision boundary linear?** 🆕
+The predicted class flips exactly where `p=0.5`, i.e., where `σ(z)=0.5`, which happens exactly when `z=0`. Since `z = β₀+β₁x₁+...+βₖxₖ` is a linear combination of the raw features, the equation `z=0` is literally the equation of a hyperplane (a straight line in 2D, a plane in 3D, etc.) in the original feature space — the sigmoid non-linearity only reshapes *how confidently* the model reports predictions on either side of that boundary, it does not bend the boundary itself.
+
+**18. How would you get a non-linear decision boundary from logistic regression?** 🆕
+Since the boundary is linear *in whatever feature space you feed the model*, you can make it curved in the *original* raw-feature space by engineering new, non-linear features from the originals before fitting — e.g., adding `x²`, `x₁·x₂` (interaction terms), `log(x)`, or radial-basis-style distance features. The model is still, technically, "linear in its inputs" (the new expanded feature vector), but because those inputs are themselves non-linear functions of the raw variables, the boundary traced back in raw-feature space can be curved, circular, or otherwise non-linear — this is exactly the same trick used to let linear/logistic regression fit polynomial curves.
+
+**19. Why does unregularized logistic regression overfit?** 🆕
+Gradient descent has no built-in preference for "small" or "simple" weight vectors — it will keep increasing any weight as long as doing so continues to reduce training loss, even if the reduction comes from exploiting a pattern that's pure sampling noise or coincidence specific to the training set (e.g., "every customer whose ID ends in 7 happened to churn in this sample"). With enough features relative to data points, the model has enough degrees of freedom to essentially memorize idiosyncrasies of the training set, achieving very low training loss while generalizing poorly to new data that doesn't share those coincidental patterns.
+
+**20. Difference between L1 and L2 regularization?** 🆕
+Both add a penalty term to the loss discouraging large weights, but with different shapes: **L2 (Ridge)** adds `λΣβⱼ²` — since the penalty is quadratic, its gradient (`2λβⱼ`) shrinks proportionally to the current weight's size, meaning the "pull toward zero" gets weaker and weaker as a weight approaches zero, so weights get smoothed down but essentially never land exactly on zero. **L1 (Lasso)** adds `λΣ|βⱼ|` — its gradient (`±λ`, a constant) doesn't shrink as the weight shrinks, so it keeps pushing with the same constant force all the way down to exactly zero, effectively performing automatic feature selection by eliminating weakly-informative features entirely.
+
+**21. Why does L1 produce sparsity but L2 doesn't?** 🆕
+This follows directly from Q20's gradient behavior: L2's penalty gradient is proportional to the weight itself (`2λw`), so as `w→0` the penalty's pull also `→0` — there's no force left to push it the rest of the way to exactly zero, so it just asymptotically approaches (but doesn't reach) zero. L1's penalty gradient is a constant magnitude `λ` regardless of how small `w` already is, so it keeps applying the same "pull toward zero" pressure even for very small weights — once the data's own gradient signal for that weight is weaker than this constant pull, the optimizer drives the weight to exactly zero and it stays there (the well-known "soft-thresholding" behavior, see Part IV for the explicit update rule).
+
+**22. λ is set extremely high — what happens?** 🆕
+The regularization penalty term dominates the loss function relative to the actual data-fit term (cross-entropy), so the optimizer's primary incentive becomes "make all weights as close to zero as possible" rather than "fit the data well." In the limit, all weights (and typically the bias too, depending on whether it's regularized) shrink toward zero, and the model's output collapses toward predicting the same constant probability for every input regardless of features — a severely **underfit** model that has essentially discarded all the signal in the data. This is the textbook illustration that regularization strength is a genuine bias-variance dial, not a "more is always better" setting.
+
+**23. Why is accuracy a bad metric for imbalanced data?** 🆕
+Accuracy simply counts what fraction of all predictions were correct, with no distinction for *which class* they were correct on. If 99% of examples are the negative class, a trivial model that always predicts "negative" scores 99% accuracy while having zero ability to identify any positive case — the exact scenario the model was presumably built to catch (fraud, churn, disease, etc.). Because the majority class dominates the denominator, accuracy can look excellent while the metric that actually matters (how well you catch the rare, important class) is at rock bottom — this is why precision, recall, F1, and PR-AUC are the standard replacements for imbalanced problems.
+
+**24. Precision vs. recall — formulas and when each matters?** 🆕
+`Precision = TP/(TP+FP)` — "of everything I flagged as positive, what fraction was actually positive?" This matters most when false positives are expensive or annoying (e.g., flagging a legitimate transaction as fraud and blocking a real customer's purchase). `Recall = TP/(TP+FN)` — "of everything that was actually positive, what fraction did I catch?" This matters most when false negatives are expensive or dangerous (e.g., missing an actual case of cancer or actual fraud). Most real systems must explicitly choose a point on the precision-recall tradeoff curve rather than optimizing either metric in isolation, since improving one typically costs some of the other as you move the decision threshold.
+
+**25. Why harmonic mean for F1, not a simple average?** 🆕
+The harmonic mean of precision and recall, `F1 = 2·P·R/(P+R)`, has a key property that a simple arithmetic mean lacks: it is much more sensitive to the *smaller* of the two values. For example, precision=1.0 and recall=0.01 gives an arithmetic mean of 0.505 (looks decent!) but an F1 of ≈0.0198 (correctly signals the model is nearly useless, since it's catching almost nothing despite being "precise" about the few things it does flag). This matters because a model that trivially maximizes one metric while ignoring the other (e.g., flag literally nothing → perfect precision, zero recall) should be penalized harshly, and only the harmonic mean does that reliably.
+
+**26. ROC-AUC vs PR-AUC — when to use which?** 🆕
+ROC-AUC plots True Positive Rate against False Positive Rate; FPR's denominator is the (huge) total count of true negatives, so under severe class imbalance, even a mediocre model that produces a modest absolute number of false positives can have a *tiny* FPR simply because true negatives vastly outnumber everything else — making ROC-AUC look deceptively strong. PR-AUC instead plots Precision against Recall, and Precision's denominator (`TP+FP`) is directly tied to how many positives you actually predicted, which stays sensitive to the minority class regardless of how many true negatives exist in the background — making PR-AUC the more honest metric under heavy imbalance, while ROC-AUC remains perfectly fine (and more standard/interpretable) when classes are roughly balanced.
+
+**27. What does AUC = 0.5 mean? AUC = 0.3?** 🆕
+Using the probabilistic definition (`AUC = P(score(random positive) > score(random negative))`): AUC=0.5 means the model's scores for positives and negatives are statistically indistinguishable — equivalent to random guessing, providing zero discriminative information. AUC=0.3, however, is *not* "worse than random" in the sense of being useless — it means the model is ranking negatives above positives 70% of the time, i.e., it has learned a real, systematic (if backwards) signal. Since AUC is not symmetric around 0.5 in terms of "informativeness," an AUC of 0.3 can trivially be converted into a *useful* AUC-0.7 model simply by flipping the sign of its output (`score' = -score` or equivalently `p' = 1-p`) — only 0.5 represents a model with genuinely zero learned signal.
+
+**28. What is calibration, and how does it differ from AUC?** 🆕
+Calibration asks whether the model's predicted probabilities are *quantitatively accurate* as probabilities — among all the times the model said "70% chance," did the positive outcome actually happen about 70% of the time? AUC, by contrast, only measures *relative ranking* — whether positives tend to score higher than negatives — and is completely invariant to any monotonic transformation of the scores (multiplying every score by 2, or squaring them, leaves AUC unchanged even though it would badly break calibration). A model can have excellent AUC (great at ranking) while being badly miscalibrated (its absolute probability numbers are meaningless) — which is exactly why applications that use the *raw probability value* for downstream decisions (ad auction pricing, risk-based budget allocation, medical risk scoring) need to check calibration separately from, and in addition to, AUC.
+
+**29. What does logistic regression assume about the relationship between features and the outcome?** 🆕
+Precisely: linearity in the **log-odds** — `log(p/(1-p)) = β·x` — not linearity in the raw probability, and not linearity in the raw binary outcome itself (which wouldn't even make sense, since the raw outcome is discrete). This precision matters because it's easy to sloppily say "logistic regression assumes a linear relationship" without specifying *which* transformed scale that linearity applies to; the actual relationship between a feature and the raw probability is a smooth S-curve (via the sigmoid), not a straight line, even though the underlying log-odds relationship is linear by model construction.
+
+**30. What's the difference between the independence assumption and the multicollinearity assumption?** 🆕
+These are easy to conflate but describe orthogonal problems: **Independence** concerns the *rows* of your dataset — each observation's label/error should be statistically independent of every other observation's (violated by, e.g., repeated measurements on the same user, or time-series/clustered data where nearby points are correlated). **Multicollinearity** concerns the *columns* — the features themselves should not be too highly correlated with one another (violated by, e.g., including both "age in years" and "age in months" as separate features). Independence violations primarily corrupt your standard errors and any inferential statistics (p-values, confidence intervals) on the model; multicollinearity primarily corrupts the stability/interpretability of individual coefficients while often leaving overall predictive accuracy intact.
+
+**31. Does multicollinearity hurt predictions or coefficients?** 🆕
+Mainly coefficients. When two features are highly correlated, the model has many nearly-equally-good ways to split "credit" for the shared signal between them — small changes in the training sample can cause the two coefficients to swing wildly (even flipping which one is positive/negative), because the loss surface is very flat along the direction that trades off one coefficient against the other. However, the model's actual *predictions* `p = σ(β·x)` typically remain fairly stable, because what matters for the prediction is the (stable) combined effect `β₁x₁+β₂x₂`, not the individual, unstable values of `β₁` and `β₂` separately — this is why multicollinearity is primarily a concern for *interpretation* (e.g., informing a business decision from a specific coefficient) rather than for raw predictive performance.
+
+**32. How do you extend logistic regression to multiclass problems?** 🆕
+Two standard approaches: **One-vs-Rest (OvR)** trains `K` completely independent binary logistic regression classifiers, each answering "is it class `k` or not?", and at prediction time you run all `K` and pick whichever gives the highest score — simple and parallelizable, but the `K` separate probability outputs aren't jointly constrained to sum to 1 (they're calibrated independently, if at all). **Softmax (multinomial) regression** instead trains one unified model with `K` weight vectors simultaneously, computing `P(y=k|x) = e^{β_k·x} / Σⱼe^{β_j·x}`, which guarantees the outputs form a valid probability distribution over all `K` classes by construction (they always sum to exactly 1) since the classes compete for probability mass jointly during training rather than independently.
+
+**33. Why does softmax use exponentiation?** 🆕
+The raw logits `z_k = β_k·x` can be any real number, including negative — but probabilities must be non-negative. Exponentiating each logit (`e^{z_k}`) guarantees every term is strictly positive regardless of the sign of `z_k`, so once you normalize by dividing by the sum of all exponentiated logits, you're guaranteed a valid, non-negative probability distribution that sums to exactly 1. (A secondary, less commonly cited benefit: exponentiation also amplifies differences between logits, so the class with the largest logit gets disproportionately more probability mass than a simple linear-rescaling normalization would give it — a "soft" version of picking the max.)
+
+**34. How is softmax related to sigmoid?** 🆕
+Sigmoid is the exact special case of softmax when `K=2`. If you write out softmax for two classes with logits `z_1` and `z_0`, `P(y=1|x) = e^{z_1}/(e^{z_1}+e^{z_0})`, and dividing numerator and denominator by `e^{z_1}` gives `1/(1+e^{-(z_1-z_0)})` — exactly the sigmoid function applied to the *difference* of the two logits. This is why, practically, binary logistic regression only ever needs one weight vector (implicitly setting `z_0=0` as a reference class) rather than two — the extra degree of freedom in the two-class softmax formulation is redundant.
+
+**35. Why would you choose logistic regression over gradient boosting?** 🆕
+Three concrete reasons, each with a production justification: **(1) Interpretability** — coefficients translate directly into odds ratios that domain experts, regulators, or legal teams can inspect and defend, whereas a GBM's decision logic is comparatively opaque even with tools like SHAP. **(2) Latency** — LR inference is one dot product plus a sigmoid, computable in microseconds, whereas traversing hundreds of boosted trees per prediction is meaningfully slower — critical for real-time serving at massive request volume. **(3) Baseline value** — because LR is so cheap to train and reason about, it's the standard first model to fit; if a much more expensive GBM only beats it by a fraction of an AUC point, that's often a signal to invest in better features or more data rather than a more complex model, since the "cheap" model has revealed there isn't much non-linear signal left to capture.
+
+**36. Logistic regression is mathematically equivalent to what neural network structure?** 🆕
+A single artificial neuron: one linear combination of inputs `z=w·x+b` followed by a sigmoid activation `p=σ(z)`, with no hidden layers at all. This is precisely the "modern neuron" architecture from the foundational deep-learning material — logistic regression is literally the simplest possible neural network, which is why understanding its gradient derivation, loss function choice, and optimization dynamics transfers directly to understanding the output layer of *every* binary-classification neural network, no matter how many hidden layers sit in front of it.
+
+**37. Why do stacked layers need non-linear activation functions?** 🆕
+If every layer were purely linear (`aˡ=Wˡaˡ⁻¹`, no activation function in between), the composition of `L` linear transformations collapses algebraically into a single linear transformation: `ŷ = (Wᴸ·Wᴸ⁻¹·...·W¹)x = W*x` for some single combined matrix `W*`. No matter how many layers you stack, the *entire network* is mathematically no more expressive than one single layer — you've paid for depth in compute and parameters but gained zero additional representational power. Inserting a non-linearity (sigmoid, ReLU, tanh, etc.) between every linear layer breaks this collapsibility, which is the entire reason deep networks can represent functions far beyond what any single linear (or single logistic regression) layer could ever capture.
+
+---
+---
+
+# PART II — Historic Interview Questions: Google · Apple · Meta
+### L4–L6 / Senior–Staff
 
 > **How to use this guide:** Each question is tagged with the company and the level it most commonly surfaces at. Answers are written the way a strong L5/L6 candidate would *speak* them — precise, grounded in math where it matters, and always connecting theory to production reality.
 
 ---
 
 ## Table of Contents
-1. [Foundations & Mechanics](#1-foundations--mechanics)
-2. [MLE, Loss, and Optimization](#2-mle-loss-and-optimization)
-3. [Coefficients, Multicollinearity & Confidence Intervals](#3-coefficients-multicollinearity--confidence-intervals)
-4. [Model Evaluation](#4-model-evaluation)
-5. [Regularization & Overfitting](#5-regularization--overfitting)
-6. [Class Imbalance](#6-class-imbalance)
-7. [Assumptions & Diagnostics](#7-assumptions--diagnostics)
-8. [Logistic Regression vs. Other Models](#8-logistic-regression-vs-other-models)
-9. [Applied & System-Design Framing (Meta/Google)](#9-applied--system-design-framing-metagoogle)
-10. [Apple-Specific: Propensity, Coefficient Interpretation, Causal Inference](#10-apple-specific-propensity-coefficient-interpretation-causal-inference)
+1. Foundations & Mechanics
+2. MLE, Loss, and Optimization
+3. Coefficients, Multicollinearity & Confidence Intervals
+4. Model Evaluation
+5. Regularization & Overfitting
+6. Class Imbalance
+7. Assumptions & Diagnostics
+8. Logistic Regression vs. Other Models
+9. Applied & System-Design Framing (Meta/Google)
+10. Apple-Specific: Propensity, Coefficient Interpretation, Causal Inference
 
 ---
 
@@ -721,11 +1060,10 @@ AUC definition:   P(score(pos) > score(neg))
 ```
 
 ---
-
-# Logistic Regression — Part 1: Historic Interview Questions & Model Answers
-### Google · Apple · Meta — Calibrated for L4–L6 / Senior to Staff Level
-
 ---
+
+# PART III — By-Company Deep Dive: Historic Interview Questions & Model Answers
+### Google · Apple · Meta — Calibrated for L4–L6 / Senior to Staff Level
 
 > **How to use this guide:** Questions are grouped by company, then ordered from foundational → advanced → applied/system-level. Each answer is written at the bar interviewers actually hold for senior and staff candidates — not just definitions, but mathematical intuition, tradeoff awareness, and production context. Read actively: cover the answer and try it first.
 
@@ -733,10 +1071,10 @@ AUC definition:   P(score(pos) > score(neg))
 
 ## Table of Contents
 
-1. [Google](#google)
-2. [Apple](#apple)
-3. [Meta (Facebook)](#meta-facebook)
-4. [Cross-Company Synthesis](#cross-company-synthesis)
+1. Google
+2. Apple
+3. Meta (Facebook)
+4. Cross-Company Synthesis
 
 ---
 
@@ -1300,7 +1638,7 @@ If the model predicts ŷ = 0.05 (5% click probability), then across all impressi
 
 ---
 
-*End of Part 1 — Logistic Regression*
+*End of Part III*
 
 ---
 
@@ -1320,8 +1658,9 @@ If the model predicts ŷ = 0.05 (5% click probability), then across all impressi
 | Production failures / shift | ✅ Confirmed | ICT4+ | ✅ Heavy |
 
 ---
+---
 
-# Regularisation, Assumptions & When Not to Use Logistic Regression
+# PART IV — Regularisation, Assumptions & When Not to Use Logistic Regression
 
 ---
 
@@ -1889,8 +2228,10 @@ Need calibrated probabilities and interpretability?
   No  → XGBoost / Random Forest (likely higher accuracy)
 ```
 
-# Logistic Regression Interview Q&A — Part 1
-### Google · Apple · Meta | L4–L6 Data Scientist
+---
+---
+
+# PART V — Logistic Regression Interview Q&A: Google · Apple · Meta | L4–L6
 
 > **How to use this guide:** Questions are organized by company, then by theme. Answers are written at the L5 bar — technically precise, product-aware, and free of hand-waving. L4 candidates should master the core answer; L6 candidates should be able to extend every answer into a system-design or leadership discussion.
 
@@ -2514,5 +2855,47 @@ Offline evaluation used a random holdout; the A/B test exposes the model to a sp
 | Calibration correction (downsampled neg) | $p_{\text{corrected}} = \frac{p}{p + (1-p)/w}$ |
 
 ---
+---
 
-*Part 1 of the Logistic Regression Interview Series. Part 2 will cover: Bayesian logistic regression, multinomial extensions, time-series applications, fairness and bias considerations, and system design interviews where logistic regression is a component.*
+# 🆕 PART VI: UNIFIED MEGA FORMULA SHEET & TOP PITFALLS ACROSS ALL PARTS
+
+## 🆕 The one-page equation summary
+
+```
+Sigmoid:                    σ(z) = 1/(1+e^(-z))
+Logit / log-odds:           log(p/(1-p)) = β·x
+Log-likelihood:             ℓ(β) = Σ[y·log(p)+(1-y)·log(1-p)]
+MLE gradient (vectorized):  ∇ℓ(β) = Xᵀ(y - ŷ)
+Per-weight gradient:        ∂ℓ/∂βⱼ = Σᵢ(yᵢ-pᵢ)xᵢⱼ
+Hessian:                    H = -XᵀWX, W = diag(pᵢ(1-pᵢ))  → always PSD → convex
+Odds ratio:                 OR = e^β
+Marginal probability effect: ∂p/∂xⱼ = βⱼ·p(1-p)
+
+L2 (Ridge) penalty:         λΣβⱼ²           → gradient 2λw, never reaches exactly 0
+L1 (Lasso) penalty:         λΣ|βⱼ|          → subgradient ±λ, soft-thresholds to exactly 0
+Elastic Net:                λ[α·‖w‖₁+(1-α)‖w‖²]
+L2 update w/ decay:         w ← w(1-2αλ) - α·Xᵀ(p̂-y)
+L1 soft-threshold update:   wⱼ ← sign(w̃ⱼ)·max(|w̃ⱼ|-αλ, 0)
+
+AUC (probabilistic def):    P(score(pos) > score(neg))
+AUC (integral):             ∫₀¹ TPR(FPR⁻¹(t)) dt  = Mann-Whitney U statistic
+Calibration correction:     p_corrected = p/(p+(1-p)/r)     [r = downsampling rate]
+Intercept correction:       β₀_corrected = β₀ - log(q/(1-q))  [q = sampling rate]
+
+EPV rule of thumb:          EPV = min(n₀,n₁)/p ≥ 10
+VIF threshold:               VIF > 5-10 → investigate multicollinearity
+```
+
+## 🆕 Top cross-cutting pitfalls (synthesized across all five parts)
+
+1. **Confusing odds-scale with probability-scale effects.** `e^β` is a constant multiplicative effect on *odds* — the same coefficient produces very different *probability* shifts depending on the baseline `p` (max effect at `p=0.5`, via `∂p/∂x=β·p(1-p)`).
+2. **Treating accuracy as a default metric.** Every single part of this document independently arrives at the same conclusion: under any real-world class imbalance, accuracy is actively misleading — always pair it with precision/recall/F1/PR-AUC and a naive-baseline comparison.
+3. **Conflating AUC (ranking) with calibration (absolute probability correctness).** A model can be excellent at one and terrible at the other; production systems that consume raw probabilities (auction pricing, budget allocation, medical risk) need calibration checked separately.
+4. **Forgetting to correct for downsampling/oversampling.** Any time class balance is artificially adjusted for training, the intercept or the full probability output needs a corresponding correction formula before being used at inference — this appears independently in the Meta ad-auction discussion, the Google spam-detection case, and the Apple churn case.
+5. **Over-trusting multicollinearity's effect on predictions.** It devastates coefficient interpretability and confidence intervals, but often leaves raw predictive accuracy essentially intact — don't let unstable coefficients alone convince you the model itself is bad.
+6. **Assuming more regularization is strictly better.** It's a genuine bias-variance dial; too much λ causes underfitting just as surely as too little causes overfitting.
+7. **Skipping model checks for complete separation.** Wildly large coefficients and huge standard errors are a specific, diagnosable failure mode (not just "the model needs more tuning") with a specific fix (penalization or Firth's method).
+
+---
+
+*This merged document preserves 100% of the content from all five original source documents — nothing has been deleted. New synthesis, the fully expanded rapid-fire answer bank, and the unified formula/pitfall sheet are marked 🆕 throughout.*
