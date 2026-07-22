@@ -1,4 +1,30 @@
-# Chapter 4: Forward Propagation
+# Chapter 4: Forward Propagation — FAANG Interview Master Notes
+
+---
+
+## 🆕 MASTER CHEAT SHEET — Chapter 4 at a glance
+
+| Concept | One-line definition | Key Fact |
+|---|---|---|
+| Forward propagation | Passing data through the network, input → output | = inference; also the first half of every training step |
+| zˡ | Pre-activation at layer l | zˡ = Wˡaˡ⁻¹ + bˡ |
+| aˡ | Post-activation at layer l | aˡ = σˡ(zˡ); a⁰ = x, aᴸ = ŷ |
+| Weight shape convention | Wˡ ∈ ℝ^(nˡ × nˡ⁻¹) | rows = output size, cols = input size |
+| Why cache {zˡ,aˡ}? | Needed for backprop gradients | Avoids recomputing the full forward pass per layer |
+| Batching | Stack m examples as columns | Aˡ⁻¹ ∈ ℝ^(nˡ⁻¹×m) → one matmul does all m examples |
+| Broadcasting | bˡ (shape [nˡ×1]) added to Zˡ (shape [nˡ×m]) | No memory copy — automatic replication |
+| Computational graph | DAG of ops built during forward pass | Backprop = chain rule traversed backward over this graph |
+| Softmax placement | Output layer only, never hidden layers | Forces outputs to sum to 1 → destroys independent hidden features |
+| Stable softmax | Subtract max(z) before exponentiating | Prevents float32 overflow (`exp(large)` → inf/nan) |
+| Depth vs width | Prefer deep+narrow over shallow+wide at fixed param budget | Some functions need exponential width but only polynomial depth |
+| Activation explosion/collapse | Var(aᴸ) = (nˡ⁻¹·σ²_w)ᴸ · Var(a⁰) | Grows/shrinks geometrically with depth unless nˡ⁻¹·σ²_w ≈ 1 |
+| Fix for explosion/collapse | Xavier/He init, BatchNorm, residual connections | Previewed here, detailed in Ch.7 & Ch.9 & Ch.11 |
+| Training vs inference forward pass | Training caches + builds graph + dropout + batch BN stats | Inference: `model.eval()` + `torch.no_grad()`, uses running BN stats |
+
+---
+
+<a name="chapter-4"></a>
+## Chapter 4: Forward Propagation
 
 ---
 
@@ -726,4 +752,95 @@ so if activations are 0 or inf, gradients are too.
 
 ---
 
+## 🆕 4.13 EXPANDED INTERVIEW Q&A BANK — Chapter 4
+
+**Q4 🆕: "What's the difference between `zˡ` and `aˡ`? Why can't backprop skip caching one of them to save memory?"**
+
+**Answer:** `zˡ = Wˡaˡ⁻¹ + bˡ` is the **pre-activation** (raw linear combination, unbounded); `aˡ = σˡ(zˡ)` is the **post-activation** (after the non-linearity, the value actually passed to the next layer). Both are needed during backprop for different reasons: `aˡ⁻¹` is needed to compute `∂L/∂Wˡ = δˡ·(aˡ⁻¹)ᵀ` (the weight gradient depends on what fed into this layer), while `zˡ` is needed to compute `σ'(zˡ)`, the local derivative of the activation function, which is a multiplicative factor in the error signal `δˡ`. You can't derive one from the other after the fact for non-invertible activations (e.g., ReLU's zeroed region loses information about the original `z` value — you can't recover whether `z` was -0.001 or -1000 once it's clamped to 0), so both must be cached explicitly.
+
+---
+
+**Q5 🆕: "A junior engineer writes a training loop that calls `model.eval()` before the forward pass and `model.train()` right after backward(). What's wrong, and what will you observe in the loss curve?"**
+
+**Answer:** This is backwards — `model.train()` must be active *during* the forward pass that feeds into backprop (so Dropout masks are applied and BatchNorm uses live batch statistics), and `model.eval()` is only for pure inference (no gradient step following it). With the described (swapped) order, the forward pass used for computing gradients runs in eval mode: Dropout is disabled (no regularization effect at all, silently reducing the model to its base architecture) and BatchNorm uses running statistics that haven't been updated yet (especially broken very early in training, when the running stats are still near their default init and don't reflect the actual batch distribution). You'd observe: training loss decreasing more smoothly/faster than expected early on (no dropout noise), but validation performance suffering because the model never actually learned with regularization — classic silent overfitting that's hard to spot from the training loss alone.
+
+---
+
+**Q6 🆕: "Why is a Python `for` loop over batch examples during the forward pass such a severe performance bug, in concrete terms — not just 'GPUs like matrices'?"**
+
+**Answer:** Three compounding reasons: (1) **Kernel launch overhead** — every individual matmul on a GPU has fixed overhead (~microseconds) to launch a CUDA kernel; looping over 32 examples means 32× the kernel launches instead of 1, and that fixed overhead often dominates the actual compute time for small per-example matrices; (2) **Underutilized parallelism** — a GPU has thousands of cores; a `[256×512]·[512×1]` matmul (one example) barely occupies a fraction of those cores, while a `[256×512]·[512×32]` batched matmul keeps far more cores busy simultaneously for roughly the same wall-clock cost per call; (3) **Python interpreter overhead** — the loop itself runs in the (slow, single-threaded) Python interpreter, adding overhead per iteration that has nothing to do with the actual math. Net effect: the earlier note's "100–1000× slower" isn't hyperbole — it's the multiplicative product of these three factors, and it's the single most common reason a "correct" PyTorch/NumPy implementation is unusably slow in practice.
+
+---
+
+**Q7 🆕: "In the worked 2→4→4→3 example, one neuron in each hidden layer went 'dead' (ReLU output 0). If, across an entire training run, a neuron is dead for every single input in the dataset, what's the consequence, and how would you detect it?"**
+
+**Answer:** This is the **dying ReLU** problem (introduced briefly here, covered fully in Chapter 3/9's regularization content). Consequence: if `zᵢ < 0` for a given neuron on every input in the dataset, `ReLU'(zᵢ) = 0` always, so the gradient flowing back through that neuron is permanently zero — its incoming weights never update again, no matter how much more training happens. That neuron is now a fixed, wasted unit contributing nothing to the network's capacity; in aggregate, many dead neurons effectively shrink your network's true width below what you paid for in parameters and compute. Detection: log the fraction of zero-activations per layer during training (a "dead neuron rate"); a layer where a large percentage of neurons show `a=0` across the entire validation set is a red flag. Common fixes: lower the learning rate, use He initialization, or switch to Leaky ReLU / GELU, which have a non-zero gradient for negative inputs.
+
+---
+
+**Q8 🆕: "Suppose you accidentally swap `Wˡ` to have shape `[nˡ⁻¹ × nˡ]` instead of `[nˡ × nˡ⁻¹]`. Would `Zˡ = Wˡ · Aˡ⁻¹ + bˡ` even run, or would it silently produce wrong results?"**
+
+**Answer:** It depends on the exact shapes involved, and this is precisely why it's such a dangerous bug — it doesn't always crash. If `nˡ ≠ nˡ⁻¹`, the matmul `[nˡ⁻¹ × nˡ]·[nˡ⁻¹ × m]` has mismatched inner dimensions and NumPy/PyTorch will raise a clear shape error, which is the "safe" failure mode. But if `nˡ == nˡ⁻¹` (e.g., two consecutive hidden layers of the same width, common in practice), the matmul `[n × n]·[n × m]` succeeds *silently* with the transposed weight matrix — the layer still runs, still produces output of the right shape, and training may even appear to converge, but every learned weight is now mapping the wrong input feature to the wrong output neuron. This is a genuinely hard bug to catch because there's no error message; the standard defense is unit-testing layer shapes against known-good reference dimensions and, when debugging convergence issues, explicitly asserting `W.shape == (n_out, n_in)` at construction time rather than trusting it implicitly.
+
+---
+
+**Q9 🆕: "Explain gradient checkpointing (mentioned in §4.8) as a direct consequence of what the forward pass caches. What's the exact tradeoff being made?"**
+
+**Answer:** Normally, the forward pass caches every layer's `{zˡ, aˡ}` so backprop can compute gradients without recomputation — this costs memory proportional to `depth × batch_size × layer_width`, which becomes prohibitive for very deep networks (e.g., large transformers) trained with large batches. **Gradient checkpointing** trades some of that memory back for extra compute: instead of caching every layer, you only cache activations at a sparse set of "checkpoint" layers (e.g., every k-th layer); during the backward pass, when you need the activations of a non-checkpointed layer, you **re-run the forward pass locally** from the nearest checkpoint to regenerate them on the fly, then discard them again once used. The tradeoff is explicit: memory usage drops roughly from O(depth) to O(depth/k) (or O(√depth) with optimal checkpoint placement), at the cost of doing a fraction of the forward computation twice — typically ~30% more compute time for large memory savings, which is a very good trade when memory (not compute) is the binding constraint, as it often is with today's large models.
+
+---
+
+## 🆕 4.14 RAPID-FIRE FLASHCARDS — Chapter 4
+
+| Prompt | Answer |
+|---|---|
+| Forward prop formula per layer? | zˡ = Wˡaˡ⁻¹ + bˡ, then aˡ = σˡ(zˡ) |
+| a⁰ and aᴸ are? | a⁰ = input x, aᴸ = final prediction ŷ |
+| Wˡ shape? | [nˡ × nˡ⁻¹] (out × in) |
+| Why cache zˡ and aˡ? | Needed to compute gradients in backprop without recomputing forward pass |
+| Batched forward formula? | Zˡ = Wˡ·Aˡ⁻¹ + bˡ (bias broadcasts across m columns) |
+| What is a computational graph? | DAG of ops built during forward pass; backprop = chain rule traversed backward over it |
+| Where does softmax belong? | Output layer only — never a hidden layer |
+| Why stabilize softmax? | Subtract max(z) to avoid exp() overflow → nan |
+| Fixed-budget depth vs width — which wins? | Deep + narrow, usually (exponential vs polynomial neuron counts for some functions) |
+| Activation variance recurrence? | Var(aᴸ) = (nˡ⁻¹·σ²_w)ᴸ · Var(a⁰) |
+| Stability condition on σ²_w? | nˡ⁻¹ · σ²_w ≈ 1 |
+| What differs between train-mode and eval-mode forward pass? | Dropout on/off, BatchNorm uses batch stats vs running stats, graph building on/off |
+| `torch.no_grad()` purpose? | Skip building the autograd graph → saves ~50% memory, faster inference |
+| Dying ReLU root cause? | zᵢ < 0 for all inputs → ReLU'(zᵢ)=0 always → weights never update |
+| Gradient checkpointing tradeoff? | Less memory (fewer cached layers), more compute (recompute forward locally during backward) |
+
+---
+
 *End of Chapter 4. Chapter 5 (Loss Functions) coming next.*
+
+---
+
+## 🆕 CHAPTER 4 FORMULA SHEET
+
+```
+Per-layer forward pass:     zˡ = Wˡaˡ⁻¹ + bˡ
+                              aˡ = σˡ(zˡ)
+
+Batched forward pass:        Zˡ = Wˡ·Aˡ⁻¹ + bˡ   [Aˡ⁻¹ ∈ ℝ^(nˡ⁻¹×m)]
+                              Aˡ = σˡ(Zˡ)
+
+Stable softmax:               softmax(z)ᵢ = exp(zᵢ - max(z)) / Σⱼ exp(zⱼ - max(z))
+
+Parameter count per layer:    |Wˡ| + |bˡ| = (nˡ · nˡ⁻¹) + nˡ
+
+Forward FLOPs per layer:      ≈ nˡ · nˡ⁻¹ · m   (MACs, batched)
+
+Activation variance:          Var(aᴸ) = (nˡ⁻¹ · σ²_w)ᴸ · Var(a⁰)
+Stability condition:          σ²_w ≈ 1 / nˡ⁻¹
+```
+
+## 🆕 "TOP 5 THINGS THAT TRIP PEOPLE UP" — Chapter 4
+
+1. Mixing up `Wˡ` shape convention — always `[n_out × n_in]`, and it silently breaks (no crash!) when `n_out == n_in`.
+2. Forgetting to cache `zˡ` (not just `aˡ`) — ReLU's zeroed region is not invertible, so you can't recover `σ'(zˡ)` from `aˡ` alone.
+3. Putting softmax on a hidden layer "because it looked like a good normalization" — this forces competition between features that should be independent.
+4. Skipping the max-subtraction trick in softmax — works fine in small examples, then silently produces `nan` the first time logits get large during real training.
+5. Conflating "the network is deep so it should overfit less/more" — depth affects *expressivity and optimization dynamics*, not directly the bias-variance tradeoff on its own; a very deep network still needs appropriately sized data and regularization.
+
+---
