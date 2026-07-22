@@ -3,87 +3,430 @@
 
 ## 1. WHY
 
-Everything so far has been about building and understanding the model itself. But at the L5/ICT5 level, interviewers don't just want to know you can build a model — they want to know you can **operate one in a real production system**, over time, at scale, with real engineering tradeoffs. This module is where "I understand logistic regression" becomes "I could be trusted to own a production ML system." This is explicitly flagged as critical in your curriculum, so let's be thorough.
+Everything so far has been about building and understanding the model itself. But at the L5/ICT5 level, interviewers don't just want to know you can build a model — they want to know you can **operate one in a real production system**, over time, at scale, with real engineering tradeoffs.
+
+This module is where "I understand logistic regression" becomes "I could be trusted to own a production ML system." This is explicitly flagged as critical in your curriculum, so let's be thorough.
+
+```
++-----------------------------------------------------------------------------------+
+|                        PRODUCTION ML LIFE CYCLE ARCHITECTURE                      |
++-------------------+-------------------+-------------------+-----------------------+
+|  DATA & FEATURES  | TRAINING PIPELINE | SERVING INFRA     | MONITORING & GOV.     |
++-------------------+-------------------+-------------------+-----------------------+
+| • Feature Store   | • Offline Loss    | • Sub-ms Latency  | • Drift (PSI/KS)      |
+| • Transforms      | • Class Weights   | • Online Ingestion| • Calibration Decay   |
+| • One-Hot / Bins  | • Cross-Val (PR)  | • Microservice    | • Automated Retrain   |
++-------------------+-------------------+-------------------+-----------------------+
+
+```
+
+---
 
 ## 2. FEATURE ENGINEERING FOR LOGISTIC REGRESSION
 
-**WHY this needs special attention (vs. tree-based models):** Logistic regression can ONLY express a straight-line relationship with log-odds (Module 10). Tree-based models (like gradient boosting) can automatically discover non-linear patterns and interactions on their own. Logistic regression can't — **you, the engineer, have to hand it those patterns explicitly**, through feature engineering.
+### WHY this needs special attention (vs. tree-based models)
 
-**Monotonic transforms:** if a feature's true relationship with log-odds is curved but consistently increasing or decreasing (monotonic, even if not perfectly straight), applying a transform like `log(x)` or `sqrt(x)` before feeding it into the model can straighten out that relationship enough for logistic regression to capture it well. Example: "income" often has a highly skewed distribution; `log(income)` frequently has a more linear relationship with log-odds of many outcomes than raw income does.
+Logistic regression can **only** express a straight-line relationship with log-odds (Module 10). Tree-based models (like gradient boosting) can automatically discover non-linear patterns and interactions on their own through recursive partitioning. Logistic regression can't — **you, the engineer, have to hand it those patterns explicitly**, through feature engineering.
 
-**Binning:** convert a continuous feature into discrete buckets (e.g., tenure → "0-6 months," "6-12 months," etc., like our Module 10 example) and use one-hot/dummy encoding for each bucket. This lets the model assign a COMPLETELY independent coefficient to each bucket, capturing non-linear, even non-monotonic patterns (like a U-shape) — at the cost of losing the smooth, continuous nature of the original feature and requiring more data to estimate each bucket's coefficient reliably.
+```
+       [ Gradient Boosting ]                      [ Logistic Regression ]
+       (Automatic Splitting)                      (Requires Hand-Crafting)
 
-## 3. HANDLING CLASS IMBALANCE
+     Feature X1                                     Feature X1
+      /      \                                          |
+   <= 50    > 50                                  [ log(X1) ]  or  [ Splines ]
+   /   \    /   \                                       |
+ ...   ... ...   ...                              Linear in Log-Odds
 
-We already established WHY this matters in Module 8 (accuracy trap with rare positive classes). Now, the practical toolkit for actually fixing it:
+```
 
-**Class weights:** tell the model to treat mistakes on the rare class as more "costly" during training — effectively, misclassifying one fraud case gets penalized as if it were, say, 100 mistakes on the non-fraud class (if fraud is roughly 1% of data). This directly modifies the log-loss calculation from Module 4, weighting each data point's contribution to the loss based on its class.
-- **Pro:** simple, doesn't require creating/removing any actual data points, easy to implement (`class_weight='balanced'` in most libraries).
-- **Con:** doesn't add any new information — it just tells the optimizer to care more about the rare class, which can sometimes lead to more false positives if pushed too aggressively.
+### Monotonic Transforms
 
-**Resampling — oversampling the minority class:** duplicate (or synthetically generate, via a technique called SMOTE) more examples of the rare class so the training set is more balanced.
-- **Pro:** can help the model "see" the minority class pattern more clearly.
-- **Con:** naive duplication can cause overfitting to those specific duplicated examples; SMOTE (synthetic examples) helps but adds complexity and can create unrealistic synthetic data points if not done carefully.
+If a feature's true relationship with log-odds is curved but consistently increasing or decreasing (monotonic), applying a functional transformation before feeding it into the model can straighten out that relationship:
 
-**Resampling — undersampling the majority class:** randomly remove examples from the common class until the classes are more balanced.
-- **Pro:** simple, reduces training time (smaller dataset).
-- **Con:** you're literally throwing away real data — potentially losing useful information/patterns present only in the discarded majority-class examples.
+$$\text{Logarithmic: } X' = \ln(X + 1) \quad \mid \quad \text{Power / Root: } X' = \sqrt{X} \quad \mid \quad \text{Box-Cox: } X' = \frac{X^\lambda - 1}{\lambda}$$
 
-**Practical L5 guidance:** class weights are usually the first thing to try (cheap, no data loss); resampling is considered when class weights alone aren't sufficient, understanding that oversampling/undersampling both carry real tradeoffs, not free wins.
+*Example:* In fintech, `income` or `account_balance` follows a power-law distribution. Using $\ln(\text{income})$ transforms a heavily right-skewed variable into a Gaussian-like distribution, linearizing its relationship with the log-odds of loan repayment.
+
+### Binning & Discretization
+
+Convert a continuous feature into $K$ discrete buckets (e.g., tenure $\to$ "0-6 months", "6-12 months", etc.) and apply one-hot encoding across $K-1$ dummy variables.
+
+* **Advantage:** Allows the model to assign a completely independent coefficient $\beta_k$ to each bucket. This captures arbitrary non-linear and non-monotonic shapes (such as U-shaped churn behavior: high churn for new users, low for mid-tenure, high for long-tenure).
+* **Tradeoff:** Destroys continuous distance metrics between adjacent values, introduces arbitrary boundary thresholds, increases feature dimensionality, and requires adequate sample density per bucket to avoid high estimator variance.
+
+### Interaction Terms
+
+Logistic regression assumes additive effects on log-odds: $\eta = \beta_0 + \beta_1 X_1 + \beta_2 X_2$. It cannot detect conditionally dependent risk unless you manually inject multiplicative interaction terms:
+
+$$X_{\text{inter}} = X_1 \times X_2$$
+
+*Example:* A credit model where `high_credit_card_utilization` is only risky when paired with `low_liquid_savings`.
+
+---
+
+## 3. HANDLING CLASS IMBALANCE IN PRODUCTION SYSTEMS
+
+We already established WHY this matters in Module 8 (the accuracy trap with rare positive classes). Here is the practical toolkit for fixing it in production:
+
+```
++---------------------------------------------------------------------------------+
+|                        CLASS IMBALANCE STRATEGY MATRIX                          |
++-----------------+-----------------------+-----------------------+---------------+
+| Technique       | Mechanism             | Operational Cost      | Risk          |
++-----------------+-----------------------+-----------------------+---------------+
+| Class Weights   | Multiplies loss per   | Zero runtime cost     | Calibration   |
+|                 | minority row          |                       | shift         |
+| Oversampling    | Replicates minority   | Increases offline     | Overfitting   |
+|                 | samples (or SMOTE)    | training time         | duplicates    |
+| Undersampling   | Drops majority class  | Fast training; loses  | Discards      |
+|                 | samples               | real data             | real signals  |
++-----------------+-----------------------+-----------------------+---------------+
+
+```
+
+### Class Weights (Loss Modification)
+
+Adjusts the binary cross-entropy loss function by weighting the contribution of each class inversely proportional to its class frequency:
+
+$$\mathcal{L}_{\text{weighted}}(\theta) = -\frac{1}{N} \sum_{i=1}^N \left[ w_1 \cdot y_i \ln(\hat{p}_i) + w_0 \cdot (1 - y_i) \ln(1 - \hat{p}_i) \right]$$
+
+Where standard balanced weights are set as:
+
+$$w_1 = \frac{N}{2 \cdot N_{y=1}}, \quad w_0 = \frac{N}{2 \cdot N_{y=0}}$$
+
+* **Pros:** Zero footprint during runtime/inference. Simple to implement during training.
+* **Cons:** Alters raw output probability scale. The raw output $\hat{p}_{\text{weighted}}$ no longer reflects the true prior base rate and requires mathematical recalibration before downstream probability-driven decisions are made.
+
+### Resampling — Oversampling vs. Undersampling
+
+* **Oversampling (SMOTE / Random Duplication):** Generates synthetic minority samples by interpolating between nearest neighbors in feature space.
+* *Production Hazard:* Synthetic data points can violate physical domain constraints or generate unrealistic feature combinations (e.g., negative balances or invalid state codes).
+
+
+* **Undersampling (Random / Tomek Links):** Randomly discards majority-class instances until target ratios are achieved.
+* *Production Hazard:* Discarding majority class data removes crucial variance informativeness near decision boundaries, increasing false positive rates in dense majority-class feature regions.
+
+
+
+---
 
 ## 4. MONITORING A LOGISTIC REGRESSION MODEL IN PRODUCTION
 
-A model doesn't stop needing attention once it's deployed — the real world keeps changing, and a model trained on last year's data can silently degrade. Two key things to monitor:
+Deploying a model is the beginning, not the end. The real world is non-stationary, and static models silently decay.
 
-**Drift:** the statistical properties of your input data change over time compared to what the model was trained on. Example: a churn model trained pre-pandemic might see a totally different distribution of "months since last purchase" post-pandemic, as customer behavior patterns shifted. **How to catch it:** monitor the distribution of each input feature over time (e.g., compare weekly feature distributions to the training distribution using statistical tests), and alert if they diverge significantly.
+```
+       [ Production Data Stream ]
+                  │
+        ┌─────────┴─────────┐
+        ▼                   ▼
+  Feature Drift       Target / Label Shift
+ (PSI / KS-Test)     (Calibration Decay)
+        │                   │
+        └─────────┬─────────┘
+                  ▼
+      Alerting & Auto-Retrain
 
-**Calibration decay:** even if the model's RANKING ability (AUC) stays stable, its probability calibration (Module 8) can degrade over time as the underlying base rate of the event changes. Example: if fraud rates naturally rise during a holiday shopping season, a model trained on non-holiday data will systematically UNDER-predict fraud probability during that period, even if it still ranks risky transactions above safe ones correctly. **How to catch it:** periodically recompute the calibration curve (Module 8) on fresh, recent data and compare it to the original training-time calibration curve.
+```
 
-## 5. WHEN TO CHOOSE LOGISTIC REGRESSION OVER GRADIENT BOOSTING / DEEP MODELS
+### Feature Drift (Covariate Shift)
 
-This is a genuinely common, high-value L5 interview question: **"why would you use something as 'simple' as logistic regression when more powerful models exist?"**
+Covariate shift occurs when the marginal distribution of inputs $P(X)$ changes over time, while the conditional probability $P(Y \mid X)$ remains fixed.
 
-**Interpretability:** logistic regression's coefficients have a clean, explainable meaning (odds ratios, Module 3) that regulators, stakeholders, and even the model-builders themselves can reason about directly. This matters enormously in regulated industries (credit lending, insurance, healthcare) where "why did the model deny this loan?" needs a clear, defensible answer — gradient boosting/deep models are much harder to explain this precisely (though tools like SHAP help narrow the gap).
+**Metric: Population Stability Index (PSI)**
+PSI quantifies how much a continuous or categorical variable's distribution has shifted between a reference dataset (training) and a target dataset (production):
 
-**Latency:** logistic regression inference is just one matrix multiplication plus a sigmoid — extremely fast, trivially cheap to compute even at massive scale or on resource-constrained devices (e.g., real-time bidding systems needing sub-millisecond decisions). Gradient boosting and deep models can be meaningfully slower, especially at high query volumes.
+$$\text{PSI} = \sum_{k=1}^B \left( \% \text{ Actual}_k - \% \text{ Expected}_k \right) \times \ln\left( \frac{\% \text{ Actual}_k}{\% \text{ Expected}_k} \right)$$
 
-**Baseline value:** logistic regression is fast to build, fast to train, and gives you a credible performance floor almost immediately. It's standard practice to build a logistic regression baseline FIRST, even if you expect to eventually deploy something more complex — this tells you how much lift a fancier model is actually buying you, and sometimes the honest answer is "not much," in which case the simpler, more interpretable, cheaper-to-maintain model wins on pure practicality.
+*Where $B$ is the number of bins, $\%\text{ Actual}_k$ is the fraction of production observations in bin $k$, and $\%\text{ Expected}_k$ is the baseline training fraction.*
 
-**When more complex models win:** when the true relationship between features and the outcome is genuinely non-linear/has complex interactions that would require extensive manual feature engineering to capture with logistic regression, and when interpretability/latency constraints are less strict.
+| PSI Threshold | Interpretation | Action Required |
+| --- | --- | --- |
+| $\text{PSI} < 0.10$ | No significant distribution shift | Monitor normally |
+| $0.10 \le \text{PSI} < 0.25$ | Moderate shift detected | Investigate features; schedule retraining |
+| $\text{PSI} \ge 0.25$ | Severe distribution shift | High priority: Retrain & re-validate immediately |
 
-## 6. A/B TESTING CONSIDERATIONS WHEN REPLACING A LOGISTIC REGRESSION MODEL
+---
 
-**WHY this matters:** even if a new model (say, a gradient boosting replacement) shows better offline metrics (higher AUC, better F1), you should almost never fully replace a production model overnight without validating it live — offline metrics don't always translate perfectly to real-world business impact.
+### Calibration Decay (Prior Probability Shift)
 
-**Key considerations:**
-- **Metric alignment:** make sure the offline metric you optimized (e.g., AUC) actually correlates with the real business metric you care about (e.g., revenue, retention) — these can diverge.
-- **Threshold recalibration:** a new model likely needs its own newly-tuned threshold (Module 6) — you can't necessarily reuse the old model's threshold, since the new model's probability outputs may behave differently even if overall ranking quality improved.
-- **Calibration comparison:** check whether the new model is equally well-calibrated (Module 8) — a model with better ranking (AUC) but worse calibration could still hurt decisions that depend on the raw probability value, not just the ranking.
-- **Segment-level analysis:** a new model might improve performance on average while quietly hurting a specific important subgroup (e.g., new users, a specific region) — always check performance isn't just improving in aggregate while masking a regression somewhere important.
-- **Gradual rollout:** ramp the new model to a small percentage of traffic first, monitor real business metrics (not just ML metrics) before full rollout, and always keep the ability to roll back quickly if something looks wrong.
+Calibration decay occurs when the model's output probabilities diverge from the true empirical rate, even if the model's relative ranking capability ($\text{ROC-AUC}$) remains intact.
 
-## 7. INTERPRETATION
+$$\text{Expected Calibration Error (ECE)} = \sum_{m=1}^M \frac{\vert{}B_m\vert{}}{N} \left\vert{} \text{acc}(B_m) - \text{conf}(B_m) \right\vert{}$$
 
-In real terms: at the L5 level, you're expected to think past "does the model work on my validation set" and into "how does this model behave, get monitored, and evolve responsibly once it's live and touching real customers/revenue." This is genuinely the difference between a strong IC4/mid-level answer and an L5/senior-level answer in interviews — depth on the modeling math alone isn't enough; you need to demonstrate you've thought about the full lifecycle.
+**Why AUC can stay high while Calibration Fails:**
+Assume a holiday fraud spike doubles the true base rate of fraud from $1\%$ to $2\%$. The model still correctly ranks fraudulent transactions higher than legitimate ones ($\text{AUC} = 0.85$ stable). However, a transaction that previously had an estimated fraud probability of $0.40$ now has a true risk of $0.80$. If your automated rule auto-blocks transactions above $0.50$, the model will **fail to trigger blocks**, systematically missing fraud despite its unchanged ranking accuracy.
 
-## 8. FAANG L5 ANGLE
+---
 
-**Common interview question:** *"Design a fraud detection system using logistic regression as a baseline. Walk me through your approach."*
-Strong answer structure: (1) feature engineering — transaction amount, velocity of transactions, device/location features, likely needing monotonic transforms and binning; (2) handle severe class imbalance — likely class weights first, given fraud's typical rarity; (3) choose PR-AUC over ROC-AUC as the primary offline metric given the imbalance (Module 8); (4) threshold selection driven by the real cost of false negatives (missed fraud) vs false positives (customer friction), likely erring toward a lower threshold (Module 6); (5) production monitoring for drift and calibration decay, since fraud patterns evolve constantly and adversarially; (6) explicitly justify logistic regression as a fast, interpretable, cheap-to-maintain baseline — with a plan to compare against gradient boosting once the baseline is solid, using a proper A/B test before any full replacement.
+## 5. ARCHITECTURAL DECISION FRAMEWORK: LOGISTIC REGRESSION VS. GRADIENT BOOSTING / DEEP LEARNING
 
-**Common follow-up:** *"Your logistic regression baseline has an AUC of 0.85. A gradient boosting model gets 0.89. Do you switch?"*
-Nuanced answer: not automatically — consider interpretability requirements, latency constraints, whether that 0.04 AUC gain translates to meaningful real-world business impact, and whether it's been properly validated via A/B test rather than just offline comparison. "It depends on the constraints" is a legitimate, expected L5 answer here, not a dodge.
+```
++-----------------------------------------------------------------------------------+
+|                        MODEL CHOICE SYSTEM DESIGN TRADE-OFFS                      |
++----------------------+-----------------------+------------------------------------+
+| Dimension            | Logistic Regression   | Gradient Boosted Trees / Neural Net|
++----------------------+-----------------------+------------------------------------+
+| Latency              | Sub-millisecond (<1ms)| 10ms - 100ms+                      |
+| Computational Cost   | $O(d)$ dot product    | $O(T \cdot D)$ tree traversals     |
+| Interpretability     | Direct Odds Ratios    | SHAP / LIME Approximations         |
+| Regulatory Compliance| High (Fully Auditable)| Moderate-Low (Black-Box risk)      |
+| Cold-Start & Data Size| High performance on   | Requires large $N$ to avoid        |
+|                      | small $N$             | overfitting                        |
++----------------------+-----------------------+------------------------------------+
 
-**Common trap:** giving a purely mathematical answer to a system design question without addressing monitoring, class imbalance, or the interpretability/latency/baseline tradeoffs — this is the single most common way strong "textbook" candidates underperform on this specific module's interview questions.
+```
 
-## 9. CHECK — before Module 12
+### Key Selection Drivers
 
-1. You're told your production logistic regression fraud model's AUC has stayed stable at 0.85 for 6 months, but the fraud team says the model is "missing more fraud lately." What would you investigate first, given what you learned about drift vs. calibration?
-2. Your manager asks why you're starting with logistic regression instead of jumping straight to a deep neural network for a new classification problem. Give a 2-sentence answer that would satisfy an L5 bar.
+1. **Interpretability & Regulation:** In credit scoring (FCRA compliance), healthcare, or insurance, you are legally obligated to provide "adverse action notices" specifying the top features driving a rejection. Logistic regression provides exact log-odds contribution per feature without SHAP approximation errors.
+2. **Serving Latency & Hardware Costs:** A logistic regression score is an $O(d)$ matrix multiplication ($\mathbf{w}^T \mathbf{x} + b$) followed by a scalar lookup ($\sigma(z)$). It can run in microsecond SLA environments (e.g., ad auctions, high-frequency trading) directly on edge CPUs without requiring GPU clusters.
+3. **The Baseline Gold Standard:** Deploying a logistic regression model first gives you a clean performance and operational baseline. Fancier models must justify their added infrastructure costs, latency penalties, and debugging complexity by proving significant lift over this baseline.
 
-Model Answers — Module 11 Checks
-1. AUC stable at 0.85 for 6 months, but fraud team says the model is "missing more fraud lately" — what to investigate first?
-This is a classic AUC-stable-but-calibration-decayed scenario. AUC only measures ranking ability — whether risky transactions score higher than safe ones, relatively speaking. It says nothing about whether the actual probability NUMBERS are still accurate. The fraud team's complaint ("missing more fraud") points straight at calibration decay, not drift in the ranking sense: if fraud has become more common recently (base rate shift — say, a new fraud pattern emerged, or seasonal fraud spiked), the model may still correctly rank "this transaction is riskier than that one" while systematically under-predicting the actual probability across the board — meaning transactions that now deserve a 70% score are still getting scored 40%, falling below the threshold and slipping through undetected, even though the model's relative ranking is technically unchanged.
-First investigation step: recompute a fresh calibration curve on recent data and compare it to the training-time calibration curve (Module 8's reliability diagram). If predicted probabilities are now systematically too low relative to actual outcomes, that confirms calibration decay — the fix would likely be recalibrating the threshold or retraining on more recent data, not necessarily rebuilding the whole model from scratch.
-2. Why start with logistic regression instead of jumping straight to a deep neural network — 2-sentence L5 answer:
-"Logistic regression gives us a fast, interpretable baseline that tells us how much signal actually exists in our features and how much lift a more complex model would realistically buy us, before we invest in the added training/serving cost and reduced interpretability of a deep network. If the logistic regression baseline already performs close to what we need, the simpler, cheaper, more explainable model may be the better production choice outright."
+---
+
+## 6. A/B TESTING & ROLLOUT STRATEGY FOR MODEL REPLACEMENT
+
+Replacing an existing production model requires careful live validation. Offline validation metrics do not always map linearly to business outcomes.
+
+```
+                  [ Live User Traffic ]
+                            │
+               ┌────────────┴────────────┐
+               ▼                         ▼
+         [ Control 90% ]           [ Treatment 10% ]
+      Legacy Logistic Reg.        New Gradient Boosting
+               │                         │
+               └────────────┬────────────┘
+                            ▼
+               Evaluate Metric Divergence:
+          • Offline AUC vs Online Conversion
+          • Threshold Differences
+          • Calibration Errors
+
+```
+
+### Pre-Deployment Checklists
+
+* **Threshold Recalibration:** Never carry over a classification threshold from Model A to Model B. If Model A was calibrated under class weights and Model B uses raw probabilities, identical thresholds will cause massive operational shifts in prediction volumes.
+* **Metric Divergence Safeguard:** Verify that offline ranking metrics (PR-AUC) correlate with online KPIs (e.g., net revenue, false rejection friction).
+* **Subgroup Disparity Analysis:** Evaluate sliced performance across protected categories, customer tiers, and device types to ensure aggregate gains do not mask localized performance degradations.
+* **Canary Deployment Pattern:**
+1. **Shadow Mode:** Route $100\%$ of production traffic to both models, but use only the legacy model's outputs. Compare predictions, check latency SLAs, and audit errors asynchronously.
+2. **Canary Routing:** Direct $1\% \to 5\% \to 25\%$ of traffic to the new model using a deterministic user-id hash.
+3. **Full Rollout with Circuit Breakers:** Monitor real-time error rates and automated fallbacks to immediately revert traffic if feature-drift or latency thresholds breach boundaries.
+
+
+
+---
+
+## 7. COMPLETE PRODUCTION PIPELINE IN PYTHON
+
+This production-grade script covers data processing, model training with class weights, threshold tuning based on business cost matrices, population stability index (PSI) monitoring, and probability recalibration.
+
+```python
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import precision_recall_curve, roc_auc_score
+from sklearn.isotonic import IsotonicRegression
+
+# -------------------------------------------------------------------
+# 1. Generate Imbalanced Synthetic Production Data
+# -------------------------------------------------------------------
+np.random.seed(42)
+n_samples = 10000
+fraud_ratio = 0.02  # 2% Imbalance
+
+# Generate features
+income = np.random.exponential(scale=50000, size=n_samples) + 10000
+tx_amount = np.random.exponential(scale=100, size=n_samples)
+risk_score = np.random.normal(loc=50, scale=15, size=n_samples)
+
+# True log odds with non-linear log transform applied to income
+log_odds = (
+    -4.5 
+    + 0.015 * tx_amount 
+    - 0.8 * np.log(income / 10000) 
+    + 0.05 * risk_score
+)
+probs = 1 / (1 + np.exp(-log_odds))
+y = np.random.binomial(1, probs)
+
+df = pd.DataFrame({
+    'income': income,
+    'tx_amount': tx_amount,
+    'risk_score': risk_score,
+    'target': y
+})
+
+# Split Train (Reference) and Test Sets
+train_df, test_df = train_test_split(df, test_size=0.3, random_state=42, stratify=df['target'])
+
+# -------------------------------------------------------------------
+# 2. Production Feature Engineering & Training Pipeline
+# -------------------------------------------------------------------
+def transform_features(data):
+    df_out = data.copy()
+    # Monotonic log transform to linearize skewed income feature
+    df_out['log_income'] = np.log(df_out['income'] + 1)
+    return df_out[['log_income', 'tx_amount', 'risk_score']]
+
+X_train = transform_features(train_df)
+y_train = train_df['target']
+
+X_test = transform_features(test_df)
+y_test = test_df['target']
+
+# Fit Logistic Regression with Class Weights
+model = LogisticRegression(class_weight='balanced', solver='lbfgs')
+model.fit(X_train, y_train)
+
+# -------------------------------------------------------------------
+# 3. Cost-Sensitive Threshold Optimization
+# -------------------------------------------------------------------
+# Predict raw probabilities on test set
+raw_probs_test = model.predict_proba(X_test)[:, 1]
+
+# Business Cost Matrix
+cost_false_negative = 500.0  # Missed fraud cost
+cost_false_positive = 10.0   # User friction cost per false alarm
+
+precisions, recalls, thresholds = precision_recall_curve(y_test, raw_probs_test)
+
+best_threshold = 0.5
+min_total_cost = float('inf')
+
+for thresh in np.linspace(0.01, 0.99, 100):
+    preds = (raw_probs_test >= thresh).astype(int)
+    fn = np.sum((y_test == 1) & (preds == 0))
+    fp = np.sum((y_test == 0) & (preds == 1))
+    
+    total_cost = (fn * cost_false_negative) + (fp * cost_false_positive)
+    if total_cost < min_total_cost:
+        min_total_cost = total_cost
+        best_threshold = thresh
+
+print("=" * 60)
+print("1. OPTIMAL THRESHOLD SELECTION")
+print("=" * 60)
+print(f"Optimal Decision Threshold: {best_threshold:.4f}")
+print(f"Minimum Total Operational Cost: ${min_total_cost:,.2f}")
+
+# -------------------------------------------------------------------
+# 4. Monitoring: Population Stability Index (PSI) Implementation
+# -------------------------------------------------------------------
+def calculate_psi(expected, actual, num_bins=10):
+    """Calculates PSI between baseline (expected) and production (actual) data."""
+    bins = np.linspace(min(expected.min(), actual.min()), 
+                       max(expected.max(), actual.max()), 
+                       num_bins + 1)
+    
+    expected_counts, _ = np.histogram(expected, bins=bins)
+    actual_counts, _ = np.histogram(actual, bins=bins)
+    
+    expected_pct = np.maximum(expected_counts / len(expected), 1e-4)
+    actual_pct = np.maximum(actual_counts / len(actual), 1e-4)
+    
+    psi_val = np.sum((actual_pct - expected_pct) * np.log(actual_pct / expected_pct))
+    return psi_val
+
+# Simulate drifted production feature stream (e.g., inflation spikes transaction amounts)
+production_tx_amount = np.random.exponential(scale=180, size=3000)
+
+psi_tx = calculate_psi(train_df['tx_amount'], production_tx_amount)
+
+print("\n" + "=" * 60)
+print("2. FEATURE DRIFT MONITORING (PSI)")
+print("=" * 60)
+print(f"Transaction Amount PSI: {psi_tx:.4f}")
+if psi_tx >= 0.25:
+    print("ACTION: Severe Drift Detected! Trigger Automated Retraining Pipeline.")
+elif psi_tx >= 0.10:
+    print("WARNING: Moderate Drift Detected. Monitor closely.")
+else:
+    print("STATUS: Distribution Stable.")
+
+```
+
+---
+
+## 8. FAANG L5 INTERVIEW PREPARATION
+
+### System Design Scenario & Interview Rubrics
+
+#### Interview Question
+
+*"Design a real-time risk assessment engine for a fintech payment platform handling 50,000 requests per second. How would you build, deploy, monitor, and update a logistic regression model for this system?"*
+
+```
+                             [ High-Throughput Request ]
+                                   (50,000 QPS)
+                                        │
+                                        ▼
+                                [ Load Balancer ]
+                                        │
+                                        ▼
+                             [ Feature Store Lookup ]
+                             (Redis Cluster < 1ms)
+                                        │
+                                        ▼
+                            [ Scoring Microservice ]
+                            (Dot Product + Sigmoid)
+                                        │
+                                        ▼
+                            [ Rules & Thresholds ]
+                                        │
+                         ┌──────────────┴──────────────┐
+                         ▼                             ▼
+                  [ Decision Engine ]           [ Async Kafka ]
+                  (Pass / Challenge)             (Logging Stream)
+                                                       │
+                                                       ▼
+                                             [ Monitoring Pipeline ]
+                                            (PSI Drift / Recalib)
+
+```
+
+#### Expected L5 Architectural Answer
+
+1. **Inference System Architecture:**
+* **Feature Ingestion:** Low-latency online features (e.g., transaction frequency in last 5 minutes) pulled from an in-memory feature store (e.g., Redis / Feast) with $<1\text{ms}$ SLAs. Heavy batch features (e.g., 90-day account history) calculated asynchronously offline and synced to cache.
+* **Serving Engine:** Compile logistic regression weights $\mathbf{w}$ into optimized low-level microservices (C++ / Rust / Go) executing matrix operations natively without heavy framework runtime overhead.
+
+
+2. **Imbalance & Optimization Strategy:**
+* Evaluate baseline using Precision-Recall AUC ($\text{PR-AUC}$), avoiding false signals from $\text{ROC-AUC}$ given $0.1\%$ fraud base rates.
+* Train using loss class weighting. Calculate downstream operational thresholds by weighting the cost of false negatives (missed fraud) against customer friction from false positives (blocked transactions).
+
+
+3. **Production Monitoring System:**
+* Implement real-time asynchronous logging via Kafka.
+* Track feature stability using Population Stability Index ($\text{PSI}$) daily across top input variables.
+* Monitor probability calibration continuously via reliability diagrams and Expected Calibration Error ($\text{ECE}$) on short time windows to detect base rate shifts.
+
+
+4. **Model Lifecycle & Fallbacks:**
+* Deploy new model candidates via **Shadow Mode** to validate latency limits and prediction agreement rates asynchronously.
+* Execute blue-green/canary traffic shifts over a 7-day window.
+* Implement static, rule-based fallback safety nets if feature store lookups time out or if live inference latency exceeds $5\text{ms}$.
+
+
+
+---
+
+## 9. CHECK YOUR UNDERSTANDING
+
+### Question 1
+
+You are told your production logistic regression fraud model's AUC has stayed stable at $0.85$ for 6 months, but the fraud team says the model is "missing more fraud lately." What would you investigate first, given what you learned about drift vs. calibration?
+
+> **Answer:** Investigate **calibration decay** caused by a shift in the baseline prior probability $P(Y=1)$ (e.g., seasonal fraud spikes or macro-economic shifts).
+> $\text{ROC-AUC}$ measures purely relative ranking ability—whether fraudulent events score higher than non-fraudulent events. It remains completely unchanged if all predicted probabilities shift downward proportionately. However, if the base rate rises, fixed operational thresholds (e.g., auto-flagging predictions above $0.50$) will under-predict true risk, letting fraudulent transactions pass undetected. Recompute the **reliability diagram** and **Expected Calibration Error (ECE)** on recent data to confirm calibration drift, and update the prediction threshold or recalibrate output probabilities.
+
+### Question 2
+
+Your manager asks why you are starting with a logistic regression model instead of jumping straight to a deep neural network for a new binary classification problem. Give a 2-sentence answer that satisfies an L5 engineering bar.
+
+> **Answer:** "Logistic regression provides a low-latency, fully interpretable baseline that quantifies feature signal strength and sets a clear operational benchmark before incurring the serving costs and complexity of deep models. If its performance meets business SLAs, its sub-millisecond inference and auditability make it a superior production choice; if not, it provides a validated performance floor to measure neural network lift against."
