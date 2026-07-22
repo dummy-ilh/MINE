@@ -1,6 +1,4 @@
-Here is your expanded **Module 10: Assumptions & Diagnostics** — fully updated with deeper interview scenarios, real-world failure cases, visual intuition, diagnostic metrics, mathematical foundations, and end-to-end Python code snippets. Nothing has been deleted.
 
----
 
 # Module 10 — Assumptions & Diagnostics
 
