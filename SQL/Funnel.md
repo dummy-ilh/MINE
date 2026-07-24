@@ -1,4 +1,436 @@
-# FUNNEL
+# Conversion Funnel Analysis — End to End
+### Built slowly, stage by stage — with "why" and "why not" at every step
+
+---
+
+## What Is a Conversion Funnel?
+
+A conversion funnel measures how many users make it through a sequence of ordered steps — e.g., **Viewed Product → Added to Cart → Started Checkout → Purchased**. It answers: **"Of everyone who did Step 1, what fraction made it to Step 2? Step 3? All the way to the end?"**
+
+**Why build it at all?** Without a funnel, you only see the final conversion rate (e.g., "2% of visitors buy") — a single number that hides *where* people are dropping off. A funnel splits that one number into a story: maybe 80% view a product, but only 20% of those add to cart — telling you exactly which step to fix first.
+
+**Why not just look at total purchases vs. total visitors?** Because that ratio conflates every possible failure point into one metric. A 2% overall conversion rate could mean "people love the cart page but hate checkout" or "people barely make it past the homepage" — completely different problems requiring completely different fixes. The funnel disaggregates the single number into diagnosable stages.
+
+---
+
+## The Sample Data
+
+We'll use a simple `events` table throughout, same style as a cohort analysis but now the events themselves form an ordered journey.
+
+```sql
+SELECT * FROM events LIMIT 12;
+```
+
+| user_id | event_time          | event_type       |
+|---------|---------------------|------------------|
+| 201     | 2024-05-01 09:02:00 | view_product     |
+| 201     | 2024-05-01 09:05:00 | add_to_cart      |
+| 201     | 2024-05-01 09:07:00 | start_checkout   |
+| 201     | 2024-05-01 09:10:00 | purchase         |
+| 202     | 2024-05-01 10:15:00 | view_product     |
+| 202     | 2024-05-01 10:16:00 | add_to_cart      |
+| 203     | 2024-05-02 08:00:00 | view_product     |
+| 204     | 2024-05-02 11:20:00 | view_product     |
+| 204     | 2024-05-02 11:25:00 | add_to_cart      |
+| 204     | 2024-05-02 11:40:00 | start_checkout   |
+| 205     | 2024-05-02 14:00:00 | view_product     |
+| 205     | 2024-05-02 14:02:00 | add_to_cart      |
+
+**Why this shape of table?** A "long" event log (one row per action) rather than a "wide" table (one row per user with columns for each step) is the natural format raw product analytics data arrives in — every stage of this analysis is really just different ways of reshaping this same long table. **Why not store it wide from the start?** Because a user might repeat a step (view a product twice), skip a step, or do steps out of order — a long log captures all of that faithfully, while a wide table forces premature assumptions about exactly one row per user.
+
+---
+
+## Stage 1 — Define the Funnel Steps (In Order)
+
+Before writing any SQL, we fix the ordered list of steps we're measuring.
+
+**Variables:**
+- `step_order` — A manually defined ranking (1, 2, 3, 4) of which event types count as which funnel stage
+
+```sql
+-- Stage 1: Define step ordering as a lookup (often just a CASE statement or small mapping table)
+SELECT
+    event_type,
+    CASE event_type
+        WHEN 'view_product'    THEN 1
+        WHEN 'add_to_cart'     THEN 2
+        WHEN 'start_checkout'  THEN 3
+        WHEN 'purchase'        THEN 4
+    END AS step_order
+FROM events
+GROUP BY event_type;
+```
+
+**Output:**
+
+| event_type      | step_order |
+|-----------------|------------|
+| view_product    | 1          |
+| add_to_cart     | 2          |
+| start_checkout  | 3          |
+| purchase        | 4          |
+
+**Why define this explicitly instead of trusting timestamps alone?** Timestamps tell you *when* something happened, not which conceptual funnel stage it belongs to — you need a human-defined mapping from raw event names to funnel position, because "the funnel" is a business definition, not something the data announces on its own. **Why not just count distinct event types and assume they're already in the right order?** Event names in a database are rarely stored in funnel order (e.g., alphabetically `add_to_cart` comes before `purchase`), so relying on implicit ordering will silently miscount the funnel — always pin the order down explicitly.
+
+---
+
+## Stage 2 — Find Each User's Furthest Step Reached
+
+For each user, we need to know the *highest* step_order they ever reached — this tells us how far they got, regardless of how many times they repeated earlier steps.
+
+**Variables:**
+- `max_step` — The highest step_order value seen for that user, across all their events
+
+```sql
+-- Stage 2: Find the furthest step each user reached
+WITH step_events AS (
+    SELECT
+        user_id,
+        event_type,
+        CASE event_type
+            WHEN 'view_product'    THEN 1
+            WHEN 'add_to_cart'     THEN 2
+            WHEN 'start_checkout'  THEN 3
+            WHEN 'purchase'        THEN 4
+        END AS step_order
+    FROM events
+)
+SELECT
+    user_id,
+    MAX(step_order) AS max_step        -- furthest stage reached
+FROM step_events
+GROUP BY user_id;
+```
+
+**Output:**
+
+| user_id | max_step |
+|---------|----------|
+| 201     | 4        |
+| 202     | 2        |
+| 203     | 1        |
+| 204     | 3        |
+| 205     | 2        |
+
+**Why `MAX` and not `COUNT` of events?** A user could view the product 5 times and never add to cart — `COUNT` would overstate their progress, while `MAX(step_order)` correctly captures that they only ever reached Step 1, no matter how many times they repeated it. **Why not just check "did they do the very last step" (a boolean)?** Because that only tells you pass/fail on the *entire* funnel — it throws away exactly the information a funnel exists to show: *which intermediate step* they stalled at.
+
+---
+
+## Stage 3 — A Critical Assumption: Strict Order vs. "Ever Reached"
+
+Before continuing, we must decide: does a user only count as "reaching Step 3" if they did Steps 1, 2, and 3 **in that order**, or does it just matter that they eventually did the Step 3 *event*, regardless of order?
+
+**Why does this matter?** Real user behavior is messy — someone might add-to-cart, remove it, browse more, then start checkout without technically "viewing the product" again in that session. If your funnel logic silently assumes perfect order, you can undercount real conversions.
+
+**Two approaches, with tradeoffs:**
+
+```sql
+-- Approach A: "Ever reached" (simpler, used in Stage 2 above)
+--   Just take MAX(step_order) per user — ignores sequencing entirely.
+--   Why use it: simple, fast, matches most standard funnel dashboards (Amplitude/Mixpanel default).
+--   Why not: can overcount — a user who added to cart BEFORE ever viewing a product
+--   (e.g., re-ordering from history) still counts as reaching Step 2.
+
+-- Approach B: Strict in-order sequence (stricter, more correct for "true" funnel behavior)
+SELECT
+    user_id,
+    event_type,
+    event_time,
+    LAG(event_time) OVER (PARTITION BY user_id ORDER BY event_time) AS prev_event_time
+FROM events;
+--   Why use it: guarantees the steps happened in the expected sequence for each user.
+--   Why not always: significantly more complex SQL, and for most product-analytics
+--   use cases the simpler "ever reached" approach is the industry standard because
+--   it's more forgiving of realistic, slightly non-linear user journeys.
+```
+
+**Decision for this walkthrough:** We proceed with Approach A ("ever reached") for the rest of this document, since it's what Stage 2 already computed and it's the standard behind most funnel tools — but a senior analyst should always state out loud which assumption they're making, since it changes the numbers.
+
+---
+
+## Stage 4 — Count Users Reaching Each Step (The Raw Funnel Counts)
+
+Now we count, for each step, how many users reached *at least* that far.
+
+**Variables:**
+- `users_reaching_step` — COUNT DISTINCT users whose `max_step >= step_order`
+
+```sql
+-- Stage 4: Count users reaching each step or further
+WITH user_progress AS (
+    -- Stage 2 result
+    SELECT user_id, MAX(step_order) AS max_step
+    FROM step_events
+    GROUP BY user_id
+),
+funnel_steps AS (
+    SELECT 1 AS step_order, 'view_product' AS step_name
+    UNION ALL SELECT 2, 'add_to_cart'
+    UNION ALL SELECT 3, 'start_checkout'
+    UNION ALL SELECT 4, 'purchase'
+)
+SELECT
+    f.step_order,
+    f.step_name,
+    COUNT(DISTINCT CASE WHEN u.max_step >= f.step_order THEN u.user_id END) AS users_reaching_step
+FROM funnel_steps f
+CROSS JOIN user_progress u
+GROUP BY f.step_order, f.step_name
+ORDER BY f.step_order;
+```
+
+**Output:**
+
+| step_order | step_name        | users_reaching_step |
+|------------|------------------|----------------------|
+| 1          | view_product     | 5                    |
+| 2          | add_to_cart      | 4                    |
+| 3          | start_checkout   | 2                    |
+| 4          | purchase         | 1                    |
+
+**Why `CROSS JOIN` here instead of a simple `GROUP BY max_step`?** A plain `GROUP BY max_step` only shows you how many people's *furthest* step was exactly N — it wouldn't tell you that everyone who reached Step 3 also, by definition, passed through Step 1 and 2. The `CROSS JOIN` + `>=` comparison deliberately generates the *cumulative* "reached this far or beyond" count, which is what a funnel chart actually shows (each bar is normally smaller than or equal to the one before it, never larger). **Why not just filter `WHERE max_step = f.step_order` and then manually sum going backward?** You could, but it's more error-prone to hand-roll a running total in application code than to let `>=` do the cumulative logic directly in SQL.
+
+---
+
+## Stage 5 — Compute Step-over-Step Conversion Rate
+
+The raw counts are useful, but the *rate* from one step to the next is what actually reveals drop-off.
+
+**Variables:**
+- `conversion_from_previous` — `users_reaching_step / LAG(users_reaching_step)`
+- `LAG` — Window function that looks at the previous row's value
+
+```sql
+-- Stage 5: Step-over-step and overall conversion rates
+SELECT
+    step_order,
+    step_name,
+    users_reaching_step,
+    ROUND(100.0 * users_reaching_step
+        / LAG(users_reaching_step) OVER (ORDER BY step_order), 1) AS pct_of_previous_step,
+    ROUND(100.0 * users_reaching_step
+        / FIRST_VALUE(users_reaching_step) OVER (ORDER BY step_order), 1) AS pct_of_step1
+FROM (... Stage 4 query ...)
+ORDER BY step_order;
+```
+
+**Output:**
+
+| step_order | step_name        | users_reaching_step | pct_of_previous_step | pct_of_step1 |
+|------------|------------------|----------------------|-----------------------|--------------|
+| 1          | view_product     | 5                    | —                     | 100.0%       |
+| 2          | add_to_cart      | 4                    | 80.0%                 | 80.0%        |
+| 3          | start_checkout   | 2                    | 50.0%                 | 40.0%        |
+| 4          | purchase         | 1                    | 50.0%                 | 20.0%        |
+
+**Why report *both* "% of previous step" and "% of step 1"?** They answer different questions. "% of previous step" (also called the *marginal* conversion rate) tells you exactly where the biggest relative drop-off happens — here, Step 2→3 loses half the remaining users, which is the step to investigate first. "% of step 1" (the *cumulative* conversion rate) tells you the end-to-end health of the whole funnel — useful for exec reporting ("20% of everyone who viewed a product bought one") but useless for diagnosing *which* step to fix, since a low number could come from a bad drop anywhere. **Why not report only the cumulative number?** Because two funnels can have the identical overall 20% conversion rate while failing at completely different steps — the cumulative number alone can't distinguish "everyone struggles at checkout" from "everyone struggles just to add to cart."
+
+---
+
+## Stage 6 — Add a Time Window (Why Funnels Need One)
+
+So far we've silently assumed every event in the table "counts" toward the funnel, no matter how much time passed between steps. In practice, a user who viewed a product in January and purchased in June probably wasn't on a single continuous "funnel journey" — that's two different sessions/intents.
+
+**Variables:**
+- `window_days` — Maximum allowed gap between the first step and the step being measured
+- `DATEDIFF` — Computes days between the user's Step 1 event and their later event
+
+```sql
+-- Stage 6: Restrict to events within N days of the user's first step
+WITH first_step AS (
+    SELECT
+        user_id,
+        MIN(event_time) AS first_seen
+    FROM events
+    WHERE event_type = 'view_product'
+    GROUP BY user_id
+),
+windowed_events AS (
+    SELECT
+        e.user_id,
+        e.event_type,
+        e.event_time,
+        f.first_seen
+    FROM events e
+    JOIN first_step f ON e.user_id = f.user_id
+    WHERE e.event_time <= f.first_seen + INTERVAL '7 days'   -- 7-day funnel window
+)
+SELECT * FROM windowed_events;
+```
+
+**Why add a window at all?** Without one, a funnel silently conflates unrelated visits across arbitrarily long time spans, inflating "conversion" with events that have nothing to do with each other — a purchase six months after a single product view is far more likely to be a coincidence (or a second, unrelated visit) than the outcome of that specific browsing session. **Why not make the window infinite to be "safe" and not miss any conversions?** Because a funnel's entire purpose is to measure a specific, intentional journey — an infinite window makes the funnel unfalsifiable (nearly everyone "eventually" does everything given enough time), which defeats the point of measuring where people drop off *within a session or journey*. **Why 7 days specifically, and not 1 day or 30?** The right window length depends on the product's natural consideration cycle — impulse purchases (fast food app) might use a same-day window, while considered purchases (booking a vacation) might reasonably use 30+ days; there's no universal answer, and this choice should be stated explicitly and revisited if it changes the funnel numbers materially.
+
+---
+
+## Stage 7 — Break Out the Funnel by Segment
+
+A single funnel is a starting point, but the real diagnostic value comes from comparing funnels across segments (e.g., new vs. returning users, or traffic source).
+
+**Variables:**
+- `segment` — A grouping dimension (e.g., `traffic_source`, `device_type`, `is_new_user`)
+
+```sql
+-- Stage 7: Funnel broken out by a segment column
+SELECT
+    e.traffic_source,                -- example segment
+    f.step_order,
+    f.step_name,
+    COUNT(DISTINCT CASE WHEN u.max_step >= f.step_order THEN u.user_id END) AS users_reaching_step
+FROM funnel_steps f
+CROSS JOIN user_progress u
+JOIN events e ON e.user_id = u.user_id
+GROUP BY e.traffic_source, f.step_order, f.step_name
+ORDER BY e.traffic_source, f.step_order;
+```
+
+**Why segment the funnel instead of stopping at the aggregate view?** An aggregate funnel can hide the fact that one segment is dragging down the average while another is already performing well — segmenting turns "40% drop off at checkout" into an actionable finding like "60% of *mobile* users drop off at checkout, but only 15% of desktop users do," which points straight at a mobile-checkout UX problem instead of a vague, undirected fix. **Why not segment by every possible dimension at once?** Slicing too finely (e.g., by device × traffic source × time-of-day × user tier simultaneously) fragments the data into tiny sample sizes per cell, where random noise can look like a meaningful pattern — start with one or two business-relevant segments and only drill further into a segment once it's shown a real signal.
+
+---
+
+## Stage 8 — Pivot Into the Classic Funnel Chart Shape
+
+Finally, reshape the step-by-step rows into a single row per segment with one column per step — the shape you'd actually feed into a bar chart.
+
+**Variables:**
+- `MAX(CASE WHEN ...)` — Same conditional-aggregation pivot trick used in cohort analysis
+
+```sql
+-- Stage 8: Pivot funnel steps into columns
+SELECT
+    traffic_source,
+    MAX(CASE WHEN step_order = 1 THEN users_reaching_step END) AS step1_view,
+    MAX(CASE WHEN step_order = 2 THEN users_reaching_step END) AS step2_cart,
+    MAX(CASE WHEN step_order = 3 THEN users_reaching_step END) AS step3_checkout,
+    MAX(CASE WHEN step_order = 4 THEN users_reaching_step END) AS step4_purchase
+FROM (... Stage 7 query ...)
+GROUP BY traffic_source
+ORDER BY traffic_source;
+```
+
+**Output (example, aggregate + two segments):**
+
+| traffic_source | step1_view | step2_cart | step3_checkout | step4_purchase |
+|-----------------|------------|------------|------------------|------------------|
+| organic          | 3          | 3          | 2                | 1                |
+| paid_social      | 2          | 1          | 0                | 0                |
+
+**Why pivot at the very end and not earlier?** Every prior stage (2 through 7) needed the "long" row-per-step shape to make joins, window functions, and `GROUP BY`s work naturally — pivoting early would have made every subsequent calculation harder (you'd be doing arithmetic across columns instead of rows). **Why not skip the pivot and just hand analysts the long format?** Because the long format, while easier for SQL to compute, isn't how humans read a funnel — a wide, one-row-per-segment table is what maps directly onto a funnel visualization or a simple spreadsheet comparison, so the pivot is purely for human/downstream-tool readability, done only once all the hard computation is finished.
+
+---
+
+## The Full Query (All Stages Combined)
+
+```sql
+WITH
+-- Stage 1: Step definitions
+step_events AS (
+    SELECT
+        user_id,
+        event_type,
+        event_time,
+        CASE event_type
+            WHEN 'view_product'    THEN 1
+            WHEN 'add_to_cart'     THEN 2
+            WHEN 'start_checkout'  THEN 3
+            WHEN 'purchase'        THEN 4
+        END AS step_order
+    FROM events
+),
+
+-- Stage 6: Restrict to a 7-day window from each user's first product view
+first_step AS (
+    SELECT user_id, MIN(event_time) AS first_seen
+    FROM step_events
+    WHERE step_order = 1
+    GROUP BY user_id
+),
+windowed AS (
+    SELECT s.*
+    FROM step_events s
+    JOIN first_step f ON s.user_id = f.user_id
+    WHERE s.event_time <= f.first_seen + INTERVAL '7 days'
+),
+
+-- Stage 2: Furthest step reached per user (within window)
+user_progress AS (
+    SELECT user_id, MAX(step_order) AS max_step
+    FROM windowed
+    GROUP BY user_id
+),
+
+-- Step lookup
+funnel_steps AS (
+    SELECT 1 AS step_order, 'view_product' AS step_name
+    UNION ALL SELECT 2, 'add_to_cart'
+    UNION ALL SELECT 3, 'start_checkout'
+    UNION ALL SELECT 4, 'purchase'
+),
+
+-- Stage 4: Cumulative users reaching each step
+step_counts AS (
+    SELECT
+        f.step_order,
+        f.step_name,
+        COUNT(DISTINCT CASE WHEN u.max_step >= f.step_order THEN u.user_id END) AS users_reaching_step
+    FROM funnel_steps f
+    CROSS JOIN user_progress u
+    GROUP BY f.step_order, f.step_name
+)
+
+-- Stage 5: Conversion rates
+SELECT
+    step_order,
+    step_name,
+    users_reaching_step,
+    ROUND(100.0 * users_reaching_step
+        / LAG(users_reaching_step) OVER (ORDER BY step_order), 1) AS pct_of_previous_step,
+    ROUND(100.0 * users_reaching_step
+        / FIRST_VALUE(users_reaching_step) OVER (ORDER BY step_order), 1) AS pct_of_step1
+FROM step_counts
+ORDER BY step_order;
+```
+
+---
+
+## Key Variables Summary
+
+| Variable | What It Is | Where Used |
+|----------|-----------|------------|
+| `step_order` | Manually assigned rank of each event type in the funnel | Stages 1–8 |
+| `max_step` | Furthest step_order a user ever reached | Stages 2, 4 |
+| `users_reaching_step` | COUNT DISTINCT users whose max_step >= this step | Stages 4–8 |
+| `pct_of_previous_step` | Marginal (step-over-step) conversion rate | Stage 5 |
+| `pct_of_step1` | Cumulative conversion rate from the very start | Stage 5 |
+| `window_days` | Max allowed time gap from first step to count as "in-funnel" | Stage 6 |
+| `segment` | Grouping dimension (traffic source, device, etc.) | Stage 7 |
+
+---
+
+## How to Read the Funnel
+
+```
+Step:            1 (View)   2 (Cart)   3 (Checkout)   4 (Purchase)
+Users:              5          4            2               1
+% of previous:      —         80%          50%             50%
+% of step 1:       100%       80%          40%             20%
+```
+
+- **Read left to right** → where users drop off, in absolute and relative terms
+- **The biggest % drop between adjacent steps** → your highest-priority fix
+- **% of step 1 at the final step** → the single "headline" conversion rate, but never diagnostic on its own
+- **Comparing segments side by side** → reveals whether a drop-off is universal or specific to one channel/device/cohort
+
+---
+
+## Common Variants — Why Each Exists, and Why Not to Default to It
+
+**Time-to-convert distribution** — instead of just counting who reached each step, compute `event_time - first_seen` for each step and look at the distribution (median, p90) of how *long* it took. **Why:** two funnels can have identical conversion rates but wildly different speeds — slow conversions often signal friction even when users eventually get through. **Why not always:** adds real complexity for a question you may not need answered yet — start with the basic funnel counts first, and only add time-to-convert once you've identified a step worth investigating deeper.
+
+**Strict ordered-sequence funnel** (from Stage 3, Approach B) — required when step order genuinely matters for the business question (e.g., "did they complete checkout *after* seeing the loyalty discount banner, in that order"). **Why not by default:** the join/window-function logic needed to enforce strict ordering is considerably more complex, and most standard product funnels (and the tools that generate them, like Amplitude/Mixpanel) default to the simpler "ever reached" definition — reach for strict ordering only when the business question specifically requires it.
+
+**Multi-path / branching funnels** — real products often have more than one valid path to conversion (e.g., "buy now" vs. "add to cart then checkout later"). **Why:** forcing every user into one single linear funnel undercounts people who converted via a different but equally valid path. **Why not model every possible path from day one:** it multiplies analysis complexity quickly — start with the single dominant path, and only branch the funnel once data shows a second path carries meaningful volume.
+
+**Funnel with re-entry allowed** — some funnels should let a user "restart" after a long gap (e.g., they abandoned cart, came back a month later, and completed a full new session). **Why:** without allowing re-entry, a user who fails once is permanently counted as a drop-off even if they later fully succeed in a new session. **Why not always allow re-entry:** it can double-count a single underlying user's persistence as if it were two separate successes, inflating apparent funnel health — decide explicitly whether you're measuring "session-level" or "user-level, ever" conversion, and be consistent.
 Say you have a basic events table:
 
 ```sql
