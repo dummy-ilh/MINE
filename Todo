@@ -1,6 +1,5 @@
 # ML / DS / MLE Interview Checklist
 ## ML Foundations
-1. [ ] **ML Basics** — bias-variance tradeoff, overfitting, underfitting, cross-validation (k-fold, stratified, LOOCV), evaluation metrics (precision, recall, F1, AUC-ROC, AUC-PR), class imbalance handling,
 2. [ ] **Prob & Stats** — probability distributions (Gaussian, Bernoulli, Poisson, Beta), Bayes theorem, MLE vs MAP, hypothesis testing, CLT, confidence intervals, law of large numbers
 
 ## Classical ML
@@ -31,8 +30,6 @@
 22. [ ] **Bandits & Exploration** — ε-greedy, UCB, Thompson sampling, contextual bandits, explore-exploit tradeoff, offline evaluation of bandit policies
 23. [ ] **ML Metrics & Evaluation** — metric selection, offline vs online, ranking metrics (NDCG, MAP, MRR), calibration (Platt scaling, isotonic regression), business metric alignment, Goodhart's Law
 
-## ML Problem Formulation & Feature Work
-25. [ ] **ML Problem Formulation** — defining labels, data collection strategy, proxy metrics, metric decomposition, failure mode analysis from vague business problems; "design an ML system for X" style
 
 ## MLE / Applied Scientist Focus
 26. [ ] **Model Deployment & MLOps** — versioning, CI/CD for ML, A/B testing in production, shadow deployments, canary releases, training-serving skew, latency vs accuracy tradeoffs, model governance
@@ -61,33 +58,13 @@
 
 
 
-
-
-
-
-
-
-
-1. [ ] **ML Basics** — bias-variance tradeoff, overfitting, underfitting, cross-validation (k-fold, stratified, LOOCV), evaluation metrics (precision, recall, F1, AUC-ROC, AUC-PR), class imbalance handling,
-
-
-
 **1. Bias-Variance Tradeoff**
-- Bias/variance decomposition
-- Underfitting vs overfitting
+
 - Learning curves
 - Model complexity vs tradeoff
 - Regularization as a bias-variance dial
 - Double descent
 
-
-
-**4. Statistical Prerequisites**
-- Probability refresher
-- MLE vs MAP
-- Hypothesis testing
-- Confidence intervals
-- Correlation vs causation
 
 **5. Regularization & Optimization**
 - L1 vs L2
@@ -98,53 +75,12 @@
 - Early stopping
 - Dropout
 
-**6. Feature Engineering**
-- Scaling / normalization
+
 
 - Feature selection vs extraction
-- PCA
 
-- Outlier detection
 
-**7. Classical Algorithms**
-- Linear / logistic regression
-- Decision trees
-- Random Forest
-- Gradient boosting / XGBoost
-- SVMs
-- kNN
-- Naive Bayes
 
-**8. Unsupervised Learning**
-- k-means
-- Hierarchical clustering
-- DBSCAN
-- PCA
-- t-SNE / UMAP
-- Anomaly detection
 
-**9. Production ML & Skew**
-- Training-serving skew
-- Feature / label / covariate shift
-- Skew RCA workflow
-- Feature stores
-- Drift monitoring (PSI, KL divergence)
-- Shadow deployment
-- Concept drift
 
-**10. Ensembling & Model Selection**
-- Bagging vs boosting vs stacking
-- Hyperparameter tuning (grid, random, Bayesian)
-- Simple vs complex model tradeoffs
 
-**11. Foundations & Problem Framing**
-- ML types (supervised, unsupervised, RL)
-- ML workflow
-- Train/val/test splits
-- Data leakage
-
-**12. Case Studies / Capstone**
-- End-to-end imbalanced-data problem
-- Ties together evaluation, imbalance handling, skew detection
-
-Want this as a checklist artifact you can check off as you study?
