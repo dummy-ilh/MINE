@@ -1,6 +1,6 @@
 # ML / DS / MLE Interview Checklist
 ## ML Foundations
-1. [ ] **ML Basics** — bias-variance tradeoff, overfitting, underfitting, cross-validation (k-fold, stratified, LOOCV), evaluation metrics (precision, recall, F1, AUC-ROC, AUC-PR), class imbalance handling
+1. [ ] **ML Basics** — bias-variance tradeoff, overfitting, underfitting, cross-validation (k-fold, stratified, LOOCV), evaluation metrics (precision, recall, F1, AUC-ROC, AUC-PR), class imbalance handling,
 2. [ ] **Prob & Stats** — probability distributions (Gaussian, Bernoulli, Poisson, Beta), Bayes theorem, MLE vs MAP, hypothesis testing, CLT, confidence intervals, law of large numbers
 
 ## Classical ML
@@ -55,3 +55,96 @@
 "BERT: Pre-training of Deep Bidirectional Transformers" (Devlin et al., 2018) — Establishes the encoder-only vs. decoder-only distinction that interviewers love to ask about ("when would you use BERT vs GPT?"), plus masked language modeling as a pretraining objective.
 "Language Models are Few-Shot Learners" (GPT-3, Brown et al., 2020) — Covers decoder-only autoregressive pretraining at scale and in-context/few-shot learning, which underlies most modern prompting discussions.
 "Training language models to follow instructions with human feedback"
+
+
+
+
+
+
+
+
+
+
+
+
+
+1. [ ] **ML Basics** — bias-variance tradeoff, overfitting, underfitting, cross-validation (k-fold, stratified, LOOCV), evaluation metrics (precision, recall, F1, AUC-ROC, AUC-PR), class imbalance handling,
+
+
+
+**1. Bias-Variance Tradeoff**
+- Bias/variance decomposition
+- Underfitting vs overfitting
+- Learning curves
+- Model complexity vs tradeoff
+- Regularization as a bias-variance dial
+- Double descent
+
+
+
+**4. Statistical Prerequisites**
+- Probability refresher
+- MLE vs MAP
+- Hypothesis testing
+- Confidence intervals
+- Correlation vs causation
+
+**5. Regularization & Optimization**
+- L1 vs L2
+- Elastic net
+- Gradient descent variants (batch, mini-batch, SGD)
+- Momentum
+- Adam / RMSProp
+- Early stopping
+- Dropout
+
+**6. Feature Engineering**
+- Scaling / normalization
+
+- Feature selection vs extraction
+- PCA
+
+- Outlier detection
+
+**7. Classical Algorithms**
+- Linear / logistic regression
+- Decision trees
+- Random Forest
+- Gradient boosting / XGBoost
+- SVMs
+- kNN
+- Naive Bayes
+
+**8. Unsupervised Learning**
+- k-means
+- Hierarchical clustering
+- DBSCAN
+- PCA
+- t-SNE / UMAP
+- Anomaly detection
+
+**9. Production ML & Skew**
+- Training-serving skew
+- Feature / label / covariate shift
+- Skew RCA workflow
+- Feature stores
+- Drift monitoring (PSI, KL divergence)
+- Shadow deployment
+- Concept drift
+
+**10. Ensembling & Model Selection**
+- Bagging vs boosting vs stacking
+- Hyperparameter tuning (grid, random, Bayesian)
+- Simple vs complex model tradeoffs
+
+**11. Foundations & Problem Framing**
+- ML types (supervised, unsupervised, RL)
+- ML workflow
+- Train/val/test splits
+- Data leakage
+
+**12. Case Studies / Capstone**
+- End-to-end imbalanced-data problem
+- Ties together evaluation, imbalance handling, skew detection
+
+Want this as a checklist artifact you can check off as you study?
