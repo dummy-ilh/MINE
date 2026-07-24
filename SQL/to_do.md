@@ -1,18 +1,5 @@
 
-2. **Gaps and islands** — find consecutive streaks (active days, login streaks) or find gaps (missing dates, churn windows).
-3. **Cohort retention** — group users by signup week/month, track what % return in week N.
 
-8. **Sessionization** — group events into sessions based on time gaps between them.
-
-
-
-GROUP BY with CASE WHEN
-DISTINCT in Aggregates
-
-QUERY OPTIM
-
-
-Pareto / 80-20 Analysis
 
 Got it — here's the pattern taxonomy, the shapes interviewers reuse over and over:
 
