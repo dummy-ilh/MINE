@@ -6,7 +6,6 @@
 4. [ ] **Regression** — linear regression assumptions (LINE), ridge/lasso/elastic net regularization, multicollinearity, VIF, heteroscedasticity
 6. [ ] **Classifiers** — SVM (kernels, margin, support vectors), KNN (curse of dimensionality), Naive Bayes (conditional independence assumption); trade-offs and when each shines
 7. [ ] **Trees** — decision trees (splitting criteria, pruning), random forests, bagging, OOB error, feature importance (impurity vs permutation)
-8. [ ] **Boosting** — gradient boosting mechanics, XGBoost (regularization, tree construction), LightGBM (leaf-wise vs level-wise), CatBoost, DART, monotonic constraints, handling class imbalance; differences vs bagging
 
 ## Deep Learning
 9- basics
@@ -27,8 +26,6 @@
 ## Specialized / High-Impact Topics
 22. [ ] **Bandits & Exploration** — ε-greedy, UCB, Thompson sampling, contextual bandits, explore-exploit tradeoff, offline evaluation of bandit policies
 
-
-
 ## MLE / Applied Scientist Focus
 26. [ ] **Model Deployment & MLOps** — versioning, CI/CD for ML, A/B testing in production, shadow deployments, canary releases, training-serving skew, latency vs accuracy tradeoffs, model governance
 27. [ ] **Distributed Training** — data vs model vs pipeline parallelism, gradient accumulation, mixed precision (fp16/bf16), parameter servers vs all-reduce, TPU/GPU specifics, checkpointing strategies
@@ -40,19 +37,15 @@
 29. [ ] **Time Series** — stationarity (ADF test, KPSS), differencing, ACF/PACF, ARIMA/SARIMA, exponential smoothing (Holt-Winters), temporal cross-validation, forecasting metrics (MAPE, SMAPE, WRMSSE), modern approaches (TFT, N-BEATS, TimesNet), when DL vs classical
 
 ## Often Forgotten
-
 31. [ ] **NLP Basics** — TF-IDF, Word2Vec (skip-gram, CBOW), GloVe, subword tokenization, NER, sequence labeling, pre-Transformer NLP pipeline
 32. [ ] **Graph ML** — GNNs (GCN, GAT, GraphSAGE), message passing, PageRank, node/graph embeddings, use cases in search, social graphs, fraud detection
 33. [ ] **Fairness & Responsible AI** — bias metrics (demographic parity, equalized odds, calibration across groups), mitigation strategies (re-weighting, adversarial debiasing), model documentation
-
 
 "Attention Is All You Need" (Vaswani et al., 2017) — Non-negotiable. Nearly every LLM interview probes self-attention mechanics, why Q/K/V works the way it does, multi-head attention, and positional encoding. If you know one paper cold, it's this one.
 "BERT: Pre-training of Deep Bidirectional Transformers" (Devlin et al., 2018) — Establishes the encoder-only vs. decoder-only distinction that interviewers love to ask about ("when would you use BERT vs GPT?"), plus masked language modeling as a pretraining objective.
 "Language Models are Few-Shot Learners" (GPT-3, Brown et al., 2020) — Covers decoder-only autoregressive pretraining at scale and in-context/few-shot learning, which underlies most modern prompting discussions.
 "Training language models to follow instructions with human feedback"
 - Feature selection vs extraction
-
-
 
 
 
