@@ -20,7 +20,6 @@
 15. [ ] **Multimodal Models** — vision-language models, contrastive learning (CLIP), image-text alignment, Gemini-style architecture basics, cross-modal attention
 
 ## Engineering
-16. [ ] **SQL** — joins (all types), window functions (ROW_NUMBER, LAG, LEAD, RANK), aggregations, CTEs, query optimization (indexes, execution plans), handling NULLs
 17. [ ] **Coding** — DS&A (arrays, hashmaps, graphs, trees, DP, sliding window), time/space complexity, LeetCode medium; ML-adjacent problems (matrix ops, reservoir sampling, top-K)
 18. [ ] **System Design** — feature stores (online vs offline), training pipelines, online/batch/streaming serving, two-phase retrieval, embedding freshness, feature skew, monitoring, data drift detection, model cards, rollback strategies
 19. [ ] **Data Engineering Basics** — Spark (RDDs, DataFrames, partitioning), Kafka (topics, partitions, consumer groups), batch vs streaming, pipeline orchestration (Airflow), data lake vs warehouse
@@ -28,7 +27,7 @@
 ## Specialized / High-Impact Topics
 20. [ ] **Recommender Systems** — collaborative filtering, matrix factorization (SVD, ALS), content-based, two-tower models, cold start, diversity vs relevance, position bias
 22. [ ] **Bandits & Exploration** — ε-greedy, UCB, Thompson sampling, contextual bandits, explore-exploit tradeoff, offline evaluation of bandit policies
-23. [ ] **ML Metrics & Evaluation** — metric selection, offline vs online, ranking metrics (NDCG, MAP, MRR), calibration (Platt scaling, isotonic regression), business metric alignment, Goodhart's Law
+
 
 
 ## MLE / Applied Scientist Focus
@@ -46,7 +45,7 @@
 31. [ ] **NLP Basics** — TF-IDF, Word2Vec (skip-gram, CBOW), GloVe, subword tokenization, NER, sequence labeling, pre-Transformer NLP pipeline
 32. [ ] **Graph ML** — GNNs (GCN, GAT, GraphSAGE), message passing, PageRank, node/graph embeddings, use cases in search, social graphs, fraud detection
 33. [ ] **Fairness & Responsible AI** — bias metrics (demographic parity, equalized odds, calibration across groups), mitigation strategies (re-weighting, adversarial debiasing), model documentation
-34. anmoly
+
 
 "Attention Is All You Need" (Vaswani et al., 2017) — Non-negotiable. Nearly every LLM interview probes self-attention mechanics, why Q/K/V works the way it does, multi-head attention, and positional encoding. If you know one paper cold, it's this one.
 "BERT: Pre-training of Deep Bidirectional Transformers" (Devlin et al., 2018) — Establishes the encoder-only vs. decoder-only distinction that interviewers love to ask about ("when would you use BERT vs GPT?"), plus masked language modeling as a pretraining objective.
