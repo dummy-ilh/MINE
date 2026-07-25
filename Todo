@@ -8,12 +8,10 @@
 7. [ ] **Trees** — decision trees (splitting criteria, pruning), random forests, bagging, OOB error, feature importance (impurity vs permutation)
 
 ## Deep Learning
-9- basics
 10. [ ] **DL Architectures** — CNNs (conv, pooling, receptive field), RNNs, LSTMs, GRUs (gating mechanisms), Transformers (self-attention, multi-head, positional encoding), attention variants (cross, sparse, flash)
 11. [ ] **Multi-task & Transfer Learning** — fine-tuning strategies, catastrophic forgetting, prompt tuning vs full fine-tune at scale, LoRA, adapter layers, domain adaptation
 
 ## LLM & GenAI
-12. [ ] **LLM Basics** — tokenization (BPE, WordPiece), pretraining objectives (CLM, MLM), RLHF, DPO, fine-tuning vs prompting, scaling laws (Chinchilla), emergent abilities
 13. [ ] **RAG** — embeddings, vector DBs (FAISS, Pinecone), chunking strategies, hybrid retrieval (dense + sparse), reranking, RAG evaluation (faithfulness, relevance, groundedness)
 14. [ ] **Agents** — tool use, ReAct framework, chain-of-thought, planning (MCTS, tree-of-thought), memory types (episodic, semantic, in-context)
 15. [ ] **Multimodal Models** — vision-language models, contrastive learning (CLIP), image-text alignment, Gemini-style architecture basics, cross-modal attention
@@ -27,7 +25,6 @@
 22. [ ] **Bandits & Exploration** — ε-greedy, UCB, Thompson sampling, contextual bandits, explore-exploit tradeoff, offline evaluation of bandit policies
 
 ## MLE / Applied Scientist Focus
-26. [ ] **Model Deployment & MLOps** — versioning, CI/CD for ML, A/B testing in production, shadow deployments, canary releases, training-serving skew, latency vs accuracy tradeoffs, model governance
 27. [ ] **Distributed Training** — data vs model vs pipeline parallelism, gradient accumulation, mixed precision (fp16/bf16), parameter servers vs all-reduce, TPU/GPU specifics, checkpointing strategies
 
 ## DS / Analytics Focus
