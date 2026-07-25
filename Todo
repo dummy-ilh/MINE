@@ -25,7 +25,6 @@
 19. [ ] **Data Engineering Basics** — Spark (RDDs, DataFrames, partitioning), Kafka (topics, partitions, consumer groups), batch vs streaming, pipeline orchestration (Airflow), data lake vs warehouse
 
 ## Specialized / High-Impact Topics
-20. [ ] **Recommender Systems** — collaborative filtering, matrix factorization (SVD, ALS), content-based, two-tower models, cold start, diversity vs relevance, position bias
 22. [ ] **Bandits & Exploration** — ε-greedy, UCB, Thompson sampling, contextual bandits, explore-exploit tradeoff, offline evaluation of bandit policies
 
 
@@ -41,7 +40,7 @@
 29. [ ] **Time Series** — stationarity (ADF test, KPSS), differencing, ACF/PACF, ARIMA/SARIMA, exponential smoothing (Holt-Winters), temporal cross-validation, forecasting metrics (MAPE, SMAPE, WRMSSE), modern approaches (TFT, N-BEATS, TimesNet), when DL vs classical
 
 ## Often Forgotten
-30. [ ] **Optimization** — gradient descent variants (SGD, momentum, Adam), convexity, saddle points, Lagrange multipliers, constrained optimization, learning rate sensitivity
+
 31. [ ] **NLP Basics** — TF-IDF, Word2Vec (skip-gram, CBOW), GloVe, subword tokenization, NER, sequence labeling, pre-Transformer NLP pipeline
 32. [ ] **Graph ML** — GNNs (GCN, GAT, GraphSAGE), message passing, PageRank, node/graph embeddings, use cases in search, social graphs, fraud detection
 33. [ ] **Fairness & Responsible AI** — bias metrics (demographic parity, equalized odds, calibration across groups), mitigation strategies (re-weighting, adversarial debiasing), model documentation
