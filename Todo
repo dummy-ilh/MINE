@@ -11,10 +11,6 @@
 10. [ ] **DL Architectures** — CNNs (conv, pooling, receptive field), RNNs, LSTMs, GRUs (gating mechanisms), Transformers (self-attention, multi-head, positional encoding), attention variants (cross, sparse, flash)
 11. [ ] **Multi-task & Transfer Learning** — fine-tuning strategies, catastrophic forgetting, prompt tuning vs full fine-tune at scale, LoRA, adapter layers, domain adaptation
 
-## LLM & GenAI
-13. [ ] **RAG** — embeddings, vector DBs (FAISS, Pinecone), chunking strategies, hybrid retrieval (dense + sparse), reranking, RAG evaluation (faithfulness, relevance, groundedness)
-14. [ ] **Agents** — tool use, ReAct framework, chain-of-thought, planning (MCTS, tree-of-thought), memory types (episodic, semantic, in-context)
-15. [ ] **Multimodal Models** — vision-language models, contrastive learning (CLIP), image-text alignment, Gemini-style architecture basics, cross-modal attention
 
 ## Engineering
 17. [ ] **Coding** — DS&A (arrays, hashmaps, graphs, trees, DP, sliding window), time/space complexity, LeetCode medium; ML-adjacent problems (matrix ops, reservoir sampling, top-K)
