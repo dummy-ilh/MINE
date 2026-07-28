@@ -1,0 +1,49 @@
+# Chapter 8 — Pitfalls and Gotchas
+
+Chapters 2–7 covered the methods. This chapter pulls together the failure modes that have been recurring quietly throughout — correlated features splitting credit, data leakage, high-cardinality bias, and the causal/predictive distinction — into one dedicated, interview-focused chapter, since interviewers often test this topic specifically by probing for these gotchas rather than asking you to recite a method.
+
+## 8.1 Correlated/redundant features splitting importance
+
+**The pattern, seen across nearly every method in this topic so far:** when two (or more) features carry largely overlapping information, most importance and selection methods **split credit between them** rather than correctly recognizing that the *pair* is important even if neither looks important alone.
+
+**Where you've already seen this exact issue, each time in a slightly different guise:**
+- **Lasso (Chapter 4, §4.3):** arbitrarily zeroes out one of two correlated features and keeps the other, with the choice unstable across small data changes — Elastic Net's L2 component was the fix.
+- **Tree-based implicit selection (Chapter 4, §4.4):** one of two correlated features "wins" the split competition at a given node and gets used, while the other looks unused at that node — even though it was equally capable of providing similar information.
+- **Permutation importance (Chapter 5, §5.4):** shuffling just one of two correlated features barely hurts performance, since the model can lean on the other, un-shuffled correlated feature instead — making both look individually unimportant.
+- **Linear coefficients / VIF (Chapter 7, §7.4):** correlated features produce unstable, sometimes sign-flipping coefficients, since the model has difficulty deciding how to divide credit between them.
+
+**The general lesson, worth stating as a single interview-ready line:** *"Almost every feature importance method answers 'how much does this one feature matter, holding the others fixed' — and that question becomes unstable or misleading exactly when features are correlated, because 'holding the others fixed' stops cleanly separating one feature's contribution from its correlated partner's."* When you see a surprisingly low importance score for a feature you have domain reason to expect matters, checking its correlation with other features in the dataset should be an early diagnostic step, not an afterthought.
+
+**What to actually do about it in practice:** before trusting an importance ranking, check for and either remove/combine highly correlated feature pairs, or explicitly compute importance for **groups** of correlated features together (some SHAP and permutation-importance implementations support grouped/clustered importance for exactly this reason) rather than trusting the individual-feature breakdown when redundancy is present.
+
+## 8.2 Data leakage through feature selection done before the train/test split
+
+**This is the single most common trap interviewers set up on this topic, so it's worth internalizing precisely why it's wrong, not just that it's wrong.**
+
+**The mistake, stated concretely:** you have a dataset, and you run a filter method (Chapter 2) or a wrapper method (Chapter 3) — computing correlation, mutual information, or cross-validated performance — **using the entire dataset**, including what will later become your test set. *Then* you split into train/test, train your final model on the selected features, and evaluate on the test set.
+
+**Why this leaks information, precisely:** the feature selection step looked at the test set's target values (even if only in aggregate, through a correlation or F-statistic computed across the whole dataset) when deciding which features to keep. Your test set is supposed to represent genuinely unseen data — but if the *choice of which features to even give the model* was informed by patterns present in that same test set, your test performance is no longer an honest estimate of how the model would do on truly new data. The model didn't just learn from the training set; the entire *pipeline*, feature selection included, was tuned using information from data it's later evaluated against.
+
+**Concrete illustration of how badly this can distort results:** imagine adding 1,000 completely random, meaningless features to a small dataset. If you compute correlation with the target across your *entire* dataset (train + test combined) before splitting, purely by chance some of those random features will show a modest apparent correlation with the target **in that specific combined sample** — and a filter method will happily select some of them as "informative." When you then split and evaluate, those randomly-selected noise features can still look moderately useful on your test set, purely because the test set's specific noise pattern was part of what the selection process saw and selected for in the first place. Redo the entire pipeline with a completely fresh, truly-unseen dataset, and those "selected" random features would show no relationship at all — the original apparent signal was purely an artifact of leakage.
+
+**The fix, stated as a firm rule:** **feature selection must be performed only on the training fold, inside each cross-validation split** — never on the full dataset before splitting, and never even by looking at aggregate statistics across the combined train+test data "just to decide which features to try." If you're using a wrapper method with cross-validation (Chapter 3, §3.6), the entire selection search needs to happen fold-by-fold, with performance measured only on each fold's held-out portion, and the final feature set only decided using information available at training time, never test time.
+
+**Why this specific trap is so easy to fall into, and worth being extra careful about:** it's tempting to do feature selection once, upfront, "as a data preprocessing step" before you've even set up your cross-validation loop — treating it as separate from "the modeling part" that you already know needs careful train/test discipline. But feature selection **is** part of the modeling process, and needs exactly the same train/test discipline as fitting the model's parameters — this is the single most common "wait, why is my test performance suspiciously good" bug interviewers will probe you on.
+
+## 8.3 High-cardinality categorical features inflating tree-based importance artificially
+
+This was covered in depth in Chapter 5 (§5.2) as MDI's specific known bias, but it's worth restating here as a standalone gotcha, because it's commonly asked as a quick factual check rather than a deep derivation: **a categorical feature with many distinct categories (e.g., zip code, with hundreds of values) will tend to receive an inflated MDI importance score relative to its true predictive value**, purely because it offers the tree-splitting search many more candidate split points to potentially exploit by chance. The fix, as covered in Chapter 5, is to prefer permutation importance (or SHAP) over MDI whenever your feature set mixes high- and low-cardinality features.
+
+## 8.4 Feature importance ≠ causal importance
+
+**The distinction:** every importance method covered in this topic (MDI, permutation importance, SHAP, linear coefficients) measures **predictive/associational** importance — "how much does this feature help the model predict the target, given the patterns present in this data" — **not causal importance** — "if we intervened and changed this feature's value, how much would the target actually change in the real world."
+
+**Why this distinction matters, with a concrete illustration.** Suppose `ice_cream_sales` and `drowning_incidents` are both recorded in a dataset, and both spike together in summer months due to a shared underlying cause (hot weather) that isn't itself in the dataset. A model predicting `drowning_incidents` might find `ice_cream_sales` highly *predictively* important — it's a strong, genuine statistical signal, correctly picked up by any of the importance methods in this topic. But **intervening** on ice cream sales (e.g., banning ice cream) obviously wouldn't reduce drownings at all — `ice_cream_sales` has high predictive importance and approximately zero *causal* importance for drowning.
+
+**Why this matters specifically for real decisions, not just as a classic textbook example:** if a business decision will involve actually **changing** a feature's value (e.g., "let's increase marketing spend on this channel because our model says it's the most important predictor of sales") rather than just **observing** it, predictive importance alone is the wrong tool — you need a causal inference method (randomized experiments, instrumental variables, or other causal-identification techniques, which are their own separate topic beyond this syllabus) to answer the intervention question correctly. Feature importance methods answer "what does the model lean on to predict well," which is exactly the right question for understanding model behavior, debugging, or explaining a specific prediction (Chapters 5–7) — but the wrong question if you're deciding what real-world lever to pull.
+
+**The interview-ready framing:** *"Every method in this topic tells you what the model found predictive in the data it saw — none of them, by themselves, tell you what would happen if you actually changed that feature in the real world. That's a causal question, and it needs causal tools, not just a bigger or better importance method."*
+
+---
+
+**Next: Chapter 9 — Practical Synthesis**, the final chapter — an end-to-end worked case taking a 200-feature dataset through filter → embedded → SHAP-based validation while deliberately catching a leakage bug along the way, plus a decision framework and practice interview questions pulling all eight prior chapters together.
