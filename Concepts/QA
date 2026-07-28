@@ -1,0 +1,114 @@
+Here's the ML Concepts section, answered one at a time in interview-ready form:
+
+**1. What is overfitting? How do you avoid it?**
+Model learns noise/specifics of training data instead of the underlying pattern → great train performance, poor generalization to unseen data. Tell-tale sign: large train/val accuracy gap.
+Fixes: more data, regularization (L1/L2/dropout), early stopping, cross-validation, reducing model complexity, data augmentation.
+
+**2. Explain the bias-variance tradeoff.**
+Bias = error from an overly simple model missing real structure (underfitting). Variance = error from a model too sensitive to training data specifics (overfitting). Total error ≈ bias² + variance + irreducible noise. Increasing model complexity typically lowers bias but raises variance — you tune capacity/regularization to sit at the sweet spot.
+
+**3. What is hyperparameter tuning?**
+Search for the hyperparameter configuration (learning rate, depth, regularization strength, batch size, etc. — set *before* training, unlike learned parameters) that maximizes validation performance. Methods: grid search (exhaustive, expensive), random search (often more efficient), Bayesian optimization (models the objective function to sample smartly), and now increasingly population-based/early-stopping schedulers (e.g., Hyperband, ASHA).
+
+**4. How do you handle missing or corrupted data? Name imputation techniques.**
+First diagnose: MCAR/MAR/MNAR (missing completely at random / at random / not at random) — informs whether deletion is safe.
+Techniques: 
+- Mean/median/mode imputation — simple, biases variance downward.
+- KNN imputation — infer from similar rows.
+- Iterative imputation (e.g., MICE) — model each feature as a function of the others, iterate.
+- Model-based (e.g., use a small predictive model to fill in gaps).
+- Flag-and-fill — add a binary "was missing" indicator column alongside the imputed value, so the model can still use the missingness pattern as a signal.
+
+**5. Explain a confusion matrix.**
+2x2 (or NxN) grid of actual vs. predicted class. Cells: TP, TN, FP (Type I error), FN (Type II error). From it you derive accuracy = (TP+TN)/total, precision = TP/(TP+FP), recall = TP/(TP+FN), F1 = harmonic mean of precision/recall. Useful because accuracy alone hides class imbalance issues.
+
+**6. What are false positives and false negatives?**
+FP: model predicts positive, truth is negative (e.g., flags legitimate email as spam). FN: model predicts negative, truth is positive (e.g., misses actual spam / misses a disease). Which one is worse is domain-dependent — FN is usually costlier in medical screening, FP costlier in spam filters or fraud false-flags that lock out real users.
+
+**7. How do you pick a suitable ML algorithm for a given task?**
+1. Identify task type: classification / regression / clustering / ranking.
+2. Look at data: size, dimensionality, linearity, sparsity, label availability.
+3. Set constraints: latency/throughput requirements, interpretability needs.
+4. Shortlist candidates (e.g., logistic regression vs. GBM vs. neural net).
+5. Cross-validate, compare on the right metric, pick best generalizing model — not just best training score.
+
+**8. Explain PCA and its significance.**
+Unsupervised dimensionality reduction. Standardize features → compute covariance matrix → eigendecompose → eigenvectors = principal components (directions of max variance), eigenvalues = how much variance each captures. Keep top-k components by eigenvalue. Benefits: reduces compute cost, can mitigate overfitting/multicollinearity, enables visualization of high-dim data. Caveat: components aren't interpretable in original feature terms, and PCA is sensitive to feature scaling.
+
+**9. Explain the architecture of a CNN.**
+Input layer (raw pixels) → convolutional layers (learnable filters slide over input, extract local features like edges/textures into feature maps) → activation (ReLU, non-linearity) → pooling layers (max/avg pooling, downsample spatially, add translation invariance) → repeat conv/pool blocks to build hierarchical features → flatten → fully connected layers → output (softmax for classification). Key idea vs. plain MLPs: weight sharing + local receptive fields → far fewer parameters, exploits spatial structure.
+
+**10. Explain batch, mini-batch, and stochastic gradient descent.**
+All minimize a loss function by stepping opposite the gradient.
+- Batch GD: full dataset per update — stable but slow/memory-heavy, one step per epoch.
+- SGD: one sample per update — fast, noisy updates, can escape shallow local minima but noisy convergence.
+- Mini-batch GD: small batches (e.g., 32–512) — the practical default, balances stability and speed, exploits vectorized/GPU compute.
+
+**11. Precision, recall, F1-score — when to use each.**
+Precision = TP/(TP+FP): "of what I flagged positive, how much was right" — matters when false positives are costly (spam filter, medical false-alarm burden).
+Recall = TP/(TP+FN): "of actual positives, how many did I catch" — matters when missing a positive is costly (cancer screening, fraud detection).
+F1 = harmonic mean of the two — good single-number summary on imbalanced datasets where accuracy is misleading.
+
+**12. One-hot encoding vs. label encoding.**
+One-hot: each category → its own binary column. No false ordinal assumption, but increases dimensionality (curse of dimensionality risk with high-cardinality features).
+Label encoding: category → single integer. Compact, but implies an ordinal relationship that may not exist — fine for tree-based models (which can split arbitrarily), risky for linear/distance-based models.
+
+**13. How do you ensure data quality in ML tasks?**
+- Verify source reliability and schema/format consistency.
+- Handle missing values, duplicates, outliers.
+- Explore distributions, check for label noise and class imbalance.
+- Standardize/normalize, engineer relevant features.
+- Proper train/val/test split (no leakage — e.g., no future data leaking into train).
+- Monitor data drift and model performance post-deployment.
+
+**14. Classification vs. regression.**
+Both supervised. Classification predicts discrete categories (spam/not spam, genre). Regression predicts continuous values (price, height). Choice of loss function differs accordingly (cross-entropy vs. MSE/MAE), as does evaluation (accuracy/F1 vs. RMSE/R²).
+
+**15. Explain the lifecycle of an ML application.**
+Problem framing & business understanding → data acquisition/exploration → cleaning/preprocessing → feature engineering → model selection & training → evaluation on held-out data → deployment (serving infra) → monitoring in production (drift, latency, accuracy decay) → iterate/retrain based on feedback loop.
+
+**16. Explain dropout in neural networks.**
+Regularization technique: during training, randomly zero out a fraction of neurons (and their connections) each forward pass with probability *p*. Forces the network to not rely on any single neuron/co-adapted feature detector, effectively training an ensemble of subnetworks that get averaged at inference (weights scaled by *1-p*, or inverted dropout scales during train). Reduces overfitting, especially in large fully-connected layers.
+
+**17. How does batch normalization work? Benefits?**
+Normalizes each layer's activations within a mini-batch: subtract batch mean, divide by batch std, then apply learnable scale (γ) and shift (β) to restore representational flexibility. Addresses internal covariate shift (activation distributions shifting as earlier layers update during training), which otherwise slows convergence.
+Benefits: faster training, allows higher learning rates, reduces sensitivity to weight initialization, mild regularization effect. Note: behaves differently at train (batch stats) vs. inference (running average stats).
+
+**18. How do you handle an imbalanced dataset?**
+- Use the right metric first (F1, PR-AUC, not raw accuracy).
+- Resampling: oversample minority (SMOTE), undersample majority.
+- Class-weighted loss functions (penalize minority-class errors more).
+- Ensemble methods like balanced bagging/boosting.
+- Threshold tuning post-hoc rather than default 0.5.
+- Anomaly-detection framing if imbalance is extreme (e.g., fraud).
+
+**19. Types of machine learning.**
+- Supervised: labeled data, learn input→output mapping (classification/regression).
+- Unsupervised: no labels, find structure (clustering, dimensionality reduction).
+- Reinforcement learning: agent learns via reward/penalty through interaction with environment.
+- Semi-supervised: mix of labeled + unlabeled data.
+- (Self-supervised is worth mentioning too — generates its own labels from data structure, e.g., masked language modeling — very relevant for LLM-flavored interviews.)
+
+**20. Explain training vs. testing data.**
+Training data: what the model learns parameters from. Test data: held-out, unseen-during-training set used to estimate real-world generalization. (Validation set sits in between — used for hyperparameter tuning/model selection without touching test set, to avoid leakage/overfitting to the test set itself.)
+
+**21. What is a recommendation system, and how does it work?**
+System that ranks/filters items for a user based on interaction data. Two core approaches:
+- Collaborative filtering: recommend based on what similar users liked (user-user or item-item similarity, or matrix factorization/embeddings).
+- Content-based filtering: recommend items similar in features to what the user liked before.
+Most production systems (Spotify, YouTube) use hybrid approaches plus a candidate-generation + ranking two-stage architecture.
+
+**22. What is the curse of dimensionality?**
+As feature count grows, data becomes sparse in the high-dimensional space — points become roughly equidistant from each other, hurting distance-based methods (KNN, clustering). Also increases overfitting risk (more parameters relative to data) and computational cost. Mitigations: dimensionality reduction (PCA), feature selection, regularization, more data.
+
+**23. Explain the support vector machine (SVM).**
+Supervised classifier that finds the hyperplane maximizing the margin between classes. Points nearest the boundary = support vectors, and they alone determine the decision boundary. For non-linearly separable data, the kernel trick (RBF, polynomial) implicitly projects data into higher dimensions where it becomes separable, without explicitly computing that transform. Soft-margin SVMs allow some misclassification via a regularization parameter (C) to trade off margin width vs. training error.
+
+**24. Random forests vs. decision trees.**
+Decision tree: single tree, greedily splits on features to minimize impurity (Gini/entropy). Simple, interpretable, but high variance — easily overfits.
+Random forest: ensemble of many trees, each trained on a bootstrapped sample with a random subset of features considered at each split (bagging + feature randomness). Averages/votes across trees → reduces variance substantially, more robust generalization, at some cost to interpretability.
+
+**25. Explain ETL.**
+Extract (pull from source systems — DBs, APIs, files), Transform (clean, standardize, join, feature-engineer), Load (write into target system — data warehouse/feature store) for downstream analytics or model training. In ML contexts this often extends to ELT (load raw first, transform in-warehouse) for scale, and feature pipelines feeding both training and online serving need to stay consistent to avoid train/serve skew.
+
+Want me to keep going with **ML coding** next, or **ML system design**?
