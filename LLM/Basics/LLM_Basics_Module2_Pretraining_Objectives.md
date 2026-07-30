@@ -404,3 +404,351 @@ A: No — BERT's bidirectional MLM training and encoder-only architecture never 
 ---
 
 *End of Module 2 (expanded). Next: Module 3 — Scaling Laws & Emergent Abilities (Kaplan vs Chinchilla, compute-optimal training, the emergent-abilities debate).*
+
+
+---
+
+# More
+
+
+Good question to stop and nail down — let's go slow and build it from the ground up.
+
+## Step back: what is the model actually outputting?
+
+At each position, the model doesn't output a single word. It outputs a **probability distribution over the entire vocabulary** (every possible token — could be 50,000+ options). So if the vocabulary is `["mat", "floor", "chair", "dog", ...]`, the model spits out something like:
+
+```
+P("mat")   = 0.40
+P("floor") = 0.30
+P("chair") = 0.10
+P("dog")   = 0.01
+... (all other tokens split the rest)
+```
+
+These numbers all add up to 1.0 (that's what the softmax function at the end of the model guarantees).
+
+## Loss with respect to what?
+
+**The ground truth.** You're training on real text — say the sentence "the cat sat on the mat" actually exists in your training data. So at the position right after "the cat sat on the ___", you *know* the real next word was "mat". That's your label. Nobody has to annotate it — the text itself already tells you the answer, since you just hide the next word and ask the model to guess it. This is why CLM training is "free" at massive scale: the internet already contains the labels.
+
+So the loss is comparing:
+- **What the model predicted** (a full probability distribution over all tokens)
+- **What actually happened** (one single correct token — "mat")
+
+## The loss formula, one piece at a time
+
+$$L = -\log P(\text{true token})$$
+
+That's it. You just take the probability the model assigned to the **correct** token, and you take the negative log of it. You completely ignore what probability it assigned to "floor" or "chair" — the loss only cares about the number sitting on the correct answer.
+
+- If the model gave "mat" a probability of 0.9 (confident and correct) → $-\log(0.9) = 0.105$ → tiny loss.
+- If the model gave "mat" a probability of 0.4 (guessed it, but wasn't very sure) → $-\log(0.4) = 0.916$ → medium loss.
+- If the model gave "mat" a probability of 0.01 (confidently predicted something else entirely) → $-\log(0.01) = 4.6$ → huge loss.
+
+**Why log?** Because it punishes overconfident wrongness disproportionately. Going from 90% confident-right to 40% confident-right isn't that big a jump in loss (0.1 → 0.9). But going from 40% down to 1% is a massive jump (0.9 → 4.6). This shapes the model to be not just "usually right" but genuinely well-calibrated — it gets hammered hard for being confidently wrong.
+
+## How does it actually *learn* the probabilities?
+
+This is the part that ties it together — the loss isn't just a report card, it's the steering wheel:
+
+1. The model computes $-\log P(\text{true token})$ for every position in a batch of training text.
+2. It adds all those up into one total loss number.
+3. **Backpropagation** computes the gradient of that loss with respect to every single weight in the network — i.e., "if I nudged this particular weight up or down slightly, would the loss go up or down, and by how much?"
+4. Gradient descent then nudges every weight a tiny step in the direction that *decreases* the loss.
+5. Repeat this millions/billions of times over different text.
+
+Concretely, what a weight update is "trying to do": for the example above where the model only gave "mat" 0.4 probability, the gradient pushes the model's internal weights so that *next time* it sees a very similar context ("the cat sat on the ___"), it assigns **more** probability mass to "mat" and **less** to everything else. Do this across the entire internet's worth of text, over and over, and the model's weights gradually reshape themselves so that its predicted probability distributions start matching the real statistical patterns of language — that's "learning."
+
+## The one-sentence version
+
+You're not teaching the model "mat" is a fact — you're teaching it, through millions of tiny corrections, to make its probability distribution look more and more like reality, one correct-token-at-a-time, everywhere in the text it's ever seen.
+
+
+Let's map out all four cases clearly, since this is exactly where the intuition clicks.
+
+Remember: the loss formula only looks at **one number** — whatever probability the model assigned to the *true* token. Everything else in the distribution is irrelevant to the loss, no matter how it's spread out.
+
+## Case 1: High confidence on the **correct** token (good)
+
+True token: "mat". Model gives:
+```
+P("mat")   = 0.99   ← correct, and confident
+P("floor") = 0.005
+P("chair") = 0.005
+```
+$$L = -\log(0.99) \approx 0.01$$
+Near-zero loss. The model nailed it and was sure of itself. Nothing to correct — gradients here are tiny.
+
+## Case 2: High confidence on the **wrong** token (worst case)
+
+True token: "mat". Model gives:
+```
+P("mat")   = 0.001  ← correct answer, but nearly ruled out
+P("floor") = 0.99   ← confidently wrong
+P("chair") = 0.009
+```
+$$L = -\log(0.001) \approx 6.9$$
+Huge loss. Notice the loss doesn't care that "floor" got 99% — it never looks at that number directly. It only looks at how low "mat" was pushed down, and 0.001 is *very* low, so $-\log$ blows up. This is the case that generates the biggest gradient signal: "you were confidently pointing in the wrong direction — reshape hard."
+
+## Case 3: Low confidence, but happened to lean correct
+
+True token: "mat". Model gives:
+```
+P("mat")   = 0.3   ← correct, but unsure
+P("floor") = 0.25
+P("chair") = 0.2
+(rest spread thin)
+```
+$$L = -\log(0.3) \approx 1.2$$
+Moderate loss. The model wasn't wrong, but it also wasn't confident — it hedged. Loss is noticeably higher than Case 1 even though the prediction was still "right," because being right-but-unsure is still penalized (just much less severely than being confidently wrong).
+
+## Case 4: Low confidence, and it happened to lean wrong
+
+True token: "mat". Model gives:
+```
+P("mat")   = 0.2   ← correct, given low probability
+P("floor") = 0.3   ← wrong, given slightly higher probability
+P("chair") = 0.25
+```
+$$L = -\log(0.2) \approx 1.6$$
+Still just a moderate loss — worse than Case 3, much better than Case 2. Even though the model technically "picked" the wrong word as its top guess, the loss isn't a harsh all-or-nothing penalty for getting the argmax wrong — it's a smooth penalty based on *how much* probability mass landed on the truth. Putting 20% on the right answer is a lot less bad than putting 0.1% on it.
+
+## The pattern across all four
+
+| Scenario | P(true token) | Loss |
+|---|---|---|
+| Confident + correct | 0.99 | ~0.01 |
+| Unsure, leaning correct | 0.3 | ~1.2 |
+| Unsure, leaning wrong | 0.2 | ~1.6 |
+| Confident + wrong | 0.001 | ~6.9 |
+
+The curve of $-\log(x)$ is almost flat near $x=1$ (so being very right barely improves the loss further) but shoots up steeply as $x \to 0$ (so being very wrong gets punished disproportionately hard). That asymmetry is the whole design point: it makes gradient descent focus its "correction effort" hardest on the cases where the model is *confidently* misled, not just cases where it's slightly off.
+
+
+Let's take one real sentence and walk it through completely, start to finish.
+
+## The sentence
+
+**"I love machine learning"**
+
+Tokenized (simplified, pretend each word is one token — real tokenizers split further, but this keeps it clean):
+
+```
+Token 1: I
+Token 2: love
+Token 3: machine
+Token 4: learning
+```
+
+## Setting up the training signal
+
+The model never sees the whole sentence "answered" at once. Instead, training slides across it, hiding one token at a time and asking "given everything before this, what comes next?"
+
+| Step | What model sees (context) | What it must predict | Ground truth |
+|---|---|---|---|
+| 1 | *(nothing — start of sequence)* | Token 1 | "I" |
+| 2 | "I" | Token 2 | "love" |
+| 3 | "I love" | Token 3 | "machine" |
+| 4 | "I love machine" | Token 4 | "learning" |
+
+Notice: the "ground truth" isn't some separate label file someone wrote. It's just **the next word in the actual sentence**. The sentence supplies its own answer key — that's the whole trick of CLM training at scale.
+
+## Running each step through the model
+
+At each step, the model outputs a probability over its *entire* vocabulary (tens of thousands of tokens). We only care about the probability it assigned to whatever the real next word was. Suppose these are the model's (hypothetical) outputs:
+
+**Step 1** — predicting the very first word, no context at all:
+```
+P("I") = 0.05   (a plausible-ish sentence-starter, but many words could start a sentence)
+```
+$$L_1 = -\log(0.05) \approx 3.00$$
+
+**Step 2** — context = "I", predicting "love":
+```
+P("love") = 0.10   ("I" could be followed by tons of things: "am", "went", "think"...)
+```
+$$L_2 = -\log(0.10) \approx 2.30$$
+
+**Step 3** — context = "I love", predicting "machine":
+```
+P("machine") = 0.02   (a reasonable model would give "you"/"it"/"this" much higher probability than "machine" — "machine" is a fairly surprising continuation here)
+```
+$$L_3 = -\log(0.02) \approx 3.91$$
+
+**Step 4** — context = "I love machine", predicting "learning":
+```
+P("learning") = 0.85   (once you see "machine", "learning" becomes very predictable — few other words plausibly follow "machine" in this context)
+```
+$$L_4 = -\log(0.85) \approx 0.163$$
+
+## The overall loss calculation
+
+You just **sum every position's loss**:
+
+$$L_{\text{total}} = L_1 + L_2 + L_3 + L_4 = 3.00 + 2.30 + 3.91 + 0.163 = 9.37$$
+
+Then, to get a number that doesn't just grow with sentence length (a 100-word sentence would otherwise always have a "worse" total loss than a 4-word one, which isn't a fair comparison), you **average**:
+
+$$L_{\text{avg}} = \frac{9.37}{4} \approx 2.34 \text{ nats per token}$$
+
+That's the number that actually gets backpropagated during training for this sentence.
+
+## What just happened, intuitively
+
+Look at the shape of what happened across the four steps:
+- **Step 1 and 2** had high loss — not because the model is "bad," but because the true next word genuinely wasn't very predictable yet. Lots of words can start a sentence; lots of things can follow "I". High loss here is somewhat unavoidable and not a huge red flag.
+- **Step 3** had the *highest* loss — "machine" is a fairly unusual/specific word to follow "I love" compared to more common continuations. This is where the model gets its strongest correction signal: gradient descent will nudge its weights so that, next time it sees "I love ___" in a similar context, it shifts a bit more probability toward "machine"-like words.
+- **Step 4** had very low loss — once "machine" appeared, "learning" was highly predictable, and the model correctly gave it high confidence. Barely any correction needed here.
+
+## How training actually uses this
+
+This $L_{\text{avg}} \approx 2.34$ isn't computed for just one sentence in isolation — it's computed (and summed/averaged) across a whole **batch** of many sentences at once, giving one single scalar loss number for the batch. Backpropagation then computes, for every weight in the network, "which direction would nudging this weight push that scalar down?" and gradient descent takes a small step in that direction. Do this over billions of sentences, and the model's internal weights gradually reshape so that predictable continuations (like "machine" → "learning") get high confidence, while genuinely ambiguous ones (like the first word of a sentence) stay appropriately spread out — because the model has no way to reduce their loss further without literally being wrong more often on other examples.
+
+**One more connection worth having ready:** if you exponentiate that average loss, $e^{2.34} \approx 10.4$ — that's the sentence's *perplexity*. It means: on average, across this sentence, the model was about as uncertain as if it were choosing uniformly among ~10 equally likely next words at each step. Lower average loss → lower perplexity → less "confused" the model is, position by position.
+
+
+Let's build a small **5-sentence toy corpus** and simulate the whole training loss calculation across it — this is exactly how it scales from "one sentence" to "a batch."
+
+## The corpus
+
+```
+1. I love machine learning
+2. I love deep learning
+3. machine learning is powerful
+4. deep learning is powerful
+5. I love natural language processing
+```
+
+Notice this corpus isn't random — words repeat across sentences ("I love", "learning", "is powerful"). That repetition matters: it's exactly what lets a model get *more confident* over time, because it's seen similar patterns before.
+
+## Step-by-step per sentence
+
+For each sentence, I'll assign hypothetical model probabilities at each position (higher when the model has "seen this pattern before" in the corpus, lower for surprising/rare words), then compute $-\log P$ per token.
+
+**Sentence 1: "I love machine learning"**
+
+| Token | Context | P(true token) | Loss = −log(P) |
+|---|---|---|---|
+| I | (start) | 0.20 | 1.609 |
+| love | I | 0.30 | 1.204 |
+| machine | I love | 0.15 | 1.897 |
+| learning | I love machine | 0.80 | 0.223 |
+
+Sentence total = **4.934** → avg/token = 1.233
+
+**Sentence 2: "I love deep learning"**
+
+| Token | Context | P(true token) | Loss |
+|---|---|---|---|
+| I | (start) | 0.20 | 1.609 |
+| love | I | 0.30 | 1.204 |
+| deep | I love | 0.10 | 2.303 |
+| learning | I love deep | 0.75 | 0.288 |
+
+Sentence total = **5.404** → avg/token = 1.351
+
+**Sentence 3: "machine learning is powerful"**
+
+| Token | Context | P(true token) | Loss |
+|---|---|---|---|
+| machine | (start) | 0.05 | 2.996 |
+| learning | machine | 0.70 | 0.357 |
+| is | machine learning | 0.40 | 0.916 |
+| powerful | machine learning is | 0.50 | 0.693 |
+
+Sentence total = **4.962** → avg/token = 1.240
+
+**Sentence 4: "deep learning is powerful"**
+
+| Token | Context | P(true token) | Loss |
+|---|---|---|---|
+| deep | (start) | 0.05 | 2.996 |
+| learning | deep | 0.65 | 0.431 |
+| is | deep learning | 0.45 | 0.799 |
+| powerful | deep learning is | 0.55 | 0.598 |
+
+Sentence total = **4.823** → avg/token = 1.206
+
+**Sentence 5: "I love natural language processing"**
+
+| Token | Context | P(true token) | Loss |
+|---|---|---|---|
+| I | (start) | 0.20 | 1.609 |
+| love | I | 0.30 | 1.204 |
+| natural | I love | 0.05 | 2.996 |
+| language | I love natural | 0.60 | 0.511 |
+| processing | I love natural language | 0.75 | 0.288 |
+
+Sentence total = **6.608** → avg/token = 1.322
+
+## Combining into one corpus-level loss
+
+This is the key part — during actual training, you don't handle these one at a time and stop. You throw the whole batch through the model, get a loss number *per token*, and then just **sum everything and divide by the total token count** to get one single scalar:
+
+$$L_{\text{total}} = 4.934 + 5.404 + 4.962 + 4.823 + 6.608 = 26.73$$
+
+Total tokens across the corpus: $4+4+4+4+5 = 21$
+
+$$L_{\text{avg}} = \frac{26.73}{21} \approx 1.273 \text{ nats/token}$$
+
+**That single number — 1.273 — is what gets backpropagated.** One scalar, computed from all 21 individual token-level predictions across all 5 sentences, drives one gradient update to every weight in the network.
+
+## What patterns show up, and why they matter
+
+Look at where loss was low vs. high, and notice it's not random — it directly reflects how "seen before" each pattern was *within this same corpus*:
+
+- **"learning" after "machine" or "deep"** — consistently low loss (0.223, 0.288, 0.357, 0.431). This word-pair shows up in *every single sentence* in the corpus, so the model would very quickly learn "after machine/deep, learning is a near-certainty."
+- **"machine" / "deep" / "natural" as the very first word of a sentence-start, or right after "I love"** — consistently high loss (1.9–3.0). These are the "surprising" choices — lots of things could plausibly follow "I love" or start a sentence, so no single one gets much probability mass yet.
+- **Sentence 5's "natural"** has the single highest loss (2.996) in the whole corpus — it's the *only* place this word appears, so the model has no prior reason to expect it. This is exactly the token that would get the strongest gradient push: "next time you see 'I love ___', shift a little more probability toward words like 'natural' too, since it did occur."
+
+## Perplexity for the whole corpus
+
+$$\text{Perplexity} = e^{L_{\text{avg}}} = e^{1.273} \approx 3.57$$
+
+In plain terms: across this whole 5-sentence corpus, the model was — on average, per token — about as uncertain as if it were guessing uniformly among **~3.6 equally likely options** at each position. That's a single, clean summary number for "how surprised was the model, on average, by this corpus" — and it's the number you'd track epoch over epoch to see if training is actually working (it should keep dropping toward 1.0 as the model gets better).
+
+Yes — exactly right on both counts. Let's confirm it precisely, because you've landed on the single most important (and most counterintuitive-at-first) fact about this loss function.
+
+## Yes: it only looks at the probability on the correct token
+
+The loss formula is:
+
+$$L = -\log P(\text{true token})$$
+
+There is no "wrong token" term anywhere in that formula. It doesn't matter what probability got assigned to "floor" or "chair" or anything else — the loss calculation literally never looks at those numbers. It reaches into the model's output distribution, pulls out **one single number** (whatever probability sits on the actual correct word), and computes $-\log$ of just that.
+
+## Yes: it optimizes for that, irrespective of what the wrong token got
+
+This is the part worth sitting with, because it feels like it should be more "symmetric" than it is.
+
+Take this exact scenario:
+```
+P("mat")   = 0.3   ← correct answer
+P("floor") = 0.6   ← wrong answer, but has MORE probability than the correct one
+P("chair") = 0.1
+```
+
+The model's *top guess* here is actually "floor" — wrong. But the loss doesn't care that "floor" beat "mat" in the horse race. It only computes:
+
+$$L = -\log(0.3) \approx 1.204$$
+
+That's a **moderate** loss — not the maximal penalty. Compare it to a case where "mat" got crushed down to near-zero:
+```
+P("mat")   = 0.01
+P("floor") = 0.6
+```
+$$L = -\log(0.01) \approx 4.6$$
+
+Same "wrong token has higher probability" situation in both cases — but the loss is very different, because loss tracks **how much probability mass landed on the truth**, not **whether the truth beat the competition**.
+
+## Why design it this way, instead of just penalizing "wrong top guess"?
+
+Because the loss needs to be a smooth, continuous signal that gradient descent can climb down, one tiny nudge at a time. "Did the argmax match the ground truth?" is a hard yes/no — it gives you no information about *how close* the model was, and its gradient is zero almost everywhere (a tiny nudge to a weight almost never flips which token is the argmax, so you'd get no learning signal at all most of the time). 
+
+$-\log P(\text{true token})$, by contrast, changes smoothly every time *any* weight shifts *any* probability toward or away from the true token — even if the true token never actually becomes the top pick in that step. That gives gradient descent something to work with on every single example, not just the ones where the model happens to guess right.
+
+## The practical consequence
+
+This is exactly why training can make steady progress on a token even while that token is *still* losing to a competitor. Push probability on "mat" from 0.01 → 0.05 → 0.15 → 0.3 → 0.45 → 0.55 (finally overtaking "floor") — every one of those steps produces a shrinking loss and a real gradient, long before "mat" ever becomes the top guess. If the loss only fired when the argmax was correct, most of that gradual climb would be invisible to training.
+
+**One-line summary:** the loss is entirely a function of "how much belief did you put in the truth," full stop — never a comparison against the competition. Optimizing it purely means: *keep shifting probability mass toward whatever token actually appeared, regardless of where it currently ranks.*
