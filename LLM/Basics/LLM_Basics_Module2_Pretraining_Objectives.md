@@ -1,6 +1,5 @@
 # Module 2 — Pretraining Objectives (Master Notes, Expanded)
 
-> **Editor's note on this pass**: Every word of your original notes is preserved below, in its original order. Nothing has been cut or shortened. All additions are clearly tagged with **📌 Added Explanation**, **🧮 Numerical Example**, or **❓ Interview Q&A** so you can see at a glance what's new vs. original. New material is placed directly under the section it expands.
 
 ---
 
