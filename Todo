@@ -19,8 +19,5 @@
 ## MLE / Applied Scientist Focus
 27. [ ] **Distributed Training** — data vs model vs pipeline parallelism, gradient accumulation, mixed precision (fp16/bf16), parameter servers vs all-reduce, TPU/GPU specifics, checkpointing strategies
 
-## DS / Analytics Focus
-28. [ ] **Causal Inference** — diff-in-diff, instrumental variables, propensity score matching, regression discontinuity, interference (SUTVA violations), quasi-experiments
-
 ## Often Forgotten
 31. [ ] **NLP Basics** — TF-IDF, Word2Vec (skip-gram, CBOW), GloVe, subword tokenization, NER, sequence labeling, pre-Transformer NLP pipeline
