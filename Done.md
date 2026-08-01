@@ -2,19 +2,11 @@
 
 ## Unordered Lists
 
-### Basic Unordered List
+### Concepts
 - Item 1
 - Item 2
 - Item 3
 
-### Alternative Symbols (can mix, but be consistent)
-* Item A
-* Item B
-* Item C
-
-+ Item X
-+ Item Y
-+ Item Z
 
 ## Ordered Lists
 
@@ -31,7 +23,7 @@
 ## Nested Sublists
 
 ### Unordered Sublists
-- Main item 1
+- ML Algos
   - Sub-item 1.1
   - Sub-item 1.2
     - Sub-sub-item 1.2.1
