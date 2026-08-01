@@ -1,616 +1,251 @@
-# Chapter 2: Tokenization & Vocabulary
+# Chapter 2 — Tokenization & Vocabulary (Master Notes, Apple MLE Prep)
 
-Before BERT can do anything, raw text must become numbers. This sounds mechanical, but the *how* matters enormously — bad tokenization breaks the model. Let's build the intuition from scratch.
-
----
-
-## 2.1 The Fundamental Problem
-
-A neural network needs integers as input. So we need a mapping:
-
-```
-"The cat sat" → [some sequence of integers]
-```
-
-The question is: **what are the units we assign integers to?**
-
-You have three obvious choices. All three are wrong in different ways.
+> Goal of this doc: explain from memory why word-level and char-level tokenization both fail, how WordPiece actually scores merges (not just "counts pairs" — this is a real interview trap), trace one sentence to token IDs by hand, and defend every special token's existence.
 
 ---
 
-## 2.2 Option 1: Word-Level Tokenization
+## 0. One-sentence version
 
-Split on spaces. Each unique word gets an ID.
-
-```
-"The cat sat on the mat"
-→ ["The", "cat", "sat", "on", "the", "mat"]
-→ [1423,   892,  1847,  312,  1423,  2091]
-```
-
-**Seems fine. Here's what breaks:**
-
-**Problem 1 — Vocabulary explodes.**
-English has 500,000+ words. Add names, technical terms, misspellings, "running/runner/ran/runs" as separate entries... your embedding table becomes enormous.
-
-**Problem 2 — Out-of-vocabulary (OOV) words.**
-User types "GPT-4o" or "COVID-19" or a name the model never saw during training. You have no vector for it. You're forced to use a generic `[UNK]` token, and all information is lost.
-
-**Problem 3 — Morphological blindness.**
-"run", "running", "runner", "ran" are clearly related. Word-level tokenization treats them as completely unrelated entries.
+> "Tokenization is the tradeoff between vocabulary size and sequence length — word-level gives short sequences but an unbounded, OOV-prone vocabulary; character-level gives a tiny vocabulary but blows up sequence length and destroys meaning; WordPiece is the middle ground, building a fixed ~30k vocabulary of subword pieces so common words stay whole and rare words decompose into meaningful, previously-seen fragments."
 
 ---
 
-## 2.3 Option 2: Character-Level Tokenization
+## 1. Why three "obvious" choices all fail
 
-Go the other direction. Each character gets an ID.
+The real constraint underneath all of this: a neural net has a **fixed vocabulary size** (the embedding table) and a **fixed max sequence length** (positional embeddings, Chapter 3). Every tokenization scheme is a different point on the tradeoff between those two fixed budgets.
 
-```
-"cat" → ["c", "a", "t"] → [23, 11, 44]
-```
+### 1.1 Word-level — vocabulary side loses control
 
-**Advantages:**
-- Tiny vocabulary (~100 characters)
-- No OOV problem ever
-- Handles any new word automatically
+**Why "just add every new word to the vocab" doesn't work long-term**: the embedding table is a lookup matrix of shape `[vocab_size, 768]`. Every word you add is another *learnable row* that needs enough training examples to get a good vector — rare words (names, typos, new slang) get few or zero updates and stay near-random. And you can't retroactively add rows after deployment: a fixed-vocabulary model literally has no slot for a word it's never seen.
 
-**What breaks:**
-"The cat sat on the mat" → 22 tokens (counting spaces).
-"The cat sat on the mat and the dog watched from the windowsill" → 62 tokens.
+**What if we just used a huge vocab, like 1 million words, to cover everything?** Two costs, not one: (1) the embedding table itself becomes enormous — 1M × 768 floats is ~3GB just for input embeddings, before the rest of the model; (2) it doesn't even solve OOV, because language keeps producing new words (new drugs, new slang, new usernames) faster than any fixed list can capture, and rare words in your million-word vocab still get too few training examples to be useful.
 
-For BERT's max sequence length of 512, you can fit maybe 400 characters of actual content. Paragraphs become unwieldy. And "c", "a", "t" as separate tokens carry no inherent meaning — the model must learn to group them into concepts from scratch, requiring far more data and computation.
+**Why morphological blindness is a real cost, not a nitpick**: "run," "running," "runner," "ran" get four *unrelated* rows in the embedding table. The model has to independently relearn "this is about running" four times from four separate, smaller pools of training data, instead of sharing statistical strength across a common root.
 
----
+### 1.2 Character-level — sequence length side loses control
 
-## 2.4 Option 3: WordPiece — The Sweet Spot
+**Why tiny vocab isn't a free win**: yes, ~100 characters means no OOV, ever — any string can be spelled out. But you've pushed the entire burden onto sequence length and onto the model's *capacity to compose meaning from scratch*.
 
-BERT uses **WordPiece tokenization**. The key idea: **break words into frequent subword units.**
+**The concrete cost, quantified**: "The cat sat on the mat" is 6 tokens at word-level, ~22 characters at char-level — roughly a 3-4x sequence length increase. Self-attention's compute and memory cost scales **quadratically** with sequence length (every token attends to every other token — see Chapter 1's $QK^T$). A 4x longer sequence isn't 4x more expensive, it's **~16x more expensive** in the attention computation. That's the real reason char-level tokenization is a nonstarter for Transformers at scale, not just "sequences look long."
 
-Common words stay whole. Rare or complex words get split into meaningful pieces.
+**What if we accepted the cost for the OOV-robustness benefit?** Some systems do (character-level or byte-level models exist, e.g. ByT5). The tradeoff is real and sometimes worth it for very noisy or multilingual text — but for a general-purpose encoder like BERT, the compute cost at 512-token budgets was judged not worth it versus subwords, which get *most* of the OOV robustness at a fraction of the sequence-length cost.
 
-```
-"cat"           → ["cat"]               ← common, stays whole
-"running"       → ["running"]           ← common enough
-"unbelievable"  → ["un", "##believe", "##able"]
-"embeddings"    → ["em", "##bed", "##ding", "##s"]
-"ChatGPT"       → ["Chat", "##GP", "##T"]
-"COVID"         → ["CO", "##VI", "##D"]
-```
+### 1.3 WordPiece — subword is the actual constraint-satisfying answer
 
-The `##` prefix means *"I am a continuation of the previous token, not a word start."*
+The insight: **most of the vocabulary "explosion" problem comes from rare words, and most rare words are built from common pieces** (prefixes, suffixes, roots). So: keep a fixed budget of ~30k tokens, spend it mostly on whole common words, and let rare words fall back to a *composition* of pieces the model has already seen many times elsewhere.
 
 ---
 
-## 2.5 How WordPiece Vocabulary Is Built
+## 2. How the WordPiece vocabulary is actually built — corrected and simplified
 
-It's built **bottom-up** from a large corpus using a greedy algorithm:
+**Important correction to flag going in**: the chapter's step-by-step worked example (Section "Step 3: Count All Adjacent Pairs" → "merge the highest count pair") describes **raw frequency-based merging**. That is actually the **BPE (Byte-Pair Encoding)** algorithm — the one GPT-2/GPT-3/RoBERTa use. **WordPiece**, which is what BERT specifically uses, merges based on a different score. This distinction is a common interview trap, so let's get it exactly right.
 
-**Step 1:** Start with every individual character as a token.
+### 2.1 The two scoring rules, side by side
+
+**BPE merge rule** (raw co-occurrence count):
+$$\text{score}_{BPE}(a, b) = \text{count}(a, b)$$
+Just merge whichever adjacent pair appears together most often in the corpus.
+
+**WordPiece merge rule** (likelihood gain, simplified):
+$$\text{score}_{WordPiece}(a, b) = \frac{\text{count}(a, b)}{\text{count}(a) \times \text{count}(b)}$$
+
+Plain-language read of every term:
+- $\text{count}(a, b)$ — how often symbol $a$ is immediately followed by symbol $b$ in the corpus (same as BPE's numerator).
+- $\text{count}(a)$, $\text{count}(b)$ — how often $a$ and $b$ each appear *on their own*, anywhere in the corpus (not just next to each other).
+- **Dividing by the product of individual frequencies** is the whole trick: it asks "how much does merging $a$+$b$ pay off *relative to* how useful $a$ and $b$ already are as separate, common symbols?" A pair that's very frequent together but where each half is *already* extremely common elsewhere (like "t" and "h" — both used constantly in tons of other words) scores lower than a pair that's less frequent together but whose halves almost *only* ever occur next to each other.
+
+### 2.2 Why this distinction matters — worked toy numbers
+
+Toy corpus with two candidate merges:
+
+**Candidate pair A: ("t", "h")** — very frequent overall, since "t" and "h" both appear in tons of unrelated words.
 ```
-vocabulary = {a, b, c, ..., z, A, ..., Z, 0, ..., 9, ...}
+count(t, h) = 4
+count(t)    = 10   (appears in many other words too)
+count(h)    = 6    (appears in many other words too)
 ```
+- BPE score: **4** (just the raw count)
+- WordPiece score: 4 / (10 × 6) = 4/60 ≈ **0.067**
 
-**Step 2:** Count all adjacent pairs across the corpus.
+**Candidate pair B: ("z", "q")** — rarer overall, but almost always occurs together (imagine a rare loanword where z and q are joined).
 ```
-"low", "lower", "lowest" → "l"+"o" appears frequently → merge into "lo"
+count(z, q) = 3
+count(z)    = 3    (barely appears anywhere except next to q)
+count(q)    = 3    (same)
 ```
+- BPE score: **3** (lower raw count than A)
+- WordPiece score: 3 / (3 × 3) = 3/9 ≈ **0.333**
 
-**Step 3:** Merge the pair that **most increases likelihood of the training data** (not just raw frequency — this is the WordPiece distinction from BPE).
+**Result**: BPE merges (t, h) first — it has the higher raw count. WordPiece merges (z, q) first — it has the higher *likelihood-gain* score, because z and q gain almost nothing from staying separate (they're rare on their own and only really "mean something" together), whereas t and h are already both individually useful, common building blocks that don't urgently need merging.
 
-**Step 4:** Repeat until vocabulary reaches target size.
+**The intuition to say out loud in an interview**: WordPiece asks "which merge most increases the probability of the training corpus under a unigram language model over the vocabulary" — it prioritizes merges that reduce redundancy for symbols that are otherwise wasteful to keep separate, not just whichever pair happens to co-occur most in absolute terms. Practically, this tends to make WordPiece slightly more conservative about merging very common symbols and quicker to lock in pairs that are tightly bound.
 
-BERT's vocabulary: **30,522 tokens.** This covers:
-- Common whole words
-- Frequent subwords
-- Individual characters (fallback)
-- Special tokens
+### 2.3 The rest of the algorithm (this part the original chapter got right)
 
-**The result:** Any word in any language can be tokenized. The model never sees a truly unknown token.
+1. Start with every character as a token (initial vocab, ~40 symbols for a small corpus, ~100+ for full Unicode coverage).
+2. Score every adjacent pair using the formula above.
+3. Merge the highest-scoring pair into a new single token; add it to the vocabulary.
+4. Repeat, rescoring after every merge (merging changes what "adjacent" means for the next round), until the vocabulary hits the target size — **30,522 for BERT**.
+
+**What if we picked a smaller target, like 5,000 tokens?** Fewer whole-word tokens survive; more common words get needlessly fragmented, inflating sequence length and diluting the signal per word (similar failure mode to character-level, just less extreme).
+
+**What if we picked a much larger target, like 200,000 tokens?** You approach word-level tokenization's problems again — a bigger embedding table, more rare/undertrained rows, less benefit from subword sharing, since almost everything just gets its own whole-word token. 30,522 is an empirically-tuned middle point for English-heavy corpora, not a theoretically derived optimum.
 
 ---
 
-## 2.6 Numerical Walkthrough: Text to Token IDs
-
-Let's trace exactly what happens to the sentence:
+## 3. From text to token IDs — the full pipeline
 
 ```
-"The cat sat"
+Raw text → lowercase → WordPiece split → add [CLS]/[SEP] → look up integer IDs
+```
+*(see the pipeline diagram above — each stage's output is the next stage's input, nothing more.)*
+
+**Worked example, "The cat sat":**
+```
+lowercase:        "the cat sat"
+WordPiece split:   ["the", "cat", "sat"]      ← all common, stay whole
+add special tok:   ["[CLS]", "the", "cat", "sat", "[SEP]"]
+token IDs:         [101, 1996, 4937, 2938, 102]
 ```
 
-**Step 1: Lowercase** (BERT-base-uncased lowercases everything)
-```
-"the cat sat"
-```
+**Why lowercase first, specifically for BERT-base-uncased**: lowercasing before tokenizing means "Cat" and "cat" collapse to the same token, which is more data-efficient — the model doesn't need to separately learn that both mean the same thing. **The tradeoff**: casing carries real signal sometimes (proper nouns, acronyms, sentence starts, sarcasm via "NO"), which is exactly why `bert-base-cased` also exists as a separate checkpoint — it's a deliberate choice per use case, not a universal default.
 
-**Step 2: WordPiece tokenize**
-```
-["the", "cat", "sat"]
-```
-All common words → stay whole.
-
-**Step 3: Add special tokens**
-```
-["[CLS]", "the", "cat", "sat", "[SEP]"]
-```
-
-**Step 4: Convert to IDs** (lookup in vocabulary table)
-```
-[CLS]  → 101
-the    → 1996
-cat    → 4937
-sat    → 2938
-[SEP]  → 102
-```
-
-**Final input to BERT:**
-```
-Token IDs: [101, 1996, 4937, 2938, 102]
-```
+**What if you use the cased tokenizer's IDs with the uncased model's weights (or vice versa)?** This is a real production bug class: the vocab files differ between cased/uncased checkpoints, so token ID 1996 might mean something completely different in each. Mismatching tokenizer and model silently produces garbage — always load them as a matched pair.
 
 ---
 
-## 2.7 The Special Tokens — Each One Has a Job
+## 4. Every special token, with the "what if we didn't have it"
 
-BERT uses four special tokens. Each is critical.
+### [CLS] (ID 101) — always position 0
 
-### [CLS] — ID 101
+**What it's for**: after 12 layers of self-attention, `[CLS]`'s final vector has attended to every other token in the input, so it ends up holding a learned summary of the whole sequence — used as the input to a classifier head for sentence-level tasks (sentiment, entailment, etc.).
 
-Prepended to **every single input**, always at position 0.
+**What if we instead just averaged all the real tokens' final vectors for classification, and skipped [CLS] entirely?** This is a legitimate alternative (mean pooling), and people do use it. The tradeoff: `[CLS]` is trained *specifically* to be a good aggregator (via the pre-training objectives, including Next Sentence Prediction, which directly supervises `[CLS]`'s behavior), whereas raw mean-pooling of token vectors averages in whatever those vectors were optimized for (per-token masked-word prediction, not sentence-level summary) — often works fine in practice but isn't purpose-built the way `[CLS]` is.
 
-It has no linguistic meaning at the start. But after passing through 12 Transformer layers, it has attended to every other token. Its final vector becomes the **sentence-level representation** used for classification tasks.
+### [SEP] (ID 102) — segment boundary marker
 
-Think of it as an empty vessel that fills up with global meaning as it passes through the layers.
+**What it's for**: tells the model exactly where sentence/segment A ends and B begins — essential for any two-sequence task (QA: question + passage; NLI: premise + hypothesis).
 
-### [SEP] — ID 102
+**What if we just concatenated two sentences with a space, no [SEP]?** The model would have no explicit signal for the boundary — it would have to *infer* segment structure purely from content, which is strictly harder and throws away free, unambiguous structure you could've just told it directly. This is compounded by segment IDs (the 0/0/.../1/1/... array) providing a *second*, redundant boundary signal — belt and suspenders.
 
-Marks the **end of a sentence** (or segment). Used to separate two sentences in two-sentence tasks.
+### [MASK] (ID 103) — pre-training-only placeholder
 
-```
-Single sentence:   [CLS] the cat sat [SEP]
-Two sentences:     [CLS] the cat sat [SEP] the dog watched [SEP]
-```
+**What it's for**: stands in for a hidden token during MLM pre-training (see Chapter 1, section 2.6).
 
-Without [SEP], BERT can't tell where sentence A ends and sentence B begins — critical for tasks like question answering (question = sentence A, passage = sentence B).
+**Why it's a training-only artifact, and why that itself is a designed-around problem**: `[MASK]` never appears in real downstream text — no fine-tuning dataset or production input will ever contain the literal string `[MASK]`. If BERT only ever saw `[MASK]` in that position during training, it would learn a representation specialized for "predict the word under this special placeholder token" — a skill useless at inference time, where there's no placeholder, just real words. This is exactly why the actual MLM procedure (Chapter 1) doesn't mask 100% of the selected 15% with the literal token — it swaps in the correct word 10% of the time and a random wrong word 10% of the time, forcing the model to build robust representations at *every* position, not just masked ones.
 
-### [MASK] — ID 103
+### [PAD] (ID 0) — batch-alignment filler
 
-Used **only during pre-training**. Replaces masked tokens that the model must predict.
+**What it's for**: batches need every sequence at the same length for the tensor math to work (a batch is one big rectangular tensor), so shorter sequences get padded with a token that carries no meaning.
 
-```
-[CLS] the [MASK] sat [SEP]  → model predicts "cat" at position 2
-```
-
-You will **never see [MASK] during fine-tuning or inference.** It's purely a training device.
-
-### [PAD] — ID 0
-
-Neural networks process batches, and all sequences in a batch must be the same length. Shorter sequences get padded.
-
-```
-Sequence 1: [101, 1996, 4937, 2938, 102,   0,   0,   0]  ← padded
-Sequence 2: [101, 2054, 2003, 1996, 2749, 1029,  102,  0]  ← padded
-```
-
-An **attention mask** tells BERT which positions are real (1) vs padding (0), so padding tokens are never attended to.
+**What if we forgot to also pass the attention mask?** This is a real, common bug: without an attention mask, the model would compute attention scores *involving* the pad tokens as if they were real content, letting real tokens attend to meaningless padding and letting `[PAD]`'s own (meaningless) vector influence the sentence-level `[CLS]` representation. The attention mask (a parallel 1/0 array) is what actually excludes padding positions from the softmax in self-attention — the `[PAD]` token ID alone does nothing to protect you; you must apply the mask.
 
 ---
 
-## 2.8 A Harder Example: Rare and Compound Words
+## 5. The 512-token limit
 
-```
-Input: "unaffable"   (an obscure word meaning 'unfriendly')
-```
+**Where the number literally comes from**: BERT's positional embedding table (Chapter 3) has exactly 512 learned rows — one vector per position, 0 through 511. There is no position-512 vector; it doesn't exist in the trained model. This isn't a soft heuristic, it's a hard architectural ceiling.
 
-WordPiece tokenization:
-```
-"unaffable" → ["un", "##aff", "##able"]
-Token IDs  → [4895, 14546, 3085]
-```
+**What if you truncate a document to fit?** You lose everything past the cutoff — for a long contract or research paper, that's a real, common failure mode: the answer to a question might live in the truncated tail. (Chapter 12, per the original text, presumably covers sliding-window / hierarchical approaches to work around this — chunk the document, run BERT per chunk, then aggregate.)
 
-Now even if BERT never saw "unaffable" in pre-training, it has seen:
-- "un" (prefix meaning negation) — in "unhappy", "unclear", etc.
-- "##able" (suffix meaning capacity) — in "comfortable", "capable", etc.
+**What if you just fed in more than 512 tokens anyway?** You'd either get an index-out-of-range error at the positional embedding lookup, or (if the library silently truncates for you) lose content without necessarily realizing it — a classic silent-failure production bug.
 
-It can make a reasonable inference about the word's meaning from its parts. This is WordPiece's superpower.
+Budget math: `[CLS]` + sentence A + `[SEP]` + sentence B + `[SEP]` = 3 special-token slots, so `len(A) + len(B) ≤ 509` for two-segment inputs.
 
 ---
 
-## 2.9 Sequence Length and the 512 Limit
+## 6. Domain vocabulary mismatch — why this is a real production problem, not a curiosity
 
-BERT has a hard limit of **512 tokens** per input. This comes from positional embeddings (Chapter 3) — BERT only has learned positions for slots 0 through 511.
+**The mechanism, stated precisely**: WordPiece's vocabulary was built by frequency (or likelihood-gain, per the corrected formula above) on BERT's *general-English pre-training corpus* (Wikipedia + BooksCorpus). A word is "common" or "rare" *relative to that corpus*, not relative to your domain. "Myocardial" is rare in Wikipedia-and-books English, so it gets shredded into `my ##oca ##rd ##ial` — four disconnected embedding-table rows that individually mean almost nothing, even though "myocardial" is an everyday word to a cardiologist.
 
-**In practice:** After WordPiece, most sentences fit well within 512. But long documents (articles, contracts, research papers) get **truncated**.
+**Why this hurts the model, specifically**: the model never got to build one strong, well-trained representation for the *concept* "myocardial" — its meaning is scattered across four generic-sounding fragments that also show up in totally unrelated words. Self-attention has to work harder to reassemble something coherent from noisier pieces, and there's simply less concentrated training signal behind any single fragment's contribution to that specific medical meaning.
 
-```
-Max tokens:         512
-Minus [CLS] + [SEP]: -2
-Usable tokens:      510
-```
+**What if we just fine-tuned standard BERT on medical text without changing the tokenizer?** You can, and it helps somewhat — the model can adjust how it *combines* the existing fragments. But the tokenizer's vocabulary itself is frozen; you're still stuck describing "myocardial" as four generic pieces, you're just getting a bit better at recombining them. You never get the efficiency and concentrated signal of a single dedicated token.
 
-For two-sentence inputs:
-```
-[CLS] sentence_A [SEP] sentence_B [SEP]
-              ↑                  ↑
-         counts as 1        counts as 1
-```
-
-Total: len(A) + len(B) + 3 special tokens ≤ 512.
-
-This 512 limit is a real-world constraint you'll hit constantly in production. (Chapter 12 covers how to handle it.)
+**The actual fix**: retrain WordPiece from scratch on domain text (what BioBERT/ClinicalBERT do) so that domain-common words earn their own whole-token slot in the fixed 30k budget, at the cost of some general-English words now being slightly less "whole" than they'd otherwise be — you're still spending the same fixed token budget, just reallocating it toward your domain's frequency distribution.
 
 ---
 
-## 2.10 Full Worked Example: Two Sentences
+## 7. Design-choice summary table (boosted with the "why")
 
-Let's tokenize a QA-style input completely:
-
-```
-Question: "Where did the cat sit?"
-Context:  "The cat sat on the mat."
-```
-
-**After WordPiece + special tokens:**
-```
-[CLS] where did the cat sit ? [SEP] the cat sat on the mat . [SEP]
-```
-
-**Token IDs:**
-```
-101  2073  2106  1996  4937  2303  1029  102  1996  4937  2938  2006  1996  13523  1012  102
-```
-
-**Positions:**
-```
-0     1     2     3     4     5     6    7    8     9     10    11    12    13     14    15
-```
-
-**Segment IDs:**
-```
-0     0     0     0     0     0     0    0    1     1     1     1     1     1      1     1
-```
-(0 = sentence A / question, 1 = sentence B / context)
-
-These three arrays — token IDs, positions, segment IDs — are the three inputs to BERT's embedding layer, which is exactly what Chapter 3 covers.
-
----
-
-## Chapter 2 Summary
-
-| Design Choice | Why |
-|---|---|
-| Subword (not word) | Handles OOV, manageable vocab size |
-| Subword (not char) | Tokens carry meaning, shorter sequences |
-| 30,522 vocab size | Empirically good tradeoff for English |
-| [CLS] always first | Aggregates sentence-level meaning through layers |
-| [SEP] between sentences | Lets model know segment boundaries |
-| 512 token limit | Tied to learned positional embeddings |
-
----
-Great idea. Let's run WordPiece on a real paragraph, step by step.
-
----
-
-## The Paragraph
-
-```
-"The patient was diagnosed with myocardial infarction. 
-The doctor prescribed nitroglycerin and recommended 
-hospitalization. The ECG showed abnormalities."
-```
-
----
-
-## Step 1: Lowercase + Basic Cleaning
-
-```
-"the patient was diagnosed with myocardial infarction 
-the doctor prescribed nitroglycerin and recommended 
-hospitalization the ecg showed abnormalities"
-```
-
----
-
-## Step 2: WordPiece Tokenization (BERT's actual vocab)
-
-| Original Word | WordPiece Tokens | Why |
+| Design choice | Why | What breaks without it |
 |---|---|---|
-| the | `the` | Common word, stays whole |
-| patient | `patient` | Common word, stays whole |
-| was | `was` | Common, stays whole |
-| diagnosed | `diagnosed` | Common enough, stays whole |
-| with | `with` | Common, stays whole |
-| myocardial | `my` `##oca` `##rd` `##ial` | Rare medical term, shredded |
-| infarction | `in` `##far` `##ction` | Rare, split up |
-| doctor | `doctor` | Common, stays whole |
-| prescribed | `prescribed` | Common enough, stays whole |
-| nitroglycerin | `ni` `##tro` `##gl` `##yce` `##rin` | Very rare, heavily split |
-| and | `and` | Common, stays whole |
-| recommended | `recommended` | Common, stays whole |
-| hospitalization | `hospital` `##ization` | Split — "hospital" is common, suffix is not |
-| ecg | `ec` `##g` | Abbreviation, unknown, split |
-| showed | `showed` | Common, stays whole |
-| abnormalities | `abnormal` `##ities` | Root is common, suffix splits off |
+| Subword, not whole-word | Bounded vocab + graceful OOV handling via composition | Unbounded vocab, OOV → `[UNK]`, no morphological sharing |
+| Subword, not character | Tokens carry real meaning; sequence stays short | Sequence length inflates ~3-4x → attention cost inflates ~10-16x (quadratic) |
+| 30,522 vocab size | Empirical sweet spot: common English words mostly whole, budget not wasted | Too small → excess fragmentation; too big → bloated table, undertrained rare rows |
+| WordPiece likelihood score (not raw BPE frequency) | Prioritizes merges that most reduce corpus "surprise," not just raw co-occurrence | Using BPE's rule instead gives a systematically different, not identical, vocabulary |
+| `[CLS]` always first | Gives the model a dedicated, purpose-trained slot to aggregate sentence meaning | You'd fall back to ad hoc pooling (e.g. mean) not specifically optimized for this |
+| `[SEP]` between segments | Explicit, unambiguous boundary signal (redundant with segment IDs, by design) | Model must infer boundaries from content alone — strictly harder |
+| `[MASK]` only at pre-training, with 80/10/10 mixing | Prevents the model overfitting to a token it will never see again at inference | Train/inference mismatch — degraded representations at non-masked positions |
+| 512 token limit | Tied to a fixed, learned positional embedding table (Ch. 3) | Documents longer than 512 tokens get silently truncated or error out |
 
 ---
 
-## Step 3: Full Token Sequence with [CLS] and [SEP]
+## 8. Diagnostics — misconceptions to pre-empt
 
-```
-[CLS] the patient was diagnosed with my ##oca ##rd ##ial 
-in ##far ##ction the doctor prescribed ni ##tro ##gl ##yce ##rin 
-and recommended hospital ##ization the ec ##g showed 
-abnormal ##ities [SEP]
-```
-
-**Token count:** 33 tokens for a 27-word paragraph.
-
----
-
-## The Key Observation
-
-```
-myocardial  → 4 tokens   (model sees fragments, not the concept)
-nitroglycerin → 5 tokens  (heavily fragmented)
-hospitalization → 2 tokens (lucky — "hospital" was common)
-abnormalities → 2 tokens  (lucky — "abnormal" was common)
-```
-
-**This is the core problem with using standard BERT on medical text.** The model sees `my ##oca ##rd ##ial` as four separate pieces. It has no strong pre-trained sense that this means "heart attack related." The meaning is fractured across subwords.
-
----
-
-## What a Medical Vocabulary Would Do Instead
-
-If you trained WordPiece on PubMed articles and clinical notes:
-
-| Word | BERT-base | BioBERT / Medical vocab |
+| Misconception | Why it's wrong | Correct framing |
 |---|---|---|
-| myocardial | `my` `##oca` `##rd` `##ial` | `myocardial` |
-| infarction | `in` `##far` `##ction` | `infarction` |
-| nitroglycerin | `ni` `##tro` `##gl` `##yce` `##rin` | `nitroglycerin` |
-| ecg | `ec` `##g` | `ecg` |
-
-Each medical term becomes **one token with one embedding** — much richer signal for the model to learn from.
-
----
-
-## The Rule of Thumb
-
-> If a word is **common in your domain but rare in general English**, standard BERT will mangle it into subwords and underperform.
-
-This is your signal to either use a domain-adapted model, or continue pre-training BERT on your domain corpus so it builds stronger representations for those fragmented subwords.
-
-Great — let's actually **build** the WordPiece vocabulary from scratch on that paragraph. This is the algorithm Google ran on billions of words. We'll run it on a tiny corpus so every step is visible.
+| "WordPiece just merges the most frequent pair each round, same as BPE" | WordPiece scores by likelihood gain (count(a,b) / (count(a)·count(b))), which can and does pick a different merge order than raw-frequency BPE | They're related but distinct algorithms; GPT-family models use BPE, BERT uses WordPiece |
+| "`[UNK]` never happens with WordPiece, ever" | Individual *characters* outside the vocabulary's character set (rare Unicode, some emoji/scripts) can still fail to decompose and fall back to `[UNK]` | WordPiece drastically reduces `[UNK]` frequency but doesn't mathematically guarantee zero |
+| "More subword splitting = worse performance, always" | Splitting itself isn't inherently bad — the cost is *fragmenting a domain-important concept into weakly-trained generic pieces*. A well-trodden root/suffix split (`hospital` + `##ization`) is nearly free | The problem is domain-frequency mismatch, not subword splitting in general |
+| "Padding tokens are automatically ignored by the model" | The `[PAD]` token ID by itself does nothing special in the attention computation — it's the separate attention mask array that excludes padded positions | Forgetting to pass/apply the attention mask lets the model attend into padding |
+| "The 512 limit is a soft guideline you can usually push past" | It's tied to a fixed-size, trained lookup table of positional embeddings — there is no position 512 to look up | It's a hard architectural ceiling, not a tunable hyperparameter |
 
 ---
 
-## Our Corpus
+## 9. Q&A practice set (self-test — answers below the line)
 
-```
-"the patient was diagnosed with myocardial infarction 
-the doctor prescribed nitroglycerin and recommended 
-hospitalization the ecg showed abnormalities"
-```
+**Q1 (easy).** In one sentence, why can't word-level tokenization ever fully solve the OOV problem, no matter how large you make the vocabulary?
+
+**Q2 (easy).** Why does character-level tokenization make Transformer training meaningfully more expensive, not just "produce longer sequences"?
+
+**Q3 (medium).** What does the `##` prefix in a WordPiece token actually encode, and why does it matter for reconstructing the original text?
+
+**Q4 (medium — calculation).** Pair X has count(X)=8 total co-occurrences, with count(a)=40 and count(b)=50 individually. Pair Y has count(Y)=5 total co-occurrences, with count(a)=6 and count(b)=5 individually. Under WordPiece's scoring rule, which pair merges first? Show the scores.
+
+**Q5 (medium).** Why is `[MASK]` never present at inference time, and how does BERT's training procedure specifically compensate for that gap?
+
+**Q6 (hard).** A teammate loads `bert-base-cased`'s tokenizer but accidentally loads `bert-base-uncased`'s model weights. What specifically goes wrong, mechanically?
+
+**Q7 (hard).** Why does WordPiece's likelihood-based scoring rule tend to delay merging very common character pairs like ("t","h") compared to raw-frequency BPE?
+
+**Q8 (hard — spot the bug).** A production pipeline batches sequences together, pads them to the same length, and passes the padded token IDs into BERT — but the engineer forgot to also construct and pass the attention mask. Describe what goes wrong and why the bug might not be obvious from output quality alone on short sequences.
+
+---
+---
+
+### Answers
+
+**A1.** Even an arbitrarily large fixed vocabulary can only ever include words that existed (and were frequent enough to include) at the time the vocabulary was built — language continuously produces new words (names, slang, technical terms, typos) faster than any static list can be updated, so some future input will always fall outside it.
+
+**A2.** Self-attention cost scales quadratically with sequence length, since every token computes a compatibility score against every other token ($QK^T$). Character-level tokenization roughly triples-to-quadruples sequence length versus word-level, which — because of the quadratic scaling — increases attention compute by roughly an order of magnitude, not just proportionally to the length increase.
+
+**A3.** `##` marks that a token is a continuation of the previous token rather than the start of a new word — it's purely a detokenization/boundary marker. Without it, `["un", "believe", "able"]` would be ambiguous about whether these are three separate words or fragments of one word; `["un", "##believe", "##able"]` unambiguously reconstructs to "unbelievable" with no spaces inserted between the pieces.
+
+**A4.** WordPiece score = count(pair) / (count(a) × count(b)).
+- Pair X: 8 / (40 × 50) = 8/2000 = **0.004**
+- Pair Y: 5 / (6 × 5) = 5/30 ≈ **0.167**
+
+Pair Y merges first — despite having a *lower raw co-occurrence count* (5 vs 8), its much smaller individual symbol frequencies make it score far higher under the likelihood-gain formula. This is precisely the BPE-vs-WordPiece divergence: a pure frequency-based approach (BPE) would have picked X.
+
+**A5.** `[MASK]` is a training device introduced specifically to create prediction targets during pre-training; no real downstream input (a support ticket, a search query, a fine-tuning dataset row) will ever literally contain the string `[MASK]`, so the token has no reason to appear post-training. BERT compensates by not making `[MASK]` the *only* thing that ever occupies a "to-be-predicted" position during training: of the 15% of tokens selected for prediction, only 80% are replaced with the literal `[MASK]` token, 10% are replaced with a random other word, and 10% are left unchanged — forcing the model to build genuinely reliable contextual representations at every position, since it can never be fully certain, at training time, whether the token in front of it is "trustworthy" or not.
+
+**A6.** The two checkpoints have different vocabulary files (cased preserves capitalization as meaningful, so its ID-to-token mapping differs from uncased's), so token ID 1996 under the cased vocabulary may map to a completely different string than ID 1996 under the uncased vocabulary. Feeding cased-tokenizer IDs into uncased-model weights means the model's embedding lookup pulls the *wrong* learned vector for each ID — effectively feeding it a scrambled, meaningless sequence, silently, with no error thrown. Output degrades but doesn't necessarily crash, making this a nasty bug to catch without specifically checking that tokenizer and model come from the same checkpoint.
+
+**A7.** Very common characters like "t" and "h" already appear frequently on their own, in many other pairings throughout the corpus — count(t) and count(h) are both large. Dividing count(t,h) by that large product shrinks the score, because merging them buys comparatively little: both are already well-represented, useful, standalone symbols. A rarer pair whose two halves rarely occur *except* together (small individual counts) scores much higher, because merging them captures nearly all of the co-occurrence's "value" without needing to preserve their (rare, low-value) separate usages.
+
+**A8.** Without an attention mask, self-attention computes compatibility scores between every position — including real tokens attending to `[PAD]` positions — and includes those pad positions' (meaningless) vectors in the weighted average that forms every other token's contextual representation, including `[CLS]`. On short sequences within a batch dominated by long ones, this might be barely noticeable — a handful of padding positions contribute a small, diffuse noise to the softmax-weighted average and may not visibly move metrics much. The bug becomes serious as padding proportion grows (short sequences batched with much longer ones) or at the tails of a distribution, and it's exactly the kind of silent, gradual-degradation bug that's hard to catch from aggregate accuracy numbers alone — you have to specifically test with mixed-length batches and heavy padding to expose it.
 
 ---
 
-## Step 1: Word Frequency Count
+## 10. Quick recap card (last-minute review)
 
-First, count every unique word:
+- **Word-level**: unbounded vocab, OOV fails hard, no morphological sharing.
+- **Char-level**: tiny vocab, zero OOV, but sequence length explosion → quadratic attention cost blowup, and tokens carry no inherent meaning.
+- **WordPiece**: fixed ~30k budget, common words whole, rare words decompose into meaningful, previously-seen fragments.
+- **WordPiece ≠ BPE**: WordPiece scores merges by likelihood gain `count(a,b)/(count(a)·count(b))`, not raw frequency — can pick a different merge order than BPE (used by GPT-family models).
+- **Four special tokens, four distinct jobs**: `[CLS]` aggregates sentence meaning (trained for it), `[SEP]` marks segment boundaries, `[MASK]` is pre-training-only (with 80/10/10 mixing to avoid a train/inference mismatch), `[PAD]` is inert filler that *requires* an attention mask to actually be ignored.
+- **512-token limit**: a hard architectural ceiling from the fixed-size positional embedding table, not a soft guideline.
+- **Domain mismatch**: standard BERT fragments domain-specific vocabulary (medical, legal, code) into weak generic pieces — fix at the tokenizer level (retrain WordPiece on domain text), not just via fine-tuning.
 
-```
-the              → 3
-patient          → 1
-was              → 1
-diagnosed        → 1
-with             → 1
-myocardial       → 1
-infarction       → 1
-doctor           → 1
-prescribed       → 1
-nitroglycerin    → 1
-and              → 1
-recommended      → 1
-hospitalization  → 1
-ecg              → 1
-showed           → 1
-abnormalities    → 1
-```
-
----
-
-## Step 2: Split Every Word Into Characters
-
-This is your **initial vocabulary** — every character is its own token. The first character is bare, continuations get `##`.
-
-```
-the             → t h e
-patient         → p a t i e n t
-was             → w a s
-diagnosed       → d i a g n o s e d
-with            → w i t h
-myocardial      → m y o c a r d i a l
-infarction      → i n f a r c t i o n
-doctor          → d o c t o r
-prescribed      → p r e s c r i b e d
-nitroglycerin   → n i t r o g l y c e r i n
-and             → a n d
-recommended     → r e c o m m e n d e d
-hospitalization → h o s p i t a l i z a t i o n
-ecg             → e c g
-showed          → s h o w e d
-abnormalities   → a b n o r m a l i t i e s
-```
-
-**Initial vocabulary** (all unique characters seen):
-```
-a, b, c, d, e, f, g, h, i, l, m, n, o, p, r, s, t, w, y, z
-##a, ##b, ##c, ##d, ##e, ##f, ##g, ##h, ##i, ##l, ##m, 
-##n, ##o, ##p, ##r, ##s, ##t, ##u, ##w, ##y, ##z
-```
-
-Vocab size so far: ~40 characters. Now we start merging.
-
----
-
-## Step 3: Count All Adjacent Pairs
-
-For each word, count how often each adjacent pair appears. **Weight by word frequency.**
-
-Let's track the most important ones:
-
-```
-Pair        Appears in                          Count
-────────────────────────────────────────────────────
-t + ##h     the(×3), with(×1)                 → 4
-##h + ##e   the(×3)                            → 3
-i + ##o     nitroglycerin(×1), infarction(×1)  → 2
-##e + ##d   diagnosed(×1), prescribed(×1), 
-            recommended(×1)                    → 3
-a + ##t     patient(×1)                        → 1
-##i + ##o   nitroglycerin(×1)                  → 1
-n + ##d     and(×1), recommended(×1)           → 2
-```
-
----
-
-## Step 4: Merge the Highest Count Pair → `t + ##h = th`
-
-**Winner: `t + ##h` with count 4**
-
-Update every word that contains this pair:
-
-```
-Before:  t  ##h  ##e          (the)
-After:   th ##e               (the)
-
-Before:  w  ##i  ##t  ##h     (with)
-After:   w  ##i  ##th         (with)
-```
-
-**Vocabulary now includes:** `th` as a new token.
-
----
-
-## Step 5: Recount Pairs, Merge Again → `th + ##e = the`
-
-New pair counts after last merge:
-
-```
-Pair          Count
-──────────────────
-th + ##e      3      ← "the" appears 3 times
-##e + ##d     3      ← diagnosed, prescribed, recommended
-```
-
-**Tie — pick `th + ##e` (or `##e + ##d`, both valid)**
-
-Let's merge `th + ##e = the`:
-
-```
-Before:  th  ##e          (the)
-After:   the              (the)  ← "the" is now one token!
-```
-
-**Vocabulary now includes:** `the`
-
----
-
-## Step 6: Merge `##e + ##d = ##ed`
-
-Next highest pair: `##e + ##d` with count 3
-
-```
-Before:  d  ##i  ##a  ##g  ##n  ##o  ##s  ##e  ##d   (diagnosed)
-After:   d  ##i  ##a  ##g  ##n  ##o  ##s  ##ed        (diagnosed)
-
-Before:  p  ##r  ##e  ##s  ##c  ##r  ##i  ##b  ##e  ##d  (prescribed)
-After:   p  ##r  ##e  ##s  ##c  ##r  ##i  ##b  ##ed       (prescribed)
-
-Before:  r  ##e  ##c  ##o  ##m  ##m  ##e  ##n  ##d  ##ed  (recommended)
-After:   r  ##e  ##c  ##o  ##m  ##m  ##e  ##n  ##d  ##ed  (recommended - ##d+##ed already merged above)
-```
-
-**Vocabulary now includes:** `##ed`
-
----
-
-## Step 7: Keep Merging — Fast Forward
-
-Running several more iterations, the next high-frequency pairs to merge would be:
-
-```
-Merge 4:  i + ##n  → in        (infarction, nitroglycerin)
-Merge 5:  ##i + ##t → ##it     (patient, nitroglycerin)  
-Merge 6:  ##a + ##l → ##al     (myocardial, hospitalization, abnormalities)
-Merge 7:  ##i + ##o + ##n → ##ion  (infarction, hospitalization)
-Merge 8:  h + ##o  → ho        (hospitalization, showed)
-Merge 9:  ##t + ##i → ##ti     (patient, hospitalization)
-Merge 10: ##i + ##z → ##iz     (hospitalization)
-```
-
----
-
-## Step 8: Snapshot — Vocabulary After 10 Merges
-
-```
-# Original characters (never removed)
-a, b, c, d, e, f, g, h, i, l, m, n, o, p, r, s, t, w, y, z
-##a, ##b, ##c ...
-
-# Merged tokens so far
-th, the        ← "the" fully reconstructed
-##ed           ← common past-tense suffix
-in             ← common prefix
-##al           ← common suffix  
-##ion          ← very common suffix
-ho             ← start of hospital/show
-##it           ← middle chunk
-```
-
----
-
-## When Does It Stop?
-
-In real WordPiece you set a **target vocabulary size** upfront (BERT uses 30,522). The algorithm keeps merging until it hits that number.
-
-```
-Start:          ~40 character tokens
-After 30,000 merges: 30,522 tokens total
-```
-
-By merge 30,000, every common English word is a single token. Only rare/domain-specific words remain fragmented.
-
----
-
-## The Full Picture
-
-```
-CORPUS
-  ↓
-Count word frequencies
-  ↓
-Split all words into characters → initial vocab
-  ↓
-┌─────────────────────────────────────┐
-│  Count all adjacent pairs           │
-│  Find highest scoring pair          │  ← repeat until
-│  Merge that pair into new token     │     vocab_size reached
-│  Update all words                   │
-└─────────────────────────────────────┘
-  ↓
-Final vocab.txt (30,522 lines for BERT)
-```
-
----
-
-## The Critical Insight
-
-WordPiece is **greedy and corpus-driven**. It doesn't know English grammar. It doesn't know "##ed" is past tense or "##ion" is a noun suffix. It just counts what co-occurs most. But because language has real patterns, those patterns emerge naturally from frequency — suffixes, prefixes, and roots bubble up as the most-merged units.
-
-**That's why it generalizes.** Rare words get reconstructed from meaningful subword building blocks that the model has seen thousands of times in other words.
-
-Ready for **Chapter 3: The Three Embeddings**?
-The key takeaway: by the end of tokenization, you have **three integer arrays** for every input — token IDs, position indices, and segment IDs. Chapter 3 shows exactly how each one becomes a 768-dimensional vector, and how those three vectors are combined before the first Transformer layer ever sees them.
-
-Ready for **Chapter 3**?
+*(Chapter 3 — The Three Embeddings — picks up here: how token IDs, position indices, and segment IDs each become a 768-dim vector, and how they combine before the first Transformer layer.)*
