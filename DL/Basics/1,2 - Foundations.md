@@ -2,14 +2,6 @@
 
 ---
 
-## 🆕 HOW TO USE THIS FOR INTERVIEW PREP
-
-1. **First pass:** Read each chapter fully, work through every worked numeric example by hand (don't just read it — recompute it).
-2. **Second pass:** Cover the "Answer" sections of the Q&A and try to answer from the question alone.
-3. **Night before an interview:** Only read the 🆕 Cheat Sheets and 🆕 Rapid-Fire Flashcards.
-4. **In the interview:** If asked something not verbatim here, notice which *category* it falls into (definitions, failure-mode diagnosis, "why does X break", "design a network for Y") — the patterns repeat across almost all FAANG DL interviews.
-
----
 
 ## 🆕 MASTER CHEAT SHEET (Chapters 1–2 at a glance)
 
