@@ -1,0 +1,349 @@
+# RAG System Design at Scale — "Design RAG for 500M PDFs" (Apple ICT5)
+
+This is a senior-level (ICT5) system design question. The bar isn't "do you know what RAG is" — it's **can you reason about scale, trade-offs, and failure modes like someone who has actually operated a system this size.** The 500M number is the whole point of the question. A RAG design that works for 10K PDFs falls over completely at this scale, and the interviewer is watching for whether you notice that.
+
+---
+
+## 0. How to Run the 45-Minute Interview
+
+| Time | Phase | Goal |
+|---|---|---|
+| 0–5 min | Requirements clarification | Narrow the problem, show you don't jump to solutioning |
+| 5–10 min | Back-of-envelope scale estimation | Anchor every later decision in real numbers |
+| 10–15 min | High-level architecture | One diagram, all major components, get buy-in |
+| 15–35 min | Deep dive (ingestion → storage → retrieval → generation) | This is where ICT5 is actually evaluated |
+| 35–42 min | Bottlenecks, failure modes, trade-offs | Shows systems maturity, not just ML knowledge |
+| 42–45 min | Wrap-up / metrics / cost | Shows product + business awareness |
+
+**The single biggest mistake candidates make:** spending 20 minutes on "which embedding model" and 2 minutes on "how do you shard a 20-billion-vector index." Apple interviewers for MLE roles care more about the *system* than the *model choice*. Treat the embedding model as a swappable component you name and move past.
+
+---
+
+## 1. Clarifying Questions (ask these out loud first)
+
+Don't skip this — it's graded.
+
+1. **What kind of PDFs?** Scanned/OCR-heavy vs digitally native text? (Changes ingestion cost by 10-50x.)
+2. **Query pattern?** Enterprise search (internal employees, low QPS) vs consumer-facing (Siri-style, high QPS, tight latency)?
+3. **Freshness requirement?** Is this a mostly-static corpus with occasional additions, or continuously ingesting new PDFs (e.g., every scanned Apple support doc, every legal filing)?
+4. **Multi-tenancy?** Is this one global corpus, or per-user/per-org isolated corpora (e.g., each enterprise customer only searches their own PDFs)? This single answer changes the entire storage/sharding design.
+5. **Latency SLA?** p99 under 300ms (consumer) vs a few seconds (research/enterprise tool) is a completely different architecture.
+6. **Do we need citations/grounding?** (Almost always yes for enterprise/legal — changes chunking and generation design.)
+7. **On-device vs cloud?** Given this is Apple, it's fair to ask whether any part (e.g., query embedding, a small reranker) needs to run on-device for privacy — this is a very "Apple" angle to raise and will score well.
+
+**State your assumptions and move on:** e.g. "I'll assume multi-tenant enterprise search, mixed scanned/native PDFs, freshness of ~24h for new docs, p99 retrieval latency <500ms, generation <3s, and citations required."
+
+---
+
+## 2. Back-of-Envelope Scale Estimation
+
+This is the step that separates ICT4 from ICT5 answers. Do this math out loud.
+
+| Quantity | Estimate | Reasoning |
+|---|---|---|
+| PDFs | 500,000,000 | given |
+| Avg pages/PDF | ~15 | reasonable assumption for mixed reports/manuals/contracts |
+| Total pages | **7.5 billion** | 500M × 15 |
+| Avg chunks/page | ~3 (≈400–600 tokens/chunk with overlap) | semantic/recursive chunking, not naive fixed-size |
+| **Total chunks (vectors)** | **~22.5 billion** | 7.5B × 3 |
+| Embedding dim | 768–1024 | typical for a strong retrieval model (e.g. E5-large, BGE-large) |
+| Raw embedding storage (fp32) | 22.5B × 768 × 4B ≈ **69 TB** | before compression |
+| Raw embedding storage (int8/PQ) | ~2–5 TB | after quantization — this is why quantization is non-negotiable at this scale |
+| Raw PDF blob storage | 500M × ~2MB avg ≈ **1 PB** | object storage, not the bottleneck (cheap, S3-class) |
+| Ingestion throughput needed (30-day backfill) | 500M / 30 / 86400 ≈ **~193 PDFs/sec**, ~2,900 pages/sec | sustained parsing+chunking+embedding throughput |
+| Steady-state new docs (assume 1% churn/day) | ~5M PDFs/day ≈ 58 PDFs/sec | ongoing ingestion after backfill |
+
+**Takeaway to say out loud:** "At 22 billion vectors, a single-node ANN index is off the table — HNSW graphs of this size don't fit in memory on any single machine, and even IVF-based indexes need to be sharded. This tells me the entire retrieval layer has to be a distributed, sharded ANN system, not 'pick a vector DB and call it done.'" This sentence alone signals ICT5-level thinking.
+
+---
+
+## 3. High-Level Architecture
+
+```
+                              ┌─────────────────────────────────────────────┐
+                              │              INGESTION PIPELINE              │
+                              │   (offline / async, horizontally scaled)     │
+                              └─────────────────────────────────────────────┘
+   500M PDFs                        │
+   ──────────►  Object Store  ─────►│
+   (raw upload)  (S3/blob, 1PB)     │
+                                     ▼
+                          ┌───────────────────┐
+                          │   PDF Parser /     │  ← text extraction, OCR fallback,
+                          │   Layout Analyzer  │    table/image extraction
+                          └─────────┬──────────┘
+                                    ▼
+                          ┌───────────────────┐
+                          │  Chunking Service  │  ← semantic/recursive/structure-aware
+                          └─────────┬──────────┘
+                                    ▼
+                    ┌───────────────┴────────────────┐
+                    ▼                                 ▼
+          ┌──────────────────┐              ┌──────────────────┐
+          │ Embedding Workers │              │  Metadata Extract │
+          │ (GPU batch infer) │              │ (title, ACL, date)│
+          └─────────┬─────────┘              └─────────┬────────┘
+                    ▼                                    ▼
+          ┌──────────────────┐              ┌──────────────────┐
+          │  Sharded Vector   │              │  Metadata / KV    │
+          │  Index (ANN)      │◄────────────►│  Store (Postgres/ │
+          │  22.5B vectors    │   doc_id      │  DynamoDB)        │
+          └─────────┬─────────┘              └──────────────────┘
+                    ▲
+                    │  (also feeds a parallel BM25/lexical index)
+                    │
+   ═══════════════════════════ ONLINE QUERY PATH ═══════════════════════════
+                    │
+   User Query ─────►│
+                    ▼
+          ┌──────────────────┐
+          │ Query Understanding│  ← rewrite, expand, classify intent
+          └─────────┬─────────┘
+                    ▼
+          ┌──────────────────┐
+          │  Query Embedder   │
+          └─────────┬─────────┘
+                    ▼
+      ┌─────────────┴──────────────┐
+      ▼                             ▼
+┌────────────┐              ┌────────────────┐
+│ Dense ANN  │              │  Sparse (BM25/  │
+│  Search    │              │  SPLADE) Search │
+│(fan-out to │              │                 │
+│ N shards)  │              │                 │
+└─────┬──────┘              └───────┬─────────┘
+      └───────────┬──────────────────┘
+                  ▼
+        ┌──────────────────┐
+        │  Fusion (RRF)     │  ← merge dense + sparse results
+        └─────────┬─────────┘
+                  ▼
+        ┌──────────────────┐
+        │  Cross-Encoder    │  ← rerank top ~100 → top ~10
+        │  Reranker         │
+        └─────────┬─────────┘
+                  ▼
+        ┌──────────────────┐
+        │  Context Assembly │  ← dedup, token budget, citation tagging
+        └─────────┬─────────┘
+                  ▼
+        ┌──────────────────┐
+        │   LLM Generation  │  ← streaming, cached, grounded w/ citations
+        └─────────┬─────────┘
+                  ▼
+             Response + Citations → User
+```
+
+---
+
+## 4. Deep Dive: Ingestion Pipeline
+
+### 4.1 PDF Parsing
+
+PDFs are not one thing. At 500M scale you **will** have a long tail of garbage: scanned faxes, password-protected files, corrupted files, PDFs that are actually images, multi-column academic papers, forms, spreadsheets exported as PDF.
+
+| PDF type | Strategy |
+|---|---|
+| Native text (selectable) | Direct text extraction (e.g. PyMuPDF/pdfplumber-class tools) — cheap, fast |
+| Scanned/image-only | OCR pipeline (e.g. Tesseract/cloud OCR) — 10-50x more expensive, GPU/CPU heavy |
+| Mixed layout (tables, multi-column, figures) | Layout-aware parsing model (detects reading order, table structure) |
+| Tables | Extract as structured data, not flattened text — preserve row/column semantics for chunking |
+| Images/diagrams | Optionally caption via a vision model if visual content is queryable |
+
+**Design decision to state explicitly:** run a fast **triage classifier** first (is this native text or scanned?) so you don't route every PDF through expensive OCR — this alone can cut ingestion compute by 5-10x since most enterprise PDFs are native text.
+
+### 4.2 Chunking Strategy
+
+(You've already built deep notes on this — the short version for the interview:)
+
+- **Fixed-size chunking** is the naive baseline — fast but breaks semantic units mid-sentence/mid-table.
+- **Recursive/structure-aware chunking** (split on headings → paragraphs → sentences, respecting document structure) is the industry default for this scale because it's cheap and mostly-good.
+- **Semantic chunking** (embed sentences, group by similarity) gives higher retrieval quality but costs significantly more compute — **not worth it at 22B-chunk scale as the default**; reserve it for high-value document classes (e.g. legal contracts) if the interviewer probes on quality vs cost trade-offs.
+- Chunk size: 400–600 tokens with ~10-15% overlap is the standard sweet spot balancing recall vs precision.
+- **Tables need separate handling**: convert to a normalized text representation (e.g. "row: X, column: Y, value: Z") rather than chunking raw table text, or numeric queries silently fail.
+
+### 4.3 Embedding Generation
+
+- Batch inference on GPU workers, not per-document sync calls. At ~2,900 pages/sec × 3 chunks/page ≈ **8,700 chunks/sec** sustained during backfill — this needs a large horizontally-scaled GPU fleet with dynamic batching (e.g. queue-based, Triton/vLLM-style batching).
+- Use a **distilled/smaller bi-encoder** for the base embedding model (e.g. a 100-400M param model) — at this scale, a marginally-better-but-3x-slower embedding model is rarely worth it. Save your interviewer-points here for talking about *why* small-and-fast wins at scale, not naming the fanciest model.
+- **Idempotency & dedup**: hash raw PDF content (e.g. content hash) before ingestion — with 500M PDFs there will be massive duplication (same manual uploaded by many users/orgs). Dedup at the document level before spending embedding compute.
+
+### 4.4 Metadata Extraction
+
+Store alongside each chunk: `doc_id`, `chunk_id`, `page_num`, `tenant/ACL info`, `source_uri`, `ingestion_timestamp`, `content_hash`. This is what makes citations, freshness, and access control possible later — easy to forget in the whiteboard rush, but interviewers notice its absence.
+
+---
+
+## 5. Deep Dive: Storage Layer
+
+Three distinct stores, each solving a different problem — say this explicitly, it's a strong signal:
+
+| Store | Holds | Technology class | Why not combine? |
+|---|---|---|---|
+| Object store | Raw PDF blobs (~1PB) | S3-class blob storage | Cheap, durable, not queryable — wrong tool for search |
+| Metadata store | doc/chunk metadata, ACLs, timestamps | Distributed KV/relational (DynamoDB, Postgres+sharding) | Needs transactional writes, filters, joins — vector DBs are bad at this |
+| Vector index | 22.5B chunk embeddings | Sharded ANN system (custom on FAISS/ScaNN, or managed like Milvus/Vespa/Pinecone at scale) | Needs specialized index structures (HNSW/IVF-PQ), not a general DB |
+
+### 5.1 Sharding the Vector Index — the hard part
+
+22.5B vectors will not fit in memory on one machine, and HNSW graph construction/search does not distribute trivially. Key decisions:
+
+- **Shard by tenant** if multi-tenant (each org's docs go to shard(s) based on tenant ID) — this is the *best* case because queries only fan out within a tenant's shard(s), keeping latency low. Say this out loud: multi-tenancy, if applicable, dramatically simplifies the scaling story.
+- **Shard by hash/range** if single global corpus — requires **scatter-gather**: query fans out to all shards, each returns top-k, then merge. This is expensive at 22B scale (imagine hundreds of shards, each queried per request) — mitigate with a **coarse routing layer** (e.g., cluster-based routing, or IVF-style coarse quantizer that narrows to a subset of shards before searching).
+- **Index type trade-off:**
+  - **HNSW**: best recall/latency, but memory-hungry (graph structure) and slow to build/update — a poor fit for a corpus with continuous ingestion at this scale.
+  - **IVF-PQ (Inverted File + Product Quantization)**: much lower memory footprint (compressed vectors), faster to update incrementally, slightly lower recall — **the pragmatic choice at 22B vectors**, and it's the answer that shows you understand the memory/recall trade-off rather than just naming HNSW because it's popular.
+- **Quantization**: int8 or PQ compression is mandatory — drops the 69TB raw fp32 footprint to low single-digit TB, and more importantly reduces the amount of data that must be scanned per query.
+- **Replication**: each shard replicated ≥2-3x for availability and read throughput (query load is far higher than write load in a search system).
+
+### 5.2 Incremental Updates
+
+500M PDFs isn't static — new docs arrive continuously (~58/sec steady-state from our estimate). IVF-PQ supports incremental inserts far better than HNSW. For deletes/updates (a PDF is revised or removed), use **tombstoning + periodic background compaction** rather than in-place index rebuilds — rebuilding a 22B-vector index synchronously is a non-starter.
+
+---
+
+## 6. Deep Dive: Retrieval Path (Online Query)
+
+### 6.1 Query Understanding
+
+- Query rewriting/expansion (handle typos, synonyms, abbreviation expansion — e.g. "AAPL Q3" → "Apple Q3 earnings")
+- Intent classification: is this a factual lookup, a comparison, a multi-hop question? Routes to different downstream strategies (e.g. multi-hop may need iterative retrieval).
+
+### 6.2 Hybrid Search — why not just dense retrieval?
+
+Dense embeddings are excellent at semantic similarity but **poor at exact-match** (part numbers, legal clause references, product codes, proper nouns) — extremely common in PDF corpora (manuals, contracts, invoices). This is a classic interview probe point.
+
+- Run **dense ANN search** (semantic) and **sparse search** (BM25 or learned-sparse like SPLADE) in parallel.
+- **Fuse** results with something like **Reciprocal Rank Fusion (RRF)** — simple, robust, no need to calibrate score scales across two very different retrieval systems.
+
+### 6.3 Reranking
+
+ANN search over 22B vectors returns an approximate top-k (say k=100) that's fast but noisy. A **cross-encoder reranker** (jointly encodes query+chunk, far more accurate but far more expensive per-pair) re-scores just those ~100 candidates down to the top ~10 that actually go to the LLM. This two-stage "retrieve cheap, rerank expensive-but-small" pattern is the standard way production RAG systems balance latency and quality — call it out explicitly as a design pattern, not just a step.
+
+### 6.4 Access Control
+
+At enterprise scale, **every retrieval query must be filtered by the requesting user's ACLs** — this has to happen at the ANN layer (metadata filtering during search, not after) or you leak documents the user shouldn't see, which is both a correctness and a security bug. If multi-tenant sharding is used (§5.1), this is mostly free; if not, it needs to be a first-class filter pushed into the ANN query itself.
+
+---
+
+## 7. Deep Dive: Generation Layer
+
+- **Context assembly**: dedupe near-identical chunks (common when multiple similar PDFs exist), fit within the LLM's context window/token budget, and attach citation metadata (doc_id, page) to each chunk so the model can ground its answer.
+- **Prompting**: instruct the model to answer *only* from provided context and cite sources — critical for enterprise/legal use cases to reduce hallucination risk.
+- **Serving**: batched inference with continuous batching (e.g. vLLM-style), streaming tokens back to the user to hide latency.
+- **Semantic caching**: cache (query embedding → response) for common/repeated queries — at consumer scale, a large fraction of queries cluster around popular topics, and semantic cache hits can be a major cost/latency win.
+- **On-device angle (Apple-specific)**: worth mentioning that query embedding or even a small reranking step could run on-device for privacy-sensitive queries, with only the final retrieval/generation hitting cloud infra — shows awareness of Apple's actual privacy posture.
+
+---
+
+## 8. Latency Budget (example, consumer-facing SLA)
+
+| Stage | Budget |
+|---|---|
+| Query understanding/embedding | ~20ms |
+| Dense ANN search (fan-out + merge) | ~80ms |
+| Sparse search (parallel) | ~30ms |
+| Fusion | ~5ms |
+| Reranking (cross-encoder on ~100 candidates) | ~100ms |
+| Context assembly | ~10ms |
+| LLM first-token latency | ~200ms |
+| **Total to first token** | **~450ms** |
+| Full generation (streamed) | 1-3s, hidden by streaming |
+
+State clearly: dense search and reranking are almost always the two biggest levers if the SLA is missed — reranker candidate count (k) is a tunable quality/latency knob you'd point to first.
+
+---
+
+## 9. Failure Modes & Mitigations
+
+| Failure | Mitigation |
+|---|---|
+| A shard is slow/down during scatter-gather | Timeout + partial results (better degraded answer than no answer); replica failover |
+| OCR misreads scanned PDF → garbage chunks | Confidence scoring on OCR output; flag low-confidence docs for review/reprocessing |
+| Embedding model drift after retraining | Dual-write old+new embeddings during migration, shadow-test recall before full cutover — never do an atomic hard cutover on a 22B-vector index |
+| Hot-spot queries overload one shard | Caching layer + shard replication; route via consistent hashing with load awareness |
+| LLM hallucinates despite retrieved context | Citation-grounded prompting + a post-hoc "faithfulness" check comparing answer to retrieved chunks |
+| Duplicate/near-duplicate PDFs bloat index | Content-hash dedup at ingestion, near-dedup via MinHash/SimHash for near-identical docs |
+| ACL bug leaks cross-tenant data | Filter pushed into ANN query itself, not applied post-hoc; regular access audits |
+
+---
+
+## 10. Evaluation & Monitoring
+
+- **Offline**: retrieval metrics (Recall@k, MRR, nDCG) against a labeled eval set; generation metrics (faithfulness/groundedness, answer relevance) — likely worth referencing your existing RAG evaluation knowledge here.
+- **Online**: click-through/thumbs-up-down feedback loops, latency percentiles (p50/p95/p99) per stage, index freshness lag (time from PDF upload to searchable), cost-per-query.
+- **Golden query set**: maintain a curated regression set of queries with known-correct answers to catch quality regressions on every embedding-model or index change.
+
+---
+
+## 11. Cost Considerations (mention briefly at the end)
+
+- Vector index memory/compute dominates cost at this scale far more than LLM generation cost per query, *if* traffic is high — this is somewhat counterintuitive and worth stating.
+- Quantization (§5.1) is as much a cost lever as a performance one.
+- Tiered storage: hot/recently-accessed docs in fast index tier, cold long-tail docs in a cheaper, higher-latency tier — most real-world corpora follow a power-law access pattern, so this saves significant infra cost.
+
+---
+
+## 12. Likely Follow-Up Questions (practice these)
+
+1. *"Walk me through what happens if we need to re-embed the entire corpus with a new model."* → Dual-index migration, shadow traffic, gradual cutover, never a big-bang swap on 22B vectors.
+2. *"How do you keep the index fresh if a document is updated?"* → Tombstone old chunks, insert new ones, background compaction; explain why in-place HNSW updates are painful (motivates IVF-PQ choice).
+3. *"What if a query needs information spread across multiple documents (multi-hop)?"* → Iterative retrieval / query decomposition, or a re-retrieval step conditioned on an intermediate answer.
+4. *"How would you reduce hallucination?"* → Grounded prompting + citation requirement + faithfulness scoring + reranking quality (garbage retrieval → garbage generation, so most hallucination fixes actually live in the retrieval stage, not the LLM).
+5. *"Single global index vs per-tenant sharding — how do you decide?"* → Query pattern (cross-tenant search needed?), isolation/compliance requirements, and that per-tenant sharding is operationally much simpler at this scale.
+6. *"How do you test recall without ground truth for 22B chunks?"* → Sample-based human eval + proxy metrics (e.g., known query-document pairs from click logs) + synthetic query generation from known chunks.
+
+---
+
+## 13. One-Paragraph Summary (if asked to compress the whole design)
+
+"I'd split this into an offline ingestion pipeline (parse → chunk → embed → index, tuned for ~193 PDFs/sec sustained throughput) and an online query path (hybrid dense+sparse retrieval → cross-encoder rerank → grounded LLM generation). The core scaling challenge is the ~22 billion chunk vectors, which forces a sharded IVF-PQ index over HNSW for memory and incremental-update reasons, sharded by tenant where possible to avoid expensive scatter-gather. I'd budget latency so retrieval+rerank stays under ~250ms, use RRF to fuse dense and sparse results since dense retrieval alone misses exact-match queries common in PDFs (part numbers, clause references), and treat quantization and dedup as first-class cost levers given the raw embedding footprint would otherwise be ~69TB."
+
+---
+┌─────────────────┐
+   500M PDFs ──────► │  Object Store   │  raw file storage (S3-class)
+                     └────────┬────────┘
+                              ▼
+                     ┌─────────────────┐
+                     │   PDF Parser    │  extract text/tables/OCR
+                     └────────┬────────┘
+                              ▼
+                     ┌─────────────────┐
+                     │ Chunking Service│  split into ~500-token passages
+                     └────────┬────────┘
+                              ▼
+                     ┌─────────────────┐
+                     │ Embedding Model │  chunk → dense vector
+                     └────────┬────────┘
+                              ▼
+                     ┌─────────────────┐
+                     │  Vector Index   │  sharded ANN store (IVF-PQ/HNSW)
+                     └────────┬────────┘
+                              ▲
+   ══════════════ QUERY TIME ══════════════
+                              │
+   User Query ───────────────┤
+                              ▼
+                     ┌─────────────────┐
+                     │ Query Embedder  │  turn question into a vector
+                     └────────┬────────┘
+                              ▼
+                     ┌─────────────────┐
+                     │  Dense + Sparse │  semantic + keyword search, fused
+                     │  Retrieval      │
+                     └────────┬────────┘
+                              ▼
+                     ┌─────────────────┐
+                     │   Reranker      │  cross-encoder refines top-k
+                     └────────┬────────┘
+                              ▼
+                     ┌─────────────────┐
+                     │ Context Builder │  assemble chunks + citations
+                     └────────┬────────┘
+                              ▼
+                     ┌─────────────────┐
+                     │  LLM Generator  │  answer grounded in retrieved text
+                     └────────┬────────┘
+                              ▼
+                        Response + Sources
+*Companion doc: your existing "RAG Chunking Strategies" guide covers §4.2 in much more depth — worth reviewing both together before the interview.*
