@@ -1,126 +1,118 @@
-# RAG Module 2 — Chunking Strategies
+# RAG Module 3 — Indexing & Vector Databases
 
 ---
 
-## 2.1 Why chunking is the highest-leverage knob in RAG
+## 3.1 The core problem: exact NN doesn't scale
 
-Before anything gets embedded or indexed, a decision is made about *what unit of text becomes retrievable*. This decision constrains everything downstream:
+Given a query vector, the "correct" answer is exact k-nearest-neighbor (kNN) search: compute distance to *every* vector in the index, sort, take top-k. This is O(N·d) per query — for N in the millions/billions, this is too slow for interactive latency (tens of ms).
 
-- Too large → chunks contain multiple topics, embedding becomes a diluted "average" that matches nothing precisely (low precision), and you waste context-window budget on irrelevant text packed alongside the relevant part
-- Too small → chunks lose surrounding context needed to be understood standalone (a sentence like "It increased by 40%" is useless without knowing what "it" is), and you fragment a single coherent fact across multiple disconnected chunks (hurts recall — the retriever might grab one fragment but not the others)
-
-**Framing for interviews**: chunking is fundamentally a **precision/recall and context-completeness tradeoff**, and unlike model selection, it's nearly free to iterate on — which is why it's usually the first thing to tune when diagnosing bad RAG output (ties into Module 8).
+**Approximate Nearest Neighbor (ANN)** search trades a small amount of recall (you might miss the true #7 nearest neighbor and get #9 instead) for orders-of-magnitude speedup. Every vector DB and index type in this module exists to approximate kNN faster than brute force, with different tradeoffs on speed/memory/recall.
 
 ---
 
-## 2.2 Fixed-size chunking
+## 3.2 ANN algorithm families
 
-Split text into chunks of N tokens/characters, typically with an overlap window (e.g. 512 tokens with 50-token overlap).
+### HNSW (Hierarchical Navigable Small World)
+- Builds a multi-layer graph: top layers are sparse "highways" connecting distant regions, bottom layer is dense with fine-grained connections
+- Search starts at the top layer, greedily navigates toward the query vector, drops down a layer once no closer neighbor is found, repeats until the bottom layer gives the final candidate set
+- **Tradeoffs**: excellent recall/speed tradeoff, but the graph must be held (mostly) in memory — memory footprint is a real constraint at billion-scale. Insertions are online/incremental (unlike IVF, which needs periodic retraining of cluster centroids), making HNSW a good fit for indexes with frequent updates.
+- Tunable params to know: `M` (max connections per node — higher = better recall, more memory), `efConstruction` (build-time search depth), `efSearch` (query-time search depth — the main recall/speed knob at serving time)
 
-**Why overlap exists**: without it, a sentence spanning a chunk boundary gets split mid-thought, and the fact/entity reference on one side of the boundary loses its context on the other side. Overlap creates redundancy so boundary-straddling information appears intact in at least one chunk.
+### IVF (Inverted File Index)
+- Partition the vector space into `nlist` clusters via k-means, each vector assigned to its nearest centroid
+- At query time, only search within the `nprobe` closest clusters to the query (not the whole index) — this is the core speedup
+- **Tradeoff**: `nprobe` is the recall/speed knob — probe more clusters for higher recall at higher cost. Requires a training step (running k-means) before use, and cluster boundaries can degrade as data distribution shifts post-training (a real production concern — mention this proactively).
 
-**Pros**: trivial to implement, predictable chunk sizes (predictable embedding cost, predictable token budget), works reasonably as a default baseline.
+### IVF-PQ (IVF + Product Quantization)
+- Adds **Product Quantization**: instead of storing full-precision vectors, split each vector into sub-vectors and quantize each sub-vector to a small codebook index (e.g. compress a 768-dim float32 vector down to a few dozen bytes)
+- Massively reduces memory footprint (this is the mechanism that makes billion-scale indexes fit in RAM), at the cost of reduced precision — distances computed on quantized vectors are approximate
+- **Common pattern**: use IVF-PQ for the initial fast/cheap candidate retrieval, then re-rank the shortlist using full-precision vectors (a second, small-scale exact distance computation) to recover accuracy lost to quantization — this is itself a mini preview of the two-stage retrieve-then-rerank pattern in Module 5.
 
-**Cons**: completely ignores document structure — can split mid-sentence, mid-table-row, mid-code-function. Purely mechanical, no semantic awareness.
-
-**Interview trap**: overlap is not free — it multiplies your index size (redundant content stored multiple times) and can cause the *same underlying fact* to be retrieved as several near-duplicate chunks, wasting top-k slots that could've gone to distinct information. Typical overlap is 10–20% of chunk size, not a large fraction.
-
----
-
-## 2.3 Recursive / structure-aware chunking
-
-Instead of blindly cutting at N tokens, split hierarchically along natural document boundaries — try splitting on `\n\n` (paragraphs) first; if a paragraph is still too large, fall back to splitting on `\n` (lines); if still too large, fall back to sentences; if still too large, fall back to fixed-size as a last resort.
-
-This is the actual default behavior of most production chunkers (e.g. LangChain's `RecursiveCharacterTextSplitter`) — worth naming as the practical industry default, not just fixed-size.
-
-**Why it's better than naive fixed-size**: respects the author's own structural signal (paragraph breaks usually indicate topic shifts) rather than imposing an arbitrary token boundary that ignores meaning entirely.
-
-**Still a limitation**: structure ≠ semantics. A document can have long paragraphs that still cover multiple ideas, or short paragraphs that are only meaningful together (a list item + its intro sentence).
+### ScaNN (Google)
+- Uses **anisotropic vector quantization** — unlike standard PQ which minimizes *overall* quantization error uniformly, ScaNN's quantization is specifically optimized to minimize error in the *direction that matters for inner-product ranking* (errors along the ranking-relevant axis are penalized more than errors orthogonal to it)
+- Consistently near the top of ANN benchmark leaderboards (recall vs queries-per-second) — good to know it exists and why it beats naive PQ, don't need deep implementation detail for most interviews.
 
 ---
 
-## 2.4 Semantic chunking
+## 3.3 FAISS — index types, when to use which
 
-Instead of splitting on structure, split on **meaning shifts**:
-1. Split document into small units (sentences)
-2. Embed each sentence
-3. Compute similarity between consecutive sentence embeddings
-4. Where similarity drops below a threshold (a "semantic breakpoint"), insert a chunk boundary
+FAISS (Facebook AI Similarity Search) is a library, not a managed service — you self-host and choose your index type explicitly.
 
-**Why this exists**: structure-aware chunking can still lump together a paragraph that drifts across two topics, or split apart two short paragraphs that are actually one continuous thought. Semantic chunking directly targets topic coherence rather than proxying it via formatting.
+| Index type | Description | When to use |
+|---|---|---|
+| `IndexFlatL2` / `IndexFlatIP` | Brute-force exact search | Small corpora (≤~100K vectors), or as a ground-truth baseline to measure ANN recall loss against |
+| `IndexIVFFlat` | IVF clustering + exact distance within probed clusters | Medium corpora, need better recall than PQ, memory less constrained |
+| `IndexIVFPQ` | IVF + product quantization | Large corpora where memory is the binding constraint |
+| `IndexHNSWFlat` | HNSW graph, full-precision vectors stored | Best recall/speed tradeoff when memory allows full-precision storage |
 
-**Cost**: requires embedding every sentence just to *decide* chunk boundaries, before you even embed the final chunks — meaningfully more expensive at ingestion time. Usually only worth it for high-value corpora where retrieval quality matters more than ingestion cost (legal, medical), not for bulk low-stakes content.
-
-**Threshold sensitivity**: too aggressive a similarity threshold → chunks fragment into near-single-sentence units (loses context); too lenient → barely different from paragraph-based chunking. This threshold is usually tuned empirically per corpus, not a universal constant.
-
----
-
-## 2.5 Document-specific strategies
-
-Generic chunkers break on structured content types. Know the specific failure modes:
-
-- **Tables**: naive chunking can split a table mid-row, or separate the header row from data rows entirely — destroying the ability to interpret any cell. Fix: chunk tables as atomic units when small, or repeat the header row into every chunk when a table must be split (so each chunk is self-describing).
-- **Code**: splitting mid-function breaks syntactic and semantic coherence (a function body without its signature is nearly meaningless). Fix: use AST-aware/language-aware splitters that respect function/class boundaries (e.g. tree-sitter-based chunkers).
-- **PDFs with layout**: naive text extraction from PDFs often interleaves multi-column text incorrectly (reading left column line 1, right column line 1, left column line 2... in wrong order) or loses table structure entirely. Fix: layout-aware extraction (e.g. detecting columns, using PDF structure/bounding boxes) before chunking — a garbage extraction makes any chunking strategy moot ("garbage in, garbage out" applies at the extraction stage, before chunking even begins).
-- **Markdown/structured docs**: chunk along heading hierarchy (H1/H2/H3) so each chunk inherits its section context — directly enables the metadata enrichment technique below.
+**Interview framing**: FAISS gives you the *building blocks* and you own the ops (persistence, sharding, filtering, updates) — contrast this directly with managed vector DBs (3.4) which wrap ANN indexing with production infrastructure. This distinction ("library vs system") is a common interview framing question.
 
 ---
 
-## 2.6 Small-to-big / parent-child chunking
+## 3.4 Managed vector databases — feature comparison
 
-A specific and very commonly tested pattern: **decouple the unit used for retrieval matching from the unit fed to the generator.**
+| | Pinecone | Weaviate | Qdrant | Milvus | pgvector |
+|---|---|---|---|---|---|
+| Model | Fully managed, proprietary | Open-source + managed cloud option | Open-source + managed cloud option | Open-source + managed cloud option | Postgres extension |
+| Metadata filtering | Yes, strong | Yes, strong (GraphQL-based) | Yes, strong | Yes | Yes (SQL `WHERE`) |
+| Hybrid search (dense+sparse) | Built-in (sparse-dense vectors) | Built-in (BM25 + vector fusion) | Built-in | Supported | Requires manual combination with Postgres full-text search |
+| Best fit | Teams wanting zero ops, fast to production | Teams wanting open-source + rich schema/graph features | Teams wanting open-source + strong filtering performance | Very large scale, high customization | Teams already on Postgres wanting to avoid a new system dependency |
 
-- Index small chunks (e.g. single sentences or small paragraphs) for embedding/retrieval — small chunks give more *precise* similarity matches, since the embedding isn't diluted by unrelated surrounding text
-- But when a small chunk is retrieved, **expand and return its parent** (the full section/paragraph/page it belongs to) as the actual context fed to the LLM — giving the generator enough surrounding context to answer well
-
-This solves the core tension in 2.1 directly: precision at retrieval time (small chunks), completeness at generation time (large parent context), without forcing one chunk size to serve both jobs.
-
-**Variants**:
-- **Sentence-window retrieval**: retrieve on a single sentence, expand to a fixed window of ±k surrounding sentences at generation time
-- **Hierarchical indexing**: multiple levels of chunk granularity indexed simultaneously (e.g. section summaries AND paragraph chunks), letting retrieval match at whichever granularity best fits the query
+**Interview-relevant point, not just a feature checklist**: the real decision driver is usually *operational* — do you already have Postgres in your stack and want to avoid adding a new database (pgvector), do you need proprietary-grade zero-ops scaling (Pinecone), or do you need full control/self-hosting for compliance reasons (Weaviate/Qdrant/Milvus self-hosted)? Interviewers are often testing whether you reach for "it depends on infra constraints" rather than reciting a single "best" vector DB.
 
 ---
 
-## 2.7 Metadata enrichment per chunk
+## 3.5 Metadata filtering: pre-filter vs post-filter vs hybrid
 
-Attach structured metadata to each chunk beyond raw text, used for filtering and/or improving retrievability:
+Say a query needs both vector similarity *and* a metadata constraint (e.g. "find similar docs, but only from `department=legal`").
 
-- **Section titles / breadcrumbs** ("Chapter 3 > Refund Policy > International Orders") — gives the chunk context even when read standalone, and enables metadata-filtered retrieval (Module 3/4)
-- **Auto-generated chunk summaries** — a short LLM-generated summary embedded *alongside or instead of* the raw chunk, useful when raw chunk text is noisy (e.g. dense tables, boilerplate-heavy text) and a clean summary embeds better
-- **Hypothetical questions** — generate synthetic questions that this chunk would answer, embed those questions instead of (or alongside) the raw chunk. This directly narrows the query-document "asymmetry gap" (recall 1.4's asymmetric encoding note) — since real user queries are questions, embedding synthetic questions puts the index in the *same distributional space* as what it'll be searched with. This is conceptually the ingestion-time cousin of HyDE (previewed here, covered fully in Module 4).
-- **Source/timestamp/access metadata** — not for retrieval quality directly, but for filtering (e.g. "only search docs updated in the last year," or permission-based filtering per user — foreshadows Module 9's access-control-aware retrieval)
+- **Post-filtering**: run ANN search first (get top-k by similarity), then filter the results by metadata. **Failure mode**: if very few of the top-k happen to match the metadata filter, you can end up with far fewer (or zero) results than requested — the ANN search wasn't aware of the filter, so it didn't prioritize matching candidates.
+- **Pre-filtering**: apply the metadata filter first (reduce the candidate set to only matching vectors), then run ANN search only within that filtered subset. **Failure mode**: if the filtered subset is small, you lose the benefit of ANN index structures built over the *full* dataset (may fall back to brute-force over the filtered subset, or require a separate index per filter value — doesn't scale to high-cardinality filters).
+- **Hybrid/integrated filtering** (what most modern vector DBs actually implement): filtering is pushed *into* the graph/cluster traversal itself — e.g. HNSW graph traversal skips non-matching nodes during the search rather than filtering before or after. This avoids both failure modes above but requires the index structure to support filter-aware traversal natively (not all do).
+
+**Interview trap**: candidates often assume "just filter then search" (pre-filtering) is obviously correct — the interesting answer is naming the *high-cardinality filter* failure mode (e.g. filtering by `user_id` where each user has few docs) as the case where naive pre-filtering breaks down and hybrid/integrated filtering becomes necessary.
 
 ---
 
-## 2.8 Chunk size vs recall/precision — the empirical tuning loop
+## 3.6 Index update strategies
 
-There is no universally correct chunk size — it depends on:
-- **Query type**: fact-lookup queries (short, specific answers) favor smaller chunks; synthesis/summary queries ("summarize the company's Q3 strategy") favor larger chunks with more surrounding context
-- **Embedding model's effective context**: many embedding models degrade in representation quality well before their stated max token limit — stuffing a chunk to the model's absolute max often produces a worse embedding than a more moderate chunk size
-- **Downstream LLM context budget**: if you retrieve top-k=10 chunks, total injected context = k × chunk_size — larger chunks force smaller k (or blow the context window), trading breadth of retrieved evidence for depth per chunk
+- **Real-time upsert**: insert/update vectors into a live index as new documents arrive — supported natively by HNSW-based systems (graph insertion is incremental). Good for corpora with continuous, small-volume updates (e.g. a live support ticket system).
+- **Batch rebuild**: periodically re-embed and rebuild the entire index from scratch — necessary when using IVF (cluster centroids trained on a snapshot of the data go stale as data distribution shifts) or when doing a full embedding-model migration (old and new embeddings are **not comparable** — you cannot mix vectors from two different embedding model versions in the same index, this must always be a full re-embed + rebuild).
+- **Handling deletes**: most ANN structures don't support fast true deletion (removing a node from an HNSW graph is nontrivial). Common pattern: **soft delete via a tombstone flag** filtered out at query time, with periodic compaction/rebuild to actually reclaim space and remove tombstoned entries from the underlying structure.
 
-**Practical tuning approach** (good to state explicitly in interviews — shows you don't treat this as guesswork):
-1. Build a small labeled eval set (query → known-relevant chunk/passage)
-2. Sweep chunk size (and overlap) as a grid, measure Recall@k on the eval set for each configuration
-3. Pick the knee of the curve — usually recall improves sharply then plateaus; going past the plateau just wastes context budget
-4. Re-validate after any embedding model change — the "best" chunk size is *model-dependent*, not a fixed universal constant
+**Interview trap to flag proactively**: "can you just add new documents to your existing index without downtime?" — the honest answer depends entirely on index type. HNSW: yes, easily. IVF-based: technically yes (inserted into existing clusters) but recall degrades over time as the data distribution drifts from the original cluster centroids, so periodic retraining/rebuild is still needed even though it's not strictly required for correctness.
+
+---
+
+## 3.7 Scaling: sharding, quantization, memory math
+
+**Sharding**: split the index across multiple machines/nodes, either by:
+- **Random/hash sharding**: distribute vectors arbitrarily — simple, but every query must fan out to *all* shards (scatter-gather), since there's no way to know which shard holds the relevant vectors
+- **Semantic/cluster-based sharding**: assign vectors to shards based on a coarse clustering, so queries can be routed to only the most relevant shard(s) first — reduces fan-out but adds routing complexity and risk of imbalanced shard sizes if clusters are uneven
+
+**Quantization for memory**: back-of-envelope math worth being able to do live in an interview —
+- A 768-dim float32 vector = 768 × 4 bytes = 3072 bytes ≈ 3KB per vector, *before* any graph/index overhead
+- At 100M vectors: 3KB × 100M ≈ 300GB just for raw vectors — often exceeds a single machine's RAM, motivating either PQ compression (can shrink this by 10-30x) or sharding across machines (or both)
+- Product Quantization example: compressing to 8-bit codes across 96 sub-vectors → 96 bytes/vector instead of 3072 bytes — roughly a 32x reduction, at the cost of approximate (not exact) distance computation
+
+**Interview signal**: being able to casually do this napkin math (vectors × dims × bytes-per-float) when asked "how would you scale this to N documents" is a strong differentiator — most candidates talk about scaling only qualitatively.
 
 ---
 
 ## Interview Q&A drill
 
-**Q: You increased chunk size and retrieval recall went up, but answer quality went down. Explain.**
-A: Larger chunks capture more complete context per chunk (higher chance the retrieved chunk *contains* the answer, improving recall), but they also dilute the embedding — the chunk-level vector represents an average over more content, blurring precision, and more irrelevant text gets fed to the generator alongside the relevant part, giving it more opportunity to be distracted or to synthesize incorrectly from unrelated content packed into the same context. This is the classic precision/recall tradeoff of chunk sizing, and it's why "just make chunks bigger" isn't a fix — the parent-child pattern (2.6) is often the actual fix, since it decouples retrieval precision from generation completeness.
+**Q: Your team wants to add real-time document updates to a RAG system currently using FAISS IndexIVFPQ. What's the issue and what would you recommend?**
+A: IVF-based indexes are trained on a snapshot of the data (k-means cluster centroids fit once); new vectors can technically be inserted into existing clusters, but as more new data arrives, the original centroids stop representing the actual data distribution well, degrading recall over time without warning. For a system needing frequent live updates, I'd recommend HNSW-based indexing instead (natively incremental, no periodic retraining required for correctness) or, if staying on IVF/PQ for its memory efficiency at scale, scheduling periodic full index rebuilds and monitoring recall on a held-out eval set to catch degradation before it becomes user-visible.
 
-**Q: When would you choose semantic chunking over recursive structure-aware chunking, given it's more expensive?**
-A: When the corpus has high-value, information-dense documents where topic-boundary precision materially affects downstream decisions (legal contracts, medical records, financial filings) and where the extra embedding-time cost is justified relative to the cost of a bad retrieval. For high-volume, lower-stakes content (e.g. general web docs, FAQs with naturally short/structured entries), recursive structure-aware chunking is usually sufficient and much cheaper to run at ingestion scale.
+**Q: Walk me through pre-filtering vs post-filtering and when each breaks.**
+A: Post-filtering runs ANN search first, then discards results that fail the metadata filter — breaks when the filter is highly selective, since you might filter away most or all of the top-k, ending up with too few results despite plenty of matching documents existing elsewhere in the index. Pre-filtering restricts the candidate set to matching vectors first, then searches — breaks when the filter has high cardinality (many distinct filter values, each with few matching vectors), since you either lose ANN index benefits over such tiny filtered subsets or need a separate index per filter value, which doesn't scale. Most production vector DBs solve this with filter-aware traversal integrated into the ANN algorithm itself, avoiding both failure modes.
 
-**Q: How do you chunk a 50-page PDF containing both prose and financial tables?**
-A: Don't treat it as one chunking problem — split by content type first. Use layout-aware extraction to separate prose regions from table regions. Chunk prose with recursive/structure-aware splitting as normal. Treat tables as atomic units where feasible (or split by logical row groups with the header row repeated into each chunk) so each table chunk stays self-interpretable in isolation, since a table row without its header is not embeddable into anything meaningful.
+**Q: You need to migrate from embedding model A to embedding model B. Walk through what breaks if you do this naively.**
+A: Vectors from two different embedding models live in *different, incompatible geometric spaces* — there's no shared coordinate system between them, so cosine similarity between an old-model query vector and a new-model document vector (or vice versa) is meaningless, not just slightly degraded. A naive incremental migration (embed only new documents with model B, leave old documents on model A) silently produces garbage retrieval for any query that should match an old document. The correct approach is a full re-embed of the entire corpus with model B and a full index rebuild, typically done as a blue-green swap (build the new index fully offline, validate recall against an eval set, then cut over) rather than an in-place migration.
 
-**Q: What's the actual difference between "chunking" and "indexing," and why do candidates conflate them?**
-A: Chunking decides *what text units exist* (a preprocessing/data decision); indexing decides *how those units are stored and searched* (an infrastructure/algorithm decision — ANN structure, index type, sharding). They're conflated because both happen in the ingestion pipeline back-to-back, but chunking quality is corpus/domain-driven and mostly reasoned about with eval sets, while indexing is a systems/scale problem reasoned about with latency and memory tradeoffs (Module 3). A good chunking strategy on a poorly chosen index still retrieves slowly at scale; a great index over badly chunked data still retrieves the wrong content quickly.
+**Q: When would pgvector be the right choice over a dedicated vector DB like Pinecone, even though it's less specialized?**
+A: When the team already runs Postgres for the application's primary data and wants to avoid introducing a new database dependency, operational surface, and data-sync problem (keeping metadata in Postgres and vectors in a separate vector DB in sync is itself an engineering cost). pgvector is the right tradeoff at moderate scale where you don't yet need Pinecone-grade horizontal scaling or advanced ANN tuning, and where transactional consistency between metadata and vectors (native to a single Postgres instance) matters more than raw ANN performance.
 
 ---
 
-**Next up: Module 3 — Indexing & vector databases.** Say the word when ready.
+**Next up: Module 4 — Retrieval strategies (dense, sparse, hybrid, query transformation).** Say the word when ready.
