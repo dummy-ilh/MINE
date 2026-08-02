@@ -1,751 +1,676 @@
-# Information Retrieval — Interview Question Bank
-### Google · Apple · Cracking the IR Loop
+# Chapter 5 — Evaluation Metrics
+### Mastery Edition
 
 ---
 
-## How to Use This Document
+## The Big Picture First
 
-Questions are organized by **type**, then by **company flavor**. Google leans into web-scale search and ML system design. Apple leans into on-device retrieval, App Store/Siri ranking, and privacy constraints.
+Every metric in this chapter answers a version of the same question:
 
-For each question, the answer structure is: **Lead → Core idea → Tradeoffs/Edge cases.** That's the format that lands at L5+.
+> **Did the right documents appear near the top of the list?**
+
+But "right" and "near the top" mean different things depending on the product. Before you compute anything, you need to know:
+
+```
+1. Does relevance come in degrees, or is it binary (good/bad)?
+2. Does the user look at the whole list, or stop at the first good result?
+3. Is missing a relevant document a catastrophe or an inconvenience?
+4. Are queries independent, or do users refine and iterate?
+```
+
+These four questions map directly to which metric you should use. The framework at the end of this chapter makes those choices mechanical.
 
 ---
 
-## Part 1 — Fundamentals (asked everywhere, both companies)
+## Setup — the running example
 
-These are the building-block questions. If you can't answer these cold, nothing else matters.
+All metrics use the same query throughout so you can compare their behavior directly.
+
+```
+query: "deep learning optimization"
+
+Corpus has 5 relevant documents total:
+  D1 — "Adam optimizer for deep neural networks"         (highly relevant)
+  D3 — "SGD and momentum in deep learning"               (relevant)
+  D5 — "Gradient descent variants and learning rates"    (highly relevant)
+  D7 — "Backpropagation and automatic differentiation"   (relevant)
+  D9 — "Learning rate schedules and warmup strategies"   (somewhat relevant)
+
+System A returned this ranked list:
+  rank 1: D1  (highly relevant)     ✓
+  rank 2: D2  (not relevant)        ✗
+  rank 3: D3  (relevant)            ✓
+  rank 4: D4  (not relevant)        ✗
+  rank 5: D5  (highly relevant)     ✓
+
+  D7 and D9 were not retrieved at all.
+```
+
+Binary relevance labels for AP/MRR: `rel(D1)=1, rel(D3)=1, rel(D5)=1, rel(D7)=1, rel(D9)=1`
+Graded labels for NDCG: `rel(D1)=3, rel(D3)=2, rel(D5)=3, rel(D7)=2, rel(D9)=1, all others=0`
 
 ---
 
-### Q1. What is the difference between precision and recall in a retrieval system? What is the tradeoff?
+## Metric 1 — Precision@k
 
-**Lead:** Precision = of what we returned, how much is relevant. Recall = of all relevant things, how much did we return.
+### What it measures
+
+Of the top-k results you returned, what fraction are relevant?
 
 ```
-Precision@k = relevant docs in top-k / k
-Recall@k    = relevant docs in top-k / total relevant docs in corpus
-
-Example:
-  10 relevant docs exist in corpus
-  System returns 8 docs, 6 of which are relevant
-
-  Precision@8 = 6/8 = 0.75
-  Recall@8    = 6/10 = 0.60
+P@k = (relevant documents in top k) / k
 ```
 
-**Tradeoff:** Increasing recall typically hurts precision — you retrieve more documents, including irrelevant ones. A system that retrieves everything has recall=1.0 but terrible precision.
+### Full calculation
 
-**In practice:** Stage 1 (retrieval) optimizes recall — you want every relevant document in your candidate set. Stage 2 (ranking/re-ranking) optimizes precision — you want only the best at the top.
+```
+Retrieved list: D1(✓), D2(✗), D3(✓), D4(✗), D5(✓)
+
+P@1 = 1/1 = 1.000   ← D1 is relevant
+P@2 = 1/2 = 0.500   ← D1 relevant, D2 not
+P@3 = 2/3 = 0.667   ← D1, D3 relevant; D2 not
+P@4 = 2/4 = 0.500
+P@5 = 3/5 = 0.600
+```
+
+### Real product examples
+
+**Where P@k is the right metric:**
+
+E-commerce grid view — Amazon shows 48 products on a page. Users scan all of them. The fraction of relevant products on the page (P@48) matters more than whether the single best product is at position 1 vs 3.
+
+Ad systems — an advertiser wants 3 of their ads to appear in the top 10 results. They care about P@10, not about the ordering within those 10.
+
+**Where P@k misleads:**
+
+```
+System A ranking: D2(✗), D3(✓), D1(✓)   →  P@3 = 2/3 = 0.667
+System B ranking: D1(✓), D3(✓), D2(✗)   →  P@3 = 2/3 = 0.667
+
+Identical P@3. But System B is clearly better — it puts the relevant
+results first. P@k can't see this. That's what MAP fixes.
+```
+
+### The precision-recall tradeoff — visualized
+
+```
+Imagine lowering a score threshold to return more results:
+
+Threshold high (return 5 docs):   P=0.80, R=0.20  ← few retrieved, mostly relevant
+Threshold medium (return 20 docs): P=0.50, R=0.60  ← more retrieved, some junk
+Threshold low (return 100 docs):  P=0.10, R=0.95  ← almost everything retrieved, lots of junk
+
+Return EVERYTHING → R=1.00, P≈0  (useless)
+Return NOTHING    → R=0.00, P is undefined
+```
+
+The Precision-Recall curve plots P against R as threshold varies. A better system has higher precision at every recall level — its curve is "pushed up and to the right."
 
 ---
 
-### Q2. What is NDCG? Why is it preferred over MAP or MRR?
+## Metric 2 — Recall@k
 
-**Lead:** NDCG (Normalized Discounted Cumulative Gain) measures ranking quality with position-weighted, graded relevance.
+### What it measures
+
+Of all relevant documents in the corpus, what fraction appeared in your top-k?
 
 ```
-DCG@k = Σᵢ₌₁ᵏ (2^rel(i) - 1) / log₂(i+1)
-NDCG@k = DCG@k / IDCG@k   (normalized by perfect ranking)
-
-Position weighting: rank 1 gets full credit, rank 10 gets ~1/3 credit
-Graded relevance: label=3 contributes (2³-1)=7, label=1 contributes (2¹-1)=1
+R@k = (relevant documents in top k) / (total relevant in corpus)
 ```
 
-**Why NDCG over alternatives:**
+### Full calculation
 
-| Metric | Graded relevance? | Position-weighted? | Normalized? |
+```
+Total relevant in corpus = 5 (D1, D3, D5, D7, D9)
+Retrieved top 5: D1(✓), D2(✗), D3(✓), D4(✗), D5(✓)
+
+R@1 = 1/5 = 0.200   ← found D1 only
+R@3 = 2/5 = 0.400   ← found D1, D3
+R@5 = 3/5 = 0.600   ← found D1, D3, D5  (D7 and D9 never retrieved)
+```
+
+### Real product examples
+
+**Where recall is the right metric:**
+
+Legal discovery — a law firm searches for all documents relevant to a lawsuit. Missing even one could lose the case. They'll tolerate returning 1,000 documents if needed (a human reviews them all) as long as nothing important is missed. Recall@1000 matters more than P@1000.
+
+Medical literature search — a researcher surveying all studies on a drug interaction needs high recall. Missing a contradictory study is a scientific error.
+
+Patent prior-art search — an inventor must find all patents that could invalidate their application. Missing one is expensive.
+
+**Where recall misleads:**
+
+```
+The recall cheat: return every document in the corpus.
+  R@N = 5/5 = 1.000  ← perfect recall
+  P@N = 5/1000000 ≈ 0.000  ← completely useless
+
+Recall without precision tells you nothing about whether the system is useful.
+A random document generator can achieve recall=1 trivially.
+```
+
+**The right way to use recall:** as a lower bound. Set a minimum recall requirement (e.g., R@100 ≥ 0.95) for your retrieval stage, then optimize precision separately in the ranking stage.
+
+---
+
+## Metric 3 — AP and MAP
+
+### What it measures
+
+AP rewards systems where **relevant documents appear early in the list**. It computes precision at every rank where a relevant document appears, then averages those precisions.
+
+```
+AP = (1/R) × Σ_{k: rel(k)=1} P@k
+
+where R = total relevant documents in corpus (not just retrieved)
+```
+
+MAP = mean of AP over all queries.
+
+### Why AP sees what P@k misses
+
+The key insight: precision is **sampled only at ranks where relevant docs appear.** Each relevant document "earns" a precision sample equal to the fraction of relevant docs found so far.
+
+```
+If a relevant doc appears at rank 1 (after only 1 doc retrieved) →
+  P@1 = high — we've been very selective
+
+If a relevant doc appears at rank 10 (after 10 docs retrieved) →
+  P@10 = likely lower — means we retrieved 9 other docs before this one,
+  some of which were probably irrelevant
+
+AP punishes you for making the user wait.
+```
+
+### Full calculation
+
+```
+Retrieved: D1(✓) D2(✗) D3(✓) D4(✗) D5(✓)
+Total relevant R = 5 (D1, D3, D5, D7, D9 — D7 and D9 never retrieved)
+
+Relevant docs found at:
+  rank 1 (D1): P@1 = 1/1 = 1.000
+  rank 3 (D3): P@3 = 2/3 = 0.667
+  rank 5 (D5): P@5 = 3/5 = 0.600
+  D7: never retrieved → contributes 0
+  D9: never retrieved → contributes 0
+
+AP = (1/5) × (1.000 + 0.667 + 0.600 + 0 + 0)
+   = (1/5) × 2.267
+   = 0.453
+```
+
+### What happens if we reorder the same results
+
+**System A (current):** D1(✓) D2(✗) D3(✓) D4(✗) D5(✓)
+**System B (better ordering):** D1(✓) D3(✓) D5(✓) D2(✗) D4(✗)
+
+```
+System B AP:
+  rank 1 (D1): P@1 = 1/1 = 1.000
+  rank 2 (D3): P@2 = 2/2 = 1.000
+  rank 3 (D5): P@3 = 3/3 = 1.000
+
+AP_B = (1/5) × (1.000 + 1.000 + 1.000) = 3.0/5 = 0.600
+
+AP_A = 0.453   (same docs retrieved, worse order)
+AP_B = 0.600   (same docs retrieved, better order)
+
+AP captured the ordering difference. P@5 for both = 3/5 = 0.600 (identical).
+This is exactly what P@k misses and AP catches.
+```
+
+### MAP over multiple queries
+
+```
+query 1: "deep learning optimization"  → AP = 0.453
+query 2: "transformer architecture"    → AP = 0.820
+query 3: "reinforcement learning"      → AP = 0.310
+
+MAP = (0.453 + 0.820 + 0.310) / 3 = 0.528
+```
+
+A system with MAP=0.60 beats one with MAP=0.52 if the difference is statistically significant across a large query set.
+
+### The D6-never-retrieved penalty — visualized
+
+```
+Corpus has 5 relevant docs. You retrieve 3 of them perfectly at ranks 1, 2, 3.
+
+AP = (1/5) × (P@1 + P@2 + P@3)
+   = (1/5) × (1.0 + 1.0 + 1.0) = 0.600
+
+Even a perfect system that retrieves 3 out of 5 relevant docs with perfect
+precision scoring only 0.600. The two missing docs cap you at 0.600 no
+matter how well you rank what you found.
+
+This is the recall component baked into AP.
+```
+
+### Where MAP fails
+
+AP treats all relevant documents equally. A perfect answer and a tangentially relevant answer get the same weight. Searching for "what is the capital of France?" — a document saying "Paris is the capital of France" and a document saying "France is a country in Europe with many cities including Paris" are both "relevant" under binary labels. AP can't distinguish them. That's what NDCG is for.
+
+---
+
+## Metric 4 — NDCG
+
+### What it measures
+
+NDCG handles the two things AP can't:
+
+1. **Graded relevance** — not just relevant/not relevant, but how relevant
+2. **Exponential position discount** — rank 1 is worth far more than rank 5
+
+```
+DCG@k = Σᵢ₌₁ᵏ  (2^relᵢ - 1) / log₂(i + 1)
+
+NDCG@k = DCG@k / IDCG@k
+```
+
+The numerator `(2^rel - 1)` is the **gain** — it explodes with relevance:
+
+```
+rel=0 → gain = 2⁰-1 = 0
+rel=1 → gain = 2¹-1 = 1
+rel=2 → gain = 2²-1 = 3
+rel=3 → gain = 2³-1 = 7
+
+Going from rel=2 to rel=3 (good → perfect) is 7× vs 3× — more than doubling.
+This reflects reality: the difference between a good result and a perfect result
+is much bigger than the difference between a mediocre result and a good one.
+```
+
+The denominator `log₂(i+1)` is the **discount**:
+
+```
+rank 1: log₂(2) = 1.000  ← no discount
+rank 2: log₂(3) = 1.585  ← 37% less weight than rank 1
+rank 3: log₂(4) = 2.000  ← 50% less weight than rank 1
+rank 5: log₂(6) = 2.585  ← 61% less weight than rank 1
+rank 10: log₂(11) = 3.459 ← 71% less weight than rank 1
+```
+
+### Full calculation
+
+```
+Graded labels: D1=3, D2=0, D3=2, D4=0, D5=3 (D7=2, D9=1 but not retrieved)
+
+DCG@5:
+  rank 1 (D1, rel=3): (2³-1)/log₂(2) = 7/1.000 = 7.000
+  rank 2 (D2, rel=0): (2⁰-1)/log₂(3) = 0/1.585 = 0.000
+  rank 3 (D3, rel=2): (2²-1)/log₂(4) = 3/2.000 = 1.500
+  rank 4 (D4, rel=0): (2¹-1)/log₂(5) = 0/2.322 = 0.000
+  rank 5 (D5, rel=3): (2³-1)/log₂(6) = 7/2.585 = 2.708
+
+DCG@5 = 7.000 + 0.000 + 1.500 + 0.000 + 2.708 = 11.208
+
+Ideal ranking — sort all relevant docs by relevance: 3, 3, 2, 2, 1
+  (D1=3, D5=3, D3=2, D7=2, D9=1)
+
+IDCG@5:
+  rank 1 (rel=3): 7/1.000 = 7.000
+  rank 2 (rel=3): 7/1.585 = 4.416
+  rank 3 (rel=2): 3/2.000 = 1.500
+  rank 4 (rel=2): 3/2.322 = 1.292
+  rank 5 (rel=1): 1/2.585 = 0.387
+
+IDCG@5 = 7.000 + 4.416 + 1.500 + 1.292 + 0.387 = 14.595
+
+NDCG@5 = 11.208 / 14.595 = 0.768
+```
+
+### The cost of burying a highly relevant document — quantified
+
+The irrelevant D2 at rank 2 cost us `4.416 - 0.000 = 4.416 DCG points`. If D5 (rel=3) had been there instead:
+
+```
+Hypothetical rank 2 (D5, rel=3): 7/1.585 = 4.416 gained instead of 0.000
+New DCG@5 = 7.000 + 4.416 + 1.500 + 0.000 + 0.000 = 12.916
+NDCG@5 = 12.916 / 14.595 = 0.885
+```
+
+Moving D5 from rank 5 to rank 2 is worth 0.117 NDCG points. That's a huge improvement in IR terms, where 0.01 NDCG gains are considered meaningful. **NDCG quantifies exactly how much each swap is worth.**
+
+### Why NDCG is the standard at Google/Bing/Meta
+
+Web search has deeply graded relevance. Users searching "symptoms of appendicitis" distinguish between:
+- The Mayo Clinic article listing every symptom clearly (rel=3 — perfect)
+- A health blog with general abdominal pain information (rel=1 — tangential)
+- A Wikipedia article on the appendix with a symptoms section (rel=2 — good)
+
+Treating these as identically "relevant" would make it impossible to tell whether a model change actually improved results for the user. Graded NDCG captures this.
+
+### When to use linear gain instead of exponential
+
+The standard gain formula is `2^rel - 1`. But sometimes linear gain (`rel` directly) makes more sense:
+
+```
+Exponential gain penalizes low-relevance docs very softly (0, 1, 3, 7)
+and rewards high-relevance docs aggressively.
+
+If your relevance scale is already calibrated (0 to 5 by trained raters),
+linear gain might better reflect the actual quality differences.
+
+Most production systems use exponential — it's the default in academic benchmarks
+and aligns with the intuition that "perfect" results matter much more than "okay" ones.
+```
+
+---
+
+## Metric 5 — MRR (Mean Reciprocal Rank)
+
+### What it measures
+
+How quickly does the first relevant document appear?
+
+```
+RR(q) = 1 / rank_of_first_relevant_document_for_query_q
+
+MRR = (1/|Q|) × Σ RR(q)
+```
+
+### Full calculation
+
+```
+Three queries for our system:
+
+query 1: "deep learning optimization"
+  ranked: D1(✓), D2(✗), D3(✓), D4(✗), D5(✓)
+  first relevant at rank 1 → RR = 1/1 = 1.000
+
+query 2: "convolutional neural networks"
+  ranked: D6(✗), D7(✓), D8(✗), D9(✓), D10(✗)
+  first relevant at rank 2 → RR = 1/2 = 0.500
+
+query 3: "natural language processing transformers"
+  ranked: D11(✗), D12(✗), D13(✓), D14(✗), D15(✗)
+  first relevant at rank 3 → RR = 1/3 = 0.333
+
+MRR = (1/3) × (1.000 + 0.500 + 0.333) = 1.833/3 = 0.611
+```
+
+### The sharp drop-off — why MRR is ruthless
+
+```
+first relevant at rank 1: RR = 1.000
+first relevant at rank 2: RR = 0.500  ← loses half its value immediately
+first relevant at rank 3: RR = 0.333
+first relevant at rank 4: RR = 0.250
+first relevant at rank 5: RR = 0.200
+first relevant at rank 10: RR = 0.100
+```
+
+By rank 5, you've already lost 80% of the possible score. This matches the reality of voice search and QA: if Siri doesn't surface the right answer first or second, the user gives up or rephrases.
+
+### Real product examples
+
+**Where MRR is the right metric:**
+
+Siri / Google Assistant — "Hey Siri, what year was the Eiffel Tower built?" The answer is either first or the system failed. There's no browsing.
+
+Stack Overflow answer search — a developer searching for a specific error message wants the working solution at rank 1. They don't want to scroll through 10 partially relevant answers.
+
+Autocomplete / query suggestion — which suggestion to show first when a user types three characters. Only one suggestion matters.
+
+**Where MRR misleads:**
+
+```
+System A: returns one perfect result at rank 1, then 9 irrelevant results.
+System B: returns 10 relevant results, with the first at rank 1.
+
+MRR for both: 1.000  (identical — MRR can't see past the first hit)
+
+But System B is obviously better for a user who browses beyond rank 1.
+Use NDCG or MAP here.
+```
+
+---
+
+## Metric 6 — F1 Score (and when it appears in IR)
+
+You'll see F1 mentioned in IR contexts — it's the harmonic mean of precision and recall.
+
+```
+F1 = 2 × (Precision × Recall) / (Precision + Recall)
+```
+
+### Why harmonic mean, not arithmetic?
+
+```
+System returns everything in corpus:
+  Precision = 0.001  (tiny fraction is relevant)
+  Recall = 1.000     (found everything)
+
+Arithmetic mean: (0.001 + 1.000) / 2 = 0.500  ← looks decent, wrong
+Harmonic mean:   2 × (0.001 × 1.000) / (0.001 + 1.000) = 0.002  ← correctly terrible
+```
+
+The harmonic mean punishes extreme imbalances. If either precision or recall is near zero, F1 collapses. It forces both to be high simultaneously.
+
+### F1 vs MAP/NDCG — when to use F1
+
+F1 is **not** a ranking metric. It doesn't care about order. It's appropriate when:
+- You have a fixed retrieval set (not a ranked list) — e.g., a classifier that outputs "relevant" or "not relevant"
+- You want a single number balancing precision and recall for a binary classification
+- NLP tasks: named entity recognition, question answering extraction, document classification
+
+Use MAP/NDCG when you have a ranked list. Use F1 when you have a set of binary predictions.
+
+### Fβ — controlling the tradeoff
+
+```
+Fβ = (1+β²) × (Precision × Recall) / (β²×Precision + Recall)
+
+β=1: equal weight on precision and recall (standard F1)
+β=2: recall weighted 2× more (use when missing relevant docs is costly)
+β=0.5: precision weighted 2× more (use when returning junk is costly)
+```
+
+Example: Medical document filtering. Missing a relevant paper (low recall) is much worse than including an irrelevant one (low precision). Use F2 to penalize missed recalls more.
+
+---
+
+## Choosing the Right Metric — The Full Decision Framework
+
+This is the exam question every FAANG interviewer is building toward. Learn this cold.
+
+### Step 1 — Is relevance binary or graded?
+
+```
+Binary (good/bad):
+  → MAP, MRR, P@k, R@k, F1
+
+Graded (excellent/good/okay/irrelevant):
+  → NDCG
+
+If unsure: use NDCG. It reduces to MAP-like behavior with binary labels
+and adds power with graded labels. No downside to graded.
+```
+
+### Step 2 — Does the user scan the whole list, or stop at the first good result?
+
+```
+User scans the whole list (browsing behavior):
+  → MAP (binary), NDCG (graded)
+
+User wants exactly one answer and stops:
+  → MRR
+
+User sees only a grid/page and doesn't care about within-page order:
+  → P@k
+```
+
+### Step 3 — Is missing a relevant document a catastrophe?
+
+```
+Yes — missing one is costly (legal, medical, patent):
+  → R@k, MAP (AP penalizes for missed docs)
+
+No — a few relevant docs missed is fine:
+  → P@k, MRR (both ignore docs not retrieved)
+```
+
+### Step 4 — Are you in the retrieval stage or the ranking stage?
+
+```
+Retrieval stage (candidate generation):
+  Primary metric: Recall@k  (did the right docs make it into the candidate set?)
+  Goal: k should be large enough that true top-10 is almost certainly in candidates
+
+Ranking stage (reordering candidates):
+  Primary metric: NDCG@10 or MAP@10  (is the best stuff at the top?)
+  Goal: minimize position errors that hurt users
+```
+
+### The complete decision table
+
+| Product context | Relevance | User behavior | Metric |
 |---|---|---|---|
-| MRR | No (binary) | Yes (first relevant) | No |
-| MAP | No (binary) | Yes | Yes |
-| NDCG | Yes | Yes | Yes |
+| Web search (Google) | Graded | Scans top 10 | NDCG@10 |
+| Voice assistant (Siri) | Binary | First answer only | MRR |
+| E-commerce grid (Amazon) | Graded | Scans whole page | NDCG@48 or P@48 |
+| Legal discovery | Binary | Must find everything | R@1000 |
+| Medical literature review | Binary | Must find everything | R@1000, MAP |
+| Q&A (Stack Overflow) | Binary | First answer | MRR |
+| Academic IR benchmarks | Binary | Full list | MAP |
+| News recommendation | Graded | Scans feed | NDCG@10 |
+| App Store search (Apple) | Graded | Scans top ~10 | NDCG@10 |
+| Ad ranking | Binary | P@k (slot-based) | P@3 |
+| Document retrieval stage | Binary | Does doc exist in candidates? | Recall@k |
+| Candidate reranking stage | Graded | Full ranked list | NDCG@10 |
 
-NDCG handles the reality that "very relevant" and "slightly relevant" aren't the same. It's the standard metric at Google, Bing, and in all major IR benchmarks (TREC, MS MARCO).
+### The tricky cases
 
----
+**Case: NDCG went up, MRR went down. Which matters?**
 
-### Q3. Explain BM25 and why it outperforms TF-IDF.
+Find out what the user actually does. If the product is voice search or a chatbot → MRR is primary, investigate the regression. If it's a web search results page where users browse 5-10 results → NDCG is primary and the MRR drop may be acceptable. Run an A/B test with user engagement metrics (CTR on first result, session abandonment) to confirm which offline metric predicts real user behavior.
 
-**BM25 improves on TF-IDF in two ways:**
+**Case: Two systems have the same MAP. Which do you deploy?**
 
-```
-TF-IDF problem 1: Unbounded TF
-  A document with "diabetes" 100 times scores 10× higher than one with 10 times.
-  In practice, 10 mentions is already a strong signal — the marginal value of 100 is near zero.
+Run a paired t-test on per-query AP scores. Same mean AP doesn't mean same per-query distribution — one system might consistently give AP=0.55, the other might give AP=0.90 on half the queries and AP=0.20 on the other half (high variance). Also check whether the improvement is concentrated on head queries (high volume, already well-served) or tail queries (where users actually suffer). A gain on tail queries with same MAP is often more valuable. Then A/B test — offline MAP improvement ≠ online improvement.
 
-BM25 fix: Saturating TF
-  TF_BM25(t,d) = TF(t,d) × (k1+1) / (TF(t,d) + k1)
-  With k1=1.2: TF=1 → 1.83, TF=10 → 1.98, TF=100 → 2.00
-  Diminishing returns kick in immediately. ✓
+**Case: Recall@100 = 0.95. Is that good enough for the retrieval stage?**
 
-TF-IDF problem 2: No document length normalization
-  A 10,000-word article mentioning "diabetes" 10 times is no more relevant
-  than a 500-word article mentioning it 10 times — but TF-IDF scores them equally.
-
-BM25 fix: Length normalization
-  Denominator includes (1 - b + b×|d|/avgdl)
-  Longer documents get penalized; b=0.75 is the standard balance.
-```
-
-Result: BM25 is the industry standard sparse retrieval baseline. Still competitive on many benchmarks even against fine-tuned neural retrievers.
+Depends on what happens at the re-ranking stage and your latency budget. If your cross-encoder can re-rank 100 docs in time, 0.95 means 1 in 20 queries will have the correct answer missing from candidates — the re-ranker can never recover it. For most products, 0.95 is acceptable. For high-stakes applications (medical, legal), 0.99+ is required. Plot the recall@k curve and find the elbow point: the k where recall plateaus. That's your sweet spot.
 
 ---
 
-### Q4. What is an inverted index? How is it built and queried?
+## Common Confusions — Cleared Up
 
-**Build:**
-```
-corpus: ["diabetes treatment options", "metformin for diabetes", "insulin resistance"]
+### "Higher AP means better ranking, right?"
 
-tokenize and build posting lists:
-  "diabetes"   → [doc0, doc1]
-  "treatment"  → [doc0]
-  "options"    → [doc0]
-  "metformin"  → [doc1]
-  "for"        → [doc1]
-  "insulin"    → [doc2]
-  "resistance" → [doc2]
+Almost. AP measures both retrieval quality (recall component — did you find the relevant docs?) AND ranking quality (precision component — did you rank them first?). A system can have high AP by improving either. In the ranking stage (where candidate set is fixed), AP purely measures ordering. In the retrieval stage, it measures what you chose to retrieve.
 
-Each entry stores: (doc_id, term_frequency, positions)
-```
+### "Can I use NDCG with binary labels?"
 
-**Query:**
-```
-query: "diabetes treatment"
-  lookup "diabetes"  → [doc0, doc1]
-  lookup "treatment" → [doc0]
-  intersect          → [doc0]  (contains both terms)
-  score doc0 with BM25
-```
+Yes — set rel ∈ {0, 1}. The gain formula `2^1-1=1` and `2^0-1=0` makes NDCG equivalent to a ranked precision metric. You lose the benefit of graded relevance but keep the position weighting. It's a perfectly valid choice if you only have binary labels.
 
-**Scalability:** In production (Google), inverted indexes are sharded across thousands of machines. Each shard holds a portion of the document space. Query fanout hits all shards in parallel, results merged.
+### "Why does AP divide by total relevant R, not retrieved relevant?"
+
+Intentionally. It penalizes you for failing to retrieve relevant documents. If 10 docs are relevant and you only retrieve 3 of them (even perfectly ranked), your AP is capped at 3/10 = 0.30. Missing relevant documents is a retrieval failure — AP wants the metric to reflect that.
+
+### "When is MAP misleading?"
+
+When query difficulty varies enormously. A query with 100 relevant documents and a query with 1 relevant document both contribute one AP score each to MAP. The rare-document query is much harder — a miss there is catastrophic. Consider stratifying your evaluation by query type (head/torso/tail, easy/hard) and reporting MAP separately per stratum rather than as one global number.
 
 ---
 
-### Q5. What is the difference between a bi-encoder and a cross-encoder? When do you use each?
+## Worked Comparison — Same System, All Five Metrics
 
 ```
-Bi-encoder:
-  Query  → encoder → q_vector
-  Doc    → encoder → d_vector  (done offline, stored)
-  Score  = cosine(q_vector, d_vector)
+Retrieved: D1(✓) D2(✗) D3(✓) D4(✗) D5(✓)
+5 relevant docs in corpus. Graded: D1=3, D3=2, D5=3, D7=2(not retrieved), D9=1(not retrieved)
 
-  Advantage: doc encoding is precomputed — O(1) at query time
-  Disadvantage: query and doc never "see" each other — limited interaction
+P@5   = 3/5 = 0.600
+R@5   = 3/5 = 0.600   (coincidence — same numbers here, different meaning)
+AP    = (1/5)×(1.000 + 0.667 + 0.600) = 0.453
+NDCG@5 = 11.208/14.595 = 0.768
+MRR   = 1/1 = 1.000   (D1 is first result, and it's relevant)
 
-Cross-encoder:
-  [Query; Doc] → encoder → relevance_score
-  
-  Advantage: full attention between query and doc — much richer signal
-  Disadvantage: doc cannot be pre-encoded — must run at query time for every doc
-```
+Interpretation:
+  MRR=1.000  ← looks perfect (first result is always relevant)
+  NDCG=0.768 ← decent but loses points for irrelevant D2 at rank 2 and
+                for not retrieving D7 and D9
+  AP=0.453   ← lower because two relevant docs (D7, D9) were never found
+  P@5=0.600  ← 40% of returned results are irrelevant
+  R@5=0.600  ← missed 40% of all relevant documents
 
-**Usage pattern:**
-- Bi-encoder: Stage 1 retrieval over millions of documents
-- Cross-encoder: Stage 2 re-ranking over top 50-200 candidates
-
-At 20ms per cross-encoder call, you can handle ~25 docs in 500ms. So you use bi-encoder to narrow from millions to ~200, then cross-encoder to pick the best 10.
-
----
-
-## Part 2 — Google-Specific Questions
-
-Google's focus: web-scale architecture, ranking quality, query understanding, LTR, distributed systems.
-
----
-
-### G1. [System Design] Design Google Search. Walk me through the full architecture.
-
-**What they're looking for:** Can you decompose a massive system into stages and explain each one?
-
-```
-Stage 1 — Web Crawling
-  Distributed crawler: billions of URLs
-  Politeness constraints (robots.txt, crawl rate limits)
-  Duplicate detection (SimHash/MinHash for near-duplicate pages)
-  Priority: PageRank estimate determines crawl frequency
-
-Stage 2 — Indexing
-  Parse HTML → extract text, links, metadata
-  Tokenize, stem, remove stopwords
-  Build inverted index (sharded, replicated)
-  Compute doc-level features: PageRank, spam score, freshness
-  Index updates: batch (weekly full rebuild) + incremental (real-time for news)
-
-Stage 3 — Query Understanding
-  Spell correction (noisy channel model)
-  Query segmentation: "new york times" → ["New York Times"] not ["new", "york", "times"]
-  Entity recognition: "Paris Hilton" → person, not location + hotel
-  Query expansion: "MI" → "myocardial infarction" for medical queries
-  Intent classification: navigational vs informational vs transactional
-
-Stage 4 — Retrieval
-  BM25 + dense ANN in parallel → top 1,000 candidates per shard
-  Fan out across all index shards
-  Merge results via RRF or score normalization
-
-Stage 5 — Ranking (LambdaMART or neural ranker)
-  200+ features: BM25, PageRank, freshness, CTR, dwell time, dense_sim, ...
-  Two-stage: lightweight ranker → top 200 → heavy ranker → top 10
-
-Stage 6 — Serving
-  Result diversification (don't show 10 pages from the same domain)
-  Feature enrichment (snippets, knowledge graph boxes, featured answers)
-  Personalization (logged-in users get results weighted by search history)
-  A/B testing framework: 1% of traffic to experimental rankers
-```
-
-**Latency budget for a 200ms SLA:**
-- Crawl/index: offline, not on critical path
-- Query understanding: ~10ms
-- Retrieval (parallel shards): ~30ms
-- Ranking: ~50ms
-- Serving/formatting: ~10ms
-- Total: ~100ms (leaves headroom)
-
----
-
-### G2. How would you improve search quality after a bad metric regression?
-
-This is a debugging/investigation question. Walk through it systematically:
-
-```
-Step 1 — Characterize the regression
-  Which metric dropped? NDCG@10, CTR, long-click rate, user satisfaction?
-  Which query categories? Head (high volume) vs tail (rare)? Navigational vs informational?
-  Which time range? Sudden drop (code change) vs gradual (data drift)?
-
-Step 2 — Isolate the cause
-  Did a feature distribution shift? (CTR feature from stale click logs?)
-  Did a model change deploy? (New LambdaMART version with different features?)
-  Did the index change? (New corpus shard, updated crawl)?
-  Did user behavior change? (New query patterns the model hasn't seen)
-
-Step 3 — Reproduce in offline evaluation
-  Run the old vs new model on held-out query set with editorial labels
-  If offline NDCG also regressed → model/feature issue
-  If offline NDCG is fine but online CTR dropped → presentation issue or position bias shift
-
-Step 4 — Fix and re-evaluate
-  Roll back if critical
-  If data drift: retrain with recent data
-  If feature issue: audit feature pipeline
-  Always re-evaluate on both offline (NDCG) and online (A/B test)
+Same system. Five different numbers. Five different angles on quality.
+An interviewer who asks "how good is this system?" wants you to say:
+"it depends on which aspect matters for the product."
 ```
 
 ---
 
-### G3. How does PageRank work, and what are its failure modes?
+## Statistical Significance — The Part Everyone Skips
 
-**The algorithm:**
+Computing MAP=0.723 vs MAP=0.689 means nothing without significance testing. You need to know if the difference is real or random variation across queries.
+
 ```
-PR(d) = (1-d)/N + d × Σ_{v→d} PR(v) / out_degree(v)
+Test: paired t-test on per-query AP scores
 
-d = 0.85 (damping factor — probability of following a link vs. jumping randomly)
-N = total pages
-v = pages that link to d
+null hypothesis: both systems have the same mean AP per query
 
-Interpretation: rank is proportional to how much "voting weight" flows into you
-via links from other highly-ranked pages.
+Data:
+  query 1: AP_A=0.80, AP_B=0.75  → difference = +0.05
+  query 2: AP_A=0.50, AP_B=0.60  → difference = -0.10
+  query 3: AP_A=0.90, AP_B=0.85  → difference = +0.05
+  ...
+  (over N=1000 queries)
 
-Solved iteratively: initialize PR = 1/N for all, update until convergence (~50 iterations).
+Compute: mean difference, standard deviation of differences, t-statistic
+If p < 0.05 → difference is statistically significant
+
+Rule of thumb: you need at least 100-200 queries for reliable significance.
+TREC benchmarks typically use 50 queries — sometimes considered too few.
+
+Also check: Wilcoxon signed-rank test (non-parametric, if AP distribution is skewed)
 ```
 
-**Failure modes:**
-- **Link farms:** networks of fake pages linking to each other to inflate PageRank
-- **Dangling nodes:** pages with no outbound links accumulate rank but distribute nothing (handled by teleportation)
-- **Topic insensitivity:** PageRank is query-independent — a page about plumbing can outrank a specialist page just by having more inbound links
-- **Temporal staleness:** PageRank is computed offline; newly published viral content won't have accumulated links yet
-
-**Google's response:** PageRank is one of 200+ signals. Trust rank (seed set of trusted domains), spam classifiers, and freshness signals counteract manipulation.
+**The bottom line:** Before declaring a model improvement, run significance tests. In production, NDCG differences of 0.5-1% are considered meaningful *if* statistically significant over a large query set.
 
 ---
 
-### G4. A query returns great results for head queries but fails on tail queries. What do you do?
-
-**Why this happens:**
-- Head queries have abundant training data (clicks, dwell time, editorial labels)
-- Tail queries (<10 searches/day each) have sparse or zero behavioral data
-- LambdaMART overfits to head query patterns; features like CTR are meaningless for tail
-
-**Fixes:**
+## Summary — What to Remember
 
 ```
-1. Query expansion for tail queries
-   Expand "BRCA1 c.5266dupC" with synonyms from medical ontologies (UMLS, MeSH)
-   Map rare query to nearby head query clusters
+P@k    → fraction of returned results that are relevant (ignores order within k)
+R@k    → fraction of all relevant docs that were returned (recall)
+AP     → precision averaged at each relevant doc rank (both precision + recall + order)
+MAP    → AP averaged across all queries (system-level summary)
+NDCG   → position-weighted graded precision (best for most production systems)
+MRR    → speed to first relevant result (voice, QA, one-answer tasks)
+F1     → harmonic mean of P and R (for binary classification, not ranked lists)
 
-2. Zero-shot dense retrieval
-   Dense models generalize better to unseen query patterns than LTR models that
-   need behavioral features. Use dense retrieval as a stronger component for tail.
+Decision framework:
+  Graded relevance?          → NDCG
+  Binary relevance, browsing → MAP
+  First result only?         → MRR
+  Must find everything?      → Recall@k
+  Fixed-set classification?  → F1 or Fβ
 
-3. Synthetic query generation
-   For tail query domains: generate synthetic (query, document) pairs using an LLM
-   Fine-tune bi-encoder on synthetic data to improve tail coverage
-
-4. Separate models for head vs tail
-   Classifier routes query to head model (CTR + behavioral features) or
-   tail model (more weight on BM25 + dense, less on CTR which is unreliable)
-
-5. Human evaluation on tail queries
-   Head queries are self-monitoring (lots of clicks).
-   Tail quality only surfaces via human raters — sample tail queries regularly.
+Always:
+  Report metrics at multiple k values (NDCG@1, @5, @10)
+  Test statistical significance before calling a result an improvement
+  Validate offline metric gains with online A/B tests
+  Stratify by query type — head vs tail can tell very different stories
 ```
 
 ---
 
-### G5. How do you handle position bias in click-through data for LTR training?
+## Quick Reference
 
-**The problem:**
-```
-rank 1 click rate: ~34%
-rank 10 click rate: ~2%
-
-Raw CTR at rank 1 looks 17× better than rank 10,
-but the document at rank 1 might be worse — it just benefited from position.
-Training on raw CTR amplifies this: model puts rank-1 docs at rank 1 again.
-Feedback loop → ranking ossifies around initial (possibly wrong) choices.
-```
-
-**Solutions:**
-
-```
-Option 1: Inverse Propensity Scoring (IPS)
-  Estimate propensity P(click | position k, not relevant)
-  Adjust: corrected_CTR(d) = raw_CTR(d, k) / propensity(k)
-  
-  Propensity estimation: swap rank 1 and rank 2 results for 1% of queries,
-  compare click rates to infer position effect.
-
-Option 2: Counterfactual / Randomized display
-  For 5% of queries, shuffle the top results randomly.
-  Click data from randomized results is unbiased — use for training.
-  User experience cost: ~5% of users get a slightly worse experience.
-
-Option 3: Unbiased LambdaMART
-  Incorporate propensity weights directly into the lambda gradient:
-  λᵢⱼ = (-σ̄ᵢⱼ × |ΔNDCGᵢⱼ|) / (propensity(i) × propensity(j))
-  Higher-position documents get downweighted in the gradient.
-
-Option 4: Dwell time as a debiased signal
-  A user who clicks rank 1 and immediately bounces → negative signal
-  A user who clicks rank 5 and stays 4 minutes → strong positive signal
-  Dwell time is less position-biased than raw CTR.
-```
-
----
-
-### G6. Walk me through how you'd evaluate a new ranking model before shipping.
-
-```
-Layer 1 — Offline evaluation (before any users see it)
-  Dataset: held-out query set with editorial labels (human-judged qrels)
-  Metric: NDCG@10, MAP, MRR
-  Baseline: current production model
-  Pass criteria: NDCG@10 improvement ≥ 0.5% on test set (statistically significant)
-  
-  Also check: model latency (p50, p99), memory footprint, feature availability in prod
-
-Layer 2 — Shadow mode (model runs but doesn't affect users)
-  New model scores every query in parallel with production
-  Log scores, compare against production rankings
-  Check for distribution anomalies: are scores sane? Any NaN or extreme values?
-
-Layer 3 — A/B test (small traffic slice)
-  5% of users → new model
-  5% of users → old model (holdout)
-  Run for 2–4 weeks (enough statistical power)
-  Primary metrics: CTR on top results, long-click rate (dwell > 30s), task abandonment
-  Guardrail metrics: query latency (p99), error rate, revenue per query
-  
-  Watch for novelty effect: users click new results just because they're different
-
-Layer 4 — Gradual rollout
-  10% → 25% → 50% → 100% with monitoring at each stage
-  Automated rollback if guardrail metrics degrade
-```
-
----
-
-### G7. [LTR Theory] Why does LambdaMART outperform a pointwise regression model?
-
-**Pointwise failure:** A regression model minimizes prediction error on absolute relevance scores. A document scoring 2.1 instead of 2.0 has low loss even if it's ranked below a 0.9-scoring document that should be ranked much lower. The loss doesn't see the ranking — it sees individual prediction errors.
-
-**LambdaMART's advantage:** The lambda gradient directly encodes the ranking objective. For each pair (Di, Dj) where Di should rank above Dj:
-
-```
-λᵢⱼ = -σ̄ᵢⱼ × |ΔNDCGᵢⱼ|
-
-The gradient is:
-  Large when the ordering is wrong (σ̄ᵢⱼ large)  AND
-  Large when fixing the ordering would improve NDCG a lot (|ΔNDCGᵢⱼ| large)
-
-This means:
-  - Errors at rank 1-3 get 10-20× larger gradients than errors at rank 50-100
-  - The model is explicitly trained to fix the mistakes that hurt users most
-  - NDCG improves on each boosting iteration by construction
-```
-
-The combination with GBDT (gradient boosted trees) adds: fast inference, handles missing features natively, doesn't require feature normalization, and rarely overfits on datasets of typical IR size (millions of query-doc pairs).
-
----
-
-## Part 3 — Apple-Specific Questions
-
-Apple's focus: on-device constraints, privacy-preserving retrieval, App Store ranking, Siri/Apple Intelligence, latency under hardware limits.
-
----
-
-### A1. [System Design] Design the App Store search and ranking system.
-
-**What makes this distinctly Apple:** on-device privacy, no user-level tracking across apps, device-local signals.
-
-```
-Stage 1 — Query Understanding
-  Spell correction (especially for app names with unusual spellings)
-  Category classification: "fitness tracker" → Health & Fitness
-  Intent: brand query ("Instagram") vs category query ("photo editor") vs feature query ("dark mode")
-  Language detection + localization
-
-Stage 2 — Candidate Retrieval
-  BM25 on: app name (high weight), subtitle, keywords field, developer name
-  Dense retrieval: app description embedding vs query embedding
-  Category filter: narrow by detected category
-  Candidates: top 500 apps
-
-Stage 3 — Ranking Features
-  Relevance: BM25 score, dense similarity, exact name match (binary), keyword coverage
-  Quality: avg rating, rating count, crash rate, app size, update recency
-  Popularity: install count, category rank, revenue rank
-  Behavioral: CTR on this query (aggregated, not individual), conversion rate (click → install)
-  Freshness: days since last update, whether app supports latest iOS version
-  Privacy label: apps with minimal data collection may get a small boost (Apple's values)
-  Personalization: device language, previously installed categories, country
-
-Stage 4 — Ranking Model
-  LambdaMART or two-tower neural ranker
-  Training data: editorial quality labels + install conversion as implicit signal
-  Key challenge: install → use → keep is the real metric, not just install
-    (some apps have high install rate but high uninstall rate within 7 days)
-  Multi-objective: optimize install rate + 30-day retention jointly
-
-Stage 5 — Privacy Constraints (Apple-specific)
-  No user-level behavioral tracking across apps
-  Aggregated click signals only (differential privacy applied)
-  On-device personalization: device stores local interest vector, 
-    never sent to Apple servers in identifiable form
-  Search ads clearly labeled, separated from organic results
-```
-
----
-
-### A2. How would you build an on-device semantic search for Spotlight/Siri with strict latency and memory constraints?
-
-**Constraints:**
-- Latency: <50ms on older iPhone hardware (A14 chip)
-- Memory: <200MB for the entire search index
-- No network calls (works offline)
-- Battery: can't drain CPU/GPU continuously
-
-**Architecture:**
-
-```
-Offline (server-side, pushed to device):
-  1. Build compressed embedding index for on-device content
-     (Notes, Messages, Files, Contacts, Mail subject lines)
-  2. Use quantized embeddings: float32 → int8 (4× size reduction)
-     768-dim float32 vector = 3KB → int8 = 768 bytes
-  3. HNSW index structure for ANN search (hierarchical navigable small world)
-     Allows fast approximate search with 10-30ms query time
-  4. Total index: 1M documents × 768 bytes + HNSW overhead ≈ ~1GB
-     Too large → use PQ (Product Quantization) to compress to ~100MB
-
-On-device query serving:
-  1. Encode query: CoreML model (MobileBERT or Apple's custom small model)
-     Runs on Neural Engine → ~5ms
-  2. ANN search in compressed HNSW index → top 50 candidates → ~10ms
-  3. Re-score top 50 with lightweight cross-encoder (on-device) → ~20ms
-  4. Return top 10 → ~5ms formatting
-  Total: ~40ms ✓
-
-Privacy guarantees:
-  All computation on device
-  Query never leaves device
-  No click signal sent to Apple servers
-  Index built from device content → no server knows what's on device
-```
-
----
-
-### A3. Apple News ranking: how do you personalize without user-level tracking?
-
-**The core tension:** Personalization requires knowing user preferences. Apple's privacy model forbids sending individual reading history to servers.
-
-**Solution: On-device personalization model**
-
-```
-1. Local interest model (runs on device)
-   Tracks: articles read, dwell time, shares, topics engaged with
-   Builds: local interest vector [sports=0.8, tech=0.6, politics=0.2, ...]
-   Stored: only on device, never transmitted
-
-2. Server-side: train a general ranker (no personalization)
-   Features: article quality, publisher reputation, freshness, topic trend score
-   Train with: editorial labels, aggregated (not individual) engagement signals
-   Output: base_score(article)
-
-3. On-device reranking
-   final_score(article) = base_score(article) × personalization(article, local_interest_vector)
-   
-   personalization = dot_product(article_topic_vector, local_interest_vector)
-   
-   This multiplication happens entirely on-device: server never sees what the user likes
-
-4. Aggregated signals with differential privacy
-   Apple can collect: "what fraction of users who read tech articles also read finance articles"
-   This trains the base ranker's co-engagement features
-   Individual user's behavior: never transmitted
-   DP noise added before aggregation: individual contributions unrecoverable
-```
-
----
-
-### A4. How would you detect and handle query drift in a production Apple Search ranking model?
-
-**Query drift:** User search patterns change over time. A model trained on last year's data may perform poorly on today's queries.
-
-```
-Detection:
-  Monitor: distribution of query topics (KL divergence vs training distribution)
-  Monitor: new n-grams not seen in training (vocabulary OOV rate)
-  Monitor: model confidence scores — if confidence drops, distribution shift likely
-  Monitor: CTR on served results — unexplained drops signal model mismatch
-  Alert: if any metric moves >2σ from 30-day moving average
-
-Types of drift:
-  Concept drift:  "iPhone" used to mean iPhone 14 searches → now iPhone 16
-  Feature drift:  CTR feature collected under old ranking → biased for new ranking
-  Seasonal drift: holiday queries, new product launches, iOS release cycles
-
-Response:
-  Fast path (< 1 day): 
-    Re-weight recent training data more heavily in next model refresh
-    Boost freshness feature weight for topics with detected drift
-
-  Medium path (1 week):
-    Trigger full retraining with sliding window of recent data
-    Add new vocabulary to embedding model via continual fine-tuning
-
-  Slow path (model architecture):
-    If drift is persistent, evaluate whether model architecture needs updating
-    (e.g., add a topic-freshness feature that wasn't in original design)
-
-Apple-specific: model is also deployed on-device.
-  On-device model update cadence: pushed via software update or background download
-  Can't update on-device model on same day as server-side detection
-  → server-side fallback must handle drift period while device update propagates
-```
-
----
-
-### A5. [Apple Intelligence] Design a RAG system for Siri that answers questions from personal device content.
-
-This is the 2025-2026 question Apple is actively building toward with Apple Intelligence.
-
-```
-What we're building:
-  User: "Siri, what did John say about the meeting venue?"
-  Siri: searches iMessages, Calendar, Notes, Mail → retrieves relevant context → answers
-
-Architecture:
-
-Indexing (on-device, runs in background when charging + on Wi-Fi):
-  Sources: Messages, Mail, Notes, Calendar, Files, Photos metadata, Safari history
-  Chunking strategy:
-    Messages: conversation threads as chunks (10-message windows with overlap)
-    Notes: paragraph-level chunks (150-200 tokens with 20 token overlap)
-    Mail: subject + first paragraph as chunk (body too long; truncate)
-    Files: PDF/doc text extraction → sentence-level chunks
-  Embedding: on-device CoreML model (small: 256-dim, quantized to int8)
-  Storage: HNSW index per source type (separate indexes for Messages, Mail, etc.)
-
-Query serving:
-  Query → encode → ANN search across all source indexes → top 20 per source
-  Metadata filter: "last week" → filter by date before ANN search
-  Source-aware RRF: fuse results across sources
-  Re-rank top 20 with lightweight cross-encoder
-
-Context assembly:
-  Top 5 retrieved chunks → injected into Siri's prompt as context
-  Query + context → on-device LLM (Apple Intelligence model) → natural language answer
-
-Privacy:
-  Everything on-device: query encoding, index search, LLM inference
-  No personal content sent to server
-  iCloud Private Relay used if any server call needed (metadata only)
-
-Key challenges:
-  Index freshness: new messages arrive continuously → incremental index updates
-  Multi-modal: user photo has a person's name detected by Vision → index that too
-  Memory: full personal index must fit in ~500MB
-  Authorization: Siri must only access data the user has granted access to
-```
-
----
-
-## Part 4 — Cross-Company Deep Questions
-
-These appear at both Google and Apple (and Meta, Bing, Amazon). Master them.
-
----
-
-### X1. What is the curse of dimensionality and how does it affect vector search?
-
-```
-In high-dimensional space, all points become approximately equidistant.
-
-Intuition:
-  In 2D: a query vector has a clear "nearest neighbor"
-  In 768D: the ratio (max_dist - min_dist) / min_dist → 0
-  All documents cluster at roughly the same cosine distance from the query
-  True nearest neighbor search becomes meaningless
-
-In practice for retrieval:
-  768-dim embeddings: still useful — enough signal survives
-  But exact nearest neighbor search is O(N) — you must compare every vector
-  → Use Approximate Nearest Neighbor (ANN) search
-
-ANN algorithms:
-  HNSW (Hierarchical Navigable Small World):
-    Build a graph where nearby vectors are connected
-    Query: greedy graph traversal → O(log N) average
-    Tradeoff: build time is slow, recall is 95-99% (not 100%)
-  
-  IVF (Inverted File Index, used by FAISS):
-    Cluster vectors into k centroids (via k-means)
-    At query time: compare to centroids → search only in nearby clusters
-    Tradeoff: recall depends on how many clusters you search (nprobe parameter)
-  
-  Product Quantization (PQ):
-    Compress vectors to save memory
-    Tradeoff: some precision lost, but 8-32× smaller index
-
-Production choice:
-  Google/Meta scale: IVF-PQ (FAISS) for memory efficiency
-  Apple on-device: HNSW with aggressive quantization for speed+size
-```
-
----
-
-### X2. What is query expansion and when does it help vs hurt?
-
-```
-Query expansion: add related terms to the original query before retrieval
-Goal: increase recall for queries with synonym/vocabulary mismatch
-
-Methods:
-
-1. Pseudo-Relevance Feedback (PRF)
-   Run original query → take top-k results → extract frequent terms → 
-   re-run query with those terms added
-   
-   Risk: if top-k results are wrong, expansion amplifies the error
-   ("query drift")
-
-2. Thesaurus/Ontology expansion
-   "diabetes" → add "T2DM", "type 2 diabetes", "hyperglycemia"
-   Using UMLS (medical), WordNet (general)
-   
-   Risk: "bank" → "river bank", "financial institution" — wrong sense expansion
-
-3. LLM-based expansion (2024+ trend)
-   Prompt an LLM: "List 5 alternative phrasings for: [query]"
-   Use generated queries as parallel BM25 searches, fuse with RRF
-   
-   Risk: LLM may generate hallucinated terms that match irrelevant docs
-   Latency: adds ~50ms for LLM call
-
-When it helps:
-  Rare medical/legal/scientific terminology
-  Voice queries (informal language matching formal documents)
-  Cross-lingual queries
-
-When it hurts:
-  Precise queries: "Python 3.11 asyncio bug" → expansion may return Python 2 docs
-  Named entity queries: "Apple stock" → expansion may add fruit-related terms
-  Short queries where intent is already clear
-```
-
----
-
-### X3. How do you build a search system for a new domain with no training data?
-
-This is a classic cold-start problem. Step-by-step answer:
-
-```
-Step 1 — Deploy BM25 as immediate baseline
-  No training data needed. Works on any text corpus.
-  Benchmark: measure NDCG@10 with a small labeled query set (50-100 queries,
-  hand-labeled by domain experts)
-
-Step 2 — Add a general-purpose dense model
-  Start with a pre-trained model (e.g., sentence-transformers/all-mpnet-base-v2)
-  This gives you semantic search immediately, even without domain fine-tuning
-  Combine with BM25 via RRF
-  Re-measure NDCG@10: hybrid usually beats BM25 alone by 5-15%
-
-Step 3 — Synthetic query generation (if still insufficient)
-  For each document, prompt an LLM: "Write 3 questions that this document answers"
-  You now have (query, document) pairs for fine-tuning
-  Fine-tune bi-encoder on synthetic pairs (GPL method)
-  Re-measure: typically +5-15% more NDCG
-
-Step 4 — Collect real feedback
-  Deploy the Step 2-3 system to real users
-  Log: queries, results shown, clicks, dwell time
-  This is your first real training signal for LTR
-  Build first LambdaMART model after 2-4 weeks of data collection
-
-Step 5 — Human evaluation on a sample
-  Sample 500 queries from logs (stratified: head/torso/tail)
-  Have domain experts label relevance
-  These become your ground-truth qrels for offline evaluation going forward
-```
-
----
-
-## Part 5 — Quick-Fire Definitions (common in phone screens)
-
-**What is TF-IDF?** Term Frequency × Inverse Document Frequency. Rewards terms that appear frequently in a document but rarely across the corpus. Rare terms get high scores.
-
-**What is cosine similarity?** Dot product of two unit vectors. Measures the angle between them regardless of magnitude. Standard similarity metric for embedding vectors.
-
-**What is ANN search?** Approximate Nearest Neighbor — finds vectors close to the query without checking every vector in the index. Trades small recall loss for large speed gain. HNSW and IVF-FAISS are the standard implementations.
-
-**What is chunking in RAG?** Splitting long documents into smaller segments for embedding and retrieval. Chunk size tradeoff: small chunks (precise retrieval, lose context) vs large chunks (more context, less precise). Typical: 256-512 tokens with 10-20% overlap.
-
-**What is a posting list?** In an inverted index, the list of documents containing a given term. Lookup: `"diabetes" → [(doc3, tf=2, pos=[14,87]), (doc7, tf=1, pos=[3]), ...]`
-
-**What is the two-tower model?** A neural architecture where query and document are encoded by separate towers (encoders) into the same vector space. Equivalent to bi-encoder. Standard for dense retrieval at scale.
-
-**What is MRR?** Mean Reciprocal Rank — average of 1/rank_of_first_relevant_document across queries. MRR=1.0 means the first result is always relevant. Good for navigational queries where there's one right answer.
-
-**What is HNSW?** Hierarchical Navigable Small World. A graph-based ANN index where each node connects to nearby nodes at multiple resolution layers. Query: start at top layer → greedy descent → find approximate nearest neighbors in O(log N). Fast, high recall, but memory-intensive.
-
-**What is the vocabulary mismatch problem?** When a query uses different words than the relevant documents (synonyms, paraphrases). BM25 fails completely; dense retrieval solves it. The core motivation for hybrid search.
-
----
-
-## Master Summary — What Interviewers Are Listening For
-
-| What they ask | What they're really testing |
+| Formula | Meaning |
 |---|---|
-| "Design Google Search" | Can you decompose and prioritize a massive system? |
-| "How does LambdaMART work?" | Do you understand *why* LTR beats pointwise approaches? |
-| "Handle position bias in click data" | Do you know that naive click training creates feedback loops? |
-| "Design App Store ranking" | Can you apply IR principles to a specific Apple product context? |
-| "On-device search constraints" | Do you understand Apple's privacy model and latency/memory tradeoffs? |
-| "Cold-start domain with no data" | Can you build incrementally: BM25 → hybrid → synthetic → LTR? |
-| "NDCG vs MRR vs MAP" | Do you know which metric fits which use case? |
-| "Bi-encoder vs cross-encoder" | Do you understand the recall-precision pipeline architecture? |
-
-**The meta-skill they're hiring for:** You can take a vague product requirement ("users can't find what they're looking for"), decompose it into an IR problem, pick the right retrieval and ranking approach for the constraints, and iterate from baseline to production with clear evaluation at each step.
+| `P@k = rel_in_top_k / k` | Fraction of top-k that are relevant |
+| `R@k = rel_in_top_k / total_relevant` | Fraction of all relevant docs retrieved |
+| `AP = (1/R) × Σ P@k × rel(k)` | Avg precision, sampled at relevant ranks |
+| `MAP = (1/\|Q\|) × Σ AP(q)` | Mean AP over query set |
+| `DCG@k = Σ (2^relᵢ-1) / log₂(i+1)` | Discounted cumulative gain |
+| `NDCG@k = DCG@k / IDCG@k` | Normalized DCG, range [0,1] |
+| `RR = 1 / rank_of_first_relevant` | Reciprocal rank for one query |
+| `MRR = (1/\|Q\|) × Σ RR(q)` | Mean reciprocal rank over query set |
+| `F1 = 2PR/(P+R)` | Harmonic mean of P and R |
+| `Fβ = (1+β²)PR/(β²P+R)` | Weighted F-score (β>1 weights recall more) |
