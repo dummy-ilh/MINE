@@ -11,8 +11,8 @@
 ## Ordered Lists
 
 ### Basic Ordered List
-1. First item
-2. Second item
+1. Metric Selection
+2. NLP/BERT
 3. Third item
 
 ### Ordered List Starting from Specific Number
@@ -78,16 +78,7 @@
       1. Level 3
          1. Level 4
 
-## Important Formatting Rules
 
-### Indentation Matters
-- Use **2-4 spaces** or **one tab** for each nesting level
-- Inconsistent indentation may break the list rendering
-
-### Spacing
-- Always include a space after the bullet or number
-- Leave a blank line before and after lists for better readability
-- Use blank lines between list items if they contain multiple paragraphs
 
 ### Multi-paragraph List Items
 - First paragraph of item 1
@@ -104,14 +95,7 @@
 
 3. Third item
 
-### Best Practices
-- **Be consistent** with your chosen formatting style
-- Use **ordered lists** for sequential or numbered items
-- Use **unordered lists** for items without a specific order
-- Limit nesting to **3-4 levels** for better readability
-- Use **checkboxes** for task tracking
 
-### Rendering Preview
 
 Here's how the basic list formats render:
 
@@ -122,9 +106,3 @@ Here's how the basic list formats render:
 1. Numbered item
    1. Numbered sub-item
    2. Another sub-item
-
-### Common Issues to Avoid
-- Mixing different bullet styles in the same list
-- Using inconsistent indentation
-- Forgetting spaces after list markers
-- Nesting too deeply (beyond 5 levels)
