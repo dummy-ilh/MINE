@@ -367,4 +367,162 @@ I'd track Recall@k (or a proxy, if ground-truth labels aren't available in produ
 
 ---
 
-*End of Day 22. Next up — Day 23: Apple-Specific RAG Framing (on-device/privacy constraints, Siri/Spotlight-style latency, small-model + retrieval tradeoffs).*
+Here's the breakdown — for each dimension, the range of values it could take, and the concrete design response for each:
+
+## 1. Scale
+
+**Varieties:**
+- Small (< 1M docs, low QPS, e.g. internal company wiki)
+- Medium (1M–100M docs, moderate QPS, e.g. e-commerce catalog search)
+- Large (100M–1B+ docs, high QPS, e.g. your 500M-PDF case)
+- Bursty vs. steady QPS (e.g. Black Friday spike vs. constant background traffic)
+
+**How to solve for each:**
+- Small → brute-force or a single-node flat index; no ANN needed, no sharding. Simplicity wins — HNSW is overkill and adds ops burden.
+- Medium → single ANN index (HNSW or IVF) on one well-provisioned machine or a small replicated cluster; no sharding yet, just replicas for read throughput.
+- Large → mandatory sharding (by hash, topic cluster, or time) with a query router/aggregator; likely PQ compression to fit in memory; dedicated capacity planning for embedding throughput at ingestion.
+- Bursty → autoscaling replica count, aggressive caching of hot queries, and a circuit breaker/degraded mode (e.g., skip reranking) under load rather than falling over.
+
+---
+
+## 2. Latency
+
+**Varieties:**
+- Interactive/synchronous (chat UI, user waiting) — p99 target in the hundreds of ms to low seconds
+- Near-real-time (e.g., search-as-you-type) — p99 target in tens of ms
+- Async/batch acceptable (e.g., overnight report generation) — seconds to minutes fine
+
+**How to solve for each:**
+- Interactive → tight per-stage budget (e.g., retrieval < 150ms, rerank < 100ms, generation < 1.5s); streaming token output to hide generation latency; single-stage retrieval (skip reranking) if budget is too tight for the full funnel.
+- Near-real-time → skip cross-encoder reranking entirely (too slow), rely on hybrid dense+sparse first-stage only, aggressive caching, smaller/faster embedding model.
+- Async/batch → full pipeline including reranking, multi-hop/agentic retrieval, larger k, more expensive verification passes — you can afford to "do it right" since nobody's waiting on a spinner.
+
+---
+
+## 3. Freshness
+
+**Varieties:**
+- Static/rarely-changing corpus (e.g., legal case law archive)
+- Batch-acceptable (daily/hourly updates, e.g., product catalog)
+- Near-real-time (minutes, e.g., news search)
+- True real-time (seconds, e.g., live chat/support ticket search)
+
+**How to solve for each:**
+- Static → full periodic re-index is fine; no incremental pipeline needed; optimize purely for query-time performance.
+- Batch-acceptable → scheduled batch ingestion (Airflow/cron), bulk-insert into the vector index, versioned index swaps so a bad run can roll back.
+- Near-real-time → streaming ingestion (Kafka + consumers), incremental upserts into the vector index rather than full rebuilds, index lag monitored as a first-class metric.
+- True real-time → write-through indexing at document-creation time, possibly a small "hot" in-memory index for the last few minutes of data merged with the main index at query time (two-tier retrieval).
+
+---
+
+## 4. Consistency
+
+**Varieties:**
+- Eventually consistent (a new/updated doc may take seconds–minutes to appear in search — acceptable for most RAG)
+- Read-your-writes (the user who just uploaded a doc should see it immediately, even if other users don't yet)
+- Strong/immediate consistency (every write must be searchable before the write is acknowledged — rare, expensive)
+
+**How to solve for each:**
+- Eventually consistent → default for most vector DBs; async indexing queue, no special handling needed, just document the expected lag in the SLA.
+- Read-your-writes → route the uploading user's subsequent queries to also check a small per-user staging index (or cache) until the async pipeline catches up, then merge results.
+- Strong consistency → synchronous indexing on write (index update blocks the write acknowledgment) — big latency cost, so reserved for cases where correctness truly can't tolerate lag (rare in RAG; more common in transactional systems).
+
+---
+
+## 5. Multi-tenancy
+
+**Varieties:**
+- Single-tenant (one customer, no isolation needed)
+- Multi-tenant with soft isolation (shared infra, logical separation via metadata)
+- Multi-tenant with hard isolation (regulatory/security requirement — no data ever crosses tenant boundaries, even at the infra level)
+
+**How to solve for each:**
+- Single-tenant → one shared index, no filtering logic needed.
+- Soft isolation → shared vector index with a `tenant_id` metadata field; pre-filter by tenant before/during ANN search (not post-filter, which wastes the k-budget and risks leaking result *counts* even if content is filtered).
+- Hard isolation → separate physical indices (or even separate infrastructure/VPCs) per tenant; more operational overhead and cost, but eliminates cross-tenant leakage risk entirely — typical for healthcare/finance/government customers.
+
+---
+
+## 6. Budget/cost sensitivity
+
+**Varieties:**
+- Cost-constrained (startup, high query volume, thin margins)
+- Balanced (typical enterprise SaaS)
+- Accuracy-maximizing / cost-insensitive (high-stakes, low-volume, e.g. legal research tool at $$$/query)
+
+**How to solve for each:**
+- Cost-constrained → smaller embedding models, skip reranking or use a cheap reranker, aggressive caching, smaller k, self-hosted open-weight LLMs instead of frontier API models, PQ compression to cut storage costs.
+- Balanced → hybrid: cheap first-stage retrieval + reranking only on ambiguous/low-confidence queries, mid-tier LLM for most queries with escalation to a stronger model for hard cases.
+- Accuracy-maximizing → full pipeline (hybrid retrieval + reranking + multi-hop + verification pass), largest embedding/reranker models, frontier LLM, no shortcuts — cost is a secondary concern to correctness.
+
+---
+
+## 7. Accuracy/stakes
+
+**Varieties:**
+- Low-stakes (casual FAQ bot, wrong answer is mildly annoying)
+- Medium-stakes (internal knowledge tool, wrong answer wastes someone's time)
+- High-stakes (medical, legal, financial — wrong answer causes real harm or liability)
+
+**How to solve for each:**
+- Low-stakes → ship with basic grounding instructions, no extra verification; monitor via user feedback (thumbs up/down) rather than heavy runtime checks.
+- Medium-stakes → add citations back to source chunks so users can self-verify; log low-confidence responses for human review; retrieval-confidence threshold below which the system says "I don't know" instead of guessing.
+- High-stakes → mandatory citation of every claim to a specific source; a post-hoc faithfulness/entailment check (does the answer logically follow from retrieved context?) before returning the response; human-in-the-loop review for flagged cases; possibly restrict generation to extractive-only (quote/paraphrase source text directly rather than free-form synthesis) to minimize hallucination surface area.
+
+---
+
+Want this folded into a companion markdown doc alongside your other RAG/system-design files, or kept conversational for now?
+
+
+Here's the actual reasoning process — the mental moves that take you from "user says X" to "therefore I choose Y," so it doesn't feel like pattern-matching a lookup table in the interview:
+
+## The core method: constraint → mechanism → choice
+
+For every dimension, you're doing a 3-step translation:
+
+1. **Extract the number/threshold** from the clarifying answer (not the vibe — the actual number).
+2. **Identify which mechanism that number stresses** (memory? network hops? consistency guarantees? compute?).
+3. **Pick the concrete technique that relieves that specific stress**, and say *why* out loud.
+
+If you skip step 2 and jump straight from "high scale" to "use sharding," you sound like you memorized an answer. Naming the mechanism is what makes it sound like reasoning.
+
+---
+
+## Worked example: Latency
+
+Interviewer says: "p99 end-to-end must be under 800ms."
+
+- **Step 1 (number):** 800ms total budget.
+- **Step 2 (mechanism):** Every synchronous stage in your pipeline eats into that budget additively. So the question becomes: what's the latency of each candidate stage, and does the sum fit?
+  - Query embedding: ~20ms
+  - ANN search: ~50-100ms
+  - Cross-encoder rerank: ~100-300ms (scales with candidate count)
+  - LLM generation: ~500ms-2s depending on output length and model size
+- **Step 3 (choice):** Add up the cheap stages first (embedding + ANN ≈ 70-120ms), see what's left for generation (~650-700ms), and realize reranking is the thing you'd cut or shrink (rerank fewer candidates, or drop it) — not retrieval or generation, because those are either cheap or non-negotiable. You say: "800ms is tight once you account for generation alone often taking 500ms+, so I'd keep reranking to a small candidate set (top 20, not top 200) or skip it and rely on hybrid first-stage retrieval quality instead."
+
+That's the difference between reciting "use reranking" and actually deriving when *not* to.
+
+---
+
+## The general pattern across all seven dimensions
+
+| Given this signal... | ...ask yourself this mechanism question | ...which points you to |
+|---|---|---|
+| A number (docs, QPS, latency ms) | Does this number exceed what fits on one machine / in one memory budget / in one synchronous call? | Sharding, compression, caching, async |
+| A time window (freshness) | Does new data need to be visible before the next batch job would naturally run? | Streaming vs. batch ingestion |
+| A guarantee (consistency) | What's the cost of being wrong for a few seconds vs. the cost of blocking a write? | Eventual vs. synchronous indexing |
+| A boundary (multi-tenancy) | What's the blast radius if isolation fails — annoying or lawsuit? | Metadata filtering vs. physical separation |
+| A budget (cost) | Which stage is expensive because of what it scales with (tokens? GPU-seconds? storage)? | Model size, caching, compression tradeoffs |
+| A consequence (stakes) | What's the cost of a false positive (confident wrong answer) vs. false negative (unnecessary "I don't know")? | How much verification/citation to bolt on |
+
+Notice the shape: **every dimension reduces to "what breaks first, and what's the cheapest fix for that specific break."** You're not memorizing seven separate answer keys — you're running the same one question ("what's the binding constraint, and what technique relieves it") seven times with different inputs.
+
+---
+
+## How to practice this so it's fast in the room
+
+1. **Take one dimension, vary the number, and re-derive the choice out loud** — e.g., say "500M docs" then "5M docs" then "5K docs" and force yourself to explain why the architecture changes (or explicitly *doesn't* change, which is also a valid and important answer — knowing when NOT to add complexity is a strong signal).
+2. **Practice stating the mechanism before the technique.** Bad: "I'd use sharding." Good: "At this scale the HNSW graph won't fit in memory on one node, so I'd shard — sharding solves the memory problem specifically, not the compute problem."
+3. **Practice the boundary cases**, not just the extremes — e.g., "what QPS is the tipping point where you'd add a cache vs. just accept the latency?" Interviewers love pushing on exactly where you'd flip a decision, because it proves you understand the tradeoff curve, not just the two endpoints.
+
+Want me to run a few mock rounds where I give you a number for one dimension and you derive the choice, and I push back on the reasoning?
