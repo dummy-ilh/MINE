@@ -2,9 +2,7 @@
 
 *Synthesized from Kutner, Montgomery, Sheather, and ESL/ISL — continuing the same 5-student dataset from Chapter 1 so every number below is traceable back to something you already computed by hand.*
 
-Recall from Chapter 1: $\hat{\beta}_0 = 41.5$, 
-$\hat{\beta}_1 = 7.5$,  
-$\bar{x}=3$, $\bar{y}=64$, $S_{xx}=10$.
+
 
 ---
 
