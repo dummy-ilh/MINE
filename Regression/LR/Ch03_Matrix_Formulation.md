@@ -14,7 +14,7 @@ Matrix notation solves this by writing the *entire* regression problem — one p
 
 ## 3.2 The Model in Matrix Form — Every Symbol Explained
 
-$$ \mathbf{y} = \mathbf{X}\boldsymbol{\beta} + \boldsymbol{\varepsilon} $$
+$$\mathbf{y} = \mathbf{X}\boldsymbol{\beta} + \boldsymbol{\varepsilon}$$
 
 | Symbol | Shape | Plain-English meaning |
 |---|---|---|
@@ -27,7 +27,7 @@ The **column of 1's** is the detail everyone forgets to explain: it exists purel
 
 **Our dataset in matrix form:**
 
-$$ \mathbf{X} = \begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \\ 1 & 4 \\ 1 & 5 \end{bmatrix} \qquad \mathbf{y} = \begin{bmatrix} 50 \\ 55 \\ 65 \\ 70 \\ 80 \end{bmatrix} \qquad \boldsymbol{\beta} = \begin{bmatrix} \beta_0 \\ \beta_1 \end{bmatrix} $$
+$$\mathbf{X} = \begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \\ 1 & 4 \\ 1 & 5 \end{bmatrix} \qquad \mathbf{y} = \begin{bmatrix} 50 \\ 55 \\ 65 \\ 70 \\ 80 \end{bmatrix} \qquad \boldsymbol{\beta} = \begin{bmatrix} \beta_0 \\ \beta_1 \end{bmatrix}$$
 
 ---
 
@@ -35,7 +35,7 @@ $$ \mathbf{X} = \begin{bmatrix} 1 & 1 \\ 1 & 2 \\ 1 & 3 \\ 1 & 4 \\ 1 & 5 \end{b
 
 The RSS from Chapter 1 becomes:
 
-$$ RSS(\boldsymbol{\beta}) = (\mathbf{y}-\mathbf{X}\boldsymbol{\beta})^T(\mathbf{y}-\mathbf{X}\boldsymbol{\beta}) $$
+$$RSS(\boldsymbol{\beta}) = (\mathbf{y}-\mathbf{X}\boldsymbol{\beta})^T(\mathbf{y}-\mathbf{X}\boldsymbol{\beta})$$
 
 **Why this is the same thing:** $(\mathbf{y}-\mathbf{X}\boldsymbol{\beta})$ is just the column of all residuals stacked up. Multiplying a vector by its own transpose ($\mathbf{v}^T\mathbf{v}$) is exactly the sum of its squared entries — so this single matrix expression *is* $\sum e_i^2$, just written more compactly.
 
@@ -45,17 +45,17 @@ $$ RSS(\boldsymbol{\beta}) = (\mathbf{y}-\mathbf{X}\boldsymbol{\beta})^T(\mathbf
 
 Expand the objective:
 
-$$ RSS = \mathbf{y}^T\mathbf{y} - 2\boldsymbol{\beta}^T\mathbf{X}^T\mathbf{y} + \boldsymbol{\beta}^T\mathbf{X}^T\mathbf{X}\boldsymbol{\beta} $$
+$$RSS = \mathbf{y}^T\mathbf{y} - 2\boldsymbol{\beta}^T\mathbf{X}^T\mathbf{y} + \boldsymbol{\beta}^T\mathbf{X}^T\mathbf{X}\boldsymbol{\beta}$$
 
 Take the derivative with respect to the vector $\boldsymbol{\beta}$ (using the standard matrix-calculus identities $\frac{\partial}{\partial \boldsymbol{\beta}}(\boldsymbol{\beta}^T\mathbf{a}) = \mathbf{a}$ and $\frac{\partial}{\partial \boldsymbol{\beta}}(\boldsymbol{\beta}^T\mathbf{A}\boldsymbol{\beta}) = 2\mathbf{A}\boldsymbol{\beta}$ for symmetric $\mathbf{A}$), set to zero:
 
-$$ -2\mathbf{X}^T\mathbf{y} + 2\mathbf{X}^T\mathbf{X}\boldsymbol{\beta} = 0 $$
+$$-2\mathbf{X}^T\mathbf{y} + 2\mathbf{X}^T\mathbf{X}\boldsymbol{\beta} = 0$$
 
-$$ \mathbf{X}^T\mathbf{X}\boldsymbol{\beta} = \mathbf{X}^T\mathbf{y} \quad \text{(the "Normal Equations")} $$
+$$\mathbf{X}^T\mathbf{X}\boldsymbol{\beta} = \mathbf{X}^T\mathbf{y} \quad \text{(the "Normal Equations")}$$
 
 Solving (assuming $\mathbf{X}^T\mathbf{X}$ is invertible — more on when it isn't in Chapter 9 on multicollinearity):
 
-$$ \boxed{\hat{\boldsymbol{\beta}} = (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{y}} $$
+$$\boxed{\hat{\boldsymbol{\beta}} = (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{y}}$$
 
 **This single formula is the entire content of Chapter 1's $\hat{\beta}_0, \hat{\beta}_1$ derivation, generalized to any number of predictors.** This is arguably the single most important formula in classical statistics — interviewers routinely ask you to write it from memory and explain every piece.
 
@@ -65,13 +65,13 @@ $$ \boxed{\hat{\boldsymbol{\beta}} = (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\m
 
 **Step 1 — compute $\mathbf{X}^T\mathbf{X}$:**
 
-$$ \mathbf{X}^T\mathbf{X} = \begin{bmatrix} 1&1&1&1&1 \\ 1&2&3&4&5 \end{bmatrix} \begin{bmatrix} 1&1\\1&2\\1&3\\1&4\\1&5 \end{bmatrix} = \begin{bmatrix} 5 & 15 \\ 15 & 55 \end{bmatrix} $$
+$$\mathbf{X}^T\mathbf{X} = \begin{bmatrix} 1&1&1&1&1 \\ 1&2&3&4&5 \end{bmatrix} \begin{bmatrix} 1&1\\1&2\\1&3\\1&4\\1&5 \end{bmatrix} = \begin{bmatrix} 5 & 15 \\ 15 & 55 \end{bmatrix}$$
 
 (Top-left = $n=5$; top-right/bottom-left = $\sum x_i = 15$; bottom-right = $\sum x_i^2 = 1+4+9+16+25=55$.)
 
 **Step 2 — compute $\mathbf{X}^T\mathbf{y}$:**
 
-$$ \mathbf{X}^T\mathbf{y} = \begin{bmatrix} \sum y_i \\ \sum x_i y_i \end{bmatrix} = \begin{bmatrix} 320 \\ 1035 \end{bmatrix} $$
+$$\mathbf{X}^T\mathbf{y} = \begin{bmatrix} \sum y_i \\ \sum x_i y_i \end{bmatrix} = \begin{bmatrix} 320 \\ 1035 \end{bmatrix}$$
 
 ($\sum y_i = 50+55+65+70+80=320$; $\sum x_iy_i = 50+110+195+280+400=1035$.)
 
@@ -79,13 +79,13 @@ $$ \mathbf{X}^T\mathbf{y} = \begin{bmatrix} \sum y_i \\ \sum x_i y_i \end{bmatri
 
 For a $2\times2$ matrix $\begin{bmatrix}a&b\\c&d\end{bmatrix}$, the inverse is $\frac{1}{ad-bc}\begin{bmatrix}d&-b\\-c&a\end{bmatrix}$.
 
-$$ \det = (5)(55)-(15)(15) = 275-225 = 50 $$
+$$\det = (5)(55)-(15)(15) = 275-225 = 50$$
 
-$$ (\mathbf{X}^T\mathbf{X})^{-1} = \frac{1}{50}\begin{bmatrix} 55 & -15 \\ -15 & 5 \end{bmatrix} = \begin{bmatrix} 1.1 & -0.3 \\ -0.3 & 0.1 \end{bmatrix} $$
+$$(\mathbf{X}^T\mathbf{X})^{-1} = \frac{1}{50}\begin{bmatrix} 55 & -15 \\ -15 & 5 \end{bmatrix} = \begin{bmatrix} 1.1 & -0.3 \\ -0.3 & 0.1 \end{bmatrix}$$
 
 **Step 4 — multiply through:**
 
-$$ \hat{\boldsymbol{\beta}} = \begin{bmatrix} 1.1 & -0.3 \\ -0.3 & 0.1 \end{bmatrix}\begin{bmatrix} 320 \\ 1035 \end{bmatrix} = \begin{bmatrix} 1.1(320) + (-0.3)(1035) \\ -0.3(320)+0.1(1035) \end{bmatrix} = \begin{bmatrix} 352-310.5 \\ -96+103.5 \end{bmatrix} = \begin{bmatrix} 41.5 \\ 7.5 \end{bmatrix} $$
+$$\hat{\boldsymbol{\beta}} = \begin{bmatrix} 1.1 & -0.3 \\ -0.3 & 0.1 \end{bmatrix}\begin{bmatrix} 320 \\ 1035 \end{bmatrix} = \begin{bmatrix} 1.1(320) + (-0.3)(1035) \\ -0.3(320)+0.1(1035) \end{bmatrix} = \begin{bmatrix} 352-310.5 \\ -96+103.5 \end{bmatrix} = \begin{bmatrix} 41.5 \\ 7.5 \end{bmatrix}$$
 
 **Exact match to Chapter 1's hand-derived $\hat{\beta}_0=41.5, \hat{\beta}_1=7.5$.** This is the payoff of learning the matrix form: it's not a *different* answer, it's the *same* answer via a method that scales to any number of predictors without inventing new formulas.
 
@@ -95,7 +95,7 @@ $$ \hat{\boldsymbol{\beta}} = \begin{bmatrix} 1.1 & -0.3 \\ -0.3 & 0.1 \end{bmat
 
 Once you have $\hat{\boldsymbol{\beta}}$, the fitted values are:
 
-$$ \hat{\mathbf{y}} = \mathbf{X}\hat{\boldsymbol{\beta}} = \mathbf{X}(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{y} = \mathbf{H}\mathbf{y} $$
+$$\hat{\mathbf{y}} = \mathbf{X}\hat{\boldsymbol{\beta}} = \mathbf{X}(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\mathbf{y} = \mathbf{H}\mathbf{y}$$
 
 where $\mathbf{H} = \mathbf{X}(\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T$ is called the **hat matrix**, because it "puts a hat on" $\mathbf{y}$ — it's the single matrix that transforms your raw observations directly into fitted values.
 
@@ -121,7 +121,7 @@ Chapter 1, §1.7 described OLS as an orthogonal projection without the matrix la
 
 The matrix generalization of Chapter 2's $SE(\hat{\beta}_1) = \sqrt{\sigma^2/S_{xx}}$ is:
 
-$$ \text{Var}(\hat{\boldsymbol{\beta}}) = \sigma^2(\mathbf{X}^T\mathbf{X})^{-1} $$
+$$\text{Var}(\hat{\boldsymbol{\beta}}) = \sigma^2(\mathbf{X}^T\mathbf{X})^{-1}$$
 
 This single $(p+1)\times(p+1)$ matrix contains **every** variance and covariance you'll ever need: the diagonal entries are $\text{Var}(\hat{\beta}_0), \text{Var}(\hat{\beta}_1), ...$ (their square roots are exactly the standard errors used in every t-test and CI from Chapter 2), and the off-diagonal entries tell you how correlated your coefficient estimates are with each other — a preview of why multicollinearity (Chapter 9) causes coefficient estimates to become unstable: it inflates these off-diagonal terms.
 
