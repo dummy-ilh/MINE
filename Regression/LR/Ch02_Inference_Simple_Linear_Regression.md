@@ -22,7 +22,7 @@ This is the conceptual leap most students skip past too fast. $\hat{\beta}_1$ is
 
 Under the LINE assumptions from Chapter 1 (plus Normality specifically for this section), it can be shown:
 
-$$ \hat{\beta}_1 \sim N\left(\beta_1, \ \frac{\sigma^2}{S_{xx}}\right) $$
+$$\hat{\beta}_1 \sim N\left(\beta_1,\ \frac{\sigma^2}{S_{xx}}\right)$$
 
 **Plain-English reading:** the estimate is centered on the true slope (unbiased — no systematic over/under-estimation), and its spread shrinks as $S_{xx}$ (the spread of your x-values) grows. **Intuition:** the more spread out your x-values are, the more "leverage" you have to pin down the slope precisely — a dataset where everyone studied between 2.9 and 3.1 hours tells you almost nothing about the slope, no matter how many people you sample.
 
@@ -32,21 +32,21 @@ $$ \hat{\beta}_1 \sim N\left(\beta_1, \ \frac{\sigma^2}{S_{xx}}\right) $$
 
 The formula above needs $\sigma^2$, the true (unknown) variance of the errors. We estimate it from residuals:
 
-$$ \hat{\sigma}^2 = MSE = \frac{SSE}{n-2} = \frac{\sum e_i^2}{n-2} $$
+$$\hat{\sigma}^2 = MSE = \frac{SSE}{n-2} = \frac{\sum e_i^2}{n-2}$$
 
 **Why divide by $n-2$, not $n$?** Because computing $\hat{\beta}_0$ and $\hat{\beta}_1$ each "uses up" one degree of freedom from your data — you needed the data to estimate 2 parameters before you could even compute a residual. This is the exact same logic as dividing by $n-1$ for a sample variance (which uses up 1 df estimating the mean); here we lose 2 df because we estimated 2 parameters. **This is one of the single most commonly asked "why" questions in interviews** — always answer in terms of degrees of freedom lost to parameter estimation, not "just because."
 
 **Worked numbers (from our dataset):**
 
-Fitted values: $\hat{y} = 49, 56.5, 64, 71.5, 79$ for $x=1,2,3,4,5$.
+Fitted values: $\hat{y} = 49,\ 56.5,\ 64,\ 71.5,\ 79$ for $x=1,2,3,4,5$.
 
-Residuals: $e = 1, -1.5, 1, -1.5, 1$
+Residuals: $e = 1,\ -1.5,\ 1,\ -1.5,\ 1$
 
-$$ SSE = 1^2+(-1.5)^2+1^2+(-1.5)^2+1^2 = 1+2.25+1+2.25+1 = 7.5 $$
+$$SSE = 1^2+(-1.5)^2+1^2+(-1.5)^2+1^2 = 1+2.25+1+2.25+1 = 7.5$$
 
-$$ MSE = \frac{7.5}{5-2} = \frac{7.5}{3} = 2.5 $$
+$$MSE = \frac{7.5}{5-2} = \frac{7.5}{3} = 2.5$$
 
-$$ \hat{\sigma} = s = \sqrt{2.5} \approx 1.581 $$
+$$\hat{\sigma} = s = \sqrt{2.5} \approx 1.581$$
 
 $s$ is called the **residual standard error** — roughly, "on average, how far off is a prediction, in the original units of y." Here: predictions are typically off by about 1.58 points.
 
@@ -56,7 +56,7 @@ $s$ is called the **residual standard error** — roughly, "on average, how far 
 
 Plugging our estimate of $\sigma^2$ into the formula from 2.2:
 
-$$ SE(\hat{\beta}_1) = \sqrt{\frac{MSE}{S_{xx}}} = \sqrt{\frac{2.5}{10}} = \sqrt{0.25} = 0.5 $$
+$$SE(\hat{\beta}_1) = \sqrt{\frac{MSE}{S_{xx}}} = \sqrt{\frac{2.5}{10}} = \sqrt{0.25} = 0.5$$
 
 **Reading it:** our slope estimate of 7.5 has a "typical wobble" of about ±0.5 across hypothetical resamples. That's small relative to 7.5 — a good sign the effect is real, not noise. We formalize that intuition next.
 
@@ -68,7 +68,7 @@ $$ SE(\hat{\beta}_1) = \sqrt{\frac{MSE}{S_{xx}}} = \sqrt{\frac{2.5}{10}} = \sqrt
 
 **Test statistic:**
 
-$$ t = \frac{\hat{\beta}_1 - 0}{SE(\hat{\beta}_1)} = \frac{7.5}{0.5} = 15 $$
+$$t = \frac{\hat{\beta}_1 - 0}{SE(\hat{\beta}_1)} = \frac{7.5}{0.5} = 15$$
 
 with $n-2 = 3$ degrees of freedom.
 
@@ -80,9 +80,9 @@ with $n-2 = 3$ degrees of freedom.
 
 ## 2.6 Confidence Interval for $\beta_1$
 
-$$ \hat{\beta}_1 \pm t^*_{(\alpha/2, \ n-2)} \cdot SE(\hat{\beta}_1) $$
+$$\hat{\beta}_1 \pm t^*_{(\alpha/2,\ n-2)} \cdot SE(\hat{\beta}_1)$$
 
-$$ 7.5 \pm 3.182 \times 0.5 = 7.5 \pm 1.591 = (5.91, \ 9.09) $$
+$$7.5 \pm 3.182 \times 0.5 = 7.5 \pm 1.591 = (5.91,\ 9.09)$$
 
 **Correct interpretation (the version interviewers listen for):** "If we repeated this sampling process many times and built a CI each time using this same method, about 95% of those intervals would contain the true $\beta_1$." **Incorrect interpretation to avoid saying out loud:** "There's a 95% probability the true $\beta_1$ is in this specific interval" — the true $\beta_1$ is a fixed constant, not random; the *interval* is what's random across samples, not the parameter.
 
@@ -92,7 +92,7 @@ $$ 7.5 \pm 3.182 \times 0.5 = 7.5 \pm 1.591 = (5.91, \ 9.09) $$
 
 Going back to the geometric picture from Chapter 1: total variation in y splits cleanly into "variation explained by the line" and "variation left over as residual noise."
 
-$$ \underbrace{\sum(y_i-\bar{y})^2}_{SST} = \underbrace{\sum(\hat{y}_i-\bar{y})^2}_{SSR} + \underbrace{\sum(y_i-\hat{y}_i)^2}_{SSE} $$
+$$\underbrace{\sum(y_i-\bar{y})^2}_{SST} = \underbrace{\sum(\hat{y}_i-\bar{y})^2}_{SSR} + \underbrace{\sum(y_i-\hat{y}_i)^2}_{SSE}$$
 
 | Term | Name | Meaning |
 |---|---|---|
@@ -104,17 +104,17 @@ This identity holds **exactly**, always, for OLS — it's a direct consequence o
 
 **Worked numbers:**
 
-$$ SST = \sum(y_i-64)^2 = (-14)^2+(-9)^2+1^2+6^2+16^2 = 196+81+1+36+256 = 570 $$
+$$SST = \sum(y_i-64)^2 = (-14)^2+(-9)^2+1^2+6^2+16^2 = 196+81+1+36+256 = 570$$
 
-$$ SSE = 7.5 \ \text{(computed above)} $$
+$$SSE = 7.5\ \text{(computed above)}$$
 
-$$ SSR = SST - SSE = 570 - 7.5 = 562.5 $$
+$$SSR = SST - SSE = 570 - 7.5 = 562.5$$
 
 ---
 
 ## 2.8 $R^2$ — Coefficient of Determination
 
-$$ R^2 = \frac{SSR}{SST} = \frac{562.5}{570} \approx 0.9868 $$
+$$R^2 = \frac{SSR}{SST} = \frac{562.5}{570} \approx 0.9868$$
 
 **Plain-English meaning:** about 98.7% of the variation in exam scores is explained by hours studied; the remaining 1.3% is unexplained noise. $R^2$ always lies in $[0,1]$ for simple linear regression with an intercept.
 
@@ -136,9 +136,9 @@ Both are centered at the same $\hat{y}$, but the prediction interval is **always
 
 **Formulas** (at a chosen $x_0$):
 
-$$ \text{CI for mean response: } \hat{y}_0 \pm t^* \cdot s\sqrt{\frac{1}{n}+\frac{(x_0-\bar{x})^2}{S_{xx}}} $$
+$$\text{CI for mean response: } \hat{y}_0 \pm t^* \cdot s\sqrt{\frac{1}{n}+\frac{(x_0-\bar{x})^2}{S_{xx}}}$$
 
-$$ \text{PI for new observation: } \hat{y}_0 \pm t^* \cdot s\sqrt{1+\frac{1}{n}+\frac{(x_0-\bar{x})^2}{S_{xx}}} $$
+$$\text{PI for new observation: } \hat{y}_0 \pm t^* \cdot s\sqrt{1+\frac{1}{n}+\frac{(x_0-\bar{x})^2}{S_{xx}}}$$
 
 Notice the PI formula is identical except for the extra "+1" inside the square root — that "+1" **is** the individual's own error variance being added in.
 
@@ -147,10 +147,10 @@ Notice the PI formula is identical except for the extra "+1" inside the square r
 $\hat{y}_0 = 64$
 
 CI for mean response:
-$$ 64 \pm 3.182 \times 1.581\sqrt{\frac{1}{5}+0} = 64 \pm 3.182 \times 1.581 \times 0.447 = 64 \pm 2.25 = (61.75, \ 66.25) $$
+$$64 \pm 3.182 \times 1.581\sqrt{\frac{1}{5}+0} = 64 \pm 3.182 \times 1.581 \times 0.447 = 64 \pm 2.25 = (61.75,\ 66.25)$$
 
 PI for a new observation:
-$$ 64 \pm 3.182 \times 1.581\sqrt{1+\frac{1}{5}+0} = 64 \pm 3.182 \times 1.581 \times 1.095 = 64 \pm 5.51 = (58.49, \ 69.51) $$
+$$64 \pm 3.182 \times 1.581\sqrt{1+\frac{1}{5}+0} = 64 \pm 3.182 \times 1.581 \times 1.095 = 64 \pm 5.51 = (58.49,\ 69.51)$$
 
 The prediction interval (width ≈ 11) is more than **twice as wide** as the confidence interval (width ≈ 4.5) — exactly as expected, since it must account for one more source of randomness.
 
