@@ -1,0 +1,126 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+thead th{background:var(--surface-1);color:var(--text-muted);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:10px 12px;text-align:left;border-bottom:0.5px solid var(--border);position:sticky;top:0}
+tbody tr{border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface-1)}
+tbody tr.active{background:var(--bg-accent)}
+td{padding:11px 12px;vertical-align:top;color:var(--text-primary);line-height:1.45}
+.stage{display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.stage-ret{background:#EEEDFE;color:#3C3489}
+.stage-gen{background:#FAECE7;color:#712B13}
+.stage-sys{background:#E1F5EE;color:#085041}
+.sev{display:inline-flex;gap:2px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.sev-hi .dot{background:var(--text-danger)}
+.sev-md .dot{background:var(--text-warning)}
+.sev-lo .dot{background:var(--text-success)}
+.sev-hi span{color:var(--text-danger);font-size:11px;font-weight:500}
+.sev-md span{color:var(--text-warning);font-size:11px;font-weight:500}
+.sev-lo span{color:var(--text-success);font-size:11px;font-weight:500}
+.detail{display:none;background:var(--surface-1);border-left:3px solid var(--border-accent);padding:12px 16px;margin:0}
+.detail.open{display:block}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+.detail-box{background:var(--surface-2);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px}
+.detail-label{font-size:11px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.detail-text{font-size:12px;color:var(--text-primary);line-height:1.6}
+.metric{font-family:var(--font-mono);font-size:12px;color:var(--text-accent)}
+.filters{display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap}
+button.f{font-size:12px;padding:4px 12px;border-radius:20px;border:0.5px solid var(--border-strong);background:transparent;color:var(--text-secondary);cursor:pointer}
+button.f.on{background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent)}
+.hint{font-size:12px;color:var(--text-muted);margin-bottom:.75rem}
+</style>
+
+<h2 class="sr-only">Table of top RAG production failures, their symptoms, metrics, and fixes — click a row to expand details.</h2>
+
+<div class="filters" id="filters">
+  <button class="f on" data-f="all">All</button>
+  <button class="f" data-f="retrieval">Retrieval</button>
+  <button class="f" data-f="generation">Generation</button>
+  <button class="f" data-f="system">System</button>
+  <button class="f" data-f="hi">High severity</button>
+</div>
+<p class="hint">Click a row to see symptoms, metrics, and the fix.</p>
+
+<table id="tbl">
+<thead>
+<tr>
+  <th style="width:22%">Failure</th>
+  <th style="width:12%">Stage</th>
+  <th style="width:10%">Severity</th>
+  <th style="width:30%">Symptom in prod</th>
+  <th style="width:26%">Primary fix</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+
+<script>
+const rows=[
+{id:0,name:"Retrieval misses",stage:"retrieval",sev:"hi",symptom:"Answer is confidently wrong or vague despite the answer existing in the corpus. Users rephrase the same question repeatedly.",fix:"Hybrid search (dense + BM25) + raise k. Run Recall@k sweep to find the k where recall plateaus.",detail:{signal:"Recall@k < 0.7 at your current k",cause:"Embedding model not trained on your domain; k too low; chunk boundaries split the answer across two chunks",diagnose:"Sample 20 failures — are the right chunks in top-50 but not top-5? If yes: reranker problem. Not in top-50? Retrieval problem.",fix_detail:"Switch to domain-tuned embeddings (e.g. fine-tune on your corpus). Add BM25 as a sparse retrieval lane. Tune k upward until Recall@k plateaus. Evaluate with nDCG to capture ordering too.",metric:"Recall@k, nDCG@k"}},
+{id:1,name:"Lost in the middle",stage:"generation",sev:"hi",symptom:"System answers correctly for short contexts but fails on long ones, even when the right chunk is in the context window.",fix:"Put highest-relevance chunks at position 1 and last. Never bury the answer at the midpoint of a long context.",detail:{signal:"Faithfulness drops as context length increases; correct chunk present but answer ignores it",cause:"LLMs attend strongly to the start and end of the context window. Chunks ranked 4–8 are effectively invisible in a 10-chunk context.",diagnose:"Insert the correct chunk at position 1 vs position 5 — if accuracy jumps, it's lost-in-the-middle.",fix_detail:"Reorder context so highest-scored chunks are first and last. Reduce k to only what's necessary. Use a reranker to concentrate signal before context assembly.",metric:"Faithfulness score vs context position, Answer relevance"}},
+{id:2,name:"Hallucination on noisy context",stage:"generation",sev:"hi",symptom:"Model produces plausible-sounding but fabricated details. Faithfulness is low even though Recall@k looks fine.",fix:"Improve context relevance — reduce noise chunks reaching the LLM. Add a 'ground yourself in the context' prompt instruction.",detail:{signal:"Faithfulness < 0.75 with context relevance < 0.5",cause:"Recall@k can be satisfied while the context window is 60% irrelevant noise. The LLM fills gaps with parametric knowledge when the signal-to-noise ratio is poor.",diagnose:"Check context relevance directly. If it's low, it's a retrieval/reranker problem masquerading as a generation failure.",fix_detail:"Improve reranker precision to reduce noisy chunks. Tighten k. Add explicit prompt instruction: 'Answer only from the provided context. If the context does not contain the answer, say so.' Consider a post-generation NLI faithfulness check as a runtime guardrail.",metric:"Context relevance, Faithfulness, Context precision"}},
+{id:3,name:"Chunk boundary splits",stage:"retrieval",sev:"md",symptom:"Answer requires two adjacent paragraphs but retrieval returns only one. Answers are incomplete or cut off mid-thought.",fix:"Overlap adjacent chunks by 10–20%. Use semantic chunking instead of fixed token windows.",detail:{signal:"Recall@k is moderate; retrieved chunks contain half the answer; multi-hop questions consistently fail",cause:"Fixed-size chunking (e.g. every 512 tokens) splits naturally contiguous passages. The answer straddles two chunks but only one ranks high enough.",diagnose:"Inspect raw chunks for the top-10 failures — are relevant chunks truncated? Does the preceding or following chunk contain the missing half?",fix_detail:"Add 100–200 token overlap between adjacent chunks. Switch to semantic chunking (split on paragraph/section boundaries). At query time, fetch adjacent chunks alongside the matched chunk ('context extension').",metric:"Recall@k, nDCG@k, Answer completeness (human eval)"}},
+{id:4,name:"Query-document mismatch",stage:"retrieval",sev:"md",symptom:"Short keyword queries fail to match long descriptive document chunks. Users asking 'refund?' don't retrieve the 'return and refund policy' chunk.",fix:"Query expansion or HyDE (hypothetical document embedding) to bridge the vocabulary gap.",detail:{signal:"BM25 scores low; dense retrieval also weak on short/abbreviation queries; Recall@k drops on real user traffic vs synthetic eval",cause:"The embedding space of a 3-word query is far from a 300-word paragraph even when they're semantically equivalent. This gap is the asymmetry problem.",diagnose:"Compare performance on synthetic eval (LLM-generated) vs real query logs. A large gap means real queries are shorter/more fragmented than synthetic ones.",fix_detail:"HyDE: prompt the LLM to generate a hypothetical answer, embed that instead of the raw query — the hypothetical lives in document-space. Alternatively, query expansion: generate 3–5 paraphrases of the query and retrieve for each, then merge results with RRF.",metric:"Recall@k on real query logs vs synthetic, MRR"}},
+{id:5,name:"Stale knowledge base",stage:"system",sev:"md",symptom:"Answers are correct for old information but wrong for recent updates. Users report outdated prices, deprecated endpoints, removed policies.",fix:"Incremental re-indexing pipeline with per-document timestamps and freshness scores.",detail:{signal:"Answers correct on historical eval set but produce complaints on recent events; 'document updated' field in metadata not being used",cause:"Corpus indexed at launch and never updated. New documents added but old versions not removed. No TTL on chunks.",diagnose:"Pull the 20 most-complained-about queries, find the relevant chunks, check their ingestion timestamp vs the actual document update date.",fix_detail:"Build an incremental indexer: listen to document update events, delete-and-reindex changed chunks. Add a 'freshness' metadata field and optionally down-weight chunks older than N days in scoring. Run a stale-data audit monthly.",metric:"Freshness score, complaint rate on date-sensitive queries"}},
+{id:6,name:"Answer ignores the question",stage:"generation",sev:"md",symptom:"The retrieved chunks are correct, but the model summarises them rather than answering the specific question asked. High faithfulness, low answer relevance.",fix:"Prompt the LLM explicitly with the user's original question. Add instruction: 'Answer this specific question: {query}.'",detail:{signal:"Faithfulness high (0.9+), Answer relevance low (< 0.4), Context relevance high",cause:"The LLM treats context assembly as a summarisation task instead of a QA task. Occurs when the prompt template buries the question or omits it entirely.",diagnose:"Check the actual prompt being sent to the LLM — is the original user question clearly present and prominent? Or is it just 'Answer based on the following context:'?",fix_detail:"Restructure the prompt: put the question first, then the context. Use explicit QA instruction: 'Use the context below to answer this specific question. Do not summarise the context — answer the question directly.' Measure answer relevance before and after.",metric:"Answer relevance (RAGAS), Human evaluation on a held-out set"}},
+{id:7,name:"No-answer hallucination",stage:"generation",sev:"hi",symptom:"When the corpus has no good answer, the model invents a confident-sounding response instead of saying 'I don't know'.",fix:"Add explicit 'refuse to answer' instruction + a faithfulness gate: if no claim is supported, return a fallback response.",detail:{signal:"Low faithfulness on queries outside the corpus scope; eval set missing 'no-answer' slice so this is invisible in metrics",cause:"LLMs are trained to be helpful and default to generating an answer. Without explicit instruction to abstain, they freelance from parametric memory.",diagnose:"Construct 10–20 'no-answer-exists' queries (questions about topics not in your corpus) and measure how often the model correctly abstains vs. fabricates.",fix_detail:"Add to prompt: 'If the context does not contain enough information to answer this question, respond: I don't have enough information to answer that.' Add a post-hoc faithfulness check — if 0 claims are supported, override the response with a fallback. Include 'no-answer' queries in your eval set.",metric:"Abstention rate on out-of-scope queries, Faithfulness on no-answer slice"}},
+{id:8,name:"RRF + reranker disagreement",stage:"retrieval",sev:"lo",symptom:"Adding a reranker made some queries worse. High-recall RRF candidates get down-ranked by the reranker, removing the correct chunk from the final top-k.",fix:"Increase the candidate pool passed to the reranker. Audit the reranker's domain fit — it may be out-of-domain.",detail:{signal:"nDCG improves on average but specific query categories regress; Recall@k_before_rerank > Recall@k_after_rerank",cause:"Rerankers are typically cross-encoders fine-tuned on general QA datasets (MS MARCO etc.). On domain-specific corpora they can confidently rerank the wrong chunk to the top.",diagnose:"Compare Recall@k before and after reranking on a stratified eval set. Identify which query categories regress. Check if the reranker was fine-tuned on data similar to your domain.",fix_detail:"Increase the candidate set passed to the reranker (from top-20 to top-50). Fine-tune the reranker on domain-specific examples. If no fine-tuning data: use a lighter reranker (BM25 re-scoring, ColBERT) with a larger candidate set rather than a deep cross-encoder with a small set.",metric:"nDCG before vs after reranking, Recall@k before vs after reranking"}},
+{id:9,name:"Verbosity / padding",stage:"generation",sev:"lo",symptom:"Answers are much longer than necessary, diluting the useful information. LLM judge scores are inflated because of verbosity bias.",fix:"Add output length constraints to the prompt. Calibrate your LLM judge to penalise unnecessary length.",detail:{signal:"Answer length correlates with LLM judge score but not with human ratings; users complain answers are too long or don't get to the point",cause:"LLMs default to comprehensive answers. LLM judges have a known verbosity bias — they rate longer answers as higher quality even when length adds no value.",diagnose:"Compare LLM judge scores with human ratings on the same answers across different output lengths. A strong correlation between length and judge score (but not human score) confirms verbosity bias.",fix_detail:"Add to prompt: 'Be concise. Answer in no more than 3 sentences unless the question requires more detail.' In the LLM judge prompt: 'Penalise unnecessary length. A concise correct answer scores higher than a verbose correct answer.' Calibrate judge on a length-controlled sample.",metric:"Answer length distribution, LLM judge score vs human rating correlation"}},
+];
+
+const tbody=document.getElementById('tbody');
+let active=null;
+let filter='all';
+
+function badge(stage){
+  const map={retrieval:'stage-ret',generation:'stage-gen',system:'stage-sys'};
+  return `<span class="stage ${map[stage]}">${stage}</span>`;
+}
+function sev(s){
+  if(s==='hi') return `<span class="sev sev-hi"><span class="dot"></span><span>High</span></span>`;
+  if(s==='md') return `<span class="sev sev-md"><span class="dot"></span><span>Medium</span></span>`;
+  return `<span class="sev sev-lo"><span class="dot"></span><span>Low</span></span>`;
+}
+
+function render(){
+  tbody.innerHTML='';
+  const visible=rows.filter(r=>{
+    if(filter==='all') return true;
+    if(filter==='hi') return r.sev==='hi';
+    return r.stage===filter;
+  });
+  visible.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.dataset.id=r.id;
+    tr.innerHTML=`<td style="font-weight:500">${r.name}</td><td>${badge(r.stage)}</td><td>${sev(r.sev)}</td><td style="color:var(--text-secondary)">${r.symptom}</td><td style="color:var(--text-secondary)">${r.fix}</td>`;
+    tbody.appendChild(tr);
+
+    const det=document.createElement('tr');
+    det.innerHTML=`<td colspan="5" style="padding:0"><div class="detail" id="det-${r.id}"><div class="detail-grid"><div class="detail-box"><div class="detail-label">Signal to look for</div><div class="detail-text metric">${r.detail.signal}</div></div><div class="detail-box"><div class="detail-label">Root cause</div><div class="detail-text">${r.detail.cause}</div></div><div class="detail-box"><div class="detail-label">How to diagnose</div><div class="detail-text">${r.detail.diagnose}</div></div><div class="detail-box"><div class="detail-label">Full fix</div><div class="detail-text">${r.detail.fix_detail}</div></div></div><div style="margin-top:8px;font-size:11px;color:var(--text-muted)">Metrics to track: <span style="font-family:var(--font-mono);color:var(--text-accent)">${r.detail.metric}</span></div></div></td>`;
+    tbody.appendChild(det);
+
+    tr.addEventListener('click',()=>{
+      const panel=document.getElementById('det-'+r.id);
+      const isOpen=panel.classList.contains('open');
+      document.querySelectorAll('.detail.open').forEach(d=>d.classList.remove('open'));
+      document.querySelectorAll('tr.active').forEach(t=>t.classList.remove('active'));
+      if(!isOpen){panel.classList.add('open');tr.classList.add('active');}
+    });
+  });
+}
+
+document.getElementById('filters').addEventListener('click',e=>{
+  const btn=e.target.closest('button.f');
+  if(!btn) return;
+  filter=btn.dataset.f;
+  document.querySelectorAll('button.f').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  render();
+});
+
+render();
+</script>
