@@ -984,4 +984,131 @@ CONCLUSION:
 
 ---
 
-*End of Chapter 9. Chapter 10 (CNNs) coming next.*
+# Batch Normalization — Full Explanation with Worked Example
+
+## 1. The Problem It Solves ("Why")
+
+As data flows through a deep network, the **distribution of activations at each layer keeps shifting** during training — because the parameters of every earlier layer are also changing. This is called **internal covariate shift**.
+
+| Consequence | Effect |
+|---|---|
+| Later layers must constantly re-adapt to a moving input distribution | Training is slow |
+| Activations can drift to very large/small values | Gradients vanish or explode (especially with sigmoid/tanh) |
+| Network becomes sensitive to weight initialization and learning rate | Training is unstable, needs careful tuning |
+
+**Batch Normalization (BN)** fixes this by forcing the activations at each layer to have a **stable mean and variance** (per mini-batch), then letting the network learn the ideal scale/shift on top of that stability.
+
+---
+
+## 2. The Algorithm — Step by Step
+
+Given a mini-batch of activations $\{z_1, z_2, ..., z_m\}$ for **one neuron/channel**, across $m$ samples:
+
+| Step | Formula | What it does |
+|---|---|---|
+| 1. Batch mean | $\mu_B = \dfrac{1}{m}\sum_{i=1}^m z_i$ | Center of this batch's values |
+| 2. Batch variance | $\sigma_B^2 = \dfrac{1}{m}\sum_{i=1}^m (z_i-\mu_B)^2$ | Spread of this batch's values |
+| 3. Normalize | $\hat z_i = \dfrac{z_i - \mu_B}{\sqrt{\sigma_B^2+\epsilon}}$ | Rescale to mean=0, variance=1 ($\epsilon$ = tiny constant, avoids ÷0) |
+| 4. Scale & shift | $y_i = \gamma\,\hat z_i + \beta$ | Let the network **undo** normalization if needed |
+
+$\gamma$ (scale) and $\beta$ (shift) are **learnable parameters** — one pair per neuron/channel, trained via backprop just like weights.
+
+> **Why steps 1–3 aren't enough on their own:** forcing every activation to mean-0/variance-1 could actually *hurt* the network (e.g., it destroys the useful range of a sigmoid). Step 4 gives the network the freedom to learn "actually, I want mean=$\beta$, variance=$\gamma^2$" if that's better — so BN can always fall back to doing nothing (if $\gamma=\sigma_B, \beta=\mu_B$).
+
+---
+
+## 3. Worked Numeric Example
+
+Say a mini-batch of 4 samples produces these **pre-activation values** for a single neuron:
+
+$$Z = [1,\ 5,\ 3,\ 7]$$
+
+**Step 1 — Mean**
+
+| Calculation | Value |
+|---|---|
+| $(1+5+3+7)/4$ | $16/4=$ **4.0** |
+
+**Step 2 — Variance**
+
+| Term | Calculation | Value |
+|---|---|---|
+| $(1-4)^2$ | $(-3)^2$ | 9 |
+| $(5-4)^2$ | $(1)^2$ | 1 |
+| $(3-4)^2$ | $(-1)^2$ | 1 |
+| $(7-4)^2$ | $(3)^2$ | 9 |
+| Sum | 9+1+1+9 | 20 |
+| $\sigma_B^2 = 20/4$ | | **5.0** |
+
+**Step 3 — Normalize** (using $\epsilon=10^{-5}$, so $\sqrt{5.00001}\approx 2.2361$)
+
+| $z_i$ | $z_i-\mu_B$ | $\hat z_i = (z_i-\mu_B)/2.2361$ |
+|---|---|---|
+| 1 | −3 | **−1.3416** |
+| 5 | +1 | **+0.4472** |
+| 3 | −1 | **−0.4472** |
+| 7 | +3 | **+1.3416** |
+
+*(Check: mean of $\hat z$ = 0 ✅, variance of $\hat z$ = 1 ✅)*
+
+**Step 4 — Scale & shift** (say the network has learned $\gamma=1.5,\ \beta=0.5$)
+
+| $\hat z_i$ | Calculation | $y_i = \gamma\hat z_i+\beta$ |
+|---|---|---|
+| −1.3416 | 1.5×(−1.3416)+0.5 | **−1.5124** |
+| +0.4472 | 1.5×(0.4472)+0.5 | **+1.1708** |
+| −0.4472 | 1.5×(−0.4472)+0.5 | **−0.1708** |
+| +1.3416 | 1.5×(1.3416)+0.5 | **+2.5124** |
+
+These $y_i$ values (not the raw $z_i$) are what gets passed to the activation function next.
+
+---
+
+## 4. Train Time vs. Inference Time (a common gotcha)
+
+| | Training | Inference |
+|---|---|---|
+| Which mean/variance is used? | The **current mini-batch's** $\mu_B,\sigma_B^2$ | A **running average** of $\mu_B,\sigma_B^2$ collected across all training batches |
+| Why the difference? | At test time you might get a batch of size 1 — you can't compute a meaningful batch statistic | Using running stats makes inference deterministic and independent of batch size |
+| How the running average is kept | $\mu_{run} \leftarrow (1-\alpha)\mu_{run} + \alpha\mu_B$ each step (momentum $\alpha$, typically 0.1) | — |
+
+---
+
+## 5. Backward Pass (brief)
+
+BN sits in the gradient path like any other layer, so gradients must flow through **all four steps in reverse**: $\dfrac{\partial L}{\partial y}\to\dfrac{\partial L}{\partial\gamma},\dfrac{\partial L}{\partial\beta}\to\dfrac{\partial L}{\partial\hat z}\to\dfrac{\partial L}{\partial z}$.
+
+| Gradient | What's notable |
+|---|---|
+| $\partial L/\partial\gamma = \sum_i \delta_i \cdot \hat z_i$ | Learned like any weight |
+| $\partial L/\partial\beta = \sum_i \delta_i$ | Learned like any bias |
+| $\partial L/\partial z_i$ | Trickiest — because $\mu_B$ and $\sigma_B^2$ both depend on **every** $z_i$ in the batch, so each sample's gradient depends on *all other samples in the batch* too. This is the one place BN's math gets genuinely more involved than a normal layer. |
+
+(FLOPs-wise: BN forward ≈ 5 ops/element as noted in your reusable template from earlier; backward is similarly cheap — BN is computationally tiny compared to matmuls.)
+
+---
+
+## 6. Why It Works (the benefits, concretely)
+
+| Benefit | Mechanism |
+|---|---|
+| **Faster training** | Stable input distributions per layer → can use higher learning rates |
+| **Less sensitive to initialization** | Normalization corrects for poor initial weight scales automatically |
+| **Mild regularization** | Each sample's normalization depends on other samples in its batch → adds noise, similar effect to dropout (often lets you reduce/skip dropout) |
+| **Reduces vanishing/exploding gradients** | Keeps activations in a well-behaved range through many layers |
+
+---
+
+## 7. Where It Goes + One Important Variant
+
+**Placement:** typically `Linear/Conv → BatchNorm → Activation` (normalize the pre-activation, *then* apply nonlinearity).
+
+**BatchNorm vs. LayerNorm** (relevant since you've been working through Transformers — they use LayerNorm, not BatchNorm):
+
+| | BatchNorm | LayerNorm |
+|---|---|---|
+| Normalizes across | The **batch** dimension (same neuron, across samples) | The **feature** dimension (same sample, across neurons) |
+| Depends on batch size? | Yes — breaks down for batch size 1, needs running stats at inference | No — works identically for batch size 1, no train/test discrepancy |
+| Used in | CNNs (image models) | Transformers, RNNs (sequence models, variable-length inputs) |
+
+That's why every Transformer block you've studied uses **LayerNorm**, not BatchNorm — sequences have variable length and are often processed with small/variable batch sizes, where BN's batch-dependence becomes a liability.
