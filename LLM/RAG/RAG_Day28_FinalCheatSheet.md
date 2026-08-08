@@ -97,15 +97,129 @@ These come up in some form in nearly every RAG interview — have them at true r
 5. **"How do you evaluate a RAG system?"** → Separate retrieval metrics from generation metrics, always — a single end-to-end score conflates independently-failing stages and can't tell you what to fix.
 
 ---
+# RAG Interview Cheat Sheet
 
-## MORNING-OF FINAL REMINDERS
-
-- **Ask clarifying questions before designing anything.** This alone separates strong from weak system-design answers more than any individual technical fact.
-- **State trade-offs, don't just state answers.** Every technique in this curriculum has a cost — naming it unprompted signals depth.
-- **When diagnosing, work stage by stage: retrieval → context assembly → generation → data.** Don't jump straight to "the model hallucinated."
-- **When unsure of an exact number or spec, say what you'd verify and why**, rather than guessing confidently — this is true for real systems and doubly true for anything Apple-specific, where public docs may have moved since your prep.
-- **Synthesis questions are where interviews are actually won or lost** — if a question connects two concepts, name both connections explicitly rather than answering only the more obvious half.
+Quick-scan reference — pairs with your detailed RAG Q&A doc and the 500M-PDF system design doc.
 
 ---
 
-*This concludes the 4-week RAG curriculum. Days 29-30 are open buffer — use them for whichever topic felt weakest on Mock #2, or a final full cold pass through this cheat sheet with each line explained out loud from memory. Good luck.*
+## 1. The Pipeline (memorize this order)
+
+```
+INDEXING (offline):  Parse → Chunk → Embed → Store (vector index + doc store)
+QUERY (online):      Query → [rewrite] → Embed → Retrieve (dense+sparse) → Rerank → Prompt → Generate → [verify]
+```
+
+---
+
+## 2. Core Term Sheet
+
+| Term | One-liner |
+|---|---|
+| Bi-encoder | Encodes query/doc independently → fast, used for first-stage retrieval |
+| Cross-encoder | Encodes query+doc jointly → accurate, slow, used for reranking only |
+| Dense retrieval | Embedding similarity search — good at semantic/paraphrase matches |
+| Sparse retrieval (BM25) | Term-frequency matching — good at exact terms, IDs, rare words |
+| Hybrid search | Dense + sparse fused (usually via RRF) — covers both failure modes |
+| HNSW | Graph-based ANN index; default choice, fast, memory-hungry |
+| IVF / IVF-PQ | Cluster-based ANN index; lower memory (PQ = compressed vectors) |
+| RRF (Reciprocal Rank Fusion) | Standard way to merge ranked lists from dense + sparse search |
+| HyDE | Embed a *generated hypothetical answer* instead of the raw query |
+| Lost in the middle | LLMs underuse info placed mid-context vs. start/end |
+| Groundedness / faithfulness | Does the answer only state what's in retrieved context? |
+| RAGAS | LLM-as-judge framework for faithfulness/relevance/context metrics |
+| Parent-document retrieval | Retrieve small chunks, but feed the full parent section to the LLM |
+
+---
+
+## 3. Retrieval Evaluation Metrics
+
+| Metric | Measures | Use when |
+|---|---|---|
+| Recall@k | Is the right doc in top-k? | Standard baseline check |
+| Precision@k | How many of top-k are relevant? | Care about noise in context |
+| MRR | 1/rank of first relevant hit | Usually one right answer |
+| nDCG | Rewards relevant docs ranked earlier, handles graded relevance | Multiple relevance levels |
+
+---
+
+## 4. Chunking Decision Table
+
+| Doc type | Strategy |
+|---|---|
+| Unstructured prose | Semantic chunking (split where embedding similarity drops) or recursive splitting |
+| Structured docs (Markdown/HTML/contracts) | Structure-aware (split on headers/sections) |
+| Tables | Serialize rows with header context — don't chunk mid-table |
+| General default | Recursive char splitting, ~256–512 tokens, 10–20% overlap |
+
+**Tradeoff:** too small → loses context; too large → embedding gets "blurry," wastes context budget.
+
+---
+
+## 5. RAG vs. Alternatives
+
+| | RAG | Fine-tuning | Long-context |
+|---|---|---|---|
+| Best for | Dynamic facts, citations | Style/format/behavior | Small static corpora |
+| Update cost | Cheap (re-index) | Expensive (retrain) | N/A |
+| Hallucination control | Good | Weak on facts | Good if relevant, but lost-in-middle risk |
+
+---
+
+## 6. Debugging Hallucination (despite correct retrieval) — checklist
+
+1. Is the right chunk buried mid-context? → reorder / rerank
+2. Does the prompt enforce "only use provided context"? → add explicit grounding instruction
+3. Is the fact split across chunk boundaries? → increase overlap or use parent-doc retrieval
+4. Too much noise in context? → add cross-encoder reranking, reduce k
+5. Model ignoring context in favor of pretraining knowledge? → stronger grounding + post-hoc entailment check
+
+---
+
+## 7. Scaling Cheat Sheet (500M+ docs)
+
+- **Storage estimate:** `chunks × embedding_dim × bytes_per_dim` (e.g., 5B chunks × 768 × 4B ≈ 15TB before compression)
+- **Sharding:** hash-based, topic-cluster, or time-based — needed once index exceeds single-node RAM
+- **Compression:** PQ trades some recall for large memory savings
+- **Metadata filtering:** pre-filter (filter then search) beats post-filter at scale
+- **Freshness:** incremental upserts + tombstoning for deletes, not full re-index
+
+---
+
+## 8. Latency Budget (typical interactive target ~800ms–2s)
+
+| Stage | Rough cost |
+|---|---|
+| Query embedding | ~20ms |
+| ANN search | ~50–100ms |
+| Cross-encoder rerank | ~100–300ms (scales with candidates) |
+| LLM generation | ~500ms–2s+ |
+
+**Fastest levers:** cache embeddings/responses, shrink k before reranking, stream generation output.
+
+---
+
+## 9. Clarifying-Question Dimensions (system design opener)
+
+Scale · Latency · Freshness · Consistency · Multi-tenancy · Budget · Accuracy/stakes
+
+**Method:** for each — extract the number → identify the mechanism it stresses (memory? sync call? blast radius?) → pick the technique that relieves that specific stress. State the mechanism out loud, not just the technique.
+
+---
+
+## 10. Apple-Specific Quick Hits
+
+- **On-device-first:** privacy + latency + cost-at-scale (billion+ devices) all point the same direction.
+- **Private Cloud Compute (PCC):** stateless, no privileged access, cryptographically attested — cloud fallback isn't "call an API," it's this specific pattern.
+- **Core ML / ANE constraints:** model size, memory footprint, op coverage, battery/thermal — quantization is often not optional.
+- **Federated learning + differential privacy:** train from device data without centralizing raw data; DP adds noise so aggregates can't be reverse-engineered to an individual.
+- **Red flag answer:** "just send everything to a cloud LLM and cache aggressively" — ignores on-device-first / privacy-preserving-escalation expectations.
+
+---
+
+## 11. Rapid-Fire One-Liners
+
+- Cosine vs. dot product: same ranking if vectors are normalized; dot product is faster but magnitude-sensitive.
+- Reranking cost: O(query×doc) per pair — only feasible on ~20–100 candidates, never the full corpus.
+- Multi-hop questions: decompose into sub-queries, iterate (ReAct-style), or use graph-based retrieval.
+- Why not just use a huge context window instead of RAG: cost scales per call, lost-in-the-middle, doesn't scale past corpus > context size.
