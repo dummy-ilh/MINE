@@ -259,5 +259,46 @@ Stage 1 — hybrid first-stage retrieval (Day 9): BM25 + bi-encoder/ANN in paral
 **Gotcha to remember:** reranker scores aren't calibrated across queries — don't use a fixed absolute threshold; think in relative/within-query terms instead.
 
 ---
+Good question. RRF (Reciprocal Rank Fusion) and reranking serve different purposes, and understanding why you might need both comes down to what each one actually does.
 
-*End of Day 10. Next up — Day 11: Query Transformation (HyDE, multi-query, decomposition).*
+## What RRF does
+
+RRF is a **score fusion** method. It takes ranked lists from multiple retrieval sources (e.g., dense vector search + BM25 sparse search) and merges them into a single ranked list using the formula:
+
+```
+RRF(d) = Σ 1 / (k + rank_i(d))
+```
+
+It's fast, parameter-free, and good at combining signals from heterogeneous retrievers. But crucially, **it only knows about rank positions** — not the actual content of the query or documents.
+
+## Why reranking is still needed
+
+**1. RRF doesn't understand semantic relevance deeply**
+RRF trusts that if both retrievers ranked a document highly, it's probably good. But it has no mechanism to judge *how well* a document actually answers the query. A cross-encoder reranker (like a fine-tuned BERT model or Cohere Rerank) reads the query and each document together and scores their relevance directly — much more accurate than position-based fusion.
+
+**2. RRF operates on ranks, not content**
+Two documents at rank 3 from two different retrievers are treated identically by RRF, regardless of whether one is a perfect answer and the other is tangentially related. A reranker distinguishes between them.
+
+**3. Top-k truncation problem**
+Your retrievers typically return top-100 or top-200 candidates. RRF narrows this down, but the top-20 after RRF can still contain noise. A reranker does a more expensive, fine-grained pass on this smaller set to surface the best 5–10.
+
+**4. RRF doesn't handle query intent nuance**
+For nuanced or complex queries, RRF can't compensate for retrieval failures — if both retrievers missed the most relevant document, RRF won't help. But a reranker can sometimes rescue a relevant doc that ranked 40th by recognizing its deep semantic match.
+
+## The typical pipeline
+
+```
+Dense retrieval (top-100)  ──┐
+                              ├──► RRF fusion (top-50) ──► Reranker (top-5–10) ──► LLM
+Sparse retrieval (top-100) ──┘
+```
+
+RRF is cheap and handles the **multi-source merging** problem. Reranking is expensive (it's O(n) cross-encoder inference) and handles the **precision** problem. That's why you do RRF first to reduce candidates, then rerank the smaller set.
+
+## When you can skip reranking
+
+- Latency is critical and RRF quality is already sufficient for your use case
+- Your queries are simple and both retrievers are high quality
+- You're using a retriever that's already doing cross-attention (e.g., ColBERT), which partially overlaps with reranking
+
+In practice, reranking on top of RRF consistently gives measurable precision gains (typically 5–15% on NDCG@10 in benchmarks), which matters a lot when the retrieved context directly drives LLM output quality.
