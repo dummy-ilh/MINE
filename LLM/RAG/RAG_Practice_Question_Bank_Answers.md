@@ -190,3 +190,218 @@ RRF is a strong default — simple, robust, no corpus-specific tuning required, 
 
 **55. Your corpus has adversarially many near-duplicate documents. How does this affect retrieval, reranking, and generation, and what would you change at each stage?**
 Retrieval: near-duplicates can flood the top-k with redundant content, crowding out genuinely distinct relevant documents and wasting recall budget — mitigate with deduplication/near-duplicate detection at ingestion or post-retrieval (embedding-similarity clustering). Reranking: redundant candidates waste reranker calls (cost scales with k) without adding new information — dedup before reranking to make better use of the k budget. Generation: even after retrieval-stage dedup, near-identical chunks reaching the generator waste context budget and increase "lost in the middle" risk by padding the context with repetitive content instead of diverse evidence — dedup or diversity-aware selection (e.g. maximal marginal relevance) should be applied before final context assembly.
+
+
+# RAG Interview Q&A — FAANG/Apple MLE Prep
+
+A detailed question-and-answer reference on Retrieval-Augmented Generation (RAG), aimed at senior ML/Applied Scientist interview depth.
+
+---
+
+## Section 1: Fundamentals
+
+### Q1. What is RAG, and why does it exist?
+
+**A:** RAG (Retrieval-Augmented Generation) is an architecture that combines a **retriever** (which pulls relevant documents/chunks from an external knowledge source) with a **generator** (an LLM that produces an answer conditioned on the retrieved context plus the user's query).
+
+It exists to solve three core weaknesses of pure LLMs:
+1. **Knowledge cutoff** — LLM parameters are frozen at training time; RAG lets you inject fresh or private data without retraining.
+2. **Hallucination** — grounding generation in retrieved text reduces (doesn't eliminate) fabricated facts, and gives you citations.
+3. **Cost of fine-tuning** — updating a knowledge base (add/delete documents) is far cheaper than fine-tuning a model every time facts change.
+
+The tradeoff: RAG adds system complexity (indexing pipeline, retrieval latency, chunking strategy) and its quality ceiling is bounded by retrieval quality — garbage in, garbage out.
+
+---
+
+### Q2. Walk me through the RAG pipeline end-to-end.
+
+**A:** Two phases:
+
+**Offline (indexing):**
+1. Ingest raw documents (PDFs, HTML, DBs).
+2. Parse/clean → extract text, tables, structure.
+3. Chunk into passages (fixed-size, recursive, semantic, or structure-aware).
+4. Embed each chunk with an embedding model.
+5. Store vectors + metadata in a vector index (ANN structure) alongside a document store for the raw text.
+
+**Online (query time):**
+1. User query arrives.
+2. Optionally rewrite/expand the query (HyDE, multi-query, decomposition).
+3. Embed the query with the *same* embedding model.
+4. Retrieve top-k candidates via ANN search (often combined with keyword/BM25 — "hybrid search").
+5. Rerank candidates with a cross-encoder for precision.
+6. Construct a prompt: system instructions + retrieved context + query.
+7. LLM generates the answer, ideally with citations back to source chunks.
+8. (Optional) Post-hoc verification / groundedness check.
+
+---
+
+### Q3. RAG vs. fine-tuning vs. long-context — when do you pick each?
+
+**A:**
+
+| Dimension | RAG | Fine-tuning | Long-context (stuff everything in prompt) |
+|---|---|---|---|
+| Best for | Dynamic/frequently updated knowledge, factual grounding, citations | Teaching style/format/behavior, domain jargon, task-specific reasoning patterns | Small, static corpora that fit in context |
+| Update cost | Cheap (re-index) | Expensive (retrain) | N/A |
+| Latency | Extra retrieval hop | None extra at inference | Very high (long prefill) |
+| Hallucination control | Good (grounding + citations) | Weak on facts (bakes stale facts into weights) | Good if relevant, but "lost in the middle" |
+| Cost at scale | Amortized indexing cost | Training compute cost | Token cost scales with context length every call |
+
+In practice, production systems often combine all three: fine-tune for domain tone/instruction-following, RAG for facts, and keep context windows for short session history.
+
+---
+
+## Section 2: Retrieval & Embeddings
+
+### Q4. How do dense retrieval and sparse retrieval (BM25) differ, and why use hybrid search?
+
+**A:**
+- **Sparse (BM25/TF-IDF):** term-frequency-based, exact lexical match, works great for rare terms, IDs, acronyms, numbers — things embeddings often blur together. No training required, interpretable.
+- **Dense (embeddings, e.g., bi-encoders):** captures semantic similarity — "car" and "automobile" land close in vector space even without shared tokens. Fails on exact-match needs (part numbers, proper nouns not well represented in training data).
+
+**Hybrid search** runs both and fuses scores (commonly via **Reciprocal Rank Fusion, RRF**, or a weighted linear combination) because their failure modes are complementary. In interviews, a strong answer notes: dense retrieval alone often underperforms BM25 on out-of-domain or keyword-heavy queries — this is a well-documented empirical finding, not just theory.
+
+---
+
+### Q5. What's the difference between a bi-encoder and a cross-encoder? Why do we use both?
+
+**A:**
+- **Bi-encoder:** query and document are embedded *independently* into fixed vectors; similarity is a cheap dot product/cosine. This is what makes ANN search over millions of documents tractable — you precompute document embeddings offline.
+- **Cross-encoder:** query and document are concatenated and passed *together* through a transformer, producing a single relevance score with full cross-attention between query and document tokens. Far more accurate, but O(n) — you can't precompute it, so it doesn't scale to searching millions of documents directly.
+
+**Standard pattern:** bi-encoder for first-stage **recall** (fast, retrieve top 100–1000), cross-encoder for second-stage **reranking** (slow but accurate, narrow down to top 5–10). This recall→precision funnel is a very common interview whiteboard question.
+
+---
+
+### Q6. How does approximate nearest neighbor (ANN) search work? Name some algorithms.
+
+**A:** Exact k-NN over millions/billions of vectors is O(n) per query — too slow. ANN trades a small amount of recall for large speedups.
+
+- **HNSW (Hierarchical Navigable Small World):** builds a multi-layer graph where each node connects to nearby neighbors; search greedily "hops" through layers from coarse to fine. High recall, good latency, memory-hungry. The most common production default (used in FAISS, Pinecone, Weaviate, pgvector).
+- **IVF (Inverted File Index):** clusters vectors into Voronoi cells (via k-means); at query time, only search the nearest few cells (`nprobe`). Faster to build than HNSW, tunable recall/speed via `nprobe`, lower memory.
+- **IVF-PQ (Product Quantization):** compresses vectors into short codes to reduce memory footprint drastically — used when the index is too large to fit in RAM otherwise, at some recall cost.
+- **LSH (Locality-Sensitive Hashing):** older technique, hashes similar vectors into the same bucket; largely superseded by HNSW/IVF in modern stacks.
+
+A good interview answer names the recall/latency/memory triangle and says HNSW is the default unless memory is the binding constraint, in which case IVF-PQ.
+
+---
+
+### Q7. How would you evaluate retrieval quality?
+
+**A:** Standard IR metrics, applied to a labeled (query, relevant-doc) set:
+
+- **Recall@k:** fraction of queries where the ground-truth doc appears in the top-k retrieved.
+- **Precision@k:** fraction of top-k results that are actually relevant.
+- **MRR (Mean Reciprocal Rank):** average of 1/rank of the first relevant result — good when there's typically one right answer.
+- **nDCG (Normalized Discounted Cumulative Gain):** handles graded relevance (not just binary) and rewards relevant docs appearing earlier.
+
+For RAG specifically, retrieval metrics alone aren't enough — you also need **end-to-end** metrics like faithfulness/groundedness (does the answer only state what's in the retrieved context?) and answer relevance (does the answer address the query?), often measured with frameworks like RAGAS using an LLM-as-judge.
+
+---
+
+## Section 3: Chunking & Indexing
+
+### Q8. How do you decide chunk size and overlap?
+
+**A:** It's a bias-variance-style tradeoff:
+- **Too small:** loses context, fragments coherent ideas, retrieval may need many chunks stitched together, increases risk of missing the full answer.
+- **Too large:** dilutes the embedding (a chunk about 5 topics has a "blurry" average vector), wastes context window tokens, may exceed reranker limits.
+
+Typical production defaults: **256–512 tokens per chunk**, with **10–20% overlap** to avoid severing a sentence/idea exactly at a chunk boundary. But the right answer is **content-dependent**:
+- Structure-aware chunking (split on headers/sections) for well-formatted docs (Markdown, HTML, legal contracts).
+- Semantic chunking (split where embedding similarity between consecutive sentences drops) for unstructured prose.
+- Recursive character splitting (paragraph → sentence → word fallback) as a robust general default (e.g., LangChain's `RecursiveCharacterTextSplitter`).
+- Table/structured data needs special handling — naive chunking destroys row/column relationships; better to serialize each row with its header context, or keep tables intact and route to a different retrieval path.
+
+---
+
+### Q9. What is "lost in the middle" and how does it affect RAG design?
+
+**A:** Research on long-context LLMs shows models are much better at using information placed at the **very beginning or very end** of the context window than in the middle — a U-shaped attention/utilization curve. For RAG, this means:
+- Don't just dump top-k chunks in retrieval-score order into the middle of the prompt and hope for the best.
+- Consider **reordering** retrieved chunks so the most relevant ones are near the start and end of the context.
+- It's an argument *against* naively increasing k or context length as a fix for poor retrieval — more context isn't free, and can actively hurt if the truly relevant chunk gets buried.
+
+---
+
+## Section 4: Advanced / System Design
+
+### Q10. Your RAG system is hallucinating despite retrieving the right document. Why, and how do you fix it?
+
+**A:** Several possible root causes, and this is exactly the kind of "debug this system" question FAANG interviewers like:
+1. **Retrieved-but-not-used:** the right chunk is in context, but buried in the middle (see lost-in-the-middle) or the prompt doesn't instruct the model to *only* use provided context.
+2. **Prompt doesn't enforce grounding:** fix with explicit instructions ("answer only using the context below; say 'I don't know' if not present") and few-shot examples of refusal.
+3. **Chunk lacks sufficient context:** the fact is split across chunk boundaries — improve chunking/overlap or use a "parent document retriever" (retrieve small chunks for precision, but pass the full parent section to the LLM).
+4. **Reranking is needed:** the right doc was retrieved at rank 40 out of 50 chunks stuffed into context, drowned out by noise — add a cross-encoder reranking stage.
+5. **Model prioritizes parametric memory:** even with context provided, LLMs sometimes fall back on pretraining knowledge, especially if it conflicts with retrieved facts — this is an active research problem; mitigations include stronger grounding instructions and post-hoc fact-verification passes.
+
+---
+
+### Q11. Design a RAG system to search over 500 million PDFs. What are the key architectural decisions?
+
+**A:** (High-level skeleton — see full architecture doc for the deep dive.)
+
+- **Ingestion at scale:** distributed pipeline (Spark/Ray) for PDF parsing (text, tables, images via OCR), chunking, and embedding generation — this is embarrassingly parallel and should be a batch job, not synchronous.
+- **Embedding compute:** GPU batch inference is the bottleneck at this scale; think through throughput (docs/sec per GPU) and total embedding cost/time budget.
+- **Vector index sharding:** a single HNSW index over billions of chunks won't fit in memory on one machine — shard horizontally (e.g., by hash or topic cluster) across nodes, with a query router/aggregator merging top-k from each shard.
+- **Storage tiering:** hot/recent data in fast ANN index; cold data can use IVF-PQ (compressed) or even fall back to on-demand re-embedding.
+- **Metadata filtering:** most real queries aren't pure semantic search — they combine vector similarity with structured filters (date range, document type, access permissions). The index needs to support **pre-filtering** (filter then search) or **post-filtering** (search then filter) efficiently — pre-filtering is generally better at scale to avoid wasting the k-budget on filtered-out results.
+- **Multi-tenancy / access control:** if PDFs belong to different users/orgs, retrieval must respect permissions — often solved with metadata-filtered search or separate indices per tenant.
+- **Latency budget:** decompose end-to-end latency target (e.g., p99 < 500ms) across parse-time-is-offline, ANN search, reranking, and LLM generation — generation is usually the dominant cost, so keep retrieval fast (<100ms) to leave budget for generation.
+- **Freshness:** new PDFs need an incremental indexing path (not full re-index), and a way to handle deletions/updates (tombstoning in the vector index).
+
+---
+
+### Q12. How would you reduce RAG latency in production?
+
+**A:**
+- **Cache** embeddings for repeated/similar queries; cache full RAG responses for common queries.
+- **Smaller/faster embedding model** for first-stage retrieval; reserve expensive cross-encoder reranking for a narrow candidate set.
+- **Async/parallel retrieval** across shards or across hybrid (dense + sparse) paths.
+- **Reduce k** aggressively — most of the value is in the top 3–5 chunks after reranking; retrieving 50 "just in case" mostly adds latency and prompt-dilution risk.
+- **Streaming generation** so users see tokens while the tail of generation is still running (doesn't reduce total latency but improves perceived latency).
+- **Quantized/compressed vector index** (PQ) trades a little recall for memory bandwidth savings, which often dominates ANN search latency.
+
+---
+
+### Q13. What is HyDE (Hypothetical Document Embeddings), and why might it help?
+
+**A:** Instead of embedding the raw user query directly, HyDE prompts an LLM to first generate a *hypothetical answer* to the query, then embeds *that* generated text and uses it for retrieval. The intuition: a hypothetical answer is written in the same style/register as the documents you're searching over (answer-like text vs. question-like text), so it's often closer in embedding space to the true relevant documents than the terse query itself. It trades one extra LLM call for (sometimes) meaningfully better recall, especially on queries that are short or phrased very differently from the source documents.
+
+---
+
+### Q14. How do you handle multi-hop questions in RAG (questions requiring info from multiple documents combined)?
+
+**A:** Naive single-shot retrieval often fails because no single chunk contains the full answer. Approaches:
+- **Query decomposition:** break the question into sub-questions, retrieve for each separately, then synthesize.
+- **Iterative/agentic retrieval:** retrieve → read → decide if more info is needed → retrieve again (ReAct-style loop), continuing until the model believes it has enough to answer.
+- **Graph-based RAG:** build a knowledge graph or entity-linked structure over the corpus so multi-hop relationships (A relates to B relates to C) can be traversed directly rather than relying purely on vector similarity, which is inherently single-hop.
+
+---
+
+### Q15. What are common failure modes of RAG systems, and how do you detect them in production?
+
+**A:**
+| Failure mode | Symptom | Detection/mitigation |
+|---|---|---|
+| Retrieval miss | Right doc never surfaces | Log query + retrieved doc IDs; sample-review; track Recall@k against a golden eval set |
+| Chunking fragments an answer | Partial/incorrect answers despite doc being "retrieved" | Inspect chunk boundaries around known failures; try parent-document retrieval |
+| Stale index | Answers reference outdated info | Track index freshness/lag metrics; incremental re-indexing SLA |
+| Hallucination despite correct context | Confident wrong answer | Groundedness/faithfulness scoring (LLM-as-judge or NLI-based entailment check between answer and context) |
+| Embedding/query mismatch (different domains) | Poor recall on domain-specific jargon | Fine-tune or choose a domain-adapted embedding model; add BM25 hybrid fallback |
+| Latency creep as corpus grows | p99 latency degrades over time | Monitor ANN search latency vs. index size; plan sharding before it's an emergency |
+
+---
+
+## Section 5: Rapid-fire (good for a phone screen)
+
+- **Q: What's the difference between recall@k in retrieval vs. classification recall?** A: Same concept (fraction of relevant items found), but "relevant" here means "is this doc/chunk relevant to this query" rather than "is this the positive class" — evaluated per-query then averaged.
+- **Q: Why not just use a longer context window and skip retrieval entirely?** A: Cost scales with tokens on every call, lost-in-the-middle degrades utilization, and it doesn't scale to corpora larger than the context window (millions of docs).
+- **Q: What's re-ranking's computational cost, and why is it only applied to a small candidate set?** A: Cross-encoders are O(query×doc) per pair with full attention — applying to millions of docs is infeasible, so it's reserved for the top ~50-100 candidates from cheap first-stage retrieval.
+- **Q: Cosine similarity vs. dot product for embeddings — when does it matter?** A: If embeddings are normalized to unit length, cosine similarity and dot product give the same ranking. Dot product alone is faster (no normalization step) but sensitive to vector magnitude, which can be meaningful (e.g., in some models magnitude encodes confidence/frequency) or purely a training artifact — check your embedding model's assumptions.
+- **Q: What is RAGAS?** A: A framework for evaluating RAG systems using an LLM-as-judge across metrics like faithfulness (is the answer supported by context), answer relevance, context precision, and context recall — without needing human-labeled ground truth for every query.
+
+---
+
+*This complements your existing chunking-strategies guide and the 500M-PDF system design doc — this file focuses on the interview Q&A format across retrieval, embeddings, chunking, and system design tradeoffs.*
