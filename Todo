@@ -12,9 +12,6 @@
 17. [ ] **Coding** — DS&A (arrays, hashmaps, graphs, trees, DP, sliding window), time/space complexity, LeetCode medium; ML-adjacent problems (matrix ops, reservoir sampling, top-K)
 18. [ ] **System Design** — feature stores (online vs offline), training pipelines, online/batch/streaming serving, two-phase retrieval, embedding freshness, feature skew, monitoring, data drift detection, model cards, rollback strategies
 
-## Specialized / High-Impact Topics
-22. [ ] **Bandits & Exploration** — ε-greedy, UCB, Thompson sampling, contextual bandits, explore-exploit tradeoff, offline evaluation of bandit policies
-
 ## MLE / Applied Scientist Focus
 27. [ ] **Distributed Training** — data vs model vs pipeline parallelism, gradient accumulation, mixed precision (fp16/bf16), parameter servers vs all-reduce, TPU/GPU specifics, checkpointing strategies
 
