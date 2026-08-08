@@ -403,5 +403,92 @@ Typical production defaults: **256–512 tokens per chunk**, with **10–20% ove
 - **Q: What is RAGAS?** A: A framework for evaluating RAG systems using an LLM-as-judge across metrics like faithfulness (is the answer supported by context), answer relevance, context precision, and context recall — without needing human-labeled ground truth for every query.
 
 ---
+Here's a set of Apple-specific ML interview questions — the stuff that's likely to come up specifically because it's Apple (not generic FAANG), spanning on-device ML, privacy architecture, and how that intersects with RAG/system design.
 
-*This complements your existing chunking-strategies guide and the 500M-PDF system design doc — this file focuses on the interview Q&A format across retrieval, embeddings, chunking, and system design tradeoffs.*
+## Section 1: On-Device ML & Core ML
+
+### Q1. Why does Apple push so hard for on-device inference instead of cloud inference?
+
+**A:** Three converging reasons, and a strong answer names all three rather than just "privacy":
+1. **Privacy-as-brand** — Apple's public positioning is built on "your data stays on your device." Cloud inference means shipping user data (photos, messages, queries) to a server, which conflicts with that stance.
+2. **Latency/offline reliability** — on-device means no network round-trip; features like Face ID, autocorrect, and on-device Siri commands need to work with no connectivity and near-zero latency.
+3. **Cost at scale** — with over a billion active devices, running inference on Apple's own servers for every autocorrect keystroke or photo classification would be enormous infra cost; pushing compute to the device (which the user already paid for) is economically necessary at that scale.
+
+### Q2. What is Core ML, and what are its main constraints as a deployment target?
+
+**A:** Core ML is Apple's framework for running trained ML models on-device (iPhone, iPad, Mac, Watch), converting models (from PyTorch/TensorFlow via `coremltools`) into a `.mlmodel`/`.mlpackage` format that runs on the **Neural Engine**, GPU, or CPU depending on the op support and device.
+
+Key constraints an interviewer wants you to reason about:
+- **Model size** — app bundle size limits and download-over-cellular caps push toward compressed/quantized models (often 4-bit or 8-bit weights).
+- **Memory footprint** — background apps get killed under memory pressure; a large model competing with the OS and other apps for RAM is a real failure mode, not a theoretical one.
+- **Op coverage** — not every PyTorch op has a Core ML equivalent; custom layers may need to be rewritten or approximated, which is a real engineering tax when porting research models to production.
+- **Battery/thermal** — sustained Neural Engine usage generates heat and drains battery; Apple's design ethos favors quick bursts of inference over sustained heavy compute.
+- **Heterogeneous hardware** — the same model has to run acceptably on a 3-year-old iPhone and the newest one; Apple engineers often design for the low end and treat newer hardware as "faster," not "required."
+
+### Q3. What is the Apple Neural Engine (ANE), and how does it change model design decisions?
+
+**A:** The ANE is a dedicated matrix-multiplication/tensor accelerator on Apple Silicon, separate from CPU and GPU, optimized for low-power, high-throughput inference (not training). It changes design decisions because:
+- It favors certain op patterns (e.g., specific convolution/attention shapes) — models that aren't ANE-friendly silently fall back to GPU/CPU, losing the power/speed benefit even if they technically "run."
+- Apple publishes ANE-optimization guidance (e.g., preferring certain tensor layouts), so a genuinely Apple-flavored interview answer is: "I wouldn't just port a model and assume it's fast — I'd profile whether it's actually hitting the ANE or silently falling back, since that's an easy way to ship something that 'works' but is 3x slower/more power-hungry than intended."
+
+---
+
+## Section 2: Privacy Architecture (this is the one that's *most* Apple-specific)
+
+### Q4. What is Private Cloud Compute (PCC), and why does it matter for a RAG/LLM system design question at Apple?
+
+**A:** Apple Intelligence uses a tiered approach: simple requests run entirely on-device; requests needing more compute (larger models, more context) are offloaded to **Private Cloud Compute** — Apple-designed servers built so that even Apple cannot access the data processed there. Key properties Apple has publicized:
+- Stateless computation — no data is retained after the request completes.
+- No privileged runtime access — not even Apple engineers can inspect user data on PCC servers during normal operation.
+- Independent verifiability — Apple publishes cryptographic attestations of the exact software running on PCC servers, and (per their stated approach) allows external security researchers to inspect them.
+
+**Why it matters for interview framing:** if you're asked to design a RAG/Apple Intelligence-style system, the "cloud fallback" component isn't just "call an API" — it's a specific architectural pattern: **on-device-first, cryptographically-verifiable-cloud-second**, with a hard requirement that data never persists past the single request. That reshapes your caching strategy too — you can't cache raw user queries/results server-side the way a typical RAG system would, which conflicts with the "cache aggressively for latency" advice that's normally correct.
+
+### Q5. How would differential privacy show up in an Apple ML system, and why would Apple use it over plain aggregation?
+
+**A:** Differential privacy (DP) adds calibrated statistical noise to data before/during aggregation so that no individual's contribution can be reverse-engineered from the aggregate, while population-level patterns (e.g., "which emoji are trending," "which words are commonly mistyped") are still learnable.
+
+Apple uses this for things like: QuickType suggestions, emoji usage trends, Safari energy/health-of-web reporting, Health app trend data — cases where they want population insight but have publicly committed to not seeing individual raw data. It's an answer to: "you want to fine-tune a global model on data you can't see individual copies of" — DP is the mechanism, alongside federated learning, for extracting signal without centralizing raw data.
+
+### Q6. What's the difference between differential privacy and federated learning, and how do they combine?
+
+**A:** They solve different problems and are often used together:
+- **Federated learning:** the *training* happens on-device (each device computes a local model update from its own local data); only the **model update** (gradients/weights), not the raw data, is sent to a central server, which aggregates updates from many devices into an improved global model.
+- **Differential privacy:** a *noise-addition guarantee* applied on top of any data release (including those federated updates) so that even the aggregated update can't be reverse-engineered to leak an individual's specific data.
+
+Combined: federated learning keeps raw data off the server; DP ensures the *updates themselves* don't leak individual info even in aggregate. Apple has used both together in production (e.g., for QuickType keyboard model improvements).
+
+---
+
+## Section 3: System Design Framing, Apple-flavored
+
+### Q7. If asked to design "Siri with RAG" or "on-device search over your Notes/Photos/Messages," what's different from a generic RAG system design?
+
+**A:** The generic RAG skeleton (chunk → embed → index → retrieve → rerank → generate) still applies, but every component gets an on-device-first constraint layered on top:
+- **Indexing:** the vector index has to live and be updated *on the device itself* (Spotlight-style on-device indexing), not in a centralized cloud vector DB — so index size and update latency are bounded by phone storage/CPU, not by a data-center budget.
+- **Embedding model:** must be small enough to run on-device (likely a distilled/quantized model, possibly ANE-optimized), trading some retrieval quality for the ability to run entirely locally.
+- **Cross-device sync:** if you search across iPhone + iPad + Mac, you need an encrypted sync mechanism (similar in spirit to iCloud Keychain) rather than a shared server-side index — this is a real added complexity beyond a normal single-backend RAG system.
+- **Escalation path:** for queries needing more compute/context than the device can handle, the *fallback* isn't "call an LLM API" — it's the PCC pattern from Q4, with its stricter guarantees.
+- **No cross-user learning by default:** a generic RAG system might improve retrieval ranking using aggregate click data across all users; Apple's constraints push you toward on-device personalization or DP/federated aggregation instead, since raw per-user query logs generally can't be centrally collected and analyzed the way they could at, say, Google.
+
+### Q8. Why might Apple choose a smaller/distilled model over a larger, more accurate one, even if accuracy suffers?
+
+**A:** This is really a "know your deployment constraints" answer, applied to Apple's specific ones: on-device latency and battery budget, the ANE's more limited compute versus a data-center GPU cluster, app size limits, and the requirement that the same model run acceptably across several generations of hardware still in active use. In an interview, the strongest framing is that this is an explicit **accuracy-vs-constraint tradeoff Apple makes deliberately**, not an oversight — and you should be ready to reason about *where* they'd draw that line (e.g., a more permissive line for a flagship on-device feature vs. a stricter one for something that must run even on older/lower-RAM devices).
+
+### Q9. How do App Store review and platform constraints affect ML feature design at Apple, in a way that wouldn't apply to, say, a backend-only company?
+
+**A:** A few Apple-specific pressures worth naming:
+- **Binary size and download caps** push toward compressed models and on-demand resource downloading rather than bundling everything upfront.
+- **Background execution limits** (iOS aggressively suspends/kills background processes) mean any ML pipeline that wants to run periodically (e.g., re-indexing Photos for search) has to work within scheduled background task APIs, not a persistent server-style daemon.
+- **Sandboxing** — apps can't freely access data from other apps' storage, which shapes how any cross-app "search everything" feature has to be architected (through system-level frameworks like Spotlight/Core Spotlight, not ad hoc file access).
+
+---
+
+## Section 4: Rapid-fire
+
+- **Q: What's Apple's stated position on training on user content vs. licensed/public data for its foundation models?** A: Apple has publicly stated it trains on a mix of licensed data, publicly available data, and (for on-device personalization only) uses user data locally without it leaving the device or being used to train the shared/global model.
+- **Q: On-device vs. server split — what's the deciding factor?** A: Roughly: task complexity vs. what fits in the on-device compute/latency/battery budget; simple tasks stay on-device, complex ones escalate to PCC.
+- **Q: Why would quantization matter more at Apple than at a pure cloud-ML company?** A: Cloud companies can throw more GPU/TPU at a problem; on-device deployment has a hard, fixed compute ceiling per device, so quantization (fp16 → int8 → int4) is often not optional — it's what makes the feature ship at all.
+- **Q: What's a realistic Apple interview red flag in a RAG/LLM system design answer?** A: Defaulting to "just send everything to a cloud LLM API and cache aggressively" without acknowledging the on-device-first / privacy-preserving-escalation pattern — that's a strong signal you're pattern-matching a generic FAANG answer rather than reasoning about Apple's actual constraints.
+
+Want this saved as a companion file alongside your other RAG and system design docs, or kept conversational?
