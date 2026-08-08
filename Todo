@@ -3,7 +3,6 @@
 2. [ ] **Prob & Stats** — probability distributions (Gaussian, Bernoulli, Poisson, Beta), Bayes theorem, MLE vs MAP, hypothesis testing, CLT, confidence intervals, law of large numbers
 
 ## Classical ML
-4. [ ] **Regression** — linear regression assumptions (LINE), ridge/lasso/elastic net regularization, multicollinearity, VIF, heteroscedasticity
 6. [ ] **Classifiers** — SVM (kernels, margin, support vectors), KNN (curse of dimensionality), Naive Bayes (conditional independence assumption); trade-offs and when each shines
 7. [ ] **Trees** — decision trees (splitting criteria, pruning), random forests, bagging, OOB error, feature importance (impurity vs permutation)
 
