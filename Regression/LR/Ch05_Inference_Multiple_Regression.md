@@ -151,4 +151,228 @@ A: A partial F-test comparing the reduced model (without the three) to the full 
 
 ---
 
-*End of Chapter 5. Next: Chapter 6 — The Gauss-Markov Theorem (why OLS is BLUE — Best Linear Unbiased Estimator — and the full proof of why no other linear unbiased estimator can have lower variance).*
+# The F-Test for Adding Features to Regression
+
+## 1. The question this test answers
+
+You have a regression model. You're wondering: *"If I add this new feature (or these new features), does the model actually get meaningfully better — or does it only look better by chance, because more predictors always inflate R² a little?"*
+
+The **F-test** (specifically the **partial F-test**, also called the **nested F-test**) gives you a formal, statistical answer to that question — instead of eyeballing "R² went up a bit, I guess that's good."
+
+This is the core tool behind **forward selection**, **backward elimination**, and general **model comparison** in regression.
+
+---
+
+## 2. Why you can't just compare R² directly
+
+Here's the trap: **R² can never decrease when you add a feature** — even a completely useless, random-noise feature — because OLS will always find *some* tiny amount of correlation with the residuals by chance, and use it to reduce SSE slightly.
+
+So "R² went up" is *not* evidence the new feature is useful. You need a test that asks: **"Is the improvement in R² bigger than what we'd expect from random noise alone, given how many degrees of freedom I spent to get it?"**
+
+That's exactly what the F-test does — it penalizes you for the number of new parameters you added, the same spirit as adjusted R², but as a proper hypothesis test with a p-value.
+
+---
+
+## 3. Setting up the two competing models
+
+You compare a **reduced model** (without the new feature(s)) against a **full model** (with them). The two models must be **nested** — meaning the reduced model's predictors are a strict subset of the full model's predictors.
+
+**Reduced model** (k predictors):
+```
+y = β₀ + β₁x₁ + ... + βₖxₖ + ε
+```
+
+**Full model** (k + q predictors — you added q new features):
+```
+y = β₀ + β₁x₁ + ... + βₖxₖ + βₖ₊₁xₖ₊₁ + ... + βₖ₊qxₖ₊q + ε
+```
+
+### The hypotheses
+
+```
+H₀:  βₖ₊₁ = βₖ₊₂ = ... = βₖ₊q = 0    (the new features add nothing — reduced model is "true")
+H₁:  at least one of βₖ₊₁, ..., βₖ₊q ≠ 0    (at least one new feature genuinely helps)
+```
+
+Notice: this is a **joint test**. Even if you're adding just *one* feature (q=1), it's still phrased as "is this one coefficient zero" — which, as you'll see in §6, connects directly back to the t-test you already know.
+
+---
+
+## 4. The F-statistic — built from SSE, piece by piece
+
+Recall from your regression fundamentals: **SSE (sum of squared errors)** measures how much error is left after fitting a model. Adding predictors can only decrease (or leave unchanged) SSE.
+
+```
+SSE_reduced = SSE of the model WITHOUT the new features
+SSE_full    = SSE of the model WITH the new features
+```
+
+Since the full model has more flexibility, `SSE_full ≤ SSE_reduced` always. The question is: **how much smaller, relative to how many parameters you spent buying that improvement?**
+
+```
+        (SSE_reduced - SSE_full) / q
+F  =  ────────────────────────────────
+              SSE_full / (n - k - q - 1)
+```
+
+Let's name every piece:
+
+| Symbol | Meaning |
+|---|---|
+| `SSE_reduced - SSE_full` | Extra error *removed* by adding the new features (bigger = better) |
+| `q` | Number of new parameters added (the "cost" you paid) |
+| `n` | Number of observations |
+| `k` | Number of predictors in the reduced model |
+| `n - k - q - 1` | Residual degrees of freedom of the *full* model (subtract 1 for the intercept) |
+
+**Read it as a ratio of two things:**
+- **Numerator**: average error-reduction *per new parameter* — "how much did each new predictor buy you, on average"
+- **Denominator**: average leftover error *per remaining degree of freedom* in the full model — this is basically the full model's residual variance, `σ̂²`
+
+So the F-statistic is really asking: **"Is the improvement per new parameter large relative to the model's typical unexplained noise?"** If the new features are pure noise, you'd expect the numerator to be roughly the same *size* as random noise itself, giving F ≈ 1. If the features are genuinely useful, the numerator will be much bigger than the noise floor, giving F >> 1.
+
+This F-statistic follows an **F-distribution** with `(q, n-k-q-1)` degrees of freedom under H₀, which is how you get your p-value.
+
+---
+
+## 5. Worked numerical example
+
+Let's extend your existing 5-student regression setup conceptually with a slightly bigger illustrative dataset (n = 10 students) so the F-test has enough degrees of freedom to be meaningful.
+
+Suppose you're predicting **exam score** from **hours studied** (reduced model), and you're considering adding **hours slept** as a second feature (full model).
+
+| Model | Predictors | SSE | # params (incl. intercept) |
+|---|---|---|---|
+| Reduced | hours studied | 180 | 2 (β₀, β₁) |
+| Full | hours studied + hours slept | 120 | 3 (β₀, β₁, β₂) |
+
+- `n = 10`
+- `k = 1` (reduced model has 1 predictor)
+- `q = 1` (we added 1 new feature: hours slept)
+- Residual df of full model: `n - k - q - 1 = 10 - 1 - 1 - 1 = 7`
+
+**Step 1 — numerator:**
+```
+(SSE_reduced - SSE_full) / q = (180 - 120) / 1 = 60
+```
+
+**Step 2 — denominator:**
+```
+SSE_full / (n - k - q - 1) = 120 / 7 = 17.14
+```
+
+**Step 3 — F-statistic:**
+```
+F = 60 / 17.14 = 3.50
+```
+
+**Step 4 — compare to critical value.** Look up `F(1, 7)` at α = 0.05 → critical value ≈ **5.59**.
+
+Since `3.50 < 5.59`, we **fail to reject H₀** — at the 5% significance level, we don't have enough evidence that "hours slept" meaningfully improves the model, despite SSE dropping from 180 to 120. That drop could plausibly be due to chance given only 7 residual degrees of freedom.
+
+*(If instead SSE_full had dropped to, say, 60, you'd get F = (120/1)/(60/7) = 120/8.57 = 14.0, which would clear the 5.59 threshold — a case where you'd reject H₀ and keep the feature.)*
+
+---
+
+## 6. Special case: adding exactly ONE feature (q = 1)
+
+This is the most common case in forward selection, and it connects to something you already know: **the t-test on a single coefficient.**
+
+When you add just one feature, there's a clean identity:
+
+```
+F = t²
+```
+
+where `t` is the usual t-statistic for testing `H₀: βₖ₊₁ = 0` (the coefficient of the new feature alone) from the full model's regression output.
+
+**This means:** for a single added feature, the F-test and the t-test on that feature's coefficient give you *exactly the same conclusion* — they're mathematically the same test viewed two ways. You don't need to run both. This is worth stating explicitly in an interview: it shows you understand *why* forward selection can just check "is the new coefficient's p-value < threshold?" instead of manually computing an F-statistic every time.
+
+---
+
+## 7. How this powers stepwise selection procedures
+
+### Forward selection algorithm
+
+1. Start with the **null model** (intercept only, or your current feature set).
+2. For every candidate feature *not yet in the model*, temporarily add it and compute its partial F-test (equivalently, its t-test p-value) against the current model.
+3. Pick the candidate with the **most significant** result (largest F / smallest p-value).
+4. If that best candidate's p-value is below your threshold (commonly p < 0.05, sometimes called `F-to-enter`), **permanently add it** to the model.
+5. If no remaining candidate clears the threshold, **stop**.
+6. Repeat from step 2 with the updated model.
+
+### Backward elimination (the mirror image)
+
+1. Start with **all candidate features** in the model.
+2. Find the feature with the **least significant** coefficient (smallest F / largest p-value).
+3. If that p-value exceeds your threshold (`F-to-remove`), **remove it**.
+4. Refit and repeat until every remaining feature is significant.
+
+### Why the F-test is the natural engine for both
+
+At every step, you're comparing two *nested* models (with vs. without one feature) — exactly the setup the partial F-test was built for. The F-test gives you a principled, consistent stopping rule instead of an arbitrary "does R² look better" judgment call.
+
+---
+
+## 8. Testing a GROUP of features at once (q > 1)
+
+Sometimes you don't want to add features one at a time — e.g., you have a categorical variable that expands into 4 dummy variables, and it only makes sense to add or remove them together as a block.
+
+Here the general F-test (§4, with `q > 1`) is essential — you *can't* just look at individual t-tests for each dummy, because:
+- Individual coefficients might each look non-significant on their own (especially if the dummies are correlated with each other),
+- but the **block as a whole** could still be jointly significant.
+
+**Example:** testing whether "school region" (4 categories → 3 dummy variables after dropping a baseline) belongs in a model predicting exam scores.
+
+```
+H₀: β_region1 = β_region2 = β_region3 = 0
+```
+
+You'd run one F-test with `q = 3`, not three separate t-tests. This is a common interview trap — testing correlated dummy variables one-by-one with t-tests can miss a jointly significant effect (or find spuriously significant individual dummies that don't hold up jointly).
+
+---
+
+## 9. Why this helps in practice — the core intuition, restated
+
+| Without F-test | With F-test |
+|---|---|
+| "R² went from 0.71 to 0.73, seems better, let's keep it" | "That 0.02 R² gain isn't statistically distinguishable from noise, given how many parameters it cost — drop it" |
+| Risk: overfitting by greedily adding any feature that nudges R² up | Protection: only add features whose improvement clears a noise-adjusted bar |
+| No principled stopping rule for stepwise selection | F-to-enter / F-to-remove thresholds give an explicit, defensible stopping criterion |
+| Can't test a *group* of correlated features (e.g., dummy variables) coherently | Naturally extends to joint tests via `q > 1` |
+
+---
+
+## 10. Relationship to other tools you already know
+
+| Concept | Relationship to the partial F-test |
+|---|---|
+| **Overall F-test** (from Ch2: "is the regression significant at all?") | Special case where the reduced model is intercept-only (k=0) and the full model is your entire feature set — same formula, just q = all your predictors |
+| **t-test on a coefficient** | Special case of partial F-test with q=1; `F = t²` exactly |
+| **Adjusted R²** | Also penalizes for added parameters, but gives you a descriptive number, not a hypothesis test with a p-value — F-test is the formal significance-testing counterpart |
+| **AIC / BIC** | Alternative model-comparison criteria that also penalize complexity, but don't require nested models the way the F-test does — useful when comparing non-nested models |
+
+---
+
+## 11. Interview Q&A
+
+**Q: Why can't you just compare R² between two models to decide whether to add a feature?**
+A: R² is mathematically guaranteed to never decrease when you add any predictor, even pure noise, because OLS will always exploit whatever tiny correlation exists by chance. The F-test corrects for this by weighing the SSE improvement against the degrees of freedom spent.
+
+**Q: What's the relationship between the F-test and the t-test when adding a single feature?**
+A: They're identical tests: `F = t²`, and the p-values match exactly. The F-test framework generalizes to adding multiple features at once, which a single t-test cannot do.
+
+**Q: Why must the two models be "nested" for this F-test?**
+A: The test relies on the reduced model's predictor set being a strict subset of the full model's, so that `SSE_reduced - SSE_full` is guaranteed to be ≥ 0 and interpretable as "error removed by the added predictors." Comparing non-nested models (different, non-overlapping predictor sets) needs different tools (AIC, BIC, cross-validation).
+
+**Q: In forward selection, why not just add every feature with p < 0.05 in one shot instead of one at a time?**
+A: Multicollinearity — a feature's significance can depend on what's already in the model. Adding features one at a time (always re-testing remaining candidates against the *current* model) accounts for this; testing all candidates against the null model simultaneously would miss features that only become significant after others are already included (or falsely flag features that stop mattering once a correlated feature is added).
+
+**Q: What's a key weakness of stepwise selection via repeated F-tests?**
+A: It doesn't correct for multiple testing — running many sequential significance tests inflates the overall false-positive rate, so stepwise-selected models often look more significant than they really are on held-out data. This is a well-known criticism; cross-validation or regularization (Lasso) are often preferred for feature selection in practice.
+
+---
+
+## 12. One-paragraph summary
+
+The partial F-test compares two nested regression models — with and without a candidate feature (or block of features) — by measuring how much SSE drops per new parameter added, relative to the leftover noise in the fuller model. A large F-statistic means the improvement is bigger than you'd expect from chance; a small one means you likely just fit noise. For a single added feature, this collapses exactly to the familiar t-test (`F = t²`), which is why forward selection and backward elimination can operate one-feature-at-a-time using ordinary coefficient p-values — but the general F-test (with q > 1) is what you need whenever you're adding or removing a *group* of features together, such as a categorical variable's dummy encoding.
