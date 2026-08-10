@@ -220,6 +220,41 @@ For OLS estimates to have good statistical properties (unbiasedness, minimum var
 
 **Interview-critical nuance:** OLS point estimates ($\hat{\beta}_0, \hat{\beta}_1$) only require linearity + the errors having mean zero and being uncorrelated with x. Normality is needed only for valid t-tests/p-values/confidence intervals — a very commonly confused point that interviewers probe directly ("do you need normality to fit OLS?" — answer: no, you need it for inference, not estimation).
 
+
+
+
+**BLUE = Best Linear Unbiased Estimator.** This is the punchline of the Gauss-Markov theorem, and it's worth knowing exactly what each letter means and which assumptions buy you which property.
+
+**Gauss-Markov theorem, plain-English statement:** if the assumptions below hold, OLS isn't just *an* unbiased estimator — it's the *best* one, meaning it has the lowest variance among all linear unbiased estimators. You could invent some other linear-unbiased way to estimate the slope, but it would never beat OLS's variance. That's the whole content of the theorem.
+
+**Breaking down "BLUE":**
+
+- **B — Best** = minimum variance among all linear unbiased estimators
+- **L — Linear** = the estimator is a linear function of the $y_i$'s (OLS is, by construction — $\hat\beta_1$ is just a weighted sum of the $y_i$'s)
+- **U — Unbiased** = $E[\hat\beta_0] = \beta_0$ and $E[\hat\beta_1] = \beta_1$ — on average, across repeated samples, you hit the true value
+- **E — Estimator** = it's a rule for estimating parameters, not a claim about any single sample
+
+**What's actually required for each piece — this is the part interviewers drill on:**
+
+| Property | What you need |
+|---|---|
+| **Unbiasedness** | Linearity of the true relationship + errors have mean zero ($E[\varepsilon_i]=0$) + errors uncorrelated with x |
+| **Minimum variance (the "Best" in BLUE)** | All of the above **+ homoscedasticity** (constant error variance) **+ no autocorrelation** (independence) |
+| **Valid t-tests, p-values, confidence intervals** | All of the above **+ normality of errors** |
+
+**The key hierarchy to say out loud in an interview:**
+
+1. To get *unbiased* estimates → you only need linearity + zero-mean, x-uncorrelated errors.
+2. To get the *best* (lowest-variance) unbiased estimates → you additionally need homoscedasticity and independence. Drop either one and OLS is still unbiased, but it stops being "Best" — some other estimator (like Weighted Least Squares under heteroscedasticity, or GLS under autocorrelation) would have lower variance instead.
+3. To do *inference* (hypothesis tests, CIs) → you additionally need normality. This is purely about the sampling distribution of $\hat\beta$ being normal so you can use t/F distributions — it has nothing to do with whether the point estimate itself is good.
+
+**Common interview trap, restated precisely:** "Do you need normality to fit OLS?" — No. You need it to *trust your p-values and confidence intervals*, not to compute $\hat\beta_0, \hat\beta_1$, and not for those estimates to be unbiased or even best. By the Central Limit Theorem, with large enough $n$, your estimates are approximately normal anyway even if the errors aren't — so normality matters most in small samples.
+
+**Quick mnemonic for what breaks what:**
+- Break linearity → biased estimates, full stop.
+- Break homoscedasticity → still unbiased, but no longer "Best" (standard errors are also wrong, so your CIs are wrong even though $\hat\beta$ itself is fine).
+- Break independence (autocorrelation) → same story as homoscedasticity: unbiased but not best, and standard errors get distorted.
+- Break normality → point estimates fine, inference (t-tests, CIs) unreliable in small samples.
 ---
 
 ## 1.9 Diagnostics — A First Look
