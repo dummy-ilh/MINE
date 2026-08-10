@@ -204,10 +204,146 @@ It's $e_t$ here specifically because $\hat y_t = W_{hy}h_t+b_y$ with $W_{hy}=1$:
 **Q8. This chapter computed the gradient for $W_{hh}$ using an explicit recursive formula for $D_t$. What does an autodiff framework like PyTorch actually do differently, if anything?**
 Conceptually, nothing — autodiff builds the same computation graph (every use of $W_{hh}$ at every timestep is a separate node sharing the same underlying parameter) and accumulates gradients into that one shared parameter exactly the way the sum $\sum_t e_t D_t$ does here. The difference is mechanical: PyTorch doesn't require you to derive a closed-form recursion like $D_t$ by hand — it walks the actual unrolled graph backward, applying the chain rule at each node automatically and summing contributions into `W_hh.grad`, which is exactly what Chapter 9's from-scratch/PyTorch comparison verifies numerically.
 
-## What's ahead
 
-Chapter 4 stretches this same mechanism over a longer sequence and shows, numerically, why the gradient can shrink toward zero (vanish) — meaning early timesteps stop getting any learning signal at all.
 
 ---
 
 **One-line summary:** BPTT is regular backprop applied to the unrolled RNN, where each weight's total gradient is the *sum of its effect at every timestep*, computed recursively backward from the end of the sequence — one direct contribution per step, plus everything inherited from before.
+
+
+
+Here is the **crisp** breakdown for a **3-input RNN** (time steps \( t=1,2,3 \)).
+
+---
+
+## 1) FORMULAS ONLY
+
+### Forward Pass
+**Hidden state:**  
+\( h_t = \tanh(W_{xh} x_t + W_{hh} h_{t-1} + b_h) \)  
+*(with \( h_0 = 0 \))*
+
+**Output:**  
+\( y_t = W_{hy} h_t + b_y \)  
+
+*(for classification, apply softmax: \( \hat{y}_t = \text{softmax}(y_t) \))*
+
+**Loss (sum over time):**  
+\( L = \sum_{t=1}^{3} L_t \)  
+e.g., cross-entropy: \( L_t = -\sum_k y_{t,k}^{\text{true}} \log(\hat{y}_{t,k}) \)
+
+---
+
+### Backprop Through Time (BPTT) – Gradients
+
+**Output gradient:**  
+\( \frac{\partial L}{\partial y_t} = \hat{y}_t - y_t^{\text{true}} \) (for cross-entropy + softmax)
+
+**Gradient w.r.t. hidden output weights:**  
+\( \frac{\partial L}{\partial W_{hy}} = \sum_{t=1}^{3} \frac{\partial L}{\partial y_t} \cdot h_t^T \)
+
+**Gradient w.r.t. bias \( b_y \):**  
+\( \frac{\partial L}{\partial b_y} = \sum_{t=1}^{3} \frac{\partial L}{\partial y_t} \)
+
+**Backpropagate into hidden state:**  
+\( \delta_t = W_{hy}^T \frac{\partial L}{\partial y_t} + W_{hh}^T \delta_{t+1} \)  
+*(with \( \delta_4 = 0 \))*
+
+**Hidden activation derivative:**  
+\( \delta_t^{\text{raw}} = \delta_t \odot (1 - h_t^2) \)   (since \( \tanh' = 1 - \tanh^2 \))
+
+**Gradient w.r.t. input weights:**  
+\( \frac{\partial L}{\partial W_{xh}} = \sum_{t=1}^{3} \delta_t^{\text{raw}} \cdot x_t^T \)
+
+**Gradient w.r.t. recurrent weights:**  
+\( \frac{\partial L}{\partial W_{hh}} = \sum_{t=1}^{3} \delta_t^{\text{raw}} \cdot h_{t-1}^T \)  
+*(with \( h_0 = 0 \))*
+
+**Gradient w.r.t. hidden bias:**  
+\( \frac{\partial L}{\partial b_h} = \sum_{t=1}^{3} \delta_t^{\text{raw}} \)
+
+---
+
+## 2) NUMERICAL EXAMPLE
+
+### Given (simple setup)
+- **Inputs:** \( x_1 = 1 \), \( x_2 = 2 \), \( x_3 = 3 \) (scalars for simplicity)  
+- **Weights (scalar):** \( W_{xh} = 0.5 \), \( W_{hh} = 0.8 \), \( W_{hy} = 1.2 \)  
+- **Biases:** \( b_h = 0.1 \), \( b_y = 0.0 \)  
+- **Initial state:** \( h_0 = 0 \)  
+- **True outputs (scalar targets):** \( y_1^{\text{true}} = 0.5 \), \( y_2^{\text{true}} = 1.0 \), \( y_3^{\text{true}} = 1.5 \)  
+- **Loss:** \( L_t = \frac{1}{2}(y_t - y_t^{\text{true}})^2 \) (MSE)
+
+---
+
+### Forward Pass
+
+**t=1:**  
+\( h_1 = \tanh(0.5 \cdot 1 + 0.8 \cdot 0 + 0.1) = \tanh(0.6) = 0.537 \)  
+\( y_1 = 1.2 \cdot 0.537 + 0 = 0.644 \)
+
+**t=2:**  
+\( h_2 = \tanh(0.5 \cdot 2 + 0.8 \cdot 0.537 + 0.1) = \tanh(1 + 0.4296 + 0.1) = \tanh(1.5296) = 0.906 \)  
+\( y_2 = 1.2 \cdot 0.906 = 1.087 \)
+
+**t=3:**  
+\( h_3 = \tanh(0.5 \cdot 3 + 0.8 \cdot 0.906 + 0.1) = \tanh(1.5 + 0.7248 + 0.1) = \tanh(2.3248) = 0.982 \)  
+\( y_3 = 1.2 \cdot 0.982 = 1.178 \)
+
+---
+
+### Losses
+\( L_1 = \frac{1}{2}(0.644 - 0.5)^2 = 0.0104 \)  
+\( L_2 = \frac{1}{2}(1.087 - 1.0)^2 = 0.0038 \)  
+\( L_3 = \frac{1}{2}(1.178 - 1.5)^2 = 0.0518 \)  
+**Total \( L = 0.0660 \)**
+
+---
+
+### BPTT Gradients (Numerical)
+
+**Output gradients:**  
+\( \frac{\partial L}{\partial y_1} = y_1 - 0.5 = 0.144 \)  
+\( \frac{\partial L}{\partial y_2} = 1.087 - 1.0 = 0.087 \)  
+\( \frac{\partial L}{\partial y_3} = 1.178 - 1.5 = -0.322 \)
+
+**Backpropagate \( \delta_t \):**  
+\( \delta_4 = 0 \)  
+\( \delta_3 = W_{hy} \cdot (-0.322) + W_{hh} \cdot 0 = 1.2 \cdot (-0.322) = -0.3864 \)  
+\( \delta_3^{\text{raw}} = -0.3864 \cdot (1 - 0.982^2) = -0.3864 \cdot (1 - 0.964) = -0.3864 \cdot 0.036 = -0.0139 \)
+
+\( \delta_2 = W_{hy} \cdot 0.087 + W_{hh} \cdot \delta_3 = 1.2 \cdot 0.087 + 0.8 \cdot (-0.3864) = 0.1044 - 0.3091 = -0.2047 \)  
+\( \delta_2^{\text{raw}} = -0.2047 \cdot (1 - 0.906^2) = -0.2047 \cdot (1 - 0.821) = -0.2047 \cdot 0.179 = -0.0366 \)
+
+\( \delta_1 = W_{hy} \cdot 0.144 + W_{hh} \cdot \delta_2 = 1.2 \cdot 0.144 + 0.8 \cdot (-0.2047) = 0.1728 - 0.1638 = 0.0090 \)  
+\( \delta_1^{\text{raw}} = 0.0090 \cdot (1 - 0.537^2) = 0.0090 \cdot (1 - 0.288) = 0.0090 \cdot 0.712 = 0.0064 \)
+
+---
+
+**Gradients:**
+
+\( \frac{\partial L}{\partial W_{hy}} = \sum_{t=1}^3 \frac{\partial L}{\partial y_t} \cdot h_t = (0.144 \cdot 0.537) + (0.087 \cdot 0.906) + (-0.322 \cdot 0.982) \)  
+= \( 0.0773 + 0.0788 - 0.3162 = \mathbf{-0.1601} \)
+
+\( \frac{\partial L}{\partial W_{xh}} = \sum_{t=1}^3 \delta_t^{\text{raw}} \cdot x_t = (0.0064 \cdot 1) + (-0.0366 \cdot 2) + (-0.0139 \cdot 3) \)  
+= \( 0.0064 - 0.0732 - 0.0417 = \mathbf{-0.1085} \)
+
+\( \frac{\partial L}{\partial W_{hh}} = \sum_{t=1}^3 \delta_t^{\text{raw}} \cdot h_{t-1} = (0.0064 \cdot 0) + (-0.0366 \cdot 0.537) + (-0.0139 \cdot 0.906) \)  
+= \( 0 - 0.0197 - 0.0126 = \mathbf{-0.0323} \)
+
+\( \frac{\partial L}{\partial b_h} = \sum_{t=1}^3 \delta_t^{\text{raw}} = 0.0064 - 0.0366 - 0.0139 = \mathbf{-0.0441} \)
+
+\( \frac{\partial L}{\partial b_y} = \sum_{t=1}^3 \frac{\partial L}{\partial y_t} = 0.144 + 0.087 - 0.322 = \mathbf{-0.0910} \)
+
+---
+
+### Final Gradient Summary
+| Weight | Gradient |
+|--------|----------|
+| \( W_{hy} \) | **-0.1601** |
+| \( W_{xh} \) | **-0.1085** |
+| \( W_{hh} \) | **-0.0323** |
+| \( b_h \) | **-0.0441** |
+| \( b_y \) | **-0.0910** |
+
+These are used to update weights: \( W_{\text{new}} = W_{\text{old}} - \text{lr} \cdot \text{gradient} \).
