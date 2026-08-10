@@ -153,4 +153,29 @@ A: They perform many sequential hypothesis tests without correcting for multiple
 
 ---
 
-*End of Chapter 14. Next: Chapter 15 — Variable Selection & Overfitting (the train/test split, why in-sample fit statistics like $R^2$ can be misleading, and a first introduction to cross-validation as the more robust alternative to Chapter 14's classical criteria).*
+# Summary
+
+**What happens structurally**
+
+- $\Sigma$ (the true error covariance matrix) stops being diagonal — off-diagonal entries like $\rho, \rho^2, \rho^3...$ appear, meaning nearby errors are related to each other, not independent.
+- Plain OLS assumes $\Sigma = \sigma^2\mathbf{I}$ (diagonal, all equal). When the real $\Sigma$ has those off-diagonal entries, OLS is using the *wrong* formula to compute standard errors — it's built for a world where errors don't talk to each other, and that world doesn't exist anymore.
+
+**What breaks, and what doesn't**
+
+| Stays fine | Breaks |
+|---|---|
+| $\hat{\boldsymbol\beta}$ — still unbiased | Standard errors — computed using the wrong (diagonal) formula |
+| Point predictions — still reasonable | t-tests / p-values / confidence intervals — no longer valid |
+| | OLS is no longer BLUE — a smarter estimator (GLS) has lower variance |
+
+The dangerous part specifically: with **positive** autocorrelation (the common case), OLS's standard errors come out **too small** — so t-stats look bigger and p-values look smaller than they honestly should. You end up more confident than you're entitled to be, potentially calling a relationship "significant" when it's actually just noise with momentum.
+
+**The remedy**
+
+Two options, depending on how much you're willing to commit to a specific structure:
+
+1. **Model $\Sigma$ explicitly and use GLS** — $\hat{\boldsymbol\beta}_{GLS}=(\mathbf{X}^T\boldsymbol\Sigma^{-1}\mathbf{X})^{-1}\mathbf{X}^T\boldsymbol\Sigma^{-1}\mathbf{y}$. In practice this is done via the **Cochrane-Orcutt / Prais-Winsten transformation**: estimate $\hat\rho$, subtract $\hat\rho\times$(previous value) from both $x$ and $y$, then run ordinary OLS on the transformed data. This actually fixes the point estimates too (makes them efficient again), not just the error bars — but it requires committing to a specific correlation structure (AR(1), here).
+
+2. **Keep OLS's $\hat{\boldsymbol\beta}$, just fix the standard errors** — use **Newey-West (HAC) standard errors**. No need to estimate $\rho$ or specify the exact correlation shape; it corrects the error bars to be valid under autocorrelation (and heteroscedasticity) up to a chosen lag. This is the more common default in practice, since you rarely know the true structure with confidence.
+
+**Rule of thumb for choosing:** GLS/Cochrane-Orcutt if you want maximally precise estimates and trust your assumed structure; Newey-West if you just want honest inference without betting on getting that structure exactly right.
