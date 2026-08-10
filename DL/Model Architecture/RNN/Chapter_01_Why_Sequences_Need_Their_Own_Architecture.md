@@ -86,17 +86,22 @@ It's deliberately tiny — a single number per day, not a whole embedding vector
 
 ## What's ahead
 
-| Chapter | What you'll get |
-|---|---|
-| 2 | Full forward pass on the toy sequence — every number computed by hand |
-| 3 | Backpropagation through time (BPTT), same example |
-| 4 | Why gradients vanish/explode over long sequences (shown numerically) |
-| 5 | The fixes — clipping, truncated BPTT, and why LSTM/GRU exist |
-| 6 | The 7 architectural shapes of RNNs (one-to-many, many-to-many, etc.) and how BPTT differs across them |
-| 7 | Interview cheat sheet |
-| 8 | RNNs on tabular data |
-| 9 | Built from scratch — NumPy, then PyTorch |
+Here’s the **crisp** answer:
 
 ---
 
-**One-line summary:** an RNN reads a sequence one step at a time, using the *same* small function at every step to update a running summary vector (the hidden state). Everything from here is detail on top of that idea.
+### **Problem RNNs Fix**
+Standard neural networks (and CNNs) assume **independent inputs**. They can't handle **sequential data** where order and context matter (e.g., time series, text, audio). They also have **fixed input/output sizes**, so they fail with variable-length sequences.
+
+---
+
+### **RNN Advantages**
+1. **Memory / State** – Maintains a hidden state that acts as a "memory" of past inputs, allowing it to capture **temporal dependencies**.
+2. **Variable-Length Handling** – Processes sequences of any length (input and output).
+3. **Parameter Sharing** – Uses the same weights across all time steps, making it efficient and able to generalize across different positions in the sequence.
+4. **Contextual Understanding** – Each output is influenced by the entire previous history, not just the current input.
+
+---
+
+### **Core Fix**
+RNNs solve the **"no memory"** problem of feedforward networks for **ordered, sequential data**.
