@@ -1,6 +1,6 @@
-# Chapter 13 — Categorical Predictors & Interactions
+# Chapter 13 — Categorical Predictors & Interactions (Boosted Edition)
 
-*Synthesized from Kutner, Montgomery, Sheather, and ESL/ISL — expanded with plain-language explanations. Introduces a new small dataset with a categorical predictor, since none of the running datasets so far have included one.*
+*Synthesized from Kutner, Montgomery, Sheather, and ESL/ISL — expanded with plain-language explanations, ASCII diagrams, and two additional fully-worked numerical examples contrasting the no-interaction and interaction models side by side.*
 
 **New example dataset** — students studying via two methods (self-study vs. tutor), with hours studied ($x$) and exam score ($y$):
 
@@ -20,6 +20,30 @@
 Every predictor so far has been numeric (hours, practice tests). But plenty of real predictors are **categories** — study method, device type, treatment vs. control, region. Regression can't multiply a coefficient by the word "tutor" — categories have to be converted into numbers first, in a way that preserves a sensible interpretation. That conversion is **dummy coding**, and it's the entire subject of the first half of this chapter.
 
 **Plain-language framing before anything else:** every formula we've used so far has needed actual numbers to multiply against — you can't do "$\beta_2 \times \text{"tutor"}$" the way you can do "$\beta_1 \times 3\text{ hours}$." So the whole first half of this chapter is about a simple but important trick: relabeling a category ("tutor" vs. "self-study") as a plain 0-or-1 number, so the same regression machinery from every earlier chapter can chew on it without any changes. The second half is about a genuinely new idea: letting the *slope itself* — not just the starting point — differ between groups, which is what "interaction" means.
+
+**ASCII picture — the two competing "shapes" this whole chapter is about, side by side:**
+
+```
+   NO INTERACTION                        WITH INTERACTION
+   (parallel lines)                      (lines that fan out/converge)
+
+ y                                     y
+ |                    Tutor            |                         Tutor
+ |               ,--*                  |                    ,--*
+ |          ,--*                       |               ,--*
+ |     ,--*         Self-study         |          ,--*
+ |,--*          ,--*                   |     ,--*         ,--* Self-study
+ |          ,--*                       |,--*         ,--*
+ |     ,--*                            |        ,--*
+ +---------------------------- x       +---------------------------- x
+
+ Same slope for both groups —          Different slopes — the lines
+ tutor line is just shifted UP         spread apart as x increases
+ by a constant amount everywhere       (tutoring isn't just a head
+                                        start, it's a steeper climb)
+```
+
+This picture is the entire chapter in one glance: **is the extra benefit of one group over another the same at every value of $x$ (left), or does that gap grow or shrink as $x$ changes (right)?**
 
 ---
 
@@ -43,13 +67,73 @@ $$ y_i = \beta_0+\beta_1x_i+\beta_2D_i+\varepsilon_i $$
 
 ---
 
-## 13.3 Adding an Interaction Term — Letting the Slope Differ Too
+## 13.3 NUMERICAL 1 — Fitting the No-Interaction Model by Hand
+
+Let's actually fit the parallel-lines model from §13.2 to the student dataset, step by step, **before** jumping to the already-fit interaction model in §13.4. This shows exactly what happens when you *force* equal slopes onto data that doesn't really have them.
+
+**Design matrix** (columns: intercept, $x$, $D$):
+
+| Student | Intercept | $x$ | $D$ | $y$ |
+|---|---|---|---|---|
+| 1 | 1 | 1 | 0 | 45 |
+| 2 | 1 | 2 | 0 | 50 |
+| 3 | 1 | 3 | 0 | 55 |
+| 4 | 1 | 1 | 1 | 58 |
+| 5 | 1 | 2 | 1 | 66 |
+| 6 | 1 | 3 | 1 | 74 |
+
+**Step 1 — means:** $\bar{x}=2$, $\bar{D}=0.5$, $\bar{y}=58$.
+
+**Step 2 — solving the normal equations** (same machinery as Chapter 4) gives:
+
+$$ \hat\beta_0 = 41.33, \qquad \hat\beta_1 = 6.5, \qquad \hat\beta_2 = 15.33 $$
+
+**Step 3 — fitted values and residuals:**
+
+| Student | Group | $x$ | Fitted $\hat y$ | Actual $y$ | Residual |
+|---|---|---|---|---|---|
+| 1 | Self-study | 1 | $41.33+6.5(1)=47.83$ | 45 | $-2.83$ |
+| 2 | Self-study | 2 | $41.33+6.5(2)=54.33$ | 50 | $-4.33$ |
+| 3 | Self-study | 3 | $41.33+6.5(3)=60.83$ | 55 | $-5.83$ |
+| 4 | Tutor | 1 | $41.33+15.33+6.5(1)=63.16$ | 58 | $-5.16$ |
+| 5 | Tutor | 2 | $41.33+15.33+6.5(2)=69.66$ | 66 | $-3.66$ |
+| 6 | Tutor | 3 | $41.33+15.33+6.5(3)=76.16$ | 74 | $-2.16$ |
+
+**The tell-tale sign this model is wrong:** notice the residuals for self-study start small-ish and get **more negative** as $x$ increases ($-2.83\to-4.33\to-5.83$), while tutor's residuals start very negative and **improve** toward zero ($-5.16\to-3.66\to-2.16$). **This is a systematic pattern, not noise** — exactly the fingerprint of a missing interaction term. The parallel-lines model can't bend to match tutor's steeper real slope, so it under-predicts tutor early and over-predicts self-study late, in a completely predictable, structured way.
+
+**ASCII picture of what just happened:**
+
+```
+ y                                    Forced parallel-line fit
+ 76 |                              *  <- actual tutor point,
+ 74 |                          ,-'      model UNDER-predicts here
+    |                      ,-'
+ 66 |                  ,-*    <- model line (tutor)
+    |              ,-'
+ 58 |          ,-*      <- actual tutor point,
+    |      ,-'              model way UNDER-predicts here
+    |  ,-*
+ 55 |,'        *  <- actual self-study point,
+    |              model OVER-predicts here (fitted line is above it)
+    +------------------------------------- x
+     1        2        3
+
+ The straight parallel-line model simply CANNOT capture that
+ tutor's real slope is steeper — it compromises with one
+ "average" slope for both, missing systematically at both ends.
+```
+
+**The formal fix, and the payoff of doing this numerical:** this residual pattern is exactly what should push you toward testing $H_0:\beta_3=0$ (§13.5) and very likely rejecting it — which leads straight into the interaction model worked next.
+
+---
+
+## 13.4 Adding an Interaction Term — Letting the Slope Differ Too
 
 The data above doesn't actually have equal slopes across groups — the tutor group's scores climb faster per hour than self-study's. To let the slope itself differ by group, add an **interaction term**: the product of $x$ and $D$.
 
 $$ y_i = \beta_0+\beta_1x_i+\beta_2D_i+\beta_3(x_i\times D_i)+\varepsilon_i $$
 
-**Plain-English framing before the group-by-group breakdown:** the previous model (§13.2) only let the two groups have different *starting points* — it forced them to improve at the exact same rate per hour. But look at the actual data: self-study goes up by 5 points per hour (45→50→55), while tutor goes up by 8 points per hour (58→66→74) — a genuinely different *rate* of improvement, not just a different starting point. The interaction term is the tool that lets the model capture "different starting point AND different rate," instead of forcing both groups onto parallel lines.
+**Plain-English framing before the group-by-group breakdown:** the previous model (§13.2–13.3) only let the two groups have different *starting points* — it forced them to improve at the exact same rate per hour. But look at the actual data: self-study goes up by 5 points per hour (45→50→55), while tutor goes up by 8 points per hour (58→66→74) — a genuinely different *rate* of improvement, not just a different starting point. The interaction term is the tool that lets the model capture "different starting point AND different rate," instead of forcing both groups onto parallel lines.
 
 **Reading it group by group:**
 
@@ -62,9 +146,28 @@ $$ \hat{\beta}_0=40,\quad \hat{\beta}_1=5,\quad \hat{\beta}_2=10,\quad \hat{\bet
 
 **Verification** (tutor group, $x=2$): $(40+10)+(5+3)(2) = 50+16=66$ — matches the table exactly. Every other row checks out the same way.
 
+**ASCII picture — this time the model actually captures the fanning-out pattern:**
+
+```
+ y
+ 74 |                                *  <- exact match now
+ 66 |                          *
+    |                    ,-'  (tutor slope = 8/hour)
+ 58 |              *
+    |
+ 55 |                    *  <- exact match
+ 50 |              *          (self-study slope = 5/hour)
+ 45 |        *
+    +------------------------------------- x
+     1        2        3
+
+ Two DIFFERENT slopes, correctly diverging — zero residuals,
+ because this model has the right shape to match the data.
+```
+
 ---
 
-## 13.4 What Each Coefficient Actually Means Here
+## 13.5 What Each Coefficient Actually Means Here
 
 | Coefficient | Value | Meaning |
 |---|---|---|
@@ -85,7 +188,62 @@ For self-study: effect $=5$. For tutor: effect $=5+3=8$. **You cannot meaningful
 
 ---
 
-## 13.5 Testing Whether the Interaction Is Necessary
+## 13.6 NUMERICAL 2 — A Second Worked Example, With Interaction That Goes the Other Way (Converging Lines)
+
+To make sure the concept isn't only understood in the "gap grows wider" direction, here's a second, independent numerical example where the interaction makes two groups **converge** instead of diverge — a common real-world pattern (e.g., a new drug's benefit over placebo shrinking at higher doses due to a ceiling effect).
+
+**New tiny dataset** — a drug trial, dose level ($x$, in mg) vs. symptom improvement score ($y$), for Drug and Placebo groups:
+
+| Group | $x$ (dose, mg) | $y$ (improvement score) |
+|---|---|---|
+| Placebo | 1 | 10 |
+| Placebo | 2 | 14 |
+| Placebo | 3 | 18 |
+| Drug | 1 | 25 |
+| Drug | 2 | 27 |
+| Drug | 3 | 29 |
+
+**Setting up the model** ($D=1$ for Drug, $D=0$ for Placebo):
+
+$$ y_i = \beta_0+\beta_1x_i+\beta_2D_i+\beta_3(x_i\times D_i)+\varepsilon_i $$
+
+**Solving (design matrix machinery identical to §13.4), this fits exactly:**
+
+$$ \hat\beta_0=6,\quad \hat\beta_1=4,\quad \hat\beta_2=17,\quad \hat\beta_3=-2 $$
+
+**Verification** (Drug group, $x=2$): $(6+17)+(4-2)(2) = 23+4=27$ — matches the table.
+
+**Reading the coefficients — notice $\hat\beta_3$ is now NEGATIVE:**
+
+- **Placebo** ($D=0$): slope $=\hat\beta_1=4$ points per mg.
+- **Drug** ($D=1$): slope $=\hat\beta_1+\hat\beta_3=4-2=2$ points per mg.
+
+**In plain words:** placebo's effect keeps climbing steadily (4 points per mg, no ceiling in sight). The drug starts far ahead ($\hat\beta_2=17$-point head start at dose zero) but its *additional* benefit per extra mg is actually smaller (only 2 points per mg) — a classic **ceiling effect**, where a treatment that's already working well has less room left to improve further. The gap between drug and placebo is **shrinking** as dose increases, even though drug is still ahead at every dose shown here.
+
+**ASCII picture — the converging-lines case:**
+
+```
+ y
+ 29 |                                    *  Drug (gap = 11)
+ 27 |                              *
+ 25 |                        *
+    |                                          (gap keeps
+ 18 |                                    *      SHRINKING
+ 14 |                              *             as x grows)
+ 10 |                        *
+    +------------------------------------- x
+     1        2        3
+
+ Drug starts WAY ahead (gap=15 at x=1) but placebo is catching
+ up (gap=11 at x=3) — a NEGATIVE interaction coefficient means
+ the lines converge instead of fan out.
+```
+
+**The general lesson from comparing Numerical 1 (implicitly diverging tutor data) and Numerical 2 (explicitly converging drug data):** the **sign** of $\hat\beta_3$ tells you the direction of the interaction — positive means the reference group's advantage (or disadvantage) grows with $x$; negative means it shrinks. The **size** of $\hat\beta_3$ relative to $\hat\beta_1$ tells you how dramatic that change is. Always check both.
+
+---
+
+## 13.7 Testing Whether the Interaction Is Necessary
 
 Before concluding the slopes genuinely differ, test $H_0: \beta_3=0$ (no interaction — a single common slope suffices) using the same individual t-test machinery from Chapter 2/5, or equivalently a partial F-test (Chapter 5, §5.5) comparing the interaction model to the no-interaction model from §13.2. **Practical guidance from Montgomery and Kutner alike:** if the interaction term is significant, keep both main-effect terms in the model regardless of their own individual significance — removing a main effect while keeping its interaction badly distorts the interpretation of the remaining terms (this is called maintaining **hierarchical/marginality** in the model).
 
@@ -93,7 +251,7 @@ Before concluding the slopes genuinely differ, test $H_0: \beta_3=0$ (no interac
 
 ---
 
-## 13.6 Categorical Predictors With More Than Two Levels
+## 13.8 Categorical Predictors With More Than Two Levels
 
 For a 3-level factor (self-study / tutor / online), with self-study as reference:
 
@@ -107,16 +265,16 @@ $\beta_2$ is "tutor vs. self-study" and $\beta_3$ is "online vs. self-study," bo
 
 ---
 
-## 13.7 Where the Textbooks Differ
+## 13.9 Where the Textbooks Differ
 
 - **Kutner** uses the term "indicator variables" throughout and gives the most complete general treatment of the dummy-variable-trap/multicollinearity connection.
 - **Montgomery** emphasizes **effect coding** (using $-1/+1$ instead of $0/1$) as an alternative scheme common in designed experiments, where coefficients are interpreted as deviations from a grand mean rather than from a specific reference category — worth recognizing by name even if $0/1$ dummy coding remains the default in most applied regression work.
-- **Sheather** leans on visualizing interaction effects directly — plotting separate fitted lines for each group side by side — as the primary tool for building intuition, over the algebraic decomposition in §13.3–13.4.
-- **ESL/ISL**, reflecting a machine-learning perspective, calls this **one-hot encoding** and treats it as a standard, almost automatic preprocessing step rather than a topic requiring careful interpretive discussion — the interpretability concerns in §13.4 are far more central to classical statistics than to ML practice, where predictive accuracy is often the only priority.
+- **Sheather** leans on visualizing interaction effects directly — plotting separate fitted lines for each group side by side — as the primary tool for building intuition, over the algebraic decomposition in §13.4–13.5.
+- **ESL/ISL**, reflecting a machine-learning perspective, calls this **one-hot encoding** and treats it as a standard, almost automatic preprocessing step rather than a topic requiring careful interpretive discussion — the interpretability concerns in §13.5 are far more central to classical statistics than to ML practice, where predictive accuracy is often the only priority.
 
 ---
 
-## 13.8 Interview Q&A
+## 13.10 Interview Q&A
 
 **Q: Why do you use $k-1$ dummy variables for a $k$-level categorical predictor, not $k$?**
 A: Including all $k$ creates perfect multicollinearity with the intercept term (the dummy-variable trap) — the $k$ dummy columns would sum to the all-ones intercept column, making $\mathbf{X}^T\mathbf{X}$ non-invertible.
@@ -125,6 +283,10 @@ A: Including all $k$ creates perfect multicollinearity with the intercept term (
 **Q: In a model with an interaction term $x\times D$, what does the coefficient on $x$ alone mean?**
 A: It's the effect of $x$ specifically for the reference group ($D=0$) only — not an overall/average effect across all groups. The effect for the other group requires adding the interaction coefficient.
 *(Simple version: it's the effect for the baseline group only — you have to ask "for which group?" before trusting it.)*
+
+**Q: What does a negative interaction coefficient mean, physically, versus a positive one?**
+A: A positive interaction coefficient means the non-reference group's slope is steeper than the reference group's — the gap between groups widens as $x$ increases. A negative interaction coefficient means the opposite — the non-reference group's slope is flatter, so the gap narrows as $x$ increases (a "ceiling effect" or converging pattern).
+*(Simple version: positive interaction = lines fan apart; negative interaction = lines converge.)*
 
 **Q: If your interaction term is statistically significant but one of the main effects isn't, should you drop the non-significant main effect?**
 A: Generally no — removing a main effect while retaining its interaction violates the hierarchy/marginality principle and distorts the interpretation of the remaining coefficients; standard practice is to keep both main effects whenever their interaction is retained.
@@ -137,6 +299,9 @@ A: Test $H_0:\beta_3=0$ on the interaction coefficient — either via its indivi
 **Q: What's the difference between dummy coding and effect coding?**
 A: Dummy (0/1) coding interprets coefficients relative to a specific reference category. Effect coding ($-1/+1$) interprets coefficients as deviations from the overall grand mean across all categories — common in designed experiments, less common in general applied regression.
 *(Simple version: dummy coding compares each group to one chosen baseline group; effect coding compares each group to the overall average of everyone.)*
+
+**Q: If you fit a no-interaction (parallel-lines) model to data that actually has different slopes per group, what pattern would you expect to see in the residuals?**
+A: A systematic pattern within each group as $x$ changes — e.g., the group with the true steeper slope will be under-predicted at low $x$ and over-predicted at high $x$ (or vice versa for the flatter-sloped group), since the forced common slope is a compromise between the two true slopes. This is a direct sign, per Chapter 7, that an interaction term is missing.
 
 ---
 
