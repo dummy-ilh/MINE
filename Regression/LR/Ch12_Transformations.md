@@ -1,6 +1,6 @@
-# Chapter 12 — Transformations
+# Chapter 12 — Transformations (Mastery Edition)
 
-*Synthesized from Kutner, Montgomery, Sheather, and ESL/ISL — expanded with plain-language explanations. This chapter introduces a fresh small dataset with genuine curvature — our long-running 5-student dataset has been deliberately near-linear throughout Chapters 1–11 and isn't suited to demonstrating this chapter's fix.*
+*Synthesized from Kutner, Montgomery, Sheather, and ESL/ISL — expanded with plain-language explanations, ASCII diagrams, and additional material for full mastery of the topic. This chapter introduces a fresh small dataset with genuine curvature — our long-running 5-student dataset has been deliberately near-linear throughout Chapters 1–11 and isn't suited to demonstrating this chapter's fix.*
 
 **New example dataset** — a quantity that doubles at each step (a classic multiplicative/exponential growth pattern, e.g., bacterial population doubling per hour):
 
@@ -16,6 +16,30 @@ Chapter 7's four-panel diagnostic flagged a **curved (U-shaped) pattern** in the
 
 **Plain-language framing before anything else:** picture a population of bacteria that doubles every hour. Hour 1: 3,000. Hour 2: 6,000. Hour 3: 12,000. Hour 5: 48,000. If you try to draw a *straight* line through those points, you're doomed from the start — the growth is accelerating, and no straight line can bend to keep up. This chapter is about a clever trick: instead of giving up on straight lines, you can sometimes *reshape the data itself* so that a straight line becomes the right tool again. It's the mathematical equivalent of "if a photo looks warped, don't throw out your ruler — straighten the photo first."
 
+**ASCII picture — the raw data, visibly curving upward faster and faster:**
+
+```
+ y (thousands)
+ 48 |                                          *
+    |
+ 40 |
+    |
+ 32 |
+    |
+ 24 |                          *
+    |
+ 16 |
+    |
+  8 |            *
+    |    *
+  0 +----+----+----+----+----+----  x (hours)
+    0    1    2    3    4    5
+
+  A straight ruler laid across these points will always miss
+  badly at the ends (too low) and overshoot in the middle
+  (too high) — the curve is bending away from any straight line.
+```
+
 ---
 
 ## 12.2 Fitting the Raw (Misspecified) Linear Model First
@@ -30,6 +54,24 @@ $$ S_{xy} = 31.2+12.6+0+5.4+58.8 = 108 \quad\Rightarrow\quad \hat{\beta}_1=\frac
 
 **Walking through what this means in plain words:** notice the straight-line fit even predicts a *negative* population at hour 1 (-3, which is nonsensical for an actual bacteria count) — a strong tell that a straight line is fundamentally the wrong shape here, not just a slightly-off fit. The pattern in the residuals (big miss, smaller miss, smaller miss, bigger miss, biggest miss) is the model's way of "confessing" that it's trying to force a curve into a straight shape and failing predictably at both ends.
 
+**ASCII picture — the classic U-shaped (actually here, a "smile-then-frown," or bowl-then-hump) residual pattern that gives this problem away:**
+
+```
+ residual
+   +8 |                                    *
+      |
+   +4 |    *
+      |
+    0 +----+----+----+----+----+----  fitted value
+      |
+   -4 |
+      |
+   -8 |              *         *
+      (this "big-small-small-big" shape across the
+       fitted range is the fingerprint of a missing
+       curve — Chapter 7's Panel 1 warning sign)
+```
+
 ---
 
 ## 12.3 The Log Transform — Straightening Multiplicative Growth
@@ -37,6 +79,24 @@ $$ S_{xy} = 31.2+12.6+0+5.4+58.8 = 108 \quad\Rightarrow\quad \hat{\beta}_1=\frac
 **The core idea:** if $y$ grows *multiplicatively* (each step multiplies by a roughly constant factor, rather than adding a constant amount), taking $\ln(y)$ converts that multiplicative pattern into an *additive*, and therefore linear, one. This particular dataset was constructed as $y=3\times2^{x-1}$ (population doubling each hour) — exactly the multiplicative structure logs are built to handle.
 
 **Plain-English version of the core trick, before the log rules:** logarithms have a special property — they turn *multiplication* into *addition*. "Doubling every hour" is a multiplication story ($\times2$ each step). But $\ln(\text{doubling}) = \ln(2)$, a fixed number you *add* each step instead of multiplying by. So on the log scale, "doubling every hour" simply becomes "add the same fixed amount every hour" — and "add the same fixed amount every step" is *exactly* what a straight line describes. That's the whole trick: logs convert a multiplicative growth story into an additive one, and additive stories are what straight lines are built to capture.
+
+**ASCII picture — the "straightening" effect side by side:**
+
+```
+  RAW SCALE (y)                    LOG SCALE (ln y)
+  48|                *             4.0|                *
+    |                                 |            *
+    |          *                  3.0|
+  24|                                 |       *
+    |     *                       2.0|
+    |  *                              |   *
+   0+--+--+--+--+--+--  x         1.0+--+--+--+--+--+--  x
+    1  2  3  4  5                     1  2  3  4  5
+
+  A curve that bends sharply           A perfectly straight line —
+  upward, impossible for a             the log transform "unbent"
+  straight line to follow              the curve completely
+```
 
 Taking natural logs of $y$: $\ln(3)=1.099,\ \ln(6)=1.792,\ \ln(12)=2.485,\ \ln(24)=3.178,\ \ln(48)=3.871$.
 
@@ -68,6 +128,42 @@ This is a frequently tested interview point, because the interpretation changes 
 
 **Plain-language version of this subtle trap:** it's tempting to think "I'll just predict on the log scale, then undo the log with $e^{(\cdot)}$, and I'm done." That instinct is *almost* right, but not quite: undoing the log this simple way actually gives you the *typical middle value* (the median), not the *average* (the mean) — and those two aren't the same once you're back on the original scale, because logging and un-logging aren't perfectly symmetric when there's randomness involved. If your goal really is the average prediction, you need a small correction factor on top of the simple undo-the-log step. This is a genuinely common mistake, which is exactly why interviewers like asking about it.
 
+**ASCII picture — why exponentiating alone understates the mean (Jensen's inequality made visual):**
+
+```
+   Distribution of ln(y) on the log scale — symmetric bell curve
+              *
+           *     *
+        *           *
+     *                 *
+  ---+-----------------+---   ln(y)
+        median = mean
+        (they coincide HERE, on the log scale)
+
+   Now exponentiate every point back to the original scale:
+
+           Distribution of y — SKEWED, long right tail
+   *
+   **
+   ****
+   ******                              *      *    *
+  ---+-----------------------------------------------  y
+      median          <-- gap -->            mean
+
+   Exponentiating a symmetric bell curve produces a
+   right-skewed one. The long tail drags the MEAN to the
+   right of the MEDIAN — so exp(predicted ln y) lands on
+   the median, undershooting the true mean.
+```
+
+**Full menu of back-transformation correction options (know these by name):**
+
+| Correction | Formula | When to use |
+|---|---|---|
+| Naive exponentiation | $e^{\widehat{\ln y}}$ | Gives the **median**, not the mean — fine if the median is actually what you want |
+| Smearing estimator (Duan) | $e^{\widehat{\ln y}}\times\frac{1}{n}\sum e^{e_i}$ | Nonparametric — doesn't assume normal residuals, just uses the average exponentiated residual as a correction factor |
+| Normal-theory correction | $e^{\widehat{\ln y}+\hat\sigma^2/2}$ | Assumes log-scale residuals are normally distributed — simpler, but relies on that assumption holding |
+
 ---
 
 ## 12.5 The Box-Cox Family — Choosing a Transformation Systematically
@@ -80,9 +176,48 @@ Special cases: $\lambda=1$ is (up to a constant shift) no transformation at all;
 
 **Plain-English framing before the formula:** instead of manually trying "maybe log will work... maybe square root... maybe something else," Box-Cox packages *every* common transformation into one adjustable dial, controlled by a single number $\lambda$. Turn the dial to $\lambda=0$ and you get the log transform. Turn it to $\lambda=0.5$ and you get something like a square root. Turn it to $\lambda=1$ and you're back to the untransformed original data. Rather than guessing which specific transform to try, you can let the data itself tell you where on this dial to land.
 
+**ASCII picture — the Box-Cox "dial," and what each setting does to a growth curve:**
+
+```
+  lambda:   -1        -0.5        0         0.5        1         2
+            |          |          |          |          |          |
+  reciprocal    inverse-sqrt    LOG      sqrt-like    NO CHANGE   squared
+  (flattens     (strong        (strong    (moderate    (raw       (makes
+   extreme      flattening)     flatten-   flatten-     data)      curves
+   large                        ing)        ing)                   MORE
+   values                                                           extreme,
+   hard)                                                            rarely used
+                                                                     to "fix"
+                                                                     curvature)
+
+     <---  turn this way to flatten upward curves  ---
+```
+
 **How $\lambda$ is chosen in practice:** for a range of candidate $\lambda$ values, fit the regression using $y^{(\lambda)}$ as the response, and pick the $\lambda$ that **maximizes the profile log-likelihood** (equivalently, for a fixed grid of $\lambda$, the one minimizing SSE after accounting for the transformation's Jacobian). Software (e.g., `boxcox()` in R) typically plots log-likelihood against $\lambda$ with a confidence interval — you don't need to hand-search infinitely many values, just scan a reasonable grid (e.g., $-2$ to $2$ in steps of $0.25$) and read off the peak. For our constructed dataset, this search would land at (or very near) $\lambda=0$, correctly recovering the log transform, since the data is exactly exponential by construction.
 
 **In plain words, how the "search" actually works:** the software tries a bunch of dial settings (say, $\lambda=-2,-1.75,-1.5,...,2$), refits the regression at each setting, and checks "how well does the model fit at this setting." It then simply picks whichever setting fit best. For our doubling-population data, that search would correctly discover that $\lambda=0$ (the log transform) fits best — the data was built as a pure exponential, so it makes sense the automatic search rediscovers exactly the transform we already reasoned our way to by hand.
+
+**ASCII picture — the shape of the log-likelihood search (what software actually plots):**
+
+```
+  log-
+  likelihood
+       |              ___
+       |            /     \
+       |          /         \
+       |        /             \
+       |      /                 \___
+       |____/                        \____
+       +----+----+----+----+----+----+----+---  lambda
+           -2   -1    0    1    2
+                      ^
+                  peak here = best-fitting lambda
+                  (a confidence interval, often shown as
+                   dashed vertical lines, marks a plausible
+                   RANGE of lambda — not just one number)
+```
+
+**A limitation worth knowing for mastery:** Box-Cox as written **requires $y>0$** strictly (you can't take $y^\lambda$ or $\ln y$ of a negative or zero value). If your response can be zero or negative, the standard fix is the **Yeo-Johnson transformation** — a close cousin of Box-Cox that handles zero and negative values by applying a slightly different formula depending on the sign of $y$. Worth recognizing by name even if you'd rarely derive it by hand.
 
 ---
 
@@ -102,7 +237,62 @@ This is still technically **linear regression** (linear in the *parameters* $\be
 
 ---
 
-## 12.7 Where the Textbooks Differ
+## 12.7 The Full Transformation Toolbox — Everything You Need to Recognize for Mastery
+
+Beyond log and Box-Cox, here is the complete practical toolkit, organized by the *shape of curvature* each one is built to fix. This table alone is worth memorizing for interview purposes.
+
+| Transformation | Formula | Fixes | Typical use case |
+|---|---|---|---|
+| **Log** | $\ln(y)$ | Right-skewed data; multiplicative growth; variance growing with the mean | Population growth, income, prices, counts |
+| **Square root** | $\sqrt{y}$ | Mild right skew; variance proportional to the mean (common in count data) | Counts (e.g., number of customer complaints per day) |
+| **Reciprocal** | $1/y$ | Severe right skew; rates and ratios | Reaction rates, time-to-event data |
+| **Box-Cox** | $(y^\lambda-1)/\lambda$ | General-purpose — lets the data pick the best power automatically | When you're not sure which specific transform fits |
+| **Yeo-Johnson** | Box-Cox variant | Same as Box-Cox, but allows $y\leq0$ | Data with zeros or negative values |
+| **Arcsine square root** | $\arcsin(\sqrt{y})$ | Proportions/percentages bounded between 0 and 1 (variance shrinks near 0 and 1) | Pass rates, click-through rates, any bounded proportion |
+| **Logit** | $\ln\!\left(\frac{y}{1-y}\right)$ | Proportions/percentages — maps $(0,1)$ onto the entire real line | Probabilities, proportions, before modeling as if unbounded |
+| **Polynomial ($x^2$, $x^3$...)** | Add powers of $x$ as new columns | Curvature that isn't a clean multiplicative story | Diminishing returns, U-shaped or S-shaped relationships |
+
+**How to choose among these, as a decision flow (plain-language, step by step):**
+
+```
+   Is the curvature in y itself right-skewed / growing faster
+   and faster (like the bacteria example)?
+        |
+        YES --> Is the growth story "percentage per step"? 
+        |         YES --> LOG TRANSFORM (clean, interpretable)
+        |         NO / UNSURE --> BOX-COX (let the data decide the power)
+        |
+        NO --> Is y a bounded proportion (between 0 and 1)?
+        |         YES --> ARCSINE-SQRT or LOGIT
+        |
+        NO --> Is y a count (0, 1, 2, 3...) with variance growing
+        |      roughly with the mean?
+        |         YES --> SQUARE ROOT (or consider Poisson-family
+        |                  models instead of transforming at all)
+        |
+        NO --> Does the curve not match any clean transform story?
+                  YES --> POLYNOMIAL TERM or SPLINE (Chapter 21)
+```
+
+---
+
+## 12.8 Common Mistakes and Subtleties That Separate "Knows the Formula" From "Actually Masters This"
+
+**1. Transforming when the problem is actually heteroscedasticity, not curvature (or both at once).** Montgomery's key insight (§12.9 below) is that many transformations fix *both* nonlinearity and unequal variance simultaneously, because in many real datasets they share a common root cause (e.g., variance naturally scales with the mean in count and multiplicative data). Always re-check **all four** of Chapter 7's diagnostic panels after transforming — a log transform aimed at fixing curvature often improves the scale-location panel too, almost as a bonus.
+
+**2. Forgetting that transformations change what "outlier" and "influential point" mean.** A point that looked like a severe outlier on the raw scale (Chapter 8) may look completely ordinary after a log transform, and vice versa — leverage and Cook's distance should generally be **recomputed** on the transformed scale, not carried over from the original.
+
+**3. Over-trusting a "perfect" Box-Cox fit on a small dataset.** With very few data points (as in this chapter's constructed example), the log-likelihood curve in §12.5 can look deceptively sharp and confident. With more data and more noise, the curve is typically much flatter, and the "best" $\lambda$ comes with real uncertainty — always look at the confidence interval around $\hat\lambda$, not just the single peak value.
+
+**4. Interpreting a log-log elasticity as constant everywhere it obviously isn't.** A log-log model assumes the *same* percentage relationship holds across the entire range of $x$ — reasonable for many economic relationships locally, but potentially misleading if extrapolated far outside the observed data range (a demand curve's elasticity at very low vs. very high prices is rarely truly identical).
+
+**5. Applying $\ln(y)$ when $y$ can be zero.** $\ln(0)$ is undefined. A common (imperfect) patch is $\ln(y+1)$ (sometimes called "log1p"), which handles zeros gracefully but technically changes the interpretation of the coefficient slightly — worth flagging if your data has genuine zeros (e.g., "zero sales on some days").
+
+**6. Forgetting to back-transform *confidence intervals*, not just point predictions.** The Duan smearing / normal-theory correction in §12.4 fixes the *point* prediction's mean bias — but interval estimates need their own careful back-transformation too (typically by transforming the endpoints of the log-scale interval, not by trying to adjust a single point estimate's interval directly).
+
+---
+
+## 12.9 Where the Textbooks Differ
 
 - **Kutner** presents Box-Cox with the fullest likelihood-based derivation and the most systematic treatment of the transformation-selection procedure.
 - **Montgomery** emphasizes the variance-stabilizing role of transformations as much as the linearizing role — noting that many transformations (log, square root) simultaneously fix both nonlinearity **and** heteroscedasticity (Chapter 10) when the two problems share a common cause (e.g., variance naturally growing alongside the mean in count or multiplicative data).
@@ -111,7 +301,7 @@ This is still technically **linear regression** (linear in the *parameters* $\be
 
 ---
 
-## 12.8 Interview Q&A
+## 12.10 Interview Q&A
 
 **Q: You see a U-shaped pattern in your residuals-vs-fitted plot. What are your options?**
 A: Consider a transformation (log, square root, Box-Cox) if the curvature looks multiplicative/proportional in nature, or add a polynomial term (or spline) if it doesn't match a clean transformation story — both directly address the linearity violation flagged in that panel from Chapter 7.
@@ -132,6 +322,15 @@ A: Yes — the model is linear in the parameters ($\beta_0,\beta_1,\beta_2,...$)
 **Q: How is the Box-Cox $\lambda$ parameter chosen?**
 A: By maximizing the profile log-likelihood (equivalently minimizing an appropriately Jacobian-adjusted SSE) across a grid of candidate $\lambda$ values — not by arbitrary trial and error, and not something you'd typically need to derive by hand in an interview beyond explaining the selection principle.
 *(Simple version: try a bunch of dial settings, keep whichever one fits the data best.)*
+
+**Q: What do you do if your response variable has zeros or negative values and you want a Box-Cox-style transformation?**
+A: Use the Yeo-Johnson transformation, which extends the same idea to handle zero and negative values (ordinary Box-Cox requires strictly positive $y$); a simpler but imperfect patch for zeros specifically is $\ln(y+1)$.
+
+**Q: How would you choose a transformation for a proportion or percentage variable bounded between 0 and 1?**
+A: Arcsine-square-root or logit transforms — these are specifically designed for bounded proportion data, where variance naturally shrinks near 0 and 1 in a way that log or Box-Cox don't directly address.
+
+**Q: Why should you re-check your diagnostic plots after applying a transformation, rather than assuming the problem is solved?**
+A: A transformation aimed at fixing curvature often also changes (usually improves, but not always) the heteroscedasticity picture and can change which points appear as outliers or high-leverage/influential — all four of Chapter 7's diagnostic panels and Chapter 8's influence measures should be recomputed on the transformed scale, not assumed to carry over.
 
 ---
 
