@@ -1,133 +1,195 @@
 # Chapter 10 — Heteroscedasticity
 
-*Synthesized from Kutner, Montgomery, Sheather, and ESL/ISL — expanded with plain-language explanations. Uses Chapter 5's noisy dataset (residuals $e=0.2,0.6,-1,-0.6,0.8$; $SSE=2.4$) for the formal test, and a simple-regression version for the Weighted Least Squares illustration.*
+*Synthesized from Kutner, Montgomery, Sheather, and ESL/ISL — rewritten with plain-language explanations, ASCII visuals, and extra worked examples. Uses Chapter 5's dataset (residuals $e = 0.2, 0.6, -1, -0.6, 0.8$; $SSE = 2.4$) for the formal test, plus a simple-regression example for the Weighted Least Squares walkthrough.*
 
 ---
 
 ## 10.1 The Motivating Question
 
-Chapter 7's "scale-location" panel flagged a funnel-shaped spread of residuals as a visual warning sign. This chapter makes that warning rigorous: **is the assumption of constant error variance ($\text{Var}(\varepsilon_i)=\sigma^2$ for all $i$) actually violated, formally, or does it just look that way by eye?**
+**In one sentence:** heteroscedasticity means your model's mistakes aren't equally noisy everywhere.
 
-**Why it matters, precisely:** under heteroscedasticity, OLS coefficient estimates $\hat{\boldsymbol{\beta}}$ **remain unbiased** — Gauss-Markov's unbiasedness doesn't require homoscedasticity. What breaks is **BLUE-ness** (Chapter 6): OLS is no longer the *minimum-variance* linear unbiased estimator, and — the part that actually bites in practice — the standard errors, t-tests, and confidence intervals from Chapters 2 and 5 become **invalid**, because their formulas assumed $\text{Var}(\boldsymbol{\varepsilon})=\sigma^2\mathbf{I}$. You can still get a reasonable point estimate; you can no longer trust the p-value attached to it.
+Picture two scatter plots of residuals against a predictor $x$:
 
-**Plain-language framing before anything else:** "Heteroscedasticity" is a long word for a simple idea: your model's mistakes aren't equally noisy everywhere. Maybe your model predicts small values very precisely but gets wildly inconsistent on large values — like a bathroom scale that's accurate to the ounce for light objects but could be off by five pounds for heavy ones. Chapter 7 caught a hint of this visually (the "funnel shape" in a scatter plot). This chapter's job is to turn "hmm, that plot looks a little funnel-shaped" into an actual number you can test formally, and then to explain what you can still trust (your best-guess line) versus what breaks (your confidence intervals and p-values).
+```
+HOMOSCEDASTIC (good)              HETEROSCEDASTIC (funnel shape)
 
-**The one-sentence takeaway to hold onto:** your model's *predictions* stay fine; it's your model's *confidence about its own precision* that becomes unreliable.
+  e |  .   .    .   .              e |            .
+    |    .   .    .                  |          .   .
+  0 |--.----.---.----.----  x      0 |--.--.-.------.------- x
+    |    .    .   .                  |  . . .        .
+    |  .    .    .   .               |  ..              .
+    |__________________              |______________________
+
+  spread of e is constant          spread of e GROWS as x grows
+  across all x  → OK                → variance is not constant
+```
+
+The left plot is what you want: residuals scattered in an even, constant-width band. The right plot is the classic warning sign — a "funnel" that widens as $x$ increases. Chapter 7 flagged this by eye. This chapter turns "that looks a little funnel-shaped" into an actual number.
+
+**What breaks and what doesn't — the single most important fact in this chapter:**
+
+| Still fine under heteroscedasticity | Broken under heteroscedasticity |
+|---|---|
+| $\hat\beta_0, \hat\beta_1$ remain **unbiased** (Gauss-Markov's unbiasedness doesn't need constant variance) | OLS is no longer **BLUE** — some other weighted estimator now has lower variance |
+| Your point predictions | Standard errors, t-tests, F-tests, confidence intervals — all built assuming $\text{Var}(\varepsilon_i)=\sigma^2$ for every $i$ |
+
+**Analogy to hold onto:** a bathroom scale that's accurate to the ounce for light objects but could be off by five pounds for heavy ones. The scale isn't *biased* — on average it's still right — but the *precision* of its readings depends on what you're weighing. That's heteroscedasticity: your line is still the right line on average, but your confidence about how precise any single prediction is now depends on where you are on the x-axis.
 
 ---
 
 ## 10.2 The Breusch-Pagan Test — Formalizing the Funnel Shape
 
-**Core idea:** if error variance depends on the predictors, then squared residuals ($e_i^2$, our best available stand-in for the unobservable $\varepsilon_i^2$) should be *predictable* from those same predictors. So: **regress the squared residuals on the predictors**, and see if that auxiliary regression explains a significant amount of variation.
+**Plain-language idea, before any formula:** if the noisiness of your mistakes truly depends on $x_1, x_2$, then squaring each residual and trying to *predict that squared residual* from $x_1, x_2$ should actually work to some degree. If the noise is equally spread out everywhere, there's nothing for $x_1, x_2$ to explain about the size of the mistakes — the attempt should fail, and that failure (a low $R^2$) is itself the evidence that nothing suspicious is happening.
 
-**In plain words, before the steps:** if the "noisiness" of your model's mistakes truly depends on your inputs (say, mistakes get bigger as $x_1$ grows), then if you squared each mistake and tried to *predict that squared mistake* using $x_1$ and $x_2$, you should actually succeed to some degree. If the mistakes are equally noisy everywhere, there'd be nothing for $x_1$ and $x_2$ to "explain" about the size of the mistakes — trying to predict them would fail, and that failure (a low $R^2$) is itself the evidence that nothing suspicious is going on.
+```
+Step 1: fit original model  →  get residuals e_i
+Step 2: square them         →  e_i^2  (our stand-in for the unobservable variance)
+Step 3: regress e_i^2 on x1, x2   (the "auxiliary regression")
+Step 4: does that auxiliary regression explain a meaningful amount? → test it
+```
 
-**Procedure:**
-1. Fit the original model, obtain residuals $e_i$.
-2. Fit an **auxiliary regression**: $e_i^2$ on the same predictors $x_1, ..., x_p$.
-3. Compute the test statistic $BP = n\times R^2_{aux}$, which follows a $\chi^2_p$ distribution under $H_0:$ homoscedasticity.
+**The test statistic, simplified:**
 
-**Worked example.** Using Chapter 5's residuals ($e=0.2,0.6,-1,-0.6,0.8$, so $e^2=0.04,0.36,1,0.36,0.64$), regress $e^2$ on $x_1,x_2$ using the same normal-equations machinery from Chapter 4 (the design matrix $\mathbf{X}$, and its $(\mathbf{X}^T\mathbf{X})^{-1}$, are unchanged from every prior chapter).
+$$ BP = n \times R^2_{aux} $$
 
-Solving gives the auxiliary fit: $\hat{z} = 0 - 0.08x_1 + 0.4x_2$ (where $z=e^2$), with:
+Read this as: *(sample size)* × *(how well the predictors explain the squared residuals)*. Bigger sample, or a stronger pattern in the squared residuals, both push $BP$ up. Under the null hypothesis of homoscedasticity, $BP$ follows a $\chi^2_p$ distribution ($p$ = number of predictors in the auxiliary regression).
 
-$$ SSE_{aux} = 0.3264, \qquad SST_{aux} = 0.5184 \qquad\Rightarrow\qquad R^2_{aux} = 1-\frac{0.3264}{0.5184} \approx 0.370 $$
+**Worked example.** Residuals: $e = 0.2, 0.6, -1, -0.6, 0.8$, so $e^2 = 0.04, 0.36, 1, 0.36, 0.64$.
 
-$$ BP = n\times R^2_{aux} = 5\times0.370 \approx 1.85 $$
+Regressing $e^2$ on $x_1, x_2$ gives fitted line $\hat z = 0 - 0.08x_1 + 0.4x_2$ (where $z = e^2$), with:
 
-Comparing to $\chi^2_2$ at $\alpha=0.05$ (critical value $\approx5.99$, with $df=p=2$ predictors): since $1.85 < 5.99$, **we fail to reject homoscedasticity** — no formal evidence of heteroscedasticity in this dataset. (As with earlier small-sample tests in this curriculum, a 5-observation dataset has very low power to detect anything — this result should be read as "no signal detected here," not "homoscedasticity is confirmed.")
+$$ SSE_{aux} = 0.3264, \quad SST_{aux} = 0.5184 \quad\Rightarrow\quad R^2_{aux} = 1 - \frac{0.3264}{0.5184} \approx 0.370 $$
 
-**Walking through the result in plain words:** we took the squared mistakes and tried to explain them using hours studied and practice tests. Those two predictors managed to explain about 37% of the variation in the squared mistakes ($R^2_{aux}\approx0.370$) — which sounds like *something*, but once you account for how little data we have (only 5 points), that level of "explaining power" isn't strong enough to be confident it's a real pattern rather than coincidence. The test statistic (1.85) falls well short of the threshold (5.99) needed to call it significant. **Important nuance stated honestly:** this doesn't prove the errors are equally noisy everywhere — it just means this tiny dataset didn't give us enough evidence either way. With only 5 data points, almost nothing would pass this test convincingly.
+$$ BP = 5 \times 0.370 \approx 1.85 $$
+
+Compare to $\chi^2_2$ at $\alpha = 0.05$ (critical value $\approx 5.99$):
+
+```
+        reject region  →|███████████████
+0    1.85           5.99
+     ^BP here            ^critical value
+
+1.85 < 5.99  →  fail to reject homoscedasticity
+```
+
+**Reading the result honestly:** $x_1, x_2$ explained about 37% of the variation in the squared residuals — that sounds like something, but with only 5 data points there isn't enough evidence to call it a real pattern rather than coincidence. **This is "no signal detected," not "homoscedasticity confirmed."** With $n=5$, almost nothing passes this test convincingly either way.
 
 ---
 
 ## 10.3 White's Test — A More General Alternative
 
-Breusch-Pagan assumes variance changes *linearly* with the predictors. **White's test** is more general: the auxiliary regression includes not just $x_1,x_2$ but also their **squares and cross-product** ($x_1^2, x_2^2, x_1x_2$), catching nonlinear or interactive variance patterns that Breusch-Pagan would miss.
+Breusch-Pagan only checks: *does noise rise or fall in a straight line as $x_1$ or $x_2$ increases?* White's test checks richer patterns by adding squared and cross-product terms to the auxiliary regression:
 
-$$ White = n\times R^2_{aux} \sim \chi^2_{df} $$
+$$ e_i^2 \sim x_1,\ x_2,\ x_1^2,\ x_2^2,\ x_1 x_2 $$
 
-where $df$ equals the number of terms in the expanded auxiliary regression (here, 5: $x_1,x_2,x_1^2,x_2^2,x_1x_2$). **Trade-off:** White's test is more flexible but requires substantially more data relative to the number of auxiliary terms — with only 5 observations and 5 auxiliary predictors (plus intercept), this dataset has zero degrees of freedom left for White's test, illustrating concretely why White's test is a large-sample tool; it isn't attempted here for that reason.
+$$ White = n \times R^2_{aux} \sim \chi^2_{df}, \quad df = \text{number of auxiliary terms (here, 5)} $$
 
-**In plain words:** Breusch-Pagan only checks "does noise level rise or fall in a straight line as $x_1$ or $x_2$ increases?" White's test checks a richer set of patterns too — like "does noise spike specifically when *both* $x_1$ and $x_2$ are high together" (a cross-product effect), or "does noise follow a curve rather than a straight line" (a squared-term effect). The catch is that testing for more possible patterns means you need more data to have any statistical power left over — and with just 5 data points and 5 things to test, there's literally no room left to run the test at all. This is a clean, honest illustration of why White's test is described as a "large-sample" tool — it's not being skipped out of laziness, the math genuinely can't be done here.
+**What the extra terms buy you, in plain words:**
+- $x_1^2, x_2^2$ → catches noise that follows a *curve* rather than a straight line as $x_1$ or $x_2$ increases
+- $x_1 x_2$ → catches noise that spikes specifically when $x_1$ *and* $x_2$ are both high together (an interaction effect)
+
+**Why it's skipped here, concretely:** 5 observations, 5 auxiliary predictors + an intercept = 0 degrees of freedom left over. There's literally no data left to test with. This is the cleanest possible illustration of why White's test is a *large-sample* tool — not a stylistic choice, a hard mathematical wall.
+
+```
+Breusch-Pagan:  needs df ≥ p        (p = 2 here → fits, barely)
+White's test:   needs df ≥ p + p(p+1)/2   (5 here → n=5 leaves nothing)
+```
 
 ---
 
 ## 10.4 Remedy 1 — Weighted Least Squares (WLS)
 
-If you know (or can reasonably model) *how* variance changes across observations, **WLS** directly fixes the problem by down-weighting noisier observations and up-weighting more precise ones:
+**Plain-language idea:** if you know some data points are inherently noisier than others, let the *cleaner* points have more say in where the line goes, and let the *noisier* points have less say. That's the entire mechanism — a "weighted vote."
 
-$$ \hat{\boldsymbol{\beta}}_{WLS} = (\mathbf{X}^T\mathbf{W}\mathbf{X})^{-1}\mathbf{X}^T\mathbf{W}\mathbf{y} $$
+$$ \hat{\boldsymbol\beta}_{WLS} = (\mathbf{X}^T\mathbf{W}\mathbf{X})^{-1}\mathbf{X}^T\mathbf{W}\mathbf{y}, \qquad w_i = \frac{1}{\hat\sigma_i^2} $$
 
-where $\mathbf{W}$ is a diagonal matrix of weights, typically $w_i = 1/\hat{\sigma}_i^2$ — observations with larger assumed variance get **smaller** weight, correctly reflecting that they carry less reliable information. WLS is, in fact, the **new BLUE** estimator once homoscedasticity is violated but the weight structure is known — a direct instance of Chapter 6's closing point that a different linear unbiased estimator becomes optimal once Gauss-Markov's assumptions change.
+Noisier point → larger assumed variance → smaller weight → less influence on the fitted line. WLS is, in fact, the **new BLUE** once homoscedasticity is violated but you know the weight structure — a direct instance of Chapter 6's point that a different linear-unbiased estimator becomes optimal when Gauss-Markov's conditions change.
 
-**Plain-English intuition, before the numbers:** ordinary OLS treats every data point as equally trustworthy when drawing the line. But if you know some points are inherently noisier than others (say, measurements taken with a shakier instrument), it makes sense to let the *cleaner* points have more say in where the line goes, and let the *noisier* points have less say. WLS is exactly that — a "weighted vote" where each point's influence is scaled by how much you trust it.
+```
+OLS: every point gets an equal vote
+   [====][====][====][====][====]
 
-**Worked illustration (simple regression, $y$ on $x_1$ alone, for tractability).** Suppose we assume $\text{Var}(\varepsilon_i)\propto x_{1i}$ — a common textbook setup (variance grows with the predictor) — so weights are $w_i=1/x_{1i}$: $w=1,\ 0.5,\ 0.333,\ 0.25,\ 0.2$.
+WLS (variance grows with x1): later points get downweighted
+   [======][====][===][==][=]
+    trust ↓ as x1 rises →
+```
 
-Compute weighted means: $\bar{x}_w = \frac{\sum w_ix_{1i}}{\sum w_i} = \frac{5}{2.283}\approx2.190$, $\bar{y}_w=\frac{\sum w_iy_i}{\sum w_i}=\frac{133.27}{2.283}\approx58.37$.
+**Worked illustration** (simple regression, $y$ on $x_1$, assuming $\text{Var}(\varepsilon_i)\propto x_{1i}$, so $w_i = 1/x_{1i}$):
 
-Then, analogous to Chapter 1's $S_{xy}/S_{xx}$ but weighted:
+| Student | $x_1$ | $w_i = 1/x_1$ |
+|---|---|---|
+| 1 | 1 | 1.000 |
+| 2 | 2 | 0.500 |
+| 3 | 3 | 0.333 |
+| 4 | 4 | 0.250 |
+| 5 | 5 | 0.200 |
 
-$$ \hat{\beta}_{1,WLS} = \frac{\sum w_i(x_{1i}-\bar{x}_w)(y_i-\bar{y}_w)}{\sum w_i(x_{1i}-\bar{x}_w)^2} = \frac{31.17}{4.05} \approx 7.70 $$
+Weighted means: $\bar x_w = \dfrac{\sum w_i x_{1i}}{\sum w_i} = \dfrac{5}{2.283} \approx 2.190$, $\bar y_w = \dfrac{\sum w_i y_i}{\sum w_i} = \dfrac{133.27}{2.283} \approx 58.37$
 
-$$ \hat{\beta}_{0,WLS} = \bar{y}_w - \hat{\beta}_{1,WLS}\bar{x}_w = 58.37-7.70(2.190) \approx 41.5 $$
+Weighted slope (same shape as Chapter 1's $S_{xy}/S_{xx}$, just with a $w_i$ tucked into every term):
 
-Compare to the **unweighted** OLS simple-regression result from Chapter 5, §5.5: $\hat{\beta}_1=8.1$. WLS shifts the slope down to **7.70** — because student 5 (the highest-$x_1$ point, assumed to carry the most variance under our $\text{Var}\propto x_1$ assumption) is now down-weighted, reducing its pull on the fitted line. **This is the entire mechanism of WLS in one number:** it's OLS, but each point's "vote" in determining the line is scaled by how much you trust that point.
+$$ \hat\beta_{1,WLS} = \frac{\sum w_i(x_{1i}-\bar x_w)(y_i - \bar y_w)}{\sum w_i(x_{1i}-\bar x_w)^2} = \frac{31.17}{4.05} \approx 7.70 $$
 
-**Walking through why the weights point this direction:** we assumed noise grows *with* $x_1$ — meaning students with high hours-studied values are assumed to have the least reliable data. So their weight $w_i=1/x_{1i}$ comes out *smallest* for the highest $x_1$ (student 5 gets weight 0.2, the lowest of the group), and *largest* for the lowest $x_1$ (student 1 gets weight 1, the highest). That's the whole design: trust the low-$x_1$, low-assumed-noise points more, and let the high-$x_1$, high-assumed-noise point have less say. That's exactly why the slope shifted down from 8.1 (OLS, where student 5 had full, unweighted influence) to 7.70 (WLS, where student 5's influence was deliberately dialed back).
+$$ \hat\beta_{0,WLS} = \bar y_w - \hat\beta_{1,WLS}\bar x_w = 58.37 - 7.70(2.190) \approx 41.5 $$
+
+**Compare to plain OLS** (Chapter 5, §5.5): $\hat\beta_1 = 8.1$. WLS pulls the slope down to **7.70**, because student 5 — the highest-$x_1$ point, assumed to be the noisiest under $\text{Var}\propto x_1$ — gets the *smallest* weight (0.2) and loses influence over the line. Student 1, assumed cleanest, keeps full weight (1.0) and gains relative influence. That single reweighting is the entire difference between the two slopes.
 
 ---
 
 ## 10.5 Remedy 2 — Robust (Sandwich) Standard Errors
 
-WLS requires **knowing** (or modeling) the variance structure — sometimes you don't know it, but still want valid standard errors despite heteroscedasticity of unknown form. The **Huber-White sandwich estimator** achieves this without changing the point estimates at all — it keeps ordinary $\hat{\boldsymbol{\beta}}_{OLS}$, but replaces the standard-error formula:
+**The problem WLS doesn't solve:** WLS needs you to *know or guess* the shape of the variance (e.g., "grows proportionally with $x_1$"). What if you don't know that, and don't want to guess wrong?
 
-$$ \widehat{\text{Var}}_{robust}(\hat{\boldsymbol{\beta}}) = (\mathbf{X}^T\mathbf{X})^{-1}\left(\mathbf{X}^T\text{diag}(e_i^2)\mathbf{X}\right)(\mathbf{X}^T\mathbf{X})^{-1} $$
+**Robust standard errors sidestep the whole problem.** They keep the *exact same* $\hat{\boldsymbol\beta}_{OLS}$ — no reweighting of any data point — and only fix the error bars around it:
 
-**Why "sandwich":** the "bread" $(\mathbf{X}^T\mathbf{X})^{-1}$ appears on both outside layers, with the "filling" $\mathbf{X}^T\text{diag}(e_i^2)\mathbf{X}$ — built directly from the *observed*, possibly heteroscedastic squared residuals — in the middle. This gives asymptotically valid standard errors **without ever having to specify a weighting scheme** — the price is that it's a large-sample (asymptotic) fix, less reliable in very small samples like this chapter's 5-observation dataset.
+$$ \widehat{\text{Var}}_{robust}(\hat{\boldsymbol\beta}) = \underbrace{(\mathbf{X}^T\mathbf{X})^{-1}}_{\text{bread}} \ \underbrace{\big(\mathbf{X}^T \,\text{diag}(e_i^2)\, \mathbf{X}\big)}_{\text{filling}} \ \underbrace{(\mathbf{X}^T\mathbf{X})^{-1}}_{\text{bread}} $$
 
-**Plain-English framing, before the "sandwich" name lands:** WLS requires you to make an upfront guess about *how* the noise varies (like "noise grows proportionally with $x_1$"). But what if you don't actually know that, and don't want to guess wrong? Robust standard errors sidestep the whole problem — they keep the exact same coefficient estimates OLS already gave you, and just fix the *error bars* around those estimates so they're honest about the actual pattern of noise observed in the data, whatever that pattern turns out to be. You get truthful uncertainty estimates without ever having to commit to a specific theory about the noise.
+```
+        ┌──────────────┐
+        │  bread        │  (X'X)^-1  — same matrix used everywhere in OLS
+        ├──────────────┤
+        │  filling      │  built from OBSERVED e_i^2 — adapts to whatever
+        │  (X' diag(e²) X) noise pattern is actually in the data
+        ├──────────────┤
+        │  bread        │  (X'X)^-1  — identical outer slice again
+        └──────────────┘
+```
 
-**Why the "sandwich" name makes sense once you see it:** picture two identical slices of bread ($(\mathbf{X}^T\mathbf{X})^{-1}$) with a filling in between built from the actual observed squared residuals. The "bread" is the same structural piece used throughout every formula in this book; the "filling" is what's new — it's flexible enough to absorb whatever heteroscedasticity pattern really exists in the data, rather than assuming a specific shape for it the way WLS does.
+**Why this works, in plain words:** instead of assuming a theoretical shape for the noise (like WLS does), the "filling" is built directly out of the squared residuals you actually observed — whatever lumpy, uneven pattern is really there gets absorbed automatically. The trade-off: it's a large-sample (asymptotic) guarantee, so it's less trustworthy in a tiny 5-observation dataset like this chapter's running example.
 
-**Practical choice between the two remedies:** use **WLS** when you have good reason to believe a specific variance structure (e.g., variance proportional to a known predictor, common in survey/aggregated data); use **robust standard errors** when you just want valid inference without committing to a specific weighting model — the modern default in most applied econometrics and observational-data settings, precisely because you rarely know the true variance structure with confidence.
+**Choosing between WLS and robust SEs — the simplest possible rule:**
 
-**Simplest possible summary of the choice:** if you know *why* your data is noisier in some places (WLS), use that knowledge. If you just want to stop lying to yourself about how confident you should be (robust SEs), use that instead — no upfront theory required.
+- Know *why* the noise varies (e.g., proportional to a known predictor) → use **WLS**. It improves both efficiency and inference.
+- Don't know the shape, don't want to guess → use **robust SEs**. Same point estimate, honest error bars, no theory required. This is the modern default in most applied work, precisely because the true variance structure is rarely known with confidence.
 
 ---
 
 ## 10.6 Where the Textbooks Differ
 
-- **Kutner** presents Breusch-Pagan with the fullest derivation tying the auxiliary regression back to the same normal-equations machinery used throughout the book.
-- **Montgomery** emphasizes WLS heavily, reflecting its industrial-statistics/quality-control roots, where variance structures (e.g., measurement error scaling with quantity produced) are often known from the physical process itself.
-- **Sheather** leans hardest into robust standard errors as the default modern remedy, consistent with its applied, software-output-driven approach — most real analyses don't know the true variance structure well enough to justify WLS confidently.
-- **ESL/ISL** barely touch heteroscedasticity — it's a classical-inference concern, and their prediction-focused, cross-validation-driven framework is comparatively insensitive to it (out-of-sample predictive accuracy isn't corrupted by heteroscedasticity the way p-values and confidence intervals are).
+- **Kutner** — fullest derivation, ties the auxiliary regression back to the same normal-equations machinery used throughout the book.
+- **Montgomery** — leans hard on WLS, reflecting industrial/quality-control roots where variance structures (e.g., measurement error scaling with quantity produced) are often known from the physical process.
+- **Sheather** — leans hardest into robust standard errors as the modern default, consistent with its applied, software-output-driven style.
+- **ESL/ISL** — barely touch this topic; it's a classical-inference concern, and prediction-focused, cross-validation-driven frameworks are comparatively insensitive to it (out-of-sample accuracy isn't corrupted by heteroscedasticity the way p-values and CIs are).
 
 ---
 
 ## 10.7 Interview Q&A
 
 **Q: Does heteroscedasticity bias OLS coefficient estimates?**
-A: No — OLS remains unbiased. What's invalidated are the standard errors, and therefore the t-tests, F-tests, and confidence intervals built on the assumption of constant variance; OLS also stops being BLUE (a differently-weighted estimator becomes minimum-variance instead).
-*(Simple version: your best-guess line is still right on average — it's your error bars and p-values that can no longer be trusted.)*
+A: No. The line is still right on average. What breaks are the standard errors — and everything built on them (t-tests, F-tests, CIs) — plus OLS stops being BLUE, since a differently-weighted estimator becomes minimum-variance instead.
 
-**Q: What's the difference between the Breusch-Pagan test and White's test?**
-A: Breusch-Pagan regresses squared residuals on the original predictors only, assuming variance changes linearly with them. White's test adds squared and cross-product terms, catching more general (nonlinear, interactive) variance patterns — at the cost of needing more degrees of freedom.
-*(Simple version: Breusch-Pagan checks for straight-line noise patterns; White's test also checks for curved or "two-predictors-combined" noise patterns, but needs a lot more data to do it.)*
+**Q: Breusch-Pagan vs. White's test — what's the actual difference?**
+A: Breusch-Pagan checks for straight-line noise patterns using only the original predictors. White's test also checks for curved or interaction-driven noise patterns by adding squared and cross-product terms — at the cost of needing a lot more data (more terms = more degrees of freedom consumed).
 
-**Q: When would you choose WLS over robust standard errors?**
-A: WLS when you have good justification for a specific variance structure (e.g., known to scale with a particular predictor) — it improves both efficiency and inference. Robust standard errors when you want valid inference without committing to a specific weighting scheme, since they only correct the standard errors, not the (already unbiased) point estimates.
-*(Simple version: WLS if you know the "shape" of the noise; robust standard errors if you don't want to guess.)*
+**Q: When would you pick WLS over robust standard errors?**
+A: WLS if you know (or can justify) the shape of the variance — it fixes both efficiency and inference. Robust SEs if you don't want to commit to a specific weighting theory — same point estimate, corrected error bars only.
 
-**Q: What does the "sandwich" in sandwich standard errors refer to?**
-A: The formula $(\mathbf{X}^T\mathbf{X})^{-1}(\mathbf{X}^T\text{diag}(e_i^2)\mathbf{X})(\mathbf{X}^T\mathbf{X})^{-1}$ has the same matrix $(\mathbf{X}^T\mathbf{X})^{-1}$ on both outer sides ("bread"), with a middle term built from the observed squared residuals ("filling") that adapts to whatever heteroscedasticity pattern is actually present in the data.
-*(Simple version: two identical "bread" layers on the outside, a data-driven "filling" in the middle that automatically adjusts to whatever noise pattern is really there.)*
+**Q: What does "sandwich" refer to in sandwich standard errors?**
+A: Two identical $(\mathbf{X}^T\mathbf{X})^{-1}$ "bread" layers on the outside, with a "filling" built from the observed squared residuals in the middle — a filling that automatically adapts to whatever noise pattern is actually present, rather than assuming one in advance.
 
-**Q: If your Breusch-Pagan test fails to reject homoscedasticity, does that guarantee your errors have constant variance?**
-A: No — failing to reject just means no significant evidence of heteroscedasticity was detected, which is especially uninformative in small samples (low statistical power). It doesn't positively confirm the null hypothesis is true.
-*(Simple version: "no evidence of a problem" isn't the same as "proof there's no problem" — especially with only a handful of data points.)*
+**Q: If Breusch-Pagan fails to reject homoscedasticity, does that prove the errors have constant variance?**
+A: No — it only means no significant evidence was found, which is especially uninformative with a small, low-power sample. "No evidence of a problem" is not the same as "proof there's no problem."
 
 ---
 
-*End of Chapter 10. Next: Chapter 11 — Autocorrelation (Durbin-Watson test, time-series residual patterns, and Generalized Least Squares as the appropriate remedy when errors are correlated across observations rather than just unequal in variance).*
+*End of Chapter 10. Next: Chapter 11 — Autocorrelation (Durbin-Watson test, time-series residual patterns, and Generalized Least Squares as the remedy when errors are correlated across observations rather than just unequal in variance).*
