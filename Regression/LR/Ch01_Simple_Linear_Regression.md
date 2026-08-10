@@ -79,34 +79,80 @@ We want the $\beta_0, \beta_1$ that make this number as small as possible. This 
 
 ## 1.5 Deriving the OLS Estimators (Necessary Derivation Only)
 
-To minimize RSS, take partial derivatives with respect to $\beta_0$ and $\beta_1$, set both to zero (calculus: minimum occurs where slope of the objective is flat).
+## 1.5 Deriving the OLS Estimators — Full Derivation, Simplified
 
-**Step 1 — derivative w.r.t. $\beta_0$:**
+**The goal:** find the line $\hat{y}_i = \beta_0 + \beta_1 x_i$ that makes the total squared error as small as possible:
 
-$$ \frac{\partial RSS}{\partial \beta_0} = -2\sum_{i=1}^n (y_i - \beta_0 - \beta_1 x_i) = 0 $$
+$$ RSS(\beta_0, \beta_1) = \sum_{i=1}^n (y_i - \beta_0 - \beta_1 x_i)^2 $$
 
-Dividing by $-2n$ and rearranging:
+Think of RSS as a bowl-shaped surface sitting above the $(\beta_0, \beta_1)$ plane. The bottom of the bowl is the best-fit line. To find the bottom, we do what you'd do with any minimum: set the slope to zero in every direction — i.e., take the partial derivative with respect to each parameter and set it to 0.
 
-$$ \bar{y} = \beta_0 + \beta_1 \bar{x} $$
+---
 
-This alone tells you something important: **the regression line always passes through the point $(\bar{x}, \bar{y})$** — the center of mass of your data. This is a favorite interview fact because it's non-obvious and easy to verify.
+### Step 1: Derivative with respect to $\beta_0$
 
-**Step 2 — derivative w.r.t. $\beta_1$:**
+$$ \frac{\partial RSS}{\partial \beta_0} = \sum_{i=1}^n 2(y_i - \beta_0 - \beta_1 x_i)(-1) = -2\sum_{i=1}^n (y_i - \beta_0 - \beta_1 x_i) $$
 
-$$ \frac{\partial RSS}{\partial \beta_1} = -2\sum_{i=1}^n x_i(y_i - \beta_0 - \beta_1 x_i) = 0 $$
+Set it to 0 (drop the $-2$, it doesn't affect where the sum is zero):
 
-Substituting $\beta_0 = \bar{y} - \beta_1\bar{x}$ from Step 1 and solving (algebra omitted — Kutner and Montgomery both walk through it identically), you land on:
+$$ \sum_{i=1}^n (y_i - \beta_0 - \beta_1 x_i) = 0 $$
 
-$$ \hat{\beta}_1 = \frac{\sum_{i=1}^n (x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^n (x_i - \bar{x})^2} = \frac{S_{xy}}{S_{xx}} $$
+Split the sum term by term:
 
-$$ \hat{\beta}_0 = \bar{y} - \hat{\beta}_1 \bar{x} $$
+$$ \sum y_i - n\beta_0 - \beta_1 \sum x_i = 0 $$
 
-**Plain-English reading of $\hat{\beta}_1$:** numerator = how much x and y move together (covariance-like term); denominator = how much x varies on its own. Slope = "shared movement" divided by "x's own spread." This is exactly why $\hat{\beta}_1$ is mathematically just a rescaled version of the correlation coefficient:
+Divide everything by $n$ (recall $\bar{y} = \frac{1}{n}\sum y_i$ and $\bar{x} = \frac{1}{n}\sum x_i$):
 
-$$ \hat{\beta}_1 = r \cdot \frac{s_y}{s_x} $$
+$$ \bar{y} - \beta_0 - \beta_1 \bar{x} = 0 \quad \Rightarrow \quad \boxed{\beta_0 = \bar{y} - \beta_1 \bar{x}} $$
 
-where $r$ is Pearson correlation, $s_y, s_x$ are the sample standard deviations of y and x. **This identity is one of the single most-tested interview facts in linear regression** — it directly connects correlation to regression slope.
+**Plain-English takeaway:** whatever the slope turns out to be, the intercept is forced to be whatever makes the line pass through $(\bar{x}, \bar{y})$ — the "center of mass" of the data. That's just algebra falling out of the calculus, not an assumption.
 
+---
+
+### Step 2: Derivative with respect to $\beta_1$
+
+$$ \frac{\partial RSS}{\partial \beta_1} = \sum_{i=1}^n 2(y_i - \beta_0 - \beta_1 x_i)(-x_i) = -2\sum_{i=1}^n x_i(y_i - \beta_0 - \beta_1 x_i) $$
+
+Set to 0, drop the $-2$:
+
+$$ \sum_{i=1}^n x_i(y_i - \beta_0 - \beta_1 x_i) = 0 $$
+
+Now substitute Step 1's result, $\beta_0 = \bar{y} - \beta_1\bar{x}$:
+
+$$ \sum_{i=1}^n x_i\big(y_i - (\bar{y} - \beta_1\bar{x}) - \beta_1 x_i\big) = 0 $$
+
+$$ \sum_{i=1}^n x_i\big((y_i - \bar{y}) - \beta_1(x_i - \bar{x})\big) = 0 $$
+
+Split into two sums:
+
+$$ \sum_{i=1}^n x_i(y_i - \bar{y}) - \beta_1 \sum_{i=1}^n x_i(x_i - \bar{x}) = 0 $$
+
+$$ \beta_1 = \frac{\sum_{i=1}^n x_i(y_i - \bar{y})}{\sum_{i=1}^n x_i(x_i - \bar{x})} $$
+
+This is correct but ugly — there's a well-known trick to make it symmetric. Two small identities:
+
+- $\sum x_i(y_i - \bar y) = \sum (x_i - \bar x)(y_i - \bar y)$ — true because $\sum \bar{x}(y_i - \bar y) = \bar{x}\sum(y_i-\bar y) = 0$ (deviations from the mean always sum to zero), so subtracting $\bar x$ inside the first factor changes nothing.
+- Same logic: $\sum x_i(x_i - \bar x) = \sum (x_i - \bar x)^2$.
+
+Applying both:
+
+$$ \boxed{\hat{\beta}_1 = \frac{\sum_{i=1}^n (x_i - \bar{x})(y_i - \bar{y})}{\sum_{i=1}^n (x_i - \bar{x})^2} = \frac{S_{xy}}{S_{xx}}} $$
+
+**Plain-English reading:** numerator = "how much do x and y wiggle together" (covariance-flavored), denominator = "how much does x wiggle on its own" (variance). Slope = shared movement ÷ x's own spread.
+
+---
+
+### Bonus: why $\hat\beta_1 = r \cdot \dfrac{s_y}{s_x}$
+
+Recall the definitions (with $n-1$ dividing both, which cancels anyway):
+
+$$ r = \frac{S_{xy}/(n-1)}{s_x s_y}, \qquad s_x^2 = \frac{S_{xx}}{n-1}, \qquad s_y^2 = \frac{S_{yy}}{n-1} $$
+
+From $r$'s definition: $S_{xy} = r \cdot s_x s_y \cdot (n-1)$. Plug into $\hat\beta_1 = S_{xy}/S_{xx}$, and use $S_{xx} = s_x^2(n-1)$:
+
+$$ \hat\beta_1 = \frac{r \cdot s_x s_y \cdot (n-1)}{s_x^2 (n-1)} = r \cdot \frac{s_y}{s_x} $$
+
+**Interview-ready one-liner:** correlation tells you the *strength and direction* of the linear relationship (unitless, between -1 and 1); the slope takes that same relationship and *rescales* it into the actual units of x and y.
 ---
 
 ## 1.6 Worked Numerical Example (By Hand)
