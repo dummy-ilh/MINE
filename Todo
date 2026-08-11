@@ -4,7 +4,6 @@
 
 ## Classical ML
 6. [ ] **Classifiers** — SVM (kernels, margin, support vectors), KNN (curse of dimensionality), Naive Bayes (conditional independence assumption); trade-offs and when each shines
-7. [ ] **Trees** — decision trees (splitting criteria, pruning), random forests, bagging, OOB error, feature importance (impurity vs permutation)
 
 11. [ ] **Multi-task & Transfer Learning** — fine-tuning strategies, catastrophic forgetting, prompt tuning vs full fine-tune at scale, LoRA, adapter layers, domain adaptation
 
