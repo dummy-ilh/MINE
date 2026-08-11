@@ -336,3 +336,164 @@ A: You can, and it's often the most *principled* approach — but growing to ful
 ---
 
 **Next up: Chapter 2 — Ensemble Foundations (why averaging/boosting works, bias-variance decomposition for ensembles) before Chapter 3 goes deep on Bagging.** Want me to continue straight into that, or do you want a numerical-heavy practice set on this chapter first?
+# Chapter 1 (Simple Version) — Decision Tree Fundamentals
+
+Same house-price example we've been using since Chapter 5: predicting price from features like size, location, and age.
+
+---
+
+## 1.1 What a Tree Actually Does
+
+A decision tree predicts by asking a series of yes/no questions about your data, one at a time, until it lands on an answer.
+
+**House price example:** "Is size > 1,800 sq ft?" → if yes, "Is location = downtown?" → if yes, predict $450,000. Every path of questions ends in a final prediction — that's a **leaf**. Every house you feed the tree walks down exactly one path of questions to exactly one leaf.
+
+**How the tree is built — plain version:**
+1. Look at all your houses. Try out a bunch of possible yes/no questions (e.g., "size > 1,500?", "size > 2,000?", "age > 20?").
+2. Pick whichever single question best separates the houses into two groups that are each more "similar" to each other in price than the whole group was before asking.
+3. Do this again separately on each of the two new groups.
+4. Keep going until you decide to stop (Section 1.4).
+
+**Why this is called "greedy":** at every step, the tree just picks whatever question looks best *right now* — it never checks whether a slightly worse question now might have set up a much better follow-up question later. It's like solving a maze by always turning down whichever path looks most promising at each fork, instead of planning the whole route in advance. This is a deliberate trade-off: actually planning the whole tree in advance to find the truly best possible tree is far too slow to compute, so trees settle for "best right now, at each step" instead.
+
+---
+
+## 1.2 How Do We Know Which Question Is "Best"? (Splitting Criteria)
+
+We need a number that says "how mixed-up/messy is this group of houses" — then we pick whichever yes/no question makes the two resulting groups the least messy, on average.
+
+### Classification version: Gini Impurity (simple explanation)
+
+Say a group has 6 "expensive" houses and 4 "cheap" houses. Gini impurity asks: **if I picked one house at random from this group, and guessed its label by rolling a weighted die based on the group's own mix, how often would I guess wrong?**
+
+$$
+\text{Gini} = 1 - (\text{fraction expensive})^2 - (\text{fraction cheap})^2
+$$
+
+**Simple number check:** 6 expensive, 4 cheap → fractions are 0.6 and 0.4.
+$0.6\times0.6=0.36$, and $0.4\times0.4=0.16$.
+$$
+\text{Gini} = 1 - 0.36 - 0.16 = 0.48
+$$
+
+- If a group is **all one label** (perfectly "pure"), Gini = 0 — best possible, no confusion at all.
+- If a group is split exactly 50/50, Gini = 0.5 — the messiest a 2-label group can be.
+
+**Plain meaning of the formula:** Gini is just a "how mixed is this bag of labels" score. Low number = mostly one label. High number = evenly mixed.
+
+### Classification version: Entropy (simple explanation)
+
+Entropy measures the same basic idea — "how mixed is this group" — but comes from information theory instead: it's the expected number of yes/no questions (bits) you'd need, on average, to correctly guess a randomly picked house's label from this group.
+
+- All one label → entropy 0 (you already know the answer, zero questions needed).
+- 50/50 split → entropy 1 (you need exactly one good yes/no question, on average, like a coin flip).
+
+**Simple takeaway on Gini vs. Entropy:** they measure almost the same thing and almost always agree on which question is best. Gini is just cheaper to compute (no logarithms involved), which is why it's the common default. Don't overthink choosing between them — the honest answer in an interview is "it rarely matters."
+
+**"Information Gain"** is just: (messiness before the split) minus (messiness after the split, averaged across the two new groups). Bigger gain = better question.
+
+### Regression version: Variance Reduction (simple explanation)
+
+For regression (predicting an actual price, not a category), "messiness" of a group is just **how spread out the prices are** — the variance.
+
+**Plain idea:** a group where every house is priced close to $300K is "clean" (low messiness). A group with prices all over the map ($100K to $900K) is "messy" (high messiness). We pick whichever question splits the houses into two groups that are each more tightly clustered in price than before.
+
+**Simple number check:** group prices = [10, 12, 14, 20, 22, 24] (in $10Ks). Average = 17. Messiness (variance) here is fairly high since values range from 10 to 24. Split into [10,12,14] (average 12) and [20,22,24] (average 22) — each new group is now tightly clustered around its own average, much less messy than the mixed group of six. That's a great split.
+
+**Why use the average price as each leaf's prediction?** Because the average is mathematically the single number that's "closest" (in squared-distance terms) to every value in the group at once — so once you've decided a leaf gives one flat prediction, the average is simply the best possible single number to give.
+
+**Why sometimes use "median distance" (MAE) instead of "average distance" (MSE)?** Averaging can get pulled around a lot by one extreme outlier house (a $5M mansion in an otherwise normal neighborhood). The median-based version is more robust to that one weird house, but it's slower to compute, so it's used only when you specifically expect outlier-heavy data.
+
+---
+
+## 1.3 How the Tree Searches for the Best Question (Feature Selection for Splits)
+
+**Plain version of the search:** for every feature (size, age, location, ...), and every reasonable threshold within that feature (like "size > 1,500" vs "size > 1,600" vs "size > 1,700"), check how good that question would be at separating houses by price. Keep whichever single (feature, threshold) combo across *everything* you tried turns out best.
+
+**A shortcut that makes this fast:** you don't need to try every conceivable number as a threshold — only the midpoints between actual house sizes that appear in your data (e.g., if you have houses at 1,500 and 1,600 sq ft, try "1,550" as the threshold, not every number in between). Trying anything between two threshold candidates that doesn't cross an actual data point can't possibly give a different, better split — so those extra checks would be wasted effort.
+
+**Why does the tree always ask a yes/no (two-way) question, never a "pick one of five" question?** A multi-way question on a category with many values (like a "neighborhood" feature with 20 neighborhoods) can shatter your data into 20 tiny groups in one step — each one too small and unreliable to trust. It also unfairly favors features with lots of categories, since more categories mechanically means more chances to look good by luck, not because that feature is actually more useful. Sticking to yes/no questions is safer and just as powerful, since the tree can always ask about the same feature again later if it needs to.
+
+---
+
+## 1.3.1 CART vs. ID3 vs. C4.5 (Simple Version)
+
+Older tree-building methods (ID3, C4.5) allowed multi-way questions and had various patches for their downsides. Modern trees (what sklearn actually uses), called **CART**, simplified all of this down to: always ask yes/no questions, and use Gini or variance-reduction to pick the best one. This is simpler to build, faster to compute, and works for both classification and regression with the same basic approach — which is exactly why nearly every real-world tool (sklearn, XGBoost, etc.) is CART-based, and why ID3/C4.5 are mostly just historical background now.
+
+---
+
+## 1.4 When Does the Tree Stop Growing? (Pruning, Simple Version)
+
+If you never tell it to stop, a tree will keep asking questions until every single house sits in its own tiny group — which is obviously just memorizing the data, not learning a real pattern.
+
+**Two simple ways to stop it:**
+
+**Stop early (pre-pruning):** set rules like "don't split a group with fewer than 20 houses" or "don't go deeper than 5 questions." Simple, but a bit short-sighted — a question that doesn't look very useful right now might have led to a great follow-up question one level deeper, and stopping early never finds out.
+
+**Grow fully, then trim back (post-pruning):** let the tree grow all the way out (maximum overfitting), then go back and snip off branches that aren't earning their keep — specifically, branches whose complexity isn't worth the small amount of extra accuracy they're buying you. This is smarter (it sees the full picture before deciding what to cut) but costs more compute since you build the whole thing first.
+
+**Simple explanation of the "cost-complexity" trade-off used for trimming:** think of it as a running tally — "training error" + "a penalty for every leaf you have." A knob called `ccp_alpha` controls how expensive each extra leaf is. Turn the knob up, and the tree gets pruned back harder (fewer leaves survive, since they now cost more); turn it down, and more of the fully-grown tree survives. sklearn can compute, ahead of time, exactly which branches would get cut at every possible setting of this knob, so you can just try a few settings and pick whichever one does best on validation data.
+
+**Simple number check:** say a branch with 4 leaves gets your training error down to 10%, but collapsing it into just 1 leaf makes error 20%. That's a 10-point improvement bought by 3 extra leaves — roughly "3.3 points of improvement per leaf." If your knob's penalty-per-leaf is set lower than that, keep the branch; if it's set higher, cut it.
+
+---
+
+## 1.5 Why a Single Tree Is Unstable (Sets Up Chapter 3: Bagging)
+
+**Plain idea:** a tree can fit almost any pattern given enough depth (so it's not "biased" toward a wrong shape) — but it's very sensitive to exactly which houses happen to be in your training data. Swap out a handful of houses for different ones, and the very first question the tree asks might change completely, which then cascades into a totally different-looking tree below it.
+
+**Why so sensitive?** Because every later question depends entirely on the question before it — if the top question changes, everything built underneath it changes too. This "one change at the top ripples through everything below" behavior is exactly why trees are called high-variance: small differences in training data → big differences in the final tree.
+
+**Why this matters for later chapters:** this instability is exactly the raw material that Bagging (Chapter 3) and Random Forest (Chapter 4) are built to exploit — averaging many differently-unstable trees together smooths out each one's individual wobble, which only works well because a single tree wobbles this much in the first place.
+
+---
+
+## 1.6 Handling Missing Data and Categories, Simply
+
+**Categories with many values (like "neighborhood"):** checking every possible way to split many categories into two groups would take forever. There's a clever shortcut — sort the categories by their average price, then treat them like a number and search for a threshold the same way as any numeric feature (Section 1.3). This finds a very good split fast, without checking every possible combination.
+
+**Missing values:** classic tree theory has an idea called a "surrogate split" — a backup question to use whenever a house is missing the answer to the main question. **In practice, sklearn's trees don't support this at all** — you have to fill in missing values yourself before handing data to a plain sklearn tree. (XGBoost and LightGBM, covered in Chapter 5, do handle this automatically — one of their real practical advantages.)
+
+---
+
+## 1.7 What Shapes Can a Tree's Boundary Take?
+
+Since every question is "is this one number above/below a threshold," a tree's decision boundary is always made of straight up-and-down and left-and-right steps — never a diagonal line. If the true pattern actually needs a diagonal boundary (like "price depends on size *relative to* lot size, at some angle"), the tree can only approximate that diagonal with a staircase of many small steps, which takes a lot of splits to do well.
+
+**The interpretability trade-off, simply:** a small, shallow tree is one of the few model types a non-technical person can literally read like a flowchart — "if size > 1,800 and location = downtown, predict $450K." That's the tree's biggest practical selling point. But that readability disappears fast as the tree gets deeper — a tree with 10 levels of questions has over a thousand possible paths, which is no longer something a person can just read and understand at a glance.
+
+---
+
+## sklearn Parameters, Simply Explained
+
+| Parameter | Plain meaning |
+|---|---|
+| `criterion` | Which "messiness" score to use — Gini (default), entropy, or squared/absolute error for regression |
+| `max_depth` | How many questions deep the tree is allowed to go |
+| `min_samples_split` | Smallest group size allowed to still ask a new question |
+| `min_samples_leaf` | Smallest group size allowed to end up in a final leaf |
+| `max_features` | How many features to consider per question (usually left at "all" for a single tree — this becomes important later for Random Forest, Ch.4) |
+| `max_leaf_nodes` | Cap on the total number of final leaves |
+| `min_impurity_decrease` | How much "messiness improvement" a question must deliver to be allowed at all |
+| `ccp_alpha` | The "cost per leaf" knob used for trimming the tree after it's fully grown (Section 1.4) |
+| `class_weight` | Makes mistakes on a rarer label count for more, useful for imbalanced data |
+| `random_state` | Seed, so results are reproducible when there's any randomness involved (e.g., tie-breaking between equally good questions) |
+
+**Simple note on `min_samples_leaf` vs `max_depth`:** `max_depth` applies the same limit everywhere in the tree. `min_samples_leaf` adapts — it lets the tree keep asking questions in parts of the data where there's plenty of houses to support it, while automatically stopping in thinner, sparser parts. This usually works better in practice than a single flat depth limit.
+
+---
+
+## Quick, Simple Interview Answers
+
+**Q: "Why does a decision tree need pruning, but linear regression doesn't need anything similar?"**
+A: A tree's complexity grows on its own as it keeps splitting — nothing stops it from creating a new group for every single data point unless you tell it to stop. Linear regression's complexity is fixed from the start (it only has as many knobs as you gave it features) — it can't spontaneously get more complex the way an unpruned tree can.
+
+**Q: "Gini or entropy — does it actually matter which one you pick?"**
+A: Barely. They almost always agree on which split is best. Gini is cheaper to compute, which is the main practical reason it's the usual default.
+
+**Q: "Why can't you just always grow the tree all the way out and trim it back afterward, instead of also using early-stopping rules like `max_depth`?"**
+A: You can, and it's often the more thorough approach — but growing all the way out first can be slow and memory-heavy, especially on big datasets or when you're building hundreds of trees at once (as in Random Forest, Ch.4). Early-stopping rules are often used just to keep training fast and practical, even though full-grow-then-trim is the more careful option when you can afford it.
+
+---
+
+**Ready to continue with the harder interview practice set, or would you like anything else revisited in this simpler style first?**
