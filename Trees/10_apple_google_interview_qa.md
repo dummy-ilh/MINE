@@ -1,4 +1,118 @@
-# Trees & Ensembles — Apple / Google Style Interview Practice Q&A
+# Recent Apple, Google & Meta Interview Questions — Trees, Random Forest, Bagging
+
+Compiled from current candidate-report sites (Interview Query candidate reports, Exponent, DataInterview, Glassdoor, Blind, and similar interview-prep aggregators) as of August 2026. Where a source reported a near-verbatim question, it's flagged as **[reported]**; broader theme questions compiled from multiple sources are flagged as **[theme]**. Each includes a pointer to which of your existing notes files answers it.
+
+---
+
+## 1. Apple
+
+Apple's ML Engineer loop (per Interview Query's 2026 guide, synthesized from candidate reports) typically runs: recruiter screen → hiring-manager call → a ~30-minute applied coding screen (often NLP-flavored, sometimes with no internet access allowed) → a full-day virtual/remote onsite with ~8 interviewers covering ML fundamentals, coding, LLMs, and a deep dive on your own ML project.
+
+**Questions reported in Apple's active interview-question bank:**
+
+- **"Random Forest Explanation"** [reported] — an open-ended prompt to explain Random Forest from the ground up.
+  → *Bagging notes, Section 2 (algorithm) + Ensemble Foundations notes, Section 4 (why bagging pairs with high-variance learners)*
+
+- **"Bias vs. Variance Tradeoff"** [reported] — a standalone conceptual question, separate from the RF one, suggesting Apple tests this as its own topic rather than only inside a tree/forest context.
+  → *Ensemble Foundations notes, Section 2 (full bias-variance decomposition + worked numerical)*
+
+- **"Reducing Error Margin"** [reported] — framed around shrinking prediction error/uncertainty, a natural fit for a bagging/variance-reduction discussion.
+  → *Bagging notes, Section 5 (when bagging helps) + Ensemble Foundations notes, Section 3 (the variance formula and diminishing returns)*
+
+**Theme questions consistent with Apple's reported style** (algorithm choice justified by data/deployment constraints, cross-checked against Apple's MLE guide on Interview Query and Exponent):
+
+- **How does a random forest generate its trees, and when would you use it over logistic regression?** [reported, InterviewQuery Apple MLE guide] — expects you to describe bootstrap sampling, feature subsampling, and majority-vote/averaging aggregation, and contrast that with logistic regression's linear decision boundary. Apple is specifically testing whether you justify the choice using dataset complexity, interpretability needs, and computational constraints — not just describe the algorithm.
+  → *Decision Tree Fundamentals notes, Section 1 + Bagging notes, Section 2; Practical Interview Ground notes, Section 1 (trees vs. linear models table) for the justification framing*
+
+- **Explain the difference between XGBoost and Random Forest — when would you prefer one over the other?** [reported, InterviewQuery Apple MLE guide] — expects a contrast between RF's independent bagged trees and XGBoost's sequential, gradient-optimized boosting.
+  → *Boosting vs. Bagging notes, full document — this is exactly the comparison it's built around*
+
+- **On-device/applied framing:** given Apple's emphasis on "data privacy and on-device awareness" (per Exponent's 2026 Apple MLE guide), expect a tree/RF question to pivot into an on-device deployment follow-up (memory/latency cost of an ensemble, Core ML constraints) rather than stopping at pure theory.
+  → *Bagging notes, Section 9 (Apple MLE Q&A) + Decision Tree Fundamentals notes, Section 12 (Apple MLE Q&A) — both already built around exactly this pivot*
+
+---
+
+## 2. Google
+
+Google's ML interview loop (per Interview Query and PracHub's 2026 guides) mixes coding/algorithmic rounds with ML theory and system design, typically 5–6 rounds after an initial phone screen.
+
+**Reported/aggregated question themes across current Google-focused prep sources:**
+
+- **How do ensemble methods like Random Forest or Gradient Boosting work?** [theme, appears near-verbatim across multiple 2025–2026 Google-focused prep guides] — expects both algorithms explained and contrasted in the same answer, not just one.
+  → *Boosting vs. Bagging notes, Sections 1–2*
+
+- **What's the difference between bagging and boosting?** [theme, consistently reported] — the standard framing is: bagging trains in parallel on bootstrap samples and reduces variance; boosting trains sequentially, each model correcting the last, and tends to reduce bias but can overfit if uncontrolled.
+  → *Boosting vs. Bagging notes, full document; Ensemble Foundations notes, Section 4 (the underlying bias/variance mechanism)*
+
+- **When would you use a decision tree over logistic regression?** [theme] — expected answer centers on interpretability and non-linear decision boundaries for trees vs. linear separability and simplicity for logistic regression, with an explicit mention that trees can overfit without pruning.
+  → *Practical Interview Ground notes, Section 1 (full comparison table) + Section 2 (overfitting diagnostics)*
+
+- **Applied/scenario framing (churn prediction, reported by a Google MLE candidate account):** justify choosing Random Forest vs. Gradient Boosting for a churn model — expects you to weigh robustness, training speed, and interpretability (Random Forest) against squeezing out peak accuracy on subtle non-linear patterns at the cost of more careful tuning (GBM).
+  → *Boosting vs. Bagging notes, Section 3 ("when would you reach for bagging/RF instead of boosting") + Section 4 (Google MLE Q&A)*
+
+- **Design/scale framing:** Google's prep guides emphasize scaling reasoning (e.g., "how would this parallelize/stream over billions of records") even for core ML questions — expect a tree/RF question to get a "how would this work at scale" follow-up.
+  → *Bagging notes, Section 8 (Google MLE Q&A, the distributed-training question) + Decision Tree Fundamentals notes, Section 11 (Google MLE Q&A, the $O(p \cdot n\log n)$ scaling question)*
+
+---
+
+## 3. Meta
+
+Meta's ML Engineer loop (per Interview Query's 2026 guide) is coding-speed-heavy: a coding screen (often two LeetCode-style problems in 40–45 minutes), followed by a 4–5 round onsite mixing more coding, an ML system-design round (recommendation/ranking/feed-freshness heavy), and product-sense/behavioral rounds.
+
+**Questions reported in Meta's active interview-question bank:**
+
+- **"Random Forest Explanation"** [reported] — appears in Meta's question bank in the same form as Apple's, suggesting this is a standard, company-agnostic conceptual check both use.
+  → *Bagging notes, Section 2*
+
+- **"Bank Fraud Model"** [reported] — a scenario/design-style question; fraud detection is a canonical class-imbalance use case (rare positive class, high cost of false negatives).
+  → *Pruning/Missing Values/Imbalance notes, Part 3 (class imbalance) — directly relevant, especially Section 3.7's Q&A on false-negative cost trade-offs; Boosting vs. Bagging notes, Section 4 (Google MLE Q&A has a closely related noisy-label fraud-detection question, same reasoning applies)*
+
+- **"Reducing Error Margin"** [reported] — appears in both Apple's and Meta's banks; framed around shrinking prediction uncertainty.
+  → *Ensemble Foundations notes, Section 3 (variance-reduction formula and worked numerical)*
+
+- **"Booking Regression"** [reported] — a regression-flavored applied question (plausibly a travel/booking price or demand prediction scenario); tree-based regression fundamentals are a likely fit given Meta's product surfaces.
+  → *Decision Tree Fundamentals notes, Section 3.4 (regression/variance-reduction splitting) + Applied/Advanced notes, Section 2 (monotonic constraints — relevant if the interviewer probes "should price only increase with X")*
+
+- **"Fill None Values"** [reported] — a data-cleaning/coding-flavored question, directly about missing-value handling.
+  → *Pruning/Missing Values/Imbalance notes, Part 2 (missing value handling) — the imputation vs. native-handling comparison is exactly this topic*
+
+- **"Precision and Recall"** [reported, appears alongside the RF question in the same bank] — commonly paired with imbalanced-data or fraud-style scenarios at Meta specifically.
+  → *Evaluation & Tuning notes, Section 3 (imbalance) + Section 6 (Google MLE Q&A has a directly transferable "95% accuracy but missing everything that matters" diagnostic walk-through)*
+
+**Theme, from Meta's system-design emphasis:** expect a tree/RF/bagging question to be a smaller piece of a larger applied scenario (e.g., "build a model to detect X" or "why did engagement drop") rather than asked in isolation — Meta's process consistently pairs ML fundamentals with product/metrics reasoning.
+→ *Practical Interview Ground notes, Section 6 (Google MLE Q&A's fraud-scoring interpretability design question) transfers directly to this style of question.*
+
+---
+
+## 4. Cross-Company Pattern Summary
+
+| Pattern | Seen at | What it means for prep |
+|---|---|---|
+| "Random Forest Explanation" as a standalone open-ended prompt | Apple, Meta (identical phrasing in both question banks) | Have a tight, structured explanation ready: bootstrap sampling → per-tree training → aggregation → why it reduces variance, in under 2 minutes, before any follow-up |
+| Bagging vs. boosting comparison | Google (multiple sources), Apple (XGBoost vs. RF framing) | The comparison table and "when would you reach for X" framing matters more than reciting either algorithm alone |
+| Bias-variance tradeoff asked standalone, not just inside a tree question | Apple | Don't assume it'll only come up as a follow-up to a tree question — be ready for it cold |
+| Imbalance / fraud / precision-recall scenarios | Meta (Bank Fraud Model, Precision and Recall) | Expect imbalance handling to be tested via a scenario, not asked as "define precision and recall" in isolation |
+| Missing-value handling as a data-prep/coding question | Meta (Fill None Values) | Be ready to actually write the imputation/handling code, not just discuss it conceptually |
+| Scenario/applied framing over pure theory | All three, increasingly | Across all three companies, tree/RF/bagging questions are trending toward "justify your choice for this specific situation" rather than "define the algorithm" — the on-device (Apple), scale (Google), and product-metrics (Meta) framings in your existing notes' company-specific Q&A sections are the right prep angle |
+
+---
+
+## 5. Sources
+
+- Interview Query — Apple ML Engineer Interview Guide (2026 edition, candidate-report-sourced question bank)
+- Interview Query — Meta ML Engineer Interview Guide (2026 edition, candidate-report-sourced question bank)
+- Interview Query — Google Machine Learning Interview Questions Guide (2026 edition)
+- Exponent — Apple Machine Learning Engineer Interview Guide (2026)
+- DataInterview — Apple Machine Learning Engineer Interview guide (2026) and Top ML Interview Questions (2026)
+- Interviews.chat — Google Machine Learning Engineer Interview Questions and Answers
+- PracHub — Google Machine Learning Engineer Interview Questions (2026)
+- Devinterview.io — Random Forest / Decision Tree interview question banks (2026 editions)
+
+*Note: several of these aggregator sites compile and rephrase candidate reports rather than publishing verbatim transcripts, so exact wording can vary by source — the "reported" questions above are the specific phrasings that appeared directly in each company's active question bank on Interview Query, which sources individual candidate interview reports.*
+
+---
+
+**One-line summary to remember:** *Apple and Meta both have a standalone "Random Forest Explanation" prompt in their active question banks — have a tight, structured answer ready. Google leans on the bagging-vs-boosting comparison and scale follow-ups. Meta wraps tree/RF/imbalance questions inside applied scenarios (fraud, regression, data-cleaning) rather than asking pure theory. All three increasingly want justification for a specific situation, not just a textbook definition.*# Trees & Ensembles — Apple / Google Style Interview Practice Q&A
 
 Mixed practice set, covering the full curriculum (Ch.1-9). Questions are phrased the way they tend to show up in Apple/Google-style ML interviews — often starting concrete/practical, then pushing into "why" follow-ups. Answers are kept in the same plain-language style as the rest of the curriculum.
 
