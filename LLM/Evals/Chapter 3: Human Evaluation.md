@@ -98,3 +98,86 @@ Compute it: $P_o$ = 0.96. $P_e$ = (0.10×0.10) + (0.90×0.90) = 0.01 + 0.81 = 0.
 ---
 
 Chapter 4 is LLM-as-a-Judge — using an LLM to grade another LLM's outputs, and the biases (position bias, verbosity bias, self-preference) you need to control for. Want me to continue?
+## Krippendorff's Alpha — full worked example
+
+### Setup: 3 annotators, nominal labels ("Safe" / "Unsafe"), 5 items, no missing data yet
+
+| Unit | Annotator A | Annotator B | Annotator C |
+|---|---|---|---|
+| 1 | Safe | Safe | Unsafe |
+| 2 | Unsafe | Unsafe | Unsafe |
+| 3 | Safe | Safe | Safe |
+| 4 | Unsafe | Safe | Unsafe |
+| 5 | Safe | Unsafe | Unsafe |
+
+**Core idea, before the math:** instead of one 2x2 table (which only works for 2 annotators), Krippendorff's alpha looks at *every pair of annotators who rated the same item*, tallies how often those pairs agreed vs. disagreed, and compares that to how often you'd expect them to disagree purely by chance given the overall mix of labels.
+
+### Step 1 — count every within-unit pair
+
+Each unit with 3 raters gives you 3×2 = 6 **ordered pairs** (A vs B, A vs C, B vs A, B vs C, C vs A, C vs B).
+
+Unit 1 (S, S, U) → pairs: (S,S),(S,U),(S,S),(S,U),(U,S),(U,S) → 2 SS, 2 SU, 2 US
+Unit 2 (U, U, U) → all 6 pairs are (U,U)
+Unit 3 (S, S, S) → all 6 pairs are (S,S)
+Unit 4 (U, S, U) → 2 US, 2 SU, 2 UU
+Unit 5 (S, U, U) → 2 SU, 2 US, 2 UU
+
+**Totals across all 30 pairs:** SS = 8, SU = 6, US = 6, UU = 10
+
+### Step 2 — observed disagreement (Do)
+
+Nominal categories get the simplest possible "distance": 0 if the pair matches, 1 if it doesn't.
+
+Disagreeing pairs = SU + US = 6 + 6 = 12
+
+$$D_o = \frac{12}{30} = 0.40$$
+
+### Step 3 — expected disagreement by chance (De)
+
+Pool *all* 15 individual ratings together (ignore who rated what): count how many are Safe vs Unsafe.
+
+Safe = 7, Unsafe = 8, total = 15.
+
+If you just grabbed two ratings at random from this pool, what's the chance they're different labels?
+
+$$D_e = \frac{2 \times (7 \times 8)}{15 \times 14} = \frac{112}{210} \approx 0.533$$
+
+### Step 4 — alpha
+
+$$\alpha = 1 - \frac{D_o}{D_e} = 1 - \frac{0.40}{0.533} \approx 1 - 0.75 = 0.25$$
+
+**Reading it:** 0.25 is weak agreement — much lower than the κ=0.73 we got in Chapter 3 with 2 annotators on a similar-sized problem. That's realistic: adding a 3rd annotator's independent judgment usually *does* surface more disagreement than a 2-annotator comparison hides.
+
+---
+
+## Now the nuance: adding a unit with missing data
+
+Say a 6th item only got rated by A and C (B never saw it): A = Safe, C = Unsafe.
+
+**This is the whole point of alpha vs. kappa** — you don't need to throw the item out, and you don't need every annotator to have rated every item. This unit just contributes fewer pairs: 2×1 = 2 ordered pairs → (S,U) and (U,S).
+
+New totals: SS=8, SU=7, US=7, UU=10 → total pairs = 32
+New pool: Safe=8, Unsafe=9, total=17
+
+$$D_o = \frac{14}{32} = 0.4375 \qquad D_e = \frac{2(8)(9)}{17\times16} \approx 0.529$$
+
+$$\alpha = 1 - \frac{0.4375}{0.529} \approx 0.17$$
+
+Notice: the partially-rated unit slotted in seamlessly — no special handling, no dropped data, no need to pair-match it against a 3rd rater that doesn't exist. That's the exact capability Cohen's kappa doesn't have.
+
+---
+
+## The other nuance: ordinal/interval data changes what "disagreement" even means
+
+Everything above used **nominal** distance: disagreement is binary, 0 or 1. That's fine for "Safe/Unsafe," but wrong for a 1–5 rubric score, where a 1-vs-2 disagreement is clearly less bad than a 1-vs-5 disagreement.
+
+**Interval-level** data fixes this by squaring the numeric gap instead of using 0/1:
+
+- Annotators rate 2 vs 3 → δ² = (2−3)² = 1
+- Annotators rate 1 vs 5 → δ² = (1−5)² = 16
+
+Under nominal scoring, *both* of those count as "1 disagreement, full stop." Under interval scoring, the second one is penalized 16× harder — because it genuinely represents a much bigger split in judgment.
+
+**Ordinal-level** data (technically what a 1–5 Likert rubric is) sits between the two: it uses the *ranks* and how many rating categories separate two scores, without assuming the categories are evenly spaced numbers — useful when you can say "3 is worse than 2" but don't want to assume the psychological gap between 2-and-3 equals the gap between 4-and-5.
+
+**Why this matters for your interview answer:** if you're evaluating a 1-5 human/LLM rubric score (Chapters 3-4), nominal Krippendorff's alpha would treat a 1-vs-2 near-miss exactly the same as a 1-vs-5 total blowup — that's the wrong measurement. You'd specify the **ordinal** (or interval) metric when computing alpha, precisely because the size of the disagreement, not just its presence, is informative.
