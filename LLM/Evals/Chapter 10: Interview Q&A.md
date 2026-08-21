@@ -67,5 +67,123 @@ Input drift = the distribution of incoming queries changes (new topics, new phra
 Funnel structure: (1) fast offline-intrinsic checks on every commit (regression prompt suite), (2) offline-extrinsic gate before deployment (task benchmarks, human/LLM-judge rubric scoring, safety/red-team suite — with statistical significance testing against the current production model, not just raw numeric comparison), (3) canary/shadow deployment comparing against production, (4) full A/B test with guardrail metrics and a pre-committed sample size to avoid peeking, (5) continuous post-launch monitoring — drift detection plus periodic shadow re-scoring — with automatic alerting if key metrics cross thresholds.
 
 ---
+# Full Worked Case Study: Evaluating a RAG-Powered Support Agent
 
-That closes the 10-chapter LLM Evals curriculum — foundations (1-2), human and LLM judgment (3-4), benchmarks and task-specific evals (5-6), safety (7), statistics (8), production engineering (9), and this consolidated Q&A (10).Curriculum complete — all 10 chapters delivered. Want me to package this into a self-contained markdown reference doc, or move on to something else?
+## The system
+
+"TechCorp Support Agent" — a user asks a question, the agent:
+1. Retrieves relevant docs from a knowledge base (RAG)
+2. Reasons about what to do
+3. Optionally calls tools (`check_order_status`, `issue_refund`, `update_shipping_address`, `escalate_to_human`)
+4. Returns a final answer to the user
+
+This is deliberately the hard case — it's *both* a RAG system (Chapter 6) and an agent (Chapter 6), so you need both eval frameworks stacked, not one or the other.
+
+---
+
+## One single trace, evaluated end to end
+
+**User query:** *"My order #4471 hasn't arrived and it's been 2 weeks. I want a refund."*
+
+**Agent's actual trajectory (logged):**
+
+```
+Step 1: retrieve(query="order 4471 hasn't arrived, refund policy")
+  → returns 3 docs: [refund_policy.md, shipping_delays_faq.md, order_lookup_guide.md]
+
+Step 2: call_tool(check_order_status, order_id="4471")
+  → returns: {status: "in transit", shipped: "2024-08-01", carrier_delay: true}
+
+Step 3: reasoning: "Order is delayed but still in transit, not lost. Per refund_policy.md,
+  refunds for delay (not loss) require 21+ days. Only 14 days have passed."
+
+Step 4: call_tool(issue_refund, order_id="4471")   ← PROBLEM: shouldn't have called this yet
+  → returns: {refund_issued: true, amount: $89.99}
+
+Step 5: final_answer: "I've issued a full refund of $89.99 for your delayed order."
+```
+
+### Step A — Retrieval-side scoring (from Chapter 6)
+
+Ground truth: for this query type, the "gold" relevant docs are `refund_policy.md` and `shipping_delays_faq.md` (2 relevant docs exist in the corpus for this query).
+
+Retrieved top-3: `refund_policy.md` ✓, `shipping_delays_faq.md` ✓, `order_lookup_guide.md` ✗ (not relevant — it's about how to look up order numbers, not delays/refunds)
+
+- **Precision@3** = 2/3 ≈ 0.67
+- **Recall@3** = 2/2 = 1.0 (found everything relevant that existed)
+- **MRR** = 1/1 = 1.0 (first relevant doc, `refund_policy.md`, was rank 1)
+
+Retrieval is doing its job here — high recall, decent precision, best doc ranked first.
+
+### Step B — Generation/faithfulness scoring (from Chapter 6)
+
+Decompose the final answer into atomic claims and check each against retrieved context:
+
+| Claim | Supported by retrieved docs? |
+|---|---|
+| "Full refund of $89.99 issued" | Technically true (tool did issue it) but **contradicts** `refund_policy.md`, which the agent itself correctly cited in its own reasoning (14 days < 21-day threshold) |
+
+**Faithfulness verdict: FAIL.** This is the interesting nuance — faithfulness isn't just "is this sentence grounded in *some* document," it's "does the final action/answer contradict what the retrieved context actually says." The agent's own Step 3 reasoning correctly concluded a refund wasn't yet warranted, but Step 4 did it anyway. That's a **reasoning-to-action inconsistency**, a failure mode specific to agents that plain RAG eval (which only judges text output) wouldn't even have a slot to record.
+
+### Step C — Agent-side scoring (from Chapter 6)
+
+- **Task success:** ambiguous/fail — the user got a refund, which superficially "resolves" their complaint, but it's a **policy violation** (refund issued 7 days before the eligibility threshold). If your success criterion is naive ("did the user get an outcome"), this scores as a win. If it's correctly defined ("did the agent take the *correct, policy-compliant* action"), this is a fail. **This is exactly why Chapter 6 said task success alone is insufficient** — you need the process/trajectory check too.
+- **Tool-use correctness:** `check_order_status` call — correct, right tool, right argument. `issue_refund` call — **incorrect**: called prematurely, contradicting the agent's own retrieved policy and its own stated reasoning.
+- **Trajectory efficiency:** 4 steps for what should've been a 3-step trace (retrieve → check status → explain the 21-day policy, no refund tool call) — 1 wasted/harmful step, not just an inefficient one.
+
+**This single trace shows the diagnostic value of decomposition:** retrieval = fine, faithfulness = fail, tool-use = fail, naive task-success = misleadingly "pass." If you only tracked one blended "did the customer get helped" metric, this failure would be invisible in your dashboards until it caused a real financial/policy problem at scale.
+
+---
+
+## Now scale it: aggregate results across a 200-example eval set
+
+Run this same instrumented pipeline across 200 test conversations, each independently scored on every axis above.
+
+| Metric | Score | Read |
+|---|---|---|
+| Precision@3 (retrieval) | 0.71 | Retriever generally finds relevant docs, some noise |
+| Recall@3 (retrieval) | 0.88 | Rarely misses the truly relevant doc entirely |
+| MRR (retrieval) | 0.79 | Relevant doc usually ranked near top |
+| Faithfulness (generation) | 0.86 | 14% of final answers/actions contradict retrieved context |
+| Tool-use correctness | 0.91 | 9% of tool calls are wrong tool, bad args, or premature/unauthorized action |
+| Naive task success (did user get *an* outcome) | 0.94 | Looks great — and is the misleading number |
+| Policy-compliant task success (correct action per policy) | 0.79 | The real number that matters |
+| Avg steps-to-completion | 3.4 | Baseline for efficiency tracking over time |
+
+**The gap that matters most:** naive task success (0.94) vs. policy-compliant task success (0.79) — a **15-point gap**. That gap is a direct, quantified measure of exactly the failure mode from the single trace above: the agent "resolves" things in ways that look successful on the surface but violate business logic. If this were your only production dashboard, showing 94% success, leadership would think the system is performing great — while it's actually issuing unauthorized refunds 1 in 5 times among ambiguous cases.
+
+**Where do you point the fix, using the decomposition principle from Chapter 6?**
+- Retrieval scores (0.71–0.88) are solid → retriever isn't the bottleneck.
+- Faithfulness (0.86) is decent but not the main driver of the 15-point success gap.
+- Tool-use correctness (0.91) is the closest correlate — premature/unauthorized tool calls are the dominant root cause. **Fix target: the policy that decides *when* the agent is allowed to invoke `issue_refund`**, likely via a stricter tool-calling guardrail (e.g., require an explicit "eligibility confirmed: yes/no" reasoning step, checked programmatically, before the refund tool is even exposed to the model) — not a retrieval or prompt-wording fix.
+Based on what's actually reported by candidates (Glassdoor, IGotAnOffer, Exponent, DataInterview) for ML/DS roles at these companies — here's what's real vs. what I built for you earlier.
+
+## Google
+
+Google interviewers push candidates to apply statistical reasoning to evaluation and trade-offs — confidence intervals, calibration, thresholding, and interpreting noisy offline results rather than pure theory recall. Two concrete reported scenarios:
+
+- A model deployed for ad-policy enforcement suddenly flags twice as many ads as violations overnight, while offline eval on the labeled set is unchanged — candidates must design monitoring/alerting/retraining to distinguish input drift, label delay, and model regression, specifying at least three concrete signals with thresholds. This is almost exactly Chapter 9's drift-detection framework (input drift vs. output/performance drift), applied live.
+- A search ranking model's offline NDCG@10 improves from 0.612 to 0.616 on 50,000 queries — candidates must decide if that's a real improvement given per-query scores are heavy-tailed. This is Chapter 8 territory — significance testing on a skewed metric, not a clean proportion, so bootstrap resampling is the right instinct.
+
+Also reported: comparing the trade-offs between offline batch evaluation and online A/B testing for a recommendation system, and designing a system to fine-tune and serve an LLM for customer support, optimized for throughput and memory on TPUs (evals show up as a sub-component of these system design rounds, not usually standalone).
+
+## Meta
+
+Meta's reported style leans product-safety-flavored rather than pure-stats. One detailed reported prompt: candidates are asked to design deployment-time mitigation for an LLM-powered writing assistant in Instagram DMs that must not leak phone numbers or emails from conversation history, specifying the plan across prompting, retrieval, filtering, and logging, and stating what offline and online metrics would prove it's actually working. That's essentially Chapter 7 (safety/red-teaming evals) plus Chapter 9 (online monitoring) stitched together as one product scenario.
+
+Meta interviewers are also reported to move between theory — bias/variance, regularization, calibration — and applied troubleshooting like data leakage, class imbalance, and offline-vs-online gaps, and system design rounds have included designing an evaluation framework for ad ranking as a standalone prompt.
+
+## Apple
+
+Less "interview trivia" available publicly, but Apple's own job postings for this exact function (Siri AI Quality Engineering) spell out almost verbatim what they screen for: using LLMs to automate large-scale data generation and evaluation job execution, building LLM judges, detecting anomalies, and streamlining ML evaluation workflows, plus continuously evaluating and improving model performance through A/B testing and human feedback loops. If you're prepping for Apple specifically, lean hard into Chapter 4 (LLM-as-judge) and Chapter 9 — that's literally the job description.
+
+## General LLM-role pattern (cross-company)
+
+One recruiting-side source made a point worth internalizing for interview strategy: the candidate who wants to fine-tune everything is signaling their instinct runs toward expensive, exciting work rather than the work that ships — interviewers are told to weight evals heavily, because that's where senior candidates pull away from everyone else.
+
+**The honest caveat:** none of these sources published a clean "Q1, Q2, Q3" LLM-evals-specific bank the way DSA sites do for LeetCode — eval questions mostly show up embedded inside system-design or "debug this production issue" prompts, not as standalone quiz questions. So Chapter 10's rapid-fire format I gave you earlier is a reasonable *simulation* of interview style, but these five scenarios above are the actual reported ones — worth having a rehearsed answer for each specifically, since they're the real thing that's been asked.
+---
+
+## The interview-ready synthesis
+
+*"For a RAG-powered agent, I wouldn't evaluate it as one blended 'did it work' number. I'd score retrieval and generation faithfulness the way I would for any RAG system, then separately score tool-use correctness and trajectory efficiency the way I would for any agent — and critically, I'd define task success as policy-compliant success, not just 'did the user get an outcome,' because those two diverge exactly in the cases that matter most, like an agent taking an action that resolves the symptom while violating the underlying policy. The decomposition is what lets you localize the fix — in this case, tool-use correctness pointed straight at over-eager tool invocation, not retrieval or faithfulness."*
