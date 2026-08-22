@@ -444,11 +444,95 @@ P(A ∩ B ∩ C) = P(A) · P(B|A) · P(C|A,B)
 P(I) = 0.10, P(love|I) = 0.03, P(coffee|I, love) = 0.15  
 What is P("I love coffee")? What is the log probability? Why do language models use log probabilities?
 
+**1. P(model predicts A)**
+
+Use law of total probability:
+
+P(predict A) = P(predict A | true A)·P(A) + P(predict A | true B)·P(B)
+= 0.85 × 0.40 + 0.20 × 0.60
+= 0.34 + 0.12
+= **0.46**
+
+So the model predicts class A 46% of the time, even though only 40% of samples are actually class A.
+
 ---
 
-## 12. Looking Ahead
+**2. Proof: P(A ∩ B ∩ C) = P(A)·P(B|A)·P(C|A,B)**
 
-**Day 4** — **Bayes' Theorem**: The most important formula in ML. We already used it in Numerical 4 today. Tomorrow we formalize it, prove it, and apply it to Naive Bayes classifiers, posterior inference, and the famous Monty Hall problem.
+Start from the definition of conditional probability:
+
+$$P(X|Y) = \frac{P(X \cap Y)}{P(Y)} \quad \text{(for } P(Y) > 0\text{)}$$
+
+**Step 1** — Apply the definition to P(C | A, B):
+$$P(C \mid A \cap B) = \frac{P(A \cap B \cap C)}{P(A \cap B)}$$
+
+Rearranging:
+$$P(A \cap B \cap C) = P(C \mid A \cap B) \cdot P(A \cap B) \quad (*)$$
+
+**Step 2** — Apply the definition to P(B | A):
+$$P(B \mid A) = \frac{P(A \cap B)}{P(A)}$$
+
+Rearranging:
+$$P(A \cap B) = P(B \mid A) \cdot P(A) \quad (**)$$
+
+**Step 3** — Substitute (**) into (*):
+$$P(A \cap B \cap C) = P(C \mid A \cap B) \cdot P(B \mid A) \cdot P(A)$$
+
+Which is exactly:
+$$P(A \cap B \cap C) = P(A) \cdot P(B\mid A) \cdot P(C \mid A, B) \quad \blacksquare$$
+
+This is the **chain rule of probability** — it generalizes to any number of events by repeatedly peeling off one conditional at a time, and it's the backbone of how joint distributions get factored in Bayesian networks and language models (see Q5!).
 
 ---
-*End of Day 3 | Next: Day 4 — Bayes' Theorem, The Engine of ML*
+
+**3. P(failed at stage 1 | pipeline failed)**
+
+Let $F_i$ = "stage $i$ fails," each independent with $P(F_i) = 0.05$, so $P(\text{stage } i \text{ succeeds}) = 0.95$.
+
+The pipeline fails if **at least one** stage fails. First find P(pipeline fails):
+
+$$P(\text{fail}) = 1 - P(\text{all succeed}) = 1 - (0.95)^3 = 1 - 0.857375 = 0.142625$$
+
+Now, by Bayes' rule:
+$$P(F_1 \mid \text{fail}) = \frac{P(\text{fail} \mid F_1) \cdot P(F_1)}{P(\text{fail})}$$
+
+Here, "fail" is guaranteed if stage 1 fails (the pipeline fails regardless of what happens downstream — the whole pipeline is a failure if *any* stage fails), so $P(\text{fail} \mid F_1) = 1$.
+
+$$P(F_1 \mid \text{fail}) = \frac{1 \times 0.05}{0.142625} \approx \mathbf{0.3506}$$
+
+**Sanity check via symmetry:** by symmetry across the 3 identical, independent stages, you'd expect $P(F_1 \mid \text{fail}) \approx \frac{1}{3} = 0.333$ if failures were mutually exclusive — but our answer (0.3506) is slightly *higher* than 1/3. That's because stage 1 failing is compatible with stages 2 and/or 3 *also* failing, and those overlapping "multi-failure" cases get counted in the numerator for stage 1 too (and for stages 2, 3 as well) — but the total probability of failure in the denominator doesn't triple-count them. This asymmetry is why it isn't exactly 1/3.
+
+---
+
+**4. Overall accuracy with class imbalance**
+
+$$\text{Accuracy} = 0.90 \times 0.95 + 0.10 \times 0.60 = 0.855 + 0.060 = \mathbf{0.915} \ (91.5\%)$$
+
+**What this reveals:** 91.5% sounds great, but the model is essentially *bad at the minority class* (60% accuracy on class 1, barely better than a coin flip if class 1 were binary within itself) — yet this barely dents the overall number because class 1 is only 10% of the data. A trivial classifier that *always predicts class 0* would score 90% accuracy while being completely useless for class 1.
+
+This is exactly why **accuracy is a misleading metric under class imbalance**. Better alternatives:
+- **Precision, recall, F1** — computed per class, especially for the minority class
+- **Balanced accuracy** — average of per-class recall, treating each class equally regardless of size: here that'd be (0.95 + 0.60)/2 = 77.5%, a much more honest picture
+- **ROC-AUC / PR-AUC** — threshold-independent views of separability, with PR-AUC especially informative when the positive class is rare
+- **Confusion matrix** — just look at the raw counts directly
+
+---
+
+**5. Trigram probability and log probabilities**
+
+$$P(\text{"I love coffee"}) = P(I) \times P(\text{love}\mid I) \times P(\text{coffee}\mid I, \text{love})$$
+$$= 0.10 \times 0.03 \times 0.15 = \mathbf{0.00045}$$
+
+**Log probability** (natural log):
+$$\log P = \log(0.00045) \approx \mathbf{-7.706}$$
+
+(In log base 2, if you prefer bits: $\log_2(0.00045) \approx -11.12$.)
+
+**Why language models use log probabilities:**
+
+1. **Numerical underflow** — multiplying many small probabilities (each < 1) shrinks toward zero exponentially fast. A sentence of 50 words could produce a probability like $10^{-80}$, which underflows to 0.0 in floating-point arithmetic. Logs turn this into a sum of moderate negative numbers instead.
+2. **Multiplication → addition** — by the chain rule (see Q2!), sentence probability is a product of many conditional terms. Taking logs converts that product into a sum:
+$$\log P(w_1, \dots, w_n) = \sum_{i} \log P(w_i \mid w_{<i})$$
+Sums are numerically far more stable and computationally cheaper than nested products.
+3. **Optimization** — training objectives (cross-entropy loss = negative log-likelihood) are built directly on log probabilities, and gradients of sums are easier to compute and better-behaved than gradients of products.
+4. **Comparability** — log-probabilities let you compare sentences of different lengths more sensibly (e.g., via *perplexity*, which normalizes log-probability by sequence length) — something raw joint probabilities make awkward, since longer sentences are automatically punished with tiny probabilities regardless of quality.
