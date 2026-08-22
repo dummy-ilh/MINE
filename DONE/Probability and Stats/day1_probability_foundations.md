@@ -353,27 +353,4 @@ Boole's Inequality: P(A ∪ B) ≤ P(A) + P(B)
 
 ---
 
-## 9. Practice Problems (Solve Before Day 2)
 
-1. A model predicts one of 5 classes: {cat, dog, bird, fish, other}. Assuming uniform probability, what is P(not bird)?
-
-2. In a test set of 500 samples:
-   - 200 are labeled "positive"
-   - 180 are labeled "negative"
-   - 120 are labeled "neutral"
-   What is P(positive or negative)?
-
-3. **Prove** that P(A \ B) = P(A) - P(A ∩ B) using the axioms.
-
-4. Events A and B satisfy P(A) = 0.6, P(B) = 0.5, P(A ∪ B) = 0.8. Find P(A ∩ B).
-
-5. *(Interview-level)* You have two models M1 and M2. P(M1 correct) = 0.8, P(M2 correct) = 0.75. If they are independent, what is P(at least one is correct)?
-
----
-
-## 10. Looking Ahead
-
-**Day 2** — We learn **Counting**: permutations, combinations, the multiplication rule. This gives us a **systematic way to calculate P(A) = |A| / |Ω|** for equally likely outcomes — the backbone of combinatorial probability problems in interviews.
-
----
-*End of Day 1 | Next: Day 2 — Counting & Combinatorics*
