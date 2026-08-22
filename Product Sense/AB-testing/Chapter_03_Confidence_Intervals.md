@@ -198,3 +198,52 @@ A: Standard error scales as $\sigma/\sqrt{n}$, so width is proportional to $1/\s
 
 ---
 *End of master tutorial — combines confidence interval construction, interpretation, the CI-hypothesis test duality, levers, worked example, and interview Q&A/traps.*
+In A/B testing, **CI stands for Confidence Interval**.
+
+A Confidence Interval provides an estimated range of values likely to contain the true, unknown difference (lift) between your Treatment and Control groups, rather than relying on a single point estimate.
+
+---
+
+**The Core Intuition (The Andrew Ng Way)**
+Imagine you are measuring the height of people in a city. If you measure just 100 people and find an average of 175 cm, you know that 175 cm is just an estimate from that specific sample. If you measured a different 100 people tomorrow, you might get 174 cm or 176 cm.
+
+A **95% Confidence Interval** is like casting a net: instead of guessing a single number, you state, *"Based on this data, we estimate the true height is between 173 cm and 177 cm."* If you repeated this sampling experiment 100 times, 95 of those calculated intervals would successfully contain the true population average.
+
+---
+
+**The Mechanics: How It Works in A/B Testing**
+
+When running an experiment, the primary metric of interest is the **Treatment Effect ($\Delta$)**:
+
+$$\hat{\Delta} = \bar{X}_{\text{treatment}} - \bar{X}_{\text{control}}$$
+
+Because this observed lift $\hat{\Delta}$ has sampling noise, we construct a $(1 - \alpha)$ Confidence Interval:
+
+$$\text{CI} = \hat{\Delta} \pm Z_{1 - \alpha/2} \times \text{SE}(\hat{\Delta})$$
+
+Where:
+
+* **$\hat{\Delta}$ (Point Estimate):** The observed difference in conversion rate, latency, or revenue between groups.
+* **$Z_{1 - \alpha/2}$ (Critical Value):** For a standard 95% confidence level ($\alpha = 0.05$), $Z \approx 1.96$.
+* **$\text{SE}(\hat{\Delta})$ (Standard Error):** The standard deviation of the difference:
+
+$$\text{SE}(\hat{\Delta}) = \sqrt{\frac{\sigma_T^2}{N_T} + \frac{\sigma_C^2}{N_C}}$$
+
+
+
+---
+
+**How to Read a CI for Product & Ship Decisions**
+
+| Confidence Interval Range | Statistical Verdict | Product Action |
+| --- | --- | --- |
+| **$[+1.2\%, +3.8\%]$** (Entirely above 0) | Statistically significant positive lift ($p < 0.05$). | **Ship:** Treatment reliably beats Control. |
+| **$[-0.8\%, +2.1\%]$** (Straddles 0) | Statistically insignificant ($p > 0.05$). | **Do Not Ship / Iterate:** Cannot distinguish effect from noise. |
+| **$[-3.5\%, -0.4\%]$** (Entirely below 0) | Statistically significant negative drop ($p < 0.05$). | **Rollback:** Treatment harms the metric. |
+
+---
+
+**Why FAANG (Google / Apple) Cares About CI Over Just $P$-Values**
+
+* **Effect Size vs. Sample Size:** At Google/Apple scale (millions of users), tiny lifts like $+0.02\%$ can yield $p < 0.0001$. A $p$-value only answers *"Is there an effect?"*, whereas a CI answers *"How big is the effect, and what is our best/worst case scenario?"*
+* **Worst-Case Guardrails:** For critical guardrail metrics (e.g., latency, crash rate, battery consumption), looking at the upper bound of the CI ensures you do not violate service-level agreements (SLAs).
