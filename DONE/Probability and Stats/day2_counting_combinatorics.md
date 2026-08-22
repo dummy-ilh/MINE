@@ -413,29 +413,3 @@ Bootstrap OOB:          P(not sampled) → 1/e ≈ 0.368 as n → ∞
 
 ---
 
-## 12. Practice Problems (Solve Before Day 3)
-
-1. A password must be 4 characters, each from {A–Z, 0–9} (36 options each). Repetition allowed. How many passwords are possible?
-
-2. A team of 3 must be chosen from 7 ML engineers and 4 data scientists, such that exactly 2 are ML engineers. How many such teams exist?
-
-3. *(Bootstrap)* For a dataset of n = 10 samples, what is the probability that a **specific** sample appears **at least once** in a bootstrap sample of size 10?
-
-4. In how many ways can you arrange the letters in "STATISTICS"?
-
-5. *(Interview-level)* A model is tested on 12 images. 7 are positive class, 5 are negative. If you randomly pick 4 images:
-   - P(all positive)?
-   - P(exactly 2 positive, 2 negative)?
-   - P(at least 3 positive)?
-
-6. *(Think hard)* You have 5 candidate models. You want to pick a top-3 ranking (1st, 2nd, 3rd place). How many rankings exist? How is this different from choosing any 3 of the 5?
-
----
-
-## 13. Looking Ahead
-
-**Day 3** — **Conditional Probability & The Chain Rule.**  
-We finally answer: "Given we already know something, how does it change our probability?" This is the foundation of Bayesian thinking, Naive Bayes classifiers, and every probabilistic graphical model.
-
----
-*End of Day 2 | Next: Day 3 — Conditional Probability & The Chain Rule*
