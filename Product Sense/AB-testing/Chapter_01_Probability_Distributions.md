@@ -1,4 +1,3 @@
-
 ## 1. Definition
 
 A probability distribution describes how likely different outcomes of a random variable are. In product analytics, every metric you look at — conversion rate, session count, time-to-purchase — is a realization of some underlying random process, and the distribution tells you what "normal" variation looks like before you ever run a test.
@@ -77,132 +76,44 @@ A: Variance for a Binomial proportion is p(1-p)/n, which is maximized around p=0
 **Q: A stakeholder asks why average session duration "looks Normal in the histogram of daily averages" but the raw per-session data is heavily right-skewed. Explain the discrepancy.**
 A: This is the Central Limit Theorem in action. The raw per-session durations are skewed (most sessions are short, a few are very long), but once you average across many sessions per day, that average becomes approximately Normally distributed — the skew washes out as n grows. The individual data being non-Normal doesn't prevent the *aggregate* (mean) from being Normal; this is exactly why we can build valid confidence intervals on daily average metrics even when raw user-level data looks nothing like a bell curve.
 
----
-Yes. The key is distinguishing **relative lift** from **absolute lift**.
+**Q: Why do interview panels care so much about the difference between relative lift and absolute (percentage-point) lift?**
+A: Because confusing the two silently changes the sample size math and the business framing. A "2% lift" almost always means a 2% *relative* change to the current metric, not a 2-percentage-point jump — and the two imply wildly different magnitudes, especially at low base rates.
 
-### What is the base rate?
+## 6. Worked Example — Relative Lift vs. Percentage-Point Lift at a Low Base Rate
 
-The **base rate** is the current value of the metric **before** any experiment. For a conversion metric, it's the percentage of users who convert under the existing experience.
+**Setup:** base conversion rate = 0.1% (0.001), and you're testing for a 2% *relative* lift.
 
-If the base rate is **0.1%**, it means:
+- Relative lift target: 0.001 × 1.02 = 0.00102 → **0.102%**
+- Absolute (percentage-point) change: 0.102% − 0.100% = **0.002 percentage points**
 
-* Out of **100 users**, about **0.1** convert on average (not very intuitive).
-* Out of **1,000 users**, about **1** converts.
-* Out of **100,000 users**, about **100** convert.
+At **1,000,000 users per arm**:
 
-So:
+| | Control | Treatment |
+|---|---:|---:|
+| Users | 1,000,000 | 1,000,000 |
+| Conversion rate | 0.100% | 0.102% |
+| Conversions | 1,000 | 1,020 |
 
-* Number of users = 100,000
-* Conversions = 100
-* Conversion rate = **100 / 100,000 = 0.001 = 0.1%**
+The lift is real — 20 extra conversions per million users, i.e. (1020−1000)/1000 = **2% relative lift** — but the absolute gap is so small that it's easily swamped by sampling noise unless the experiment is well powered.
 
----
+**Why this matters at scale:** a site with 100M visitors/year and a 0.1% purchase rate goes from 100,000 to 102,000 purchases under a 2% relative lift — 2,000 extra purchases/year. At $100 each, that's $200,000/year in revenue from a change that looks tiny in the histogram. This is the standard interview point: *don't judge lift magnitude by eyeballing the percentage — judge it by what it does to the business metric at your actual traffic volume.*
 
-### What does a 2% relative lift mean?
+**Don't confuse the two:**
 
-A **2% relative lift** means increasing the conversion rate by **2% of its current value**, **not** by 2 percentage points.
+| Statement | New rate (from a 0.1% base) | Implied relative change |
+|---|---:|---:|
+| 2% **relative** lift | 0.102% | 2% |
+| 2 **percentage-point** increase | 2.1% | ~2,000% |
 
-Current conversion rate:
+A 2-point increase on a 0.1% base is essentially never realistic in a mature A/B test — if someone states a target that way, clarify which one they mean before sizing the experiment.
 
-[
-0.1% = 0.001
-]
+## 7. Quick-Reference Cheat Sheet
 
-A 2% relative increase is:
+| Distribution | Models | Test to reach for | Watch out for |
+|---|---|---|---|
+| Binomial | successes out of n trials | z-test / chi-square on proportions | variance not constant across p; use exact test near p≈0 or 1 |
+| Poisson | counts of rare events per interval | Poisson regression, rate ratio test | overdispersion (var ≫ mean) → use Negative Binomial |
+| Normal | sums/averages (via CLT) | t-test, z-test | skewed raw data needs bigger n or a transform (log, CUPED, winsorize) |
+| Exponential | waiting time to next event | log-rank test, survival analysis | real hazard rates usually aren't constant → use Weibull / Cox PH |
 
-[
-0.001 \times 1.02 = 0.00102
-]
-
-Converting back to percentages:
-
-* Before: **0.100%**
-* After: **0.102%**
-
-Absolute increase:
-
-[
-0.102% - 0.100% = 0.002%
-]
-
-or **0.002 percentage points**.
-
----
-
-### Example with 1,000,000 users
-
-Suppose:
-
-|                 |   Control | Treatment |
-| --------------- | --------: | --------: |
-| Users           | 1,000,000 | 1,000,000 |
-| Conversion rate |    0.100% |    0.102% |
-| Conversions     |     1,000 |     1,020 |
-
-The treatment generated **20 extra conversions** out of **1 million users**.
-
-That's a **2% relative lift**:
-
-[
-\frac{1020-1000}{1000}=0.02=2%
-]
-
-Even though the improvement is real, it's only **20 additional conversions**, which is a very small signal.
-
----
-
-### Why does this require a huge sample?
-
-Each user either:
-
-* converts (1), or
-* doesn't convert (0).
-
-Most users (99.9%) don't convert.
-
-The improvement you're trying to detect is:
-
-* from **1000 conversions**
-* to **1020 conversions**
-
-Because the difference is only **20 conversions**, random variation can easily hide it unless you have a very large number of users.
-
----
-
-### Is a 2% lift possible?
-
-Absolutely. Many mature products target lifts of:
-
-* **0.5%**
-* **1%**
-* **2%**
-* **5%**
-
-A 2% lift is often considered valuable at scale.
-
-For example, suppose an e-commerce site gets **100 million visitors/year** with a **0.1%** purchase rate:
-
-* Current purchases:
-  [
-  100,000,000 \times 0.1% = 100,000
-  ]
-
-* After a **2% relative lift**:
-  [
-  100,000 \times 1.02 = 102,000
-  ]
-
-That's **2,000 extra purchases per year**. If each purchase is worth $100, that's **$200,000 in additional revenue** from what appears to be a tiny improvement.
-
----
-
-### Relative lift vs. percentage-point lift
-
-These are commonly confused:
-
-| Statement                       | New conversion rate (starting from 0.1%) |
-| ------------------------------- | ---------------------------------------: |
-| **2% relative lift**            |                               **0.102%** |
-| **2 percentage-point increase** |                                 **2.1%** |
-
-A **2 percentage-point increase** (from 0.1% to 2.1%) would be an enormous change—about a **2,000% relative lift**—and is extremely unlikely in most real-world A/B tests. That's why experiment discussions almost always specify **relative lift** rather than percentage-point changes.
+**One-line interviewer bait to keep in your pocket:** *"Poisson assumes mean = variance — the moment your count data violates that, you're implicitly telling me the model is misspecified, not just noisy."*
