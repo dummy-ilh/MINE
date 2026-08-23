@@ -111,7 +111,6 @@ Generating token 3, compute only its query: $Q_3=[1,1]$.
 $K_1,K_2,V_1,V_2$ were read straight from the cache — never recomputed. Only $Q_3$ and the four arithmetic steps were fresh work.
 
 ### 2.4 Cache size — the formula and a worked example
-## Cache size formula — explained term by term
 
 $$
 \text{Cache size (bytes)} = 2 \times L \times n \times d_{model} \times b \times \text{bytes}_{dtype}
@@ -171,7 +170,6 @@ Concretely: the 2 GiB cache above assumed one K/V pair per head. With 4-way GQA,
 3. **Q: How does switching from fp16 to int8 affect max context length for a fixed memory budget?**
    A: It roughly doubles the context you can support. You're not changing how many numbers you store (that's still $2 \times L \times n \times d_{model} \times b$) — you're just halving the cost per number, which halves total bytes and therefore lets $n$ grow twice as far before you hit the same memory ceiling.
 
-Want me to fold this improved version back into the saved master notes file?
 ---
 
 ## 3. Practical, Diagnostics & Q&A
