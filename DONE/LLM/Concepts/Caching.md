@@ -249,3 +249,148 @@ Speedup:       1.73x
 
 3. **Q: What's the difference between prefix caching and semantic caching?**
    A: Prefix caching reuses exact-match model internals (K/V); semantic caching skips inference entirely for queries that mean roughly the same thing as a prior one. They operate at different layers and can be used together.
+
+## Section 4 — Four techniques you'll hear about constantly, explained simply
+
+These all attack the "memory wall" problem from Section 2 — the cache getting too big — but from four different angles. Here's each one in plain language with a concrete example.
+
+---
+
+### 4.1 Quantized cache (int8)
+
+**The idea, in one sentence:** store each number in the cache using fewer bits, so the same cache takes less memory.
+
+Normally each number in the K/V cache is stored as fp16 (16 bits = 2 bytes). Quantizing to int8 stores it in 8 bits = 1 byte instead — literally half the space, for the same numbers.
+
+**Analogy:** imagine you're keeping notes and normally you write each number out to 4 decimal places ("3.1416"). Quantizing is like rounding to 1 decimal place ("3.1") instead — you lose a little precision, but the note takes way less space on the page. Do that for millions of numbers and the savings add up fast.
+
+**Concrete example:** from Section 2, a 7B model at 4k context needs 2 GiB of cache in fp16. Switch to int8, and it drops to **1 GiB** — same content, same context length, half the memory. That "extra" GiB you saved can now go toward serving more users or supporting longer context.
+
+**The catch:** you lose some numerical precision, which *can* slightly hurt output quality — it's a genuine tradeoff, not a free lunch, which is why it's not always turned on by default.
+
+---
+
+### 4.2 GQA / MQA (Grouped-Query / Multi-Query Attention)
+
+**The idea, in one sentence:** instead of every attention "head" keeping its own separate K and V, make several heads *share* one K/V.
+
+**Analogy:** imagine a newsroom with 32 reporters (that's your attention heads), each covering the same story from a different angle (that's what makes them useful — different perspectives). Normally, each reporter keeps their *own* private notebook of facts (K/V). GQA is like saying: "you 4 reporters share one shared notebook of facts, and each of you just brings your own *questions* to it." The reporters still ask different questions and still get different insights out — but you're only maintaining 1 notebook instead of 4.
+
+- **MQA (Multi-Query Attention)** is the extreme version: *all* heads share just **one** K/V.
+- **GQA (Grouped-Query Attention)** is the middle ground: heads are split into small groups, each group shares one K/V.
+
+**Concrete example:** from Section 2's GQA example — 4 query heads sharing 1 K/V head shrinks the cache 4x, turning a 2 GiB cache into ~512 MiB, with zero change to context length or number of layers. This is why most modern production models (Llama 3, Mistral) use GQA by default — it's baked into the model architecture itself, not something you turn on later.
+
+---
+
+### 4.3 PagedAttention (vLLM)
+
+**The idea, in one sentence:** stop reserving one giant continuous memory block per conversation "just in case" it gets long — allocate memory in small chunks, only as needed.
+
+**Analogy:** imagine renting a parking garage. The naive approach is: every car that enters gets reserved an entire floor to itself, "in case" it needs to grow into a bus later. Most cars never grow — so you're wasting almost the whole floor per car, and you run out of floors fast even though there's tons of unused space scattered around.
+
+PagedAttention is like switching to individual parking *spots* instead of whole floors: each car gets exactly as many spots as it currently needs, one at a time, and a central directory (the "block table") just keeps track of which spots belong to which car — even if those spots aren't next to each other.
+
+**Concrete example:** without PagedAttention, if you set aside memory assuming every conversation might reach 4096 tokens, but the average conversation is actually only 500 tokens, you're wasting ~87% of that reserved memory per conversation — multiplied across thousands of concurrent users, that's the difference between serving 50 people and serving 400 people on the same GPU. This is the single biggest reason vLLM became the standard serving engine — it's mostly a memory-utilization fix, not a speed fix.
+
+---
+
+### 4.4 RadixAttention (SGLang)
+
+**The idea, in one sentence:** PagedAttention shares memory *within* one conversation efficiently — RadixAttention shares cache *across different requests* that overlap, even partially.
+
+**Analogy:** think of a shared family tree instead of individual family trees. If 1,000 users all start their conversation with the same company system prompt, then branch off into totally different questions, a plain prefix cache only helps if requests share the *exact same starting sequence*. RadixAttention builds a tree structure (like a family tree, or a filing cabinet with shared folders that branch off into sub-folders) where any two requests that share *any* common prefix — even a partial one, like the first 200 tokens of a 2000-token shared document — automatically reuse that shared portion, no matter how the rest of their requests differ.
+
+**Concrete example:** imagine a customer support system where 500 users each start by pasting the *same* 3-page product manual, then ask 500 completely different follow-up questions. A basic prefix cache handles this fine (since the whole manual is an identical prefix). But now imagine 500 users paste *slightly different but overlapping* excerpts of that manual — RadixAttention can still detect and reuse the *overlapping chunks*, where a simple "does this match the wire exactly" prefix cache would miss the shared portion entirely and recompute everything from scratch. It also intelligently decides what to keep in memory vs. evict when things get tight (like an LRU cache), across *all* active requests at once, not just one at a time.
+
+---
+
+### Quick recap — which one solves which problem?
+
+| Technique | Fixes | Cost/tradeoff |
+|---|---|---|
+| Quantized cache (int8) | Cache too big in memory | Slight precision/quality loss |
+| GQA/MQA | Cache too big *by design* | Built into model architecture, can't retrofit onto an already-trained model easily |
+| PagedAttention | Wasted memory from over-reserving | Requires a serving engine that supports it (vLLM) |
+| RadixAttention | Cache not shared across similar-but-not-identical requests | More complex to implement/maintain than simple prefix matching |
+
+
+## Section 5 — Advanced Q&A, simplified
+
+This builds directly on Sections 1–4. A few of these questions restate things you've already seen in a stricter, more "interview-ready" form — I'll point out where that overlap is, then add the genuinely new pieces (prefill vs. decode, MLA, eviction policies, attention sinks).
+
+---
+
+### 5.1 Prefill vs. Decode — the two phases of generation
+
+Every LLM request actually has two very different phases, and they bottleneck on completely different hardware resources:
+
+**Prefill (processing your prompt, before the first output token):** the whole prompt is known upfront, so the model processes *all* prompt tokens at once, in parallel, as one big matrix multiplication. This phase is **compute-bound** — you're limited by how fast the GPU can crunch numbers. This is also where the *initial* KV cache gets built.
+
+**Decode (generating each output token, one at a time):** each new token depends on the one before it, so this can't be parallelized the same way — one token in, one token out, over and over. Each step has to pull the *entire* KV cache (weights + all cached K/V) out of memory. This phase is **memory-bandwidth-bound** — you're limited by how fast you can *read* memory, not how fast you can compute.
+
+**Simple analogy:** prefill is like reading an entire book cover-to-cover in one sitting (compute-heavy, but done once). Decode is like writing one new sentence, then having to flip back through every previous page to check consistency, then writing the next sentence, then flipping through again — over and over. The "flipping through pages" is the memory-bandwidth cost, and it's why decode is slow token-by-token even on a fast GPU.
+
+**Why this matters practically:** Time-to-first-token (TTFT) is a prefill problem — optimize compute. Time-per-output-token (TPOT) is a decode problem — optimize memory bandwidth and cache size (which is exactly what Sections 2–4 are about).
+
+---
+
+### 5.2 The memory formula, reconciled
+
+You'll see this formula written two equivalent ways:
+
+$$\text{Memory} = 2 \times B \times S \times L \times n_{kv} \times d_k \times \text{bytes}$$
+
+versus Section 2's version using $d_{model}$. They're the same thing — $n_{kv} \times d_k$ **is** $d_{model}$ split into "number of KV heads" × "size per head." Section 2 used the collapsed form; this version shows *why* GQA/MQA helps: shrinking $n_{kv}$ (fewer KV heads) shrinks total memory directly, without touching anything else.
+
+**Worked example (Llama-3-70B):** $L=80$, $n_{kv}=8$, $d_k=128$, fp16, $S=4096$, $B=1$:
+
+$$2 \times 1 \times 4096 \times 80 \times 8 \times 128 \times 2 \approx 1.34 \text{ GB per user}$$
+
+Notice $n_{kv}=8$ here, not 64 (Llama 3 70B actually has 64 query heads) — that gap *is* GQA in action, already baked into the number.
+
+---
+
+### 5.3 Multi-Head Latent Attention (MLA) — the newest cache-shrinking trick
+
+GQA and MQA shrink the cache by having heads *share* K/V. MLA (used in DeepSeek-V2/V3) takes a different approach: instead of storing full-size K/V vectors at all, it compresses them down into a much smaller "latent" vector first, then reconstructs the full K/V on the fly when needed.
+
+**Simple analogy:** GQA is like several reporters sharing one notebook (Section 4.2). MLA is like *compressing* the notebook itself — instead of writing full sentences, you write a shorthand code that expands back into the full sentence when read. You store the compact shorthand (cheap), and only "decompress" it at the moment you actually need the full detail. The compressed version takes a fraction of the space of a full K/V vector.
+
+**Why it matters:** it gets a bigger memory reduction than GQA typically does, which is part of why DeepSeek models could support long context cheaply.
+
+---
+
+### 5.4 Compression and eviction — three more tools, simplified
+
+**Quantization variants (INT8, INT4, FP8):** same idea as Section 4.1 — fewer bits per stored number — just taken further. INT4 is half the size of INT8, which is half of FP16. The tradeoff scales too: more compression, more risk of quality loss. Techniques like KIVI and QuaRot are specific recipes for doing this compression *without* losing much accuracy (e.g. by only compressing the parts of the cache that tolerate it well).
+
+**Eviction policies (H2O, Scissorhands):** instead of shrinking every number, just **throw away whole tokens** from the cache that don't seem to matter anymore.
+
+*Analogy:* think of it like a whiteboard that's filling up — instead of writing smaller (quantization), you erase old notes that clearly aren't being referenced anymore, and keep the ones people keep pointing back to. These methods track which tokens actually get high attention weight ("heavy hitters") and keep those, discarding the ones that rarely get attended to.
+
+**Attention sinks / StreamingLLM:** a surprising empirical finding — the *very first few tokens* of a sequence get disproportionately high attention weight no matter what they are, almost like a "dumping ground" the model always glances at. StreamingLLM exploits this: keep those first few tokens permanently, plus a sliding window of the most recent tokens, and evict everything in between. This lets a model handle an effectively *infinite* stream of text in *fixed* memory, because the cache size stops growing — it's a fixed-size window plus a fixed handful of "anchor" tokens.
+
+*Analogy:* imagine taking notes during an all-day meeting — you can't keep everything, so you keep your notes from the opening framing (which everything else gets interpreted through) plus your notes from the last 10 minutes (immediately relevant), and let the middle fade.
+
+---
+
+### 5.5 Prefix caching, precisely
+
+This solidifies Section 4.4 (RadixAttention) with the general mechanism: because K/V for a given prefix is **deterministic** (same tokens always produce the same K/V, given the same model), a system can match incoming requests against previously-seen prefixes — either exact string matching, or a radix tree for partial-prefix matching (RadixAttention) — and skip straight to reusing the cached blocks. A cache hit turns an expensive prefill (compute-bound matrix multiplication) into a cheap memory lookup.
+
+---
+
+### 5.6 Semantic caching, precisely
+
+This solidifies the "application layer" caching from Section 0's primer and Section 4's recap table. It sits *in front of* the model entirely, not inside it:
+
+1. Convert the incoming prompt into an embedding vector.
+2. Compare it (cosine similarity) against embeddings of previously-answered prompts.
+3. If similarity clears a threshold (commonly ~0.95), return the old cached *response* directly — the model is never called at all.
+
+**Key distinction to remember:** prefix caching (5.5) still runs the model, just skips redundant *internal* computation. Semantic caching (5.6) skips the model *entirely* for a "close enough" match — which is why it needs a similarity threshold and tolerance for approximate matches, whereas prefix/KV caching must be exact (a single different token upstream invalidates everything downstream).
+
+---
+
+Want this folded into the master notes file as Section 5, alongside a refresh of Section 4?
