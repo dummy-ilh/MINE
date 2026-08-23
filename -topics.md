@@ -25,4 +25,7 @@ biecoder cross encoder trainign
 batch norm
 rougue blue
 onnx
-
+svd
+tsne 
+autoencoders
+curse of dimestiona
