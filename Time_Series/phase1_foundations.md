@@ -174,29 +174,52 @@ So if Q3's typical seasonal bump is +7, and this Q3 actual revenue was 26, the s
 
 ---
 
-## 6. How to actually *detect* trend/seasonality in practice (not just by eyeballing)
+## 6. How to actually *detect* trend/seasonality in practice
 
-You asked specifically "how to find how it affects" — here are the concrete, practical methods (we'll formalize the statistical tests for these in Phase 4, but here's the intuitive first pass):
+Each method below answers a different question. Use them in order — each one strips out what the previous one found, making the next pattern easier to see.
 
-1. **Plot the raw series.** Always step one. Look for: overall drift (trend), repeating bumps at fixed intervals (seasonality), irregular multi-year swings (cycle).
-2. **Plot a moving average on top of the raw data** (as we did above) — this visually strips out the noise/seasonality and shows you the trend line directly.
-3. **Seasonal subseries plot**: group all the January values together across years, all the Februarys together, etc., and look at each group's average. If the group averages differ a lot and are stable year to year, that's seasonality.
-4. **Check if the seasonal swing size grows with the trend level** (megaphone shape) → tells you additive vs multiplicative, as discussed in section 4.
+**1. Plot the raw series first.**
+This is step one for a reason: every other technique is really just a more rigorous way of confirming what your eyes already suspect. Look for three distinct signatures:
+- **Trend** → the series drifts up or down over the *whole* span, ignoring the wiggles.
+- **Seasonality** → bumps repeat at a *fixed, known* interval (every December, every Monday, every Q4).
+- **Cycle** → swings happen, but the length between peaks varies year to year — no fixed calendar rule.
+
+**2. Overlay a moving average.**
+A moving average works by averaging away short-term noise, so what's left behind is the slow-moving trend. Concretely: a 12-month moving average on monthly data averages every full year at each point, so the within-year seasonal bumps cancel out (each January is offset by the July that's also in the window) and only the underlying drift survives. If you see the raw line zigzagging but the moving-average line rising smoothly, you've confirmed trend and mostly ruled out "it's just seasonality that looks like a trend."
+
+**3. Seasonal subseries plot.**
+This is the sharpest tool for isolating seasonality specifically. Instead of looking at time left-to-right, you regroup the data *by season*: pull every January into one bucket, every February into another, etc., then plot each bucket's mean (often with a small line showing how that bucket trended year over year too).
+- If the bucket means are clearly different from each other (December >> June, say) **and** that gap is stable across years → that's real seasonality, not coincidence.
+- If the bucket means are all roughly similar, or the "high" month keeps changing year to year → there's no fixed seasonal effect; what you saw in the raw plot was probably noise or cycle.
+
+This method is powerful because trend and cycle get averaged out *within* each bucket (since each January bucket spans many years), leaving the seasonal effect isolated.
+
+**4. Check whether the seasonal swing size scales with the trend level.**
+Once you know seasonality exists, ask: does the *size* of each seasonal bump stay constant in absolute terms, or does it grow as the overall level of the series grows? Plot the series and watch the shape of the envelope around it:
+- Swings stay roughly the same height throughout → **additive** (seasonal effect is a fixed amount added/subtracted each period).
+- Swings visibly widen as the series grows — a "megaphone" shape → **multiplicative** (seasonal effect is a fixed *percentage* of the current level).
+
+This distinction matters practically: if you fit an additive model to multiplicative data, your forecast intervals will be too narrow at high levels and too wide at low levels.
 
 ---
 
-## 7. Quick self-check questions (answer in your head before moving on)
+## 7. Quick self-check questions
 
-1. A coffee shop's sales are higher every single Monday morning (people need coffee after the weekend) — is that trend, seasonal, or cyclical?
-   *(Answer: seasonal — fixed, known, calendar-tied repeat pattern, in this case weekly)*
-2. A country's GDP grows for 7 years then shrinks for 2, then grows for 5, then shrinks for 3 — trend, seasonal, or cyclical?
-   *(Answer: cyclical — repeats but without a fixed length)*
-3. If a series' seasonal swings get visibly bigger in absolute dollar terms every year as the business grows, should you model it as additive or multiplicative?
-   *(Answer: multiplicative — because the swing size scales with the level; alternatively, log-transform and treat it as additive)*
+Try answering before revealing each one — the goal is to catch yourself using the *right diagnostic reasoning*, not just the right label.
 
+**1. A coffee shop's sales spike every single Monday morning.**
+<br>Trend, seasonal, or cyclical?
+
+> **Seasonal.** The key test: is the interval *fixed and calendar-tied*? Yes — it's every 7 days, tied to the weekly cycle of "weekend just ended." Fixed period + predictable recurrence = seasonal, even though the period here is a week rather than a year.
+
+**2. A country's GDP grows for 7 years, shrinks for 2, grows for 5, shrinks for 3.**
+<br>Trend, seasonal, or cyclical?
+
+> **Cyclical.** It repeats — growth, then contraction, then growth again — but the *length of each phase changes* (7 years, then 5 years). The moment the period stops being fixed and predictable, it's no longer seasonal; it becomes cyclical (think business cycles, not calendars).
+
+**3. A series' seasonal swings get visibly bigger in absolute dollar terms every year as the business grows.**
+<br>Additive or multiplicative?
+
+> **Multiplicative** — because the swing size scales with the level of the series, not staying constant. Two equally valid ways to handle it: model it directly as multiplicative, or log-transform the series first (which converts multiplicative relationships into additive ones), then use additive methods on the transformed data.
 ---
 
-## What's next
-Phase 2 will build directly on this: we'll formally define what a **stochastic process** is (the mathematical machine that "generates" a time series), and introduce **white noise** and the **random walk** — the two simplest building-block processes that every more complex model (AR, MA, ARIMA) is built from. We go just as slow.
-
-Say "next" when ready, or ask me to drill deeper into anything in Phase 1 first (e.g., more worked examples, or the multiplicative version of the ice cream example worked by hand).
