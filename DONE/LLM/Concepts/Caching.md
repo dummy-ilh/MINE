@@ -1,184 +1,147 @@
-## Phase 1 — Intuition & the Core Problem
+# LLM Caching — Master Notes
 
-### The redundant computation problem
-
-Here's the thing about how LLMs generate text: they produce **one token at a time**, and each new token needs to "look back" at every token that came before it (that's what self-attention does — every token computes a weighted sum over all prior tokens' representations).
-
-The naive way to do this: at every single generation step, recompute attention over the *entire* sequence so far, from token 1 all the way to the current one. If you're generating token 500, you recompute the Key and Value projections for tokens 1 through 499 *again*, even though those tokens haven't changed and their K/V vectors are mathematically identical to what they were in the previous step.
-
-**Analogy:** imagine you're proofreading a growing document, and every time you add one new sentence, you re-read and re-annotate the *entire document from page 1* before you're allowed to write the next sentence. That's insane — you already annotated pages 1 through 50 last time, nothing on those pages changed, so just keep your old notes and only annotate the new sentence. That's exactly what a KV cache does: it keeps the "notes" (Key and Value vectors) from prior tokens so you never redo work you've already done.
-
-### What specifically gets cached
-
-In self-attention, each token produces three vectors: **Query (Q)**, **Key (K)**, and **Value (V)**.
-- Q is used *only* by the current token, to ask "what am I looking for?"
-- K and V represent *every* token in the sequence and are used by *all future tokens* that attend back to this one.
-
-Since K and V for a given token never change once that token is processed (they only depend on that token's own embedding and the layer weights, not on what comes after), they're the perfect candidates to store and reuse. Q, by contrast, is only needed transiently for the current step, so it's never cached.Gray boxes above = "already have K,V cached, just reuse them." The coral box = the only new computation this step. That's the entire efficiency win of KV caching in one picture.
-
-### When it helps a lot vs. barely matters
-
-**KV caching matters most when:**
-- Generating long outputs autoregressively (chatbots, code generation, long-form writing) — the savings compound with every token
-- Sequences get long — the quadratic-ish waste of full recomputation grows fast with context length
-- You're serving at scale with many concurrent users — wasted recomputation directly burns GPU cycles you're paying for
-- Latency (time-to-next-token) matters, not just total throughput
-
-**KV caching barely matters (or isn't the bottleneck) when:**
-- You're doing a single forward pass with no generation (e.g. just scoring/classifying a fixed input) — there's nothing to cache across since there's no autoregressive loop
-- Outputs are very short (1-2 tokens) — the setup/bookkeeping overhead can rival the savings
-- You're memory-constrained rather than compute-constrained — ironically, the cache itself becomes the *new* bottleneck (more on this in Phase 2, this is the famous "memory wall" of LLM serving)
-- Training (not inference) — during training you process the whole sequence in parallel with teacher forcing, so there's no sequential generation loop to cache across in the same way
-
-### The contrast case: what breaks without it
-
-If you strip caching out of a production LLM serving system:
-- **Compute cost explodes.** Generating a sequence of length *n* token-by-token without caching costs roughly O(n²) in attention compute (each of the n steps redoes O(step length) work) instead of the O(n) it costs with caching.
-- **Latency degrades as the conversation gets longer** — token 1000 takes dramatically longer to generate than token 10, because you're redoing 1000x the work instead of 1x.
-- This is precisely why every production inference engine (vLLM, TensorRT-LLM, Hugging Face's `generate()`, llama.cpp, etc.) treats the KV cache as a first-class citizen, not an optimization bolted on later.
+*Theory and practice, from the attention mechanism up to production serving systems.*
 
 ---
 
-## Chapter 1 Q&A — Google / Apple / Meta style
+## 0. Primer
 
-*(Answers below — try the questions yourself first.)*
+**What is "LLM caching"?** It's an umbrella term for three distinct techniques that all avoid redundant computation, but at different layers of the stack:
 
-**Google-style (systems/scale framing):**
-1. You're serving an LLM to millions of users with long conversation histories. Without KV caching, how does generation latency scale with conversation length, and why?
-2. Why can't you cache the Query vector the same way you cache Key and Value?
+| Layer | Name | What it avoids recomputing | Where it lives |
+|---|---|---|---|
+| Model internals | **KV cache** | Attention Key/Value vectors for tokens already processed | Inside the model, every inference call |
+| Request layer | **Prefix / prompt caching** | KV cache for a *shared prefix* across multiple requests (e.g. a system prompt) | Serving engine (vLLM, TGI) or API layer (Anthropic/OpenAI prompt caching) |
+| Application layer | **Semantic / response caching** | The entire inference call, for queries that mean roughly the same thing as a prior one | Application code, sits in front of the model entirely |
 
-**Apple-style (on-device/efficiency framing):**
-3. You're deploying an LLM on a phone with tight RAM. Why might KV caching, despite saving compute, actually create a *new* constraint you have to design around?
-4. For a very short on-device task (e.g. classifying a one-line notification as urgent/not-urgent), would you expect KV caching to give a meaningful speedup? Why or why not?
+**Why it matters:** LLMs generate text one token at a time, and naively, each new token re-derives information about every prior token from scratch. That's enormous waste — and at production scale (millions of requests, long conversations, shared prompts) it's the difference between a serving system that's affordable and one that isn't. This is why every real inference engine (vLLM, TensorRT-LLM, llama.cpp, SGLang) treats caching as core infrastructure, not an optional optimization.
 
-**Meta-style (research/architecture framing):**
-5. Why is KV caching a technique used at *inference* time but not something that changes how the model is *trained*?
-6. If K and V for a token never change once computed, why doesn't the same logic apply to intermediate activations elsewhere in the model (e.g. the FFN outputs)?
+**Real-world touchpoint:** Anthropic's API exposes prompt caching directly — if you send the same long system prompt or document repeatedly, you pay less and wait less on cache hits, because the underlying KV state for that prefix is reused server-side rather than recomputed. That feature is a direct, user-facing application of Chapter 3's "prefix caching" concept.
 
----
-
-<details>
-<summary>Answers (click to expand — or just scroll)</summary>
-
-1. Without caching, latency grows roughly quadratically — each new token requires recomputing attention over the entire growing history, so a 1000-token conversation does ~1000x more redundant work per step than a 10-token one, and each subsequent token gets slower to generate than the last.
-2. Q is only needed transiently to answer "what is *this* token looking for right now" — it's consumed immediately in the current step's attention computation and never referenced again by future tokens. K and V, by contrast, are read by *every future token* that attends back to this position, which is exactly why they're worth storing.
-3. The KV cache grows linearly with sequence length and must be held entirely in memory for the whole generation — on a memory-constrained device, a long conversation can make the cache itself the binding constraint, even though it's saving you compute.
-4. Not much — the win from caching comes from *amortizing* the setup cost across many generation steps. For a single short output, the overhead of maintaining the cache can roughly offset the compute saved.
-5. Training processes the entire target sequence in parallel via teacher-forcing (all ground-truth tokens are available upfront), so there's no sequential, one-token-at-a-time loop to amortize work across — caching is specifically a fix for the *sequential generation* pattern that only exists at inference.
-6. FFN and other intermediate activations for a token also don't change after that token is processed — and in principle they *could* be cached too, but K/V are singled out because they're the only intermediate values that get *re-read by other tokens* (via attention); FFN outputs for token *i* are never consulted when processing token *i+1*, so there's nothing to reuse there.
-
-</details>
+**Roadmap:**
+1. **Intuition** — why redundant computation happens and what a KV cache actually stores
+2. **Math** — the attention formula, a worked numeric example, and the memory-footprint formula that explains why caching creates its own problem
+3. **Practice** — verified code, production systems (PagedAttention, prefix caching, RadixAttention, semantic caching), and diagnostics
 
 ---
 
-## Phase 2 — The Math
+## 1. Intuition & the Core Problem
 
-### Notation
+### 1.1 The redundant computation problem
+
+LLMs generate text **one token at a time**, and every new token needs to "look back" at every token that came before it — that's what self-attention does.
+
+Naively, at every generation step you'd recompute attention over the *entire* sequence so far. Generating token 500 would recompute the Key/Value projections for tokens 1–499 *again*, even though those tokens haven't changed and their K/V vectors are identical to last step's.
+
+**Analogy:** you're annotating a growing document, and every time you add one sentence, you're forced to re-read and re-annotate the *entire document from page 1* before writing the next sentence. Insane — you already annotated pages 1–50 last time; keep those notes and only annotate the new sentence. That's exactly what a KV cache does.
+
+### 1.2 What specifically gets cached
+
+Each token produces three vectors: **Query (Q)**, **Key (K)**, **Value (V)**.
+- **Q** is used only by the current token, to ask "what am I looking for?" — needed transiently, never cached.
+- **K** and **V** represent a token and are read by *every future token* that attends back to it — once computed, they never change, so they're cached.
+
+### 1.3 Example: where this shows up in practice
+
+- **Chatbot with a long conversation history:** every new user turn requires attending back over the whole conversation. Without caching, turn 50 would redo the attention work for turns 1–49 from scratch — with caching, only the new turn's tokens get processed.
+- **Coding assistant reading a large file:** the file's tokens get cached once; every subsequent question about that file reuses the cached K/V instead of re-reading the file "from scratch" internally.
+
+### 1.4 When it helps a lot vs. barely matters
+
+**Helps a lot:** long autoregressive generation, long/growing sequences, high-concurrency serving, when latency (time-to-next-token) matters.
+
+**Barely matters:** a single forward pass with no generation loop (e.g. classification), very short outputs (1–2 tokens, setup overhead can rival the savings), and training (teacher-forcing processes the whole sequence in parallel — no sequential loop to cache across).
+
+### 1.5 The contrast case: what breaks without it
+
+- Compute cost for generating a sequence of length *n* goes from roughly **O(n) with caching to O(n²) without it**.
+- Latency degrades as a conversation grows — token 1000 takes dramatically longer than token 10.
+- This is why every production inference engine treats the KV cache as first-class infrastructure.
+
+### 1.6 Q&A — quick check
+
+1. **Q: Why can K and V be cached but not Q?**
+   A: Q is only needed for the current token's own attention step and is never reused. K and V are read by every future token, so they're worth storing.
+
+2. **Q: What happens to latency as a conversation grows, without caching?**
+   A: It gets worse and worse — each new token redoes more and more redundant work, roughly squaring the total cost.
+
+3. **Q: Does caching help during training?**
+   A: No — training processes the whole sequence in parallel, so there's no step-by-step generation loop to amortize work across.
+
+---
+
+## 2. The Math
+
+### 2.1 Notation
 
 | Symbol | Meaning |
 |---|---|
-| $n$ | sequence length (number of tokens processed so far) |
-| $d_{model}$ | model's hidden dimension |
+| $n$ | sequence length processed so far |
+| $d_{model}$ | model hidden dimension |
 | $h$ | number of attention heads |
-| $d_k$ | dimension per head ($d_k = d_{model}/h$) |
+| $d_k$ | dimension per head ($d_{model}/h$) |
 | $L$ | number of transformer layers |
-| $b$ | batch size (concurrent sequences) |
-| $Q, K, V$ | Query, Key, Value matrices |
+| $b$ | batch size |
 
-### The attention formula
+### 2.2 The attention formula
 
 $$
 \text{Attention}(Q,K,V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
 $$
 
-Term by term:
-- **$QK^T$** — dot product between the current query and every cached key. This is a similarity score: "how relevant is token $j$ to what I'm asking right now?"
-- **$\sqrt{d_k}$** — a scaling factor. Without it, dot products in high dimensions get large, which pushes softmax into a near-one-hot regime and kills gradient flow. It's purely a numerical-stability fix, not a conceptual one.
-- **$\text{softmax}(\cdot)$** — converts raw scores into a probability distribution (all weights sum to 1). This is literally the "how much attention to pay to each token" step.
-- **$V$** — multiplying the weights by $V$ produces a weighted blend of the *cached value vectors*. This is the payload actually being retrieved — Q and K only decide *how much* of each V to use.
+- $QK^T$ — similarity score between the current query and every cached key
+- $\sqrt{d_k}$ — numerical-stability scaling factor
+- softmax — turns scores into a probability distribution over tokens to attend to
+- multiplying by $V$ — produces a weighted blend of cached value vectors — the actual retrieved content
 
-This is exactly where Phase 1's picture becomes precise: $K$ and $V$ for tokens 1..n-1 are **the cache**. Only $Q$ for the new token gets computed fresh each step.
+**The key point:** $K$ and $V$ for tokens $1..n-1$ *are* the cache. Only $Q$ for the new token is computed fresh each step.
 
-### Worked example — one attention step, by hand
+### 2.3 Worked example — one attention step by hand
 
-Say we've already generated 2 tokens, and their $K$/$V$ vectors are sitting in the cache with $d_k=2$:
+Cache already holds (with $d_k=2$): $K_1=[1,0]$, $K_2=[0,1]$, $V_1=[1,2]$, $V_2=[3,4]$.
 
-$$K_1=[1,0],\quad K_2=[0,1] \qquad V_1=[1,2],\quad V_2=[3,4]$$
+Generating token 3, compute only its query: $Q_3=[1,1]$.
 
-Now we generate token 3. We compute **only** its query: $Q_3=[1,1]$.
+1. Dot products: $Q_3\cdot K_1 = 1$, $Q_3\cdot K_2 = 1$
+2. Scale by $\sqrt{2}\approx1.414$: $[0.707,\ 0.707]$
+3. Softmax (equal → equal weights): $[0.5,\ 0.5]$
+4. Weighted sum: $0.5[1,2] + 0.5[3,4] = [2,\ 3]$
 
-**Step 1 — dot products with cached keys (no recomputation of $K_1,K_2$):**
-$$Q_3\cdot K_1 = (1)(1)+(1)(0) = 1 \qquad Q_3\cdot K_2 = (1)(0)+(1)(1) = 1$$
+$K_1,K_2,V_1,V_2$ were read straight from the cache — never recomputed. Only $Q_3$ and the four arithmetic steps were fresh work.
 
-**Step 2 — scale by $\sqrt{d_k}=\sqrt{2}\approx1.414$:**
-$$\text{scaled} = [1/1.414,\ 1/1.414] \approx [0.707,\ 0.707]$$
-
-**Step 3 — softmax** (equal scores → equal weights):
-$$\text{softmax}([0.707, 0.707]) = [0.5,\ 0.5]$$
-
-**Step 4 — weighted sum of cached values:**
-$$0.5\times[1,2] + 0.5\times[3,4] = [2,\ 3]$$
-
-That's the full output for token 3's attention — and notice: $K_1, K_2, V_1, V_2$ were **read straight from the cache**, never recomputed. Only $Q_3$, the dot products, and the softmax were fresh work. That's the entire computational saving, made concrete.
-
-### The other half of the math: how big does the cache get?
+### 2.4 Cache size — the formula and a worked example
 
 $$
 \text{Cache size (bytes)} = 2 \times L \times n \times d_{model} \times b \times \text{bytes}_{dtype}
 $$
 
-The leading **2** is for storing both K *and* V. Everything else is just "how many numbers are we storing, and how many bytes per number."
+**Example — 7B-class model** ($L=32$, $d_{model}=4096$, fp16, $n=4096$, $b=1$):
 
-**Worked example** — a 7B-parameter-class model (Llama-2-7B-like config): $L=32$, $d_{model}=4096$, fp16 ($\text{bytes}_{dtype}=2$), context $n=4096$, batch $b=1$:
+$2 \times 32 \times 4096 \times 4096 \times 1 \times 2 = 2{,}147{,}483{,}648 \text{ bytes} \approx \mathbf{2\ GiB}$
 
-$$
-2 \times 32 \times 4096 \times 4096 \times 1 \times 2
-$$
+That's **512 KB of cache per token** — a useful number to keep in your head. Serve 16 concurrent users at this context length and the cache alone needs **32 GiB** — often more than the model weights themselves. This is the **"memory wall"** of LLM serving: caching fixes the *compute* problem from Chapter 1 but creates a new *memory* problem, which Chapter 3's production techniques exist to solve.
 
-Step by step:
-- $2 \times 32 = 64$
-- $64 \times 4096\ (n) = 262{,}144$
-- $262{,}144 \times 4096\ (d_{model}) = 1{,}073{,}741{,}824$
-- $\times 1\ (batch) = 1{,}073{,}741{,}824$
-- $\times 2\ (bytes) = 2{,}147{,}483{,}648 \text{ bytes} \approx \mathbf{2\ GiB}$
+**Second example — the GQA saving:** if a model uses grouped-query attention with 4 query heads sharing 1 K/V head instead of 4 separate K/V heads, the K/V portion of the cache shrinks by 4x — a 2 GiB cache (from above) drops to roughly 512 MiB, with no change to $n$ or $L$.
 
-**One sequence, at full 4k context, needs 2 GiB just for its KV cache** — on top of the model weights themselves (~14 GB in fp16 for a 7B model). Divide that by 4096 tokens and you get **512 KB of cache per token** — a useful rule-of-thumb number to keep in your head.
+### 2.5 Q&A — quick check
 
-Now scale it: serve **16 concurrent users** at that same context length, and the cache alone needs $16 \times 2\text{ GiB} = 32\text{ GiB}$ — often *more* memory than the model weights. This is the famous **"memory wall"** of LLM serving, and it's the entire reason Phase 3's production techniques (paged attention, prefix caching, eviction policies) exist: caching solves the *compute* redundancy problem from Phase 1, but in doing so it creates a brand-new *memory* problem that has to be engineered around.
+1. **Q: If you double the context length, what happens to cache size?**
+   A: It exactly doubles — $n$ is a plain linear multiplier in the formula.
 
----
+2. **Q: Why does batch size multiply cache cost instead of sharing it?**
+   A: Each sequence in a batch has its own independent tokens and K/V values — nothing to share across different sequences.
 
-## Chapter 2 Q&A — Google / Apple / Meta style
-
-**Google-style (scale/serving framing):**
-1. A model has $d_{model}=8192$, $L=80$, fp16 weights. If you double the context length from 2k to 4k tokens for a single request, what happens to the KV cache size, and why exactly that factor?
-2. Why does batch size multiply the cache cost linearly rather than being "shared" across requests?
-
-**Apple-style (memory-constrained framing):**
-3. If you switch a model's KV cache from fp16 to int8 (1 byte instead of 2), what's the effect on maximum supportable context length for a fixed memory budget?
-
-**Meta-style (architecture/research framing):**
-4. Why does grouped-query attention (GQA) — where multiple query heads share one K/V head — reduce KV cache size, and where in the formula above does that saving show up?
-5. In the worked attention example, why would the softmax weights *not* be [0.5, 0.5] if $Q_3$ were instead $[2, 0]$?
-
-<details>
-<summary>Answers</summary>
-
-1. Cache size scales linearly in $n$, so doubling context doubles the cache — from the formula, $n$ is a direct multiplicative factor with nothing that dampens it, so 2k→4k means exactly 2x the memory.
-2. Each request in a batch has its own independent sequence of tokens with its own K/V values — there's no redundancy to share across *different* sequences, so cache memory is $b$ separate copies, not one shared cache.
-3. Halving bytes-per-value halves total cache size, which (all else equal) lets you support roughly double the context length within the same memory budget — this is exactly why quantized KV caches are a common production lever.
-4. GQA reduces the *effective* number of K/V heads being stored (several query heads reuse one shared K/V head), which shrinks the $d_{model}$-sized K/V footprint per token — in the formula, this effectively reduces the per-token K/V dimension being cached, without touching $n$ or $L$.
-5. With $Q_3=[2,0]$, the dot product with $K_1=[1,0]$ becomes $2$ while with $K_2=[0,1]$ it stays $0$ — an unequal, larger gap between scores, which after scaling and softmax produces a skewed distribution favoring $K_1$ (softmax amplifies larger gaps, it doesn't preserve them linearly), so the weights would no longer be equal.
-
-</details>
+3. **Q: How does switching from fp16 to int8 affect max context length for a fixed memory budget?**
+   A: Roughly doubles it — half the bytes per value means half the cache size for the same content.
 
 ---
 
-## Phase 3 — Practical, Diagnostics & Q&A
+## 3. Practical, Diagnostics & Q&A
 
-### Minimal KV cache, verified
+### 3.1 Minimal KV cache — verified in code
 
-I implemented and ran both versions (recompute-every-step vs. cached) end to end — outputs matched to numerical precision, and the cache gave a real speedup at scale:
+Implemented and ran both a recompute-every-step version and a cached version; outputs matched to numerical precision, and the cache gave a measured speedup at scale.
 
 ```python
 def attend(q, K, V):
@@ -217,60 +180,37 @@ Without cache: 0.0567s
 With cache:    0.0327s
 Speedup:       1.73x
 ```
-Even this toy, single-head, unoptimized implementation shows a real speedup at 800 tokens — and the gap widens as sequence length grows, exactly matching the O(n²) vs O(n) difference from Phase 2.
 
-### Production systems built on this idea
+### 3.2 Production systems
 
-The naive cache above (a growing Python list/tensor) doesn't survive contact with real serving workloads. Three problems show up immediately at scale, and each has a named fix:
-
-**1. Memory fragmentation → PagedAttention (vLLM)**
-Naively, each sequence pre-allocates a contiguous memory block sized for the *maximum* possible sequence length — wasteful, since most sequences are shorter. PagedAttention borrows the OS idea of paging: the KV cache is split into fixed-size blocks, allocated on demand, non-contiguous in memory but tracked via a block table. This eliminates fragmentation and lets memory be shared/reused far more efficiently.
-
-**2. Redundant cache across requests → Prefix caching**
-If 1,000 requests all start with the same system prompt, naive serving recomputes and stores identical K/V for that prefix 1,000 times. Prefix caching (vLLM's `enable_prefix_caching`, and the technique behind Anthropic's/OpenAI's API-level "prompt caching") hashes prefixes and shares the cache across requests that share them — pure win when many requests share a long common prefix (system prompts, few-shot examples, long documents queried repeatedly).
-
-**3. Which sequences to keep in memory → RadixAttention (SGLang)**
-Generalizes prefix caching into a radix tree over *all* active and recently-completed sequences, so partial overlaps (not just exact-prefix matches) can still share cache, and eviction can be done intelligently (LRU-style) when memory is tight.
-
-**A different layer entirely — Semantic/response caching**
-This is *not* KV caching. It sits at the application layer: cache the entire model *response* for a query, and on a new query, check if something semantically similar was already answered (via embedding similarity) and return the cached response directly, skipping inference altogether. Complementary to KV caching, not a replacement — KV caching speeds up computation *within* a generation; semantic caching avoids generation *entirely* for repeat-ish queries.
-
-### Diagnostics — concept-specific failure modes
-
-| Symptom | Why it happens (specific to caching) | Fix |
+| Problem | System / Technique | Fix |
 |---|---|---|
-| Latency degrades sharply as conversations get longer, even with caching on | Cache is correctly avoiding recomputation, but the cache itself has grown large enough to become memory/bandwidth-bound — you're now paying for *reading* a huge cache, not recomputing it | Use quantized KV cache (int8), or attention variants that shrink cache size (GQA/MQA), or truncate/summarize old context |
-| OOM errors under concurrent load that didn't happen with fewer users | Cache memory scales linearly with both context length *and* batch size — many concurrent long conversations exceed the memory budget the model weights alone would need | PagedAttention-style dynamic allocation, request queuing/admission control, or reducing max concurrent context |
-| Two requests with an identical system prompt show no latency benefit from each other | No prefix caching enabled — each request independently computes and discards the shared prefix's K/V | Enable prefix/prompt caching at the serving layer |
-| Response looks correct once, but garbled after multi-turn edits to earlier messages | Stale cache — an earlier cache entry was reused, but the underlying prompt/context changed upstream of it, so cached K/V no longer corresponds to the current prompt | Ensure cache keys are derived from exact token-prefix hashes, invalidate on any upstream edit, never cache-key on approximate/semantic similarity for KV caches (that's fine for semantic caching, not for KV) |
-| Batching many requests together makes per-request latency *worse*, not better | Ragged/uneven cache lengths across a batch force padding to the longest sequence, wasting compute and memory on padding tokens | Continuous batching (iteration-level scheduling) instead of static batching — vLLM/TGI both do this |
+| Memory fragmentation from pre-allocating max-length blocks | **PagedAttention** (vLLM) | Splits cache into fixed-size, non-contiguous blocks, allocated on demand — like OS memory paging |
+| Redundant cache across requests sharing a prefix | **Prefix / prompt caching** (vLLM, Anthropic/OpenAI APIs) | Hashes prefixes, shares cached K/V across requests with an identical prefix |
+| Partial (non-exact-prefix) overlaps across many sequences | **RadixAttention** (SGLang) | Generalizes prefix caching into a radix tree, allows intelligent eviction |
+| Avoiding inference entirely for repeat-ish queries | **Semantic / response caching** (application layer) | Embedding-similarity lookup on whole query/response pairs — not KV caching, a different layer entirely |
 
----
+**Example — prefix caching in action:** a customer-support bot sends the same 2,000-token system prompt with every request. Without prefix caching, that prompt's K/V is recomputed for every single user message. With it, the first request computes and stores that prefix once; every subsequent request (even from different users) reuses it and only pays for the new user message — this is essentially what Anthropic's and OpenAI's "prompt caching" API features do.
 
-## Chapter 3 Q&A — Google / Apple / Meta style
+**Example — semantic caching in action:** an FAQ-answering bot gets "what's your refund policy?" and "how do refunds work?" — different wording, same intent. A semantic cache can recognize the similarity via embeddings and return the previously-generated answer without calling the model at all.
 
-**Google-style (infra/scale framing):**
-1. You're running a multi-tenant LLM API where many customers share the same long system prompt. What single serving-layer optimization gives you the biggest win here, and why?
-2. Why does naive static batching hurt latency when sequences in a batch have very different lengths?
+### 3.3 Diagnostics
 
-**Apple-style (on-device/resource-constrained framing):**
-3. On a memory-constrained device running a long multi-turn conversation, you notice the app slows down and eventually crashes with an out-of-memory error, even though the model itself loaded fine. What's the most likely cause, and what's one mitigation?
+| Symptom | Cause | Fix |
+|---|---|---|
+| Latency still degrades on long conversations even with caching on | Cache itself has grown large enough to be memory/bandwidth-bound | Quantized cache (int8), GQA/MQA, truncate/summarize old context |
+| OOM under concurrent load | Cache scales linearly with context length *and* batch size | PagedAttention-style allocation, admission control, lower max concurrent context |
+| Shared system prompt gives no cross-request speedup | Prefix caching not enabled | Enable prefix/prompt caching at the serving layer |
+| Garbled output after editing earlier messages in a conversation | Stale cache — cached K/V no longer matches the (edited) prompt | Cache keys must be exact token-prefix hashes; invalidate on any upstream edit |
+| Batching makes latency *worse* | Padding to the longest sequence in a static batch wastes compute | Continuous batching (iteration-level scheduling) |
 
-**Meta-style (systems/research framing):**
-4. Explain the difference between prefix caching and semantic caching. Could a system use both simultaneously? What would each be responsible for?
-5. Why is a hash of the exact token prefix used as the cache key for KV/prefix caching, rather than a semantic embedding similarity check?
+### 3.4 Q&A — quick check
 
-<details>
-<summary>Answers</summary>
+1. **Q: What's the single biggest win for many requests sharing one system prompt?**
+   A: Prefix caching — compute and store that prefix's K/V once, reuse across every request.
 
-1. Prefix caching — since all requests share a long identical prefix, computing and storing that prefix's K/V once and reusing it across every request eliminates the single largest source of redundant compute in this workload.
-2. Padding shorter sequences up to the longest one in the batch wastes compute and memory on padding tokens that carry no information, and the whole batch is gated by the slowest (longest) sequence, so short requests wait unnecessarily.
-3. The KV cache grows linearly with conversation length and is held entirely in memory; over a long conversation it can eventually exceed the device's available RAM even though the (fixed-size) model weights were never the problem — mitigating it means quantizing the cache, capping/summarizing context, or evicting older turns.
-4. Prefix caching operates on exact token-level matches within the model's internal K/V state, avoiding recomputation; semantic caching operates at the application layer on entire query/response pairs, avoiding inference altogether for similar-meaning queries. Yes, they can coexist: semantic caching would catch/shortcut repeat-ish questions before inference even starts, and prefix caching would speed up whatever inference calls do go through.
-5. KV cache correctness is exact — even a tiny prompt change alters every downstream token's true attention output, so approximate/semantic matching would silently serve *wrong* cached values; exact hashing guarantees the cached K/V is byte-identical to what true computation would have produced. Semantic similarity is fine for whole-response caching (Q4) precisely because there correctness tolerance is looser — a "close enough" answer is often acceptable at that layer, but never inside the model's own attention computation.
+2. **Q: Why does an app on a memory-constrained device slow down and crash during a long conversation, even though the model loaded fine?**
+   A: The KV cache grows with conversation length and can outgrow available memory even though the fixed-size model weights never change.
 
-</details>
-
----
-
-That closes out the curriculum — intuition, math, and production practice. Want me to package all three chapters into a single reference doc (markdown or Word) so you have something to revisit later?
+3. **Q: What's the difference between prefix caching and semantic caching?**
+   A: Prefix caching reuses exact-match model internals (K/V); semantic caching skips inference entirely for queries that mean roughly the same thing as a prior one. They operate at different layers and can be used together.
