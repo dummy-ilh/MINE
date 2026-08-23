@@ -111,30 +111,67 @@ Generating token 3, compute only its query: $Q_3=[1,1]$.
 $K_1,K_2,V_1,V_2$ were read straight from the cache — never recomputed. Only $Q_3$ and the four arithmetic steps were fresh work.
 
 ### 2.4 Cache size — the formula and a worked example
+## Cache size formula — explained term by term
 
 $$
 \text{Cache size (bytes)} = 2 \times L \times n \times d_{model} \times b \times \text{bytes}_{dtype}
 $$
 
-**Example — 7B-class model** ($L=32$, $d_{model}=4096$, fp16, $n=4096$, $b=1$):
+Think of this as answering one question: **"how many numbers am I storing, and how many bytes does each number cost?"** Every factor is just a count of *something*, multiplied together:
 
-$2 \times 32 \times 4096 \times 4096 \times 1 \times 2 = 2{,}147{,}483{,}648 \text{ bytes} \approx \mathbf{2\ GiB}$
+| Term | What it counts | Why it's there |
+|---|---|---|
+| **2** | K *and* V | You're not storing one set of vectors per token, you're storing two — a Key vector and a Value vector. This is fixed, not tunable. |
+| **$L$** | number of transformer layers | Every layer has its *own* attention mechanism with its *own* K/V vectors. A 32-layer model caches 32 independent copies of K/V per token — not one shared copy. |
+| **$n$** | sequence length so far | Every token processed adds one more K vector and one more V vector to the cache, at every layer. This is the term that keeps *growing* as generation continues — the reason the cache isn't a fixed cost. |
+| **$d_{model}$** | hidden dimension | Each K or V vector for a single token, at a single layer, has this many numbers in it. Bigger models → bigger vectors → more bytes per token. |
+| **$b$** | batch size | Every concurrent sequence needs its *own* cache — there's nothing to share between two unrelated conversations. |
+| **$\text{bytes}_{dtype}$** | bytes per number | fp32 = 4 bytes, fp16/bf16 = 2 bytes, int8 = 1 byte. This is the one factor you can shrink for free (with some quality tradeoff) — it directly scales the total. |
 
-That's **512 KB of cache per token** — a useful number to keep in your head. Serve 16 concurrent users at this context length and the cache alone needs **32 GiB** — often more than the model weights themselves. This is the **"memory wall"** of LLM serving: caching fixes the *compute* problem from Chapter 1 but creates a new *memory* problem, which Chapter 3's production techniques exist to solve.
+Multiply them all together and you get total bytes. **Nothing here is exotic — it's literally `count of numbers × size of each number`,** same as computing the size of any array.
 
-**Second example — the GQA saving:** if a model uses grouped-query attention with 4 query heads sharing 1 K/V head instead of 4 separate K/V heads, the K/V portion of the cache shrinks by 4x — a 2 GiB cache (from above) drops to roughly 512 MiB, with no change to $n$ or $L$.
+### Worked example, walked through slowly
 
-### 2.5 Q&A — quick check
+7B-class model: $L=32$ layers, $d_{model}=4096$, fp16 (2 bytes/number), context $n=4096$ tokens, $b=1$ sequence.
+
+**Step 1 — how many K/V vectors total?**
+$L \times n \times b = 32 \times 4096 \times 1 = 131{,}072$ vectors of K, and the same number of V vectors. (One K vector and one V vector for every token, at every layer.)
+
+**Step 2 — how many numbers per vector?**
+$d_{model} = 4096$ numbers per vector.
+
+**Step 3 — total count of numbers, K and V combined:**
+$2 \times 131{,}072 \times 4096 = 1{,}073{,}741{,}824$ numbers.
+
+**Step 4 — convert to bytes:**
+$1{,}073{,}741{,}824 \times 2 \text{ bytes} = 2{,}147{,}483{,}648 \text{ bytes} \approx \mathbf{2\ GiB}$
+
+**The per-token shortcut:** dividing that 2 GiB by 4096 tokens gives **512 KB of cache per token** for this model — meaning every single token you generate or feed in permanently costs half a megabyte of memory, for as long as it stays in context. That's the number worth memorizing, because it lets you estimate cache cost for *any* context length instantly: 1000 tokens ≈ 500 MB, 8000 tokens ≈ 4 GB, and so on.
+
+**Why this matters at scale:** one user at 4k context costs 2 GiB. Sixteen concurrent users at that same context cost **32 GiB** — likely *more* than the ~14 GB the model's own weights take up in fp16. That's the "memory wall": the model itself is a fixed, one-time cost, but the cache is a *per-user, per-token* cost that keeps growing — and it can dwarf the model.
+
+### The GQA saving, explained
+
+Normally, every attention head has its own K and V — if a model has $h=32$ heads, that's 32 separate K vectors and 32 separate V vectors per token, per layer, all folded into that $d_{model}$ term.
+
+**Grouped-query attention (GQA)** changes this: multiple query heads share *one* K/V head instead of each having their own. If 4 query heads share 1 K/V head, you've cut the number of *distinct* K/V vectors being stored by 4x — even though you still have 4x as many query heads doing the actual attending.
+
+Concretely: the 2 GiB cache above assumed one K/V pair per head. With 4-way GQA, the K/V portion shrinks to **roughly 512 MiB** for the same model, same context, same batch size — $n$ and $L$ are untouched, only the *effective* $d_{model}$ term used for K/V shrinks. This is why GQA is standard in most modern production models (Llama 2 70B, Llama 3, Mistral) — it's a direct, free-ish way to fight the memory wall.
+
+---
+
+### Q&A — quick check
 
 1. **Q: If you double the context length, what happens to cache size?**
-   A: It exactly doubles — $n$ is a plain linear multiplier in the formula.
+   A: It exactly doubles. $n$ is the term that counts "how many tokens have I cached," and every additional token adds a fixed, identical chunk of K/V data — there's no dampening effect, so the relationship is perfectly linear.
 
 2. **Q: Why does batch size multiply cache cost instead of sharing it?**
-   A: Each sequence in a batch has its own independent tokens and K/V values — nothing to share across different sequences.
+   A: The cache stores each *sequence's own* tokens' K/V — two unrelated conversations have completely different tokens, so there's nothing in common to reuse. Batch size is a straight multiplier because you're literally maintaining $b$ independent caches side by side.
 
 3. **Q: How does switching from fp16 to int8 affect max context length for a fixed memory budget?**
-   A: Roughly doubles it — half the bytes per value means half the cache size for the same content.
+   A: It roughly doubles the context you can support. You're not changing how many numbers you store (that's still $2 \times L \times n \times d_{model} \times b$) — you're just halving the cost per number, which halves total bytes and therefore lets $n$ grow twice as far before you hit the same memory ceiling.
 
+Want me to fold this improved version back into the saved master notes file?
 ---
 
 ## 3. Practical, Diagnostics & Q&A
