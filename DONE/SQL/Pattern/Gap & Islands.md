@@ -304,10 +304,181 @@ FROM (
 | 10:50 | 1 |
 | 10:55 | 1 |
 
-## Practice order
+# Islands & Gaps — Interview Q&A (Google / Apple / Meta style) + Cheatsheet
 
-1. Integer islands/gaps on a plain number list.
-2. Date islands/gaps (login streaks).
-3. Add `PARTITION BY` (per-user streaks).
-4. Same-value run grouping (status changes) — the double-`ROW_NUMBER` trick.
-5. Session windowing with a custom gap threshold (`LAG` + `SUM(flag)` style) — this is what "sessionize user clickstream, 30-min timeout" interview questions want.
+These are the actual flavors these companies ask this pattern in. Same trick every time — only the "what counts as consecutive" and "what to report" changes.
+
+---
+
+## Q1 (Meta / Facebook — LeetCode 1225, "Report Contiguous Dates")
+
+**Setup:** A `Failed` table (`fail_date`) and a `Succeeded` table (`success_date`) log server status by day. Every day has exactly one row in one of the two tables. Report the **periods** of consecutive `failed` or `succeeded` days, in order, with `period_state`, `start_date`, `end_date`.
+
+**Sample input:**
+
+`Failed`: 2019-01-01, 2019-01-02, 2019-01-03, 2019-01-17
+`Succeeded`: 2019-01-04, 2019-01-05, 2019-01-06, 2019-01-10, 2019-01-11, 2019-01-12, 2019-01-13, 2019-01-14, 2019-01-15, 2019-01-16
+
+**Expected output:**
+
+| period_state | start_date | end_date |
+|---|---|---|
+| failed | 2019-01-01 | 2019-01-03 |
+| succeeded | 2019-01-04 | 2019-01-06 |
+| succeeded | 2019-01-10 | 2019-01-16 |
+| failed | 2019-01-17 | 2019-01-17 |
+
+**Solution:**
+
+```sql
+WITH all_days AS (
+    SELECT fail_date AS d, 'failed' AS state FROM Failed
+    UNION ALL
+    SELECT success_date AS d, 'succeeded' AS state FROM Succeeded
+),
+grouped AS (
+    SELECT
+        d, state,
+        d - ROW_NUMBER() OVER (PARTITION BY state ORDER BY d) AS grp
+    FROM all_days
+)
+SELECT state AS period_state, MIN(d) AS start_date, MAX(d) AS end_date
+FROM grouped
+GROUP BY state, grp
+ORDER BY start_date;
+```
+
+**Why:** This is the "status runs" variant, but simplified — since the two tables are already split by state, you just need `PARTITION BY state` inside `ROW_NUMBER()` and the standard `date - rn` island trick does the rest. `GROUP BY state, grp` is required for the same reason as always: two separate runs of the same state must not merge.
+
+**Trap interviewers watch for:** forgetting `date` restricted to a `WHERE` range in the real problem (dates only within a filter window) — always re-check the exact date bounds asked for before running the island logic.
+
+---
+
+## Q2 (Amazon / Meta — "N consecutive active days", LeetCode 1454 "Active Users")
+
+**Setup:** A `sessions` table (`user_id`, `session_date`). Find users active for **5 or more consecutive days**.
+
+**Solution:**
+
+```sql
+WITH distinct_days AS (
+    SELECT DISTINCT user_id, session_date
+    FROM sessions
+),
+grouped AS (
+    SELECT
+        user_id, session_date,
+        session_date - ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY session_date) AS grp
+    FROM distinct_days
+),
+streaks AS (
+    SELECT user_id, grp, COUNT(*) AS streak_len, MIN(session_date) AS start_date, MAX(session_date) AS end_date
+    FROM grouped
+    GROUP BY user_id, grp
+)
+SELECT user_id, start_date, end_date, streak_len
+FROM streaks
+WHERE streak_len >= 5
+ORDER BY user_id, start_date;
+```
+
+**Why `DISTINCT` first:** if a user has two sessions on the same day, `ROW_NUMBER()` still only increments once per row — duplicate same-day rows silently break the `date - rn` arithmetic. Dedup to one row per `(user, date)` before applying the trick. This is the single most common bug in a live interview attempt at this problem.
+
+---
+
+## Q3 (Google — gap-detection, "missing dates over N days")
+
+**Setup:** A `sensor_readings` table (`sensor_id`, `reading_date`). Flag any sensor with a **gap of more than 3 days** between consecutive readings — this indicates the sensor went offline.
+
+**Solution:**
+
+```sql
+WITH ordered AS (
+    SELECT
+        sensor_id, reading_date,
+        LEAD(reading_date) OVER (PARTITION BY sensor_id ORDER BY reading_date) AS next_date
+    FROM sensor_readings
+)
+SELECT
+    sensor_id,
+    reading_date AS offline_after,
+    next_date AS back_online,
+    next_date - reading_date AS gap_days
+FROM ordered
+WHERE next_date - reading_date > 3;
+```
+
+**Why:** Pure gap-detection — no `grp`, no `ROW_NUMBER` needed at all. `PARTITION BY sensor_id` inside `LEAD` keeps each sensor's timeline independent, exactly like `PARTITION BY user_id` does for islands.
+
+**Follow-up interviewers ask:** "What if a sensor never reports again after its last reading — is that a gap?" Answer: no, `LEAD` returns `NULL` for the last row per partition, and `NULL - reading_date` is `NULL`, which fails the `> 3` filter — so trailing "gaps to now" are silently excluded. If the interviewer wants those flagged too, you need a separate `WHERE next_date IS NULL AND CURRENT_DATE - reading_date > 3` branch, unioned in.
+
+---
+
+## Q4 (Apple / Bloomberg — LeetCode 601, "Human Traffic of Stadium")
+
+**Setup:** A `stadium` table (`id`, `visit_date`, `people`), with `id` consecutive integers in visit order. Find all records where **three or more consecutive rows** (by `id`) each have `people >= 100`.
+
+**Sample input:**
+
+| id | visit_date | people |
+|---|---|---|
+| 1 | 2017-01-01 | 10 |
+| 2 | 2017-01-02 | 109 |
+| 3 | 2017-01-03 | 150 |
+| 4 | 2017-01-04 | 99 |
+| 5 | 2017-01-05 | 145 |
+| 6 | 2017-01-06 | 1455 |
+| 7 | 2017-01-07 | 199 |
+| 8 | 2017-01-08 | 188 |
+
+**Expected output:** ids 5, 6, 7, 8 (the run of `people >= 100` from row 5 onward is length 4; row 2-3 is only length 2, so it's excluded).
+
+**Solution:**
+
+```sql
+WITH filtered AS (
+    SELECT id, visit_date, people
+    FROM stadium
+    WHERE people >= 100
+),
+grouped AS (
+    SELECT
+        id, visit_date, people,
+        id - ROW_NUMBER() OVER (ORDER BY id) AS grp
+    FROM filtered
+)
+SELECT s.id, s.visit_date, s.people
+FROM grouped g
+JOIN stadium s ON s.id = g.id
+WHERE g.grp IN (
+    SELECT grp FROM grouped GROUP BY grp HAVING COUNT(*) >= 3
+)
+ORDER BY s.id;
+```
+
+**Why this is the hardest of the four:** it's islands (`id - ROW_NUMBER()`) applied *after* a `WHERE` filter, then a second pass (`HAVING COUNT(*) >= 3`) to keep only the islands that are long enough. This two-stage "filter → island → filter by island size" shape is the giveaway that a question is a harder variant of the base pattern — recognize it as: filter rows first, then run the *exact same* `id - rn` trick on the filtered id column (it still works because `id` stays the original sequential id, not a re-numbered one).
+
+**Trap:** the `grp` value here is only meaningful because `id` in the original table is itself already gapless/sequential. If `id` weren't guaranteed sequential, you'd need to `ROW_NUMBER()` the *unfiltered* table first to get a clean sequential column before filtering.
+
+---
+
+## Cheatsheet
+
+**One idea underneath everything:** a sorted column and a same-order counter climb in lockstep while nothing's missing; the difference between them is frozen during a run and jumps the instant something breaks.
+
+| Goal | Tool | Core line |
+|---|---|---|
+| Islands (basic) | `ROW_NUMBER` + `GROUP BY` | `col - ROW_NUMBER() OVER (ORDER BY col) AS grp` |
+| Islands per group (per user, per sensor) | add `PARTITION BY` | `ROW_NUMBER() OVER (PARTITION BY key ORDER BY col)`; then `GROUP BY key, grp` |
+| Gaps (basic) | `LEAD` + `WHERE` | `LEAD(col) OVER (ORDER BY col) - col > 1` |
+| Gaps per group | `LEAD` + `PARTITION BY` | `LEAD(col) OVER (PARTITION BY key ORDER BY col)` |
+| Same-value runs (status changes, not numeric) | double `ROW_NUMBER` | `ROW_NUMBER() OVER (ORDER BY id) - ROW_NUMBER() OVER (PARTITION BY status ORDER BY id)` |
+| Custom/variable gap threshold (sessions) | `LAG` + flag + running `SUM` | `SUM(CASE WHEN gap > threshold THEN 1 ELSE 0 END) OVER (ORDER BY col)` as session id |
+| Islands after filtering, kept only if long enough | filter → island trick → `HAVING COUNT(*) >= n` | `WHERE condition` first, then `id - ROW_NUMBER()`, then filter `grp`s by size |
+
+**Checklist before you write a line of SQL in the interview:**
+1. Is "consecutive" numeric/date (`+1`), or same-value-repeated, or a custom time threshold? → picks which row above you're in.
+2. Does it need to be scoped per entity (user/sensor/host)? → add `PARTITION BY` to every window function, and to the final `GROUP BY`.
+3. Duplicate rows for the same key on the same date/id? → `DISTINCT` or pre-aggregate before applying `ROW_NUMBER`, or the arithmetic silently breaks.
+4. Are you filtering rows *before* finding islands (e.g. `people >= 100`)? → filter first, then apply the trick on the filtered set, then optionally re-filter by island size with `HAVING`.
+5. Trailing/leading edge cases — first row's `LAG` is `NULL`, last row's `LEAD` is `NULL` → decide explicitly whether those count, don't let them silently vanish from your `WHERE`.
