@@ -29,3 +29,5 @@ svd
 tsne 
 autoencoders
 curse of dimestiona
+
+grid bvs random s bayesians earch
