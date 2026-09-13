@@ -208,6 +208,68 @@ Real data almost always has gaps — a lot size never recorded, a sensor reading
 
 **Important practical note:** sklearn's trees **do not implement surrogate splits** — this is textbook CART theory, not something available in sklearn's actual implementation. If you need this behavior, you're either building it yourself or using a library that supports it.
 
+
+Surrogate splits solve one specific problem: **what does a tree do at prediction time when the feature it wants to split on is missing?** They come from the original CART algorithm (Breiman et al., 1984) — not everyone implements them (sklearn doesn't; R's `rpart` does).
+
+## Step 1: The problem they solve
+
+Say a node's best split is "`sqft` > 1800". At training time this splits the node's rows into two groups using impurity reduction as usual — nothing new here. But now a new data point arrives for *prediction*, and its `sqft` value is missing. The tree needs to send it left or right, but the rule it needs to apply doesn't have the input it needs.
+
+Two bad options: throw the row out, or impute `sqft` globally and hope for the best. Surrogate splits are a third option: **find a backup feature that tends to send rows the same direction as the real split would, and use that instead.**
+
+## Step 2: How a surrogate is chosen (at training time)
+
+At the same node where the primary split ("`sqft` > 1800") was picked, look at every *other* feature and ask: **if I used this feature to guess which way each training row went under the primary split, how often would I guess right?**
+
+For each candidate feature, find its own best threshold for mimicking the primary split's left/right assignment (not for reducing impurity — for matching the primary split's decision). Rank candidates by how well they agree.
+
+**Worked example.** Node has 20 rows. Primary split "`sqft` > 1800" sends 12 rows right, 8 left.
+
+| Candidate surrogate | Agreement with primary split | 
+|---|---|
+| `num_rooms > 6` | agrees on 17/20 rows (0.85) |
+| `num_bathrooms > 2` | agrees on 14/20 rows (0.70) |
+
+But raw agreement isn't quite enough — a surrogate has to beat the "dumb" baseline of just always guessing the majority side (here, majority side is "right," 12/20 = 60% of rows, so guessing "right" for everyone gets 60% right for free, no data needed). CART's actual score, the **predictive measure of association** $\lambda$, checks improvement over that baseline:
+
+$$\lambda = \frac{\min(p_L, p_R) - (1 - \text{agreement})}{\min(p_L, p_R)}$$
+
+For `num_rooms`: $\min(p_L,p_R) = 8/20 = 0.4$, agreement $=0.85$:
+$$\lambda = \frac{0.4 - 0.15}{0.4} = 0.625$$
+
+For `num_bathrooms`: agreement $=0.70$:
+$$\lambda = \frac{0.4 - 0.30}{0.4} = 0.25$$
+
+Both are positive (both beat the naive baseline), so both get kept, ranked: **`num_rooms` is surrogate #1, `num_bathrooms` is surrogate #2.** If $\lambda \le 0$ for a candidate, it's discarded — it's no better than just guessing the majority branch, so it's not worth storing.
+
+This ranking is computed **once, per node, at training time**, and stored alongside the primary split.
+
+## Step 3: How it's used at prediction time
+
+A new row arrives. At this node:
+
+1. Is `sqft` (the primary feature) available? → use the primary split. Done.
+2. Missing? → try surrogate #1 (`num_rooms`). Available? → use its rule instead.
+3. Also missing? → try surrogate #2 (`num_bathrooms`).
+4. All surrogates also missing? → fall back to a stored **default rule** — usually "send to whichever side was the majority at this node during training" (here, "right").
+
+So a row can travel all the way down the tree even if it's missing several features, as long as *something* usable is found at each node it passes through.
+
+## Step 4: Why this is clever (not just "impute and move on")
+
+- It's **local to the node**, not global. A feature might be a great stand-in for `sqft` at one node and a terrible one at another, depending on what other splits have already happened above it. A single dataset-wide imputed value can't adapt like that.
+- It reuses correlation structure the tree already "knows about" implicitly — no separate imputation model needed.
+- **Bonus side-effect:** surrogates give you a second flavor of feature importance. A feature can score high on "surrogate importance" even if it was *never* chosen as a primary split anywhere in the tree — it just means that feature is highly redundant with whatever *did* get chosen. That's genuinely useful information (it tells you which features are substitutable for each other) that plain MDI importance doesn't surface at all.
+
+## Step 5: The catch — what surrogates *don't* handle
+
+Surrogate splits implicitly assume missingness is basically random noise — they just find the best stand-in and move on. If missingness is itself informative (e.g., a `previous_loan_default` field is missing specifically *because* the applicant never took a loan, which is itself predictive), a surrogate split throws that signal away — it treats the missing value purely as an inconvenience to route around, not as a data point in its own right.
+
+The modern alternative in gradient boosting libraries (XGBoost, LightGBM) is different and simpler: rather than ranking multiple backup features, they just learn a single "default direction" for missing values *at that specific split*, chosen to minimize loss — which actually *can* exploit informative missingness (since the model gets to pick whichever direction happens to work best for the missing rows specifically), at the cost of not being as principled/explainable as CART's surrogate ranking.
+
+> **Interview soundbite:** *"Surrogate splits answer 'what's the best stand-in feature for a missing value, given the specific rows currently at this node' — it's a local, structure-aware alternative to blanket imputation, plus it hands you a second importance measure for free. The trade-off is that it assumes missingness is noise to route around, not signal — which is exactly what modern GBM libraries' learned 'default direction' approach is designed to capture instead."*
+
+One practical note for your interview prep: **sklearn's `DecisionTreeClassifier`/`RandomForestClassifier` do not implement surrogate splits** — they require you to impute missing values before fitting. If asked "how does sklearn handle missing values in trees," the honest answer is "it doesn't, natively — that's a CART/`rpart` feature, not an sklearn one," which is a good thing to know explicitly rather than assume.
 ## 2.4 Method 3 — Native Missing-Value Handling (XGBoost, LightGBM)
 
 **What it is:** during training, for *each split individually*, the algorithm tries sending all missing-valued samples left, then tries sending them all right, and keeps whichever direction produces better training performance at that specific node. Different splits can send missing values in different directions — the best default can genuinely differ node to node.
