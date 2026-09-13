@@ -225,5 +225,92 @@ A: MDI's high-cardinality bias is a real risk here on its own, but there's an ad
 A: MDI, specifically because it's free — it requires no extra scoring passes or per-prediction computation, just reading back bookkeeping the tree already produced during training, which matters when the check has to run within an already-tight on-device compute/battery budget alongside everything else the device is doing. It's not the most trustworthy of the three, so it should be read as a coarse "did anything change dramatically" signal (e.g., a feature's MDI swinging wildly between two model versions might flag a data pipeline issue) rather than as a basis for real feature-selection decisions — those decisions are better made server-side, off-device, where permutation importance or SHAP's extra cost is easier to absorb.
 
 ---
+Let's rebuild this from scratch, slowly, with a single running example.
 
+## Step 1: Forget the formula. What is MDI actually doing?
+
+Every time a tree makes a split, that split is chosen because it made the data "purer" — the two resulting groups are more alike internally than the group was before the split. That purity gain is a number (impurity decrease). MDI's entire idea is:
+
+> **Add up all the purity gains that happened because of each feature, across the whole tree. Whichever feature racked up the biggest total gets called "most important."**
+
+That's it. No game theory, no re-scoring, no shuffling. Just: *tally up the credit each feature earned during training.*
+
+## Step 2: One tiny concrete tree
+
+Say we're predicting whether someone buys a house (yes/no), and our tree looks like this:
+
+```
+                [All 100 people]
+                 split on: income
+                 purity gain: 0.30
+                /              \
+        [60 people]          [40 people]
+     split on: age            (leaf — done)
+     purity gain: 0.10
+        /        \
+   [15 people]  [45 people]
+   (leaf)        (leaf)
+```
+
+Two splits happened: one on `income` (at the top, touching all 100 people), one on `age` (lower down, only touching the 60 people who went left).
+
+## Step 3: Give each split its credit
+
+For each split, its "credit" = **(fraction of all data that reached this split) × (purity gain at this split)**.
+
+Why multiply by the fraction of data? Because a split that helps 100 people is worth more than a split that only ever touches 60 people, even if the raw purity gain looks similar. A split buried deep in the tree, touching only a handful of rows, shouldn't get full credit — it barely affects most predictions.
+
+**Income's split:**
+- Fraction of data reaching it: 100/100 = 1.0 (it's the root — everyone passes through it)
+- Purity gain: 0.30
+- Credit: $1.0 \times 0.30 = 0.30$
+
+**Age's split:**
+- Fraction of data reaching it: 60/100 = 0.6 (only the people who went left at the root)
+- Purity gain: 0.10
+- Credit: $0.6 \times 0.10 = 0.06$
+
+## Step 4: Add up each feature's total credit
+
+Since income only appears once, its MDI score is just $0.30$.
+Since age only appears once, its MDI score is just $0.06$.
+
+$$\text{MDI(income)} = 0.30 \qquad \text{MDI(age)} = 0.06$$
+
+**Income wins, by a lot.** That formula from before — $\text{MDI}(f) = \sum p(t)\Delta i(t)$ — is *exactly* what we just did by hand: for every node that splits on feature $f$, multiply "how many rows reach it" by "how much purity it bought," and add those up across every place that feature was used.
+
+## Step 5: What if a feature is used more than once?
+
+Say `income` also happens to get reused for a second split, further down, touching only 20 people, with a small purity gain of 0.05.
+
+$$\text{MDI(income)} = \underbrace{(1.0 \times 0.30)}_{\text{first split}} + \underbrace{(0.20 \times 0.05)}_{\text{second split}} = 0.30 + 0.01 = 0.31$$
+
+You just keep adding every appearance of that feature, anywhere in the tree.
+
+## Step 6: For a whole forest, not just one tree
+
+Random Forests have hundreds of trees. You do this exact same tally *separately in each tree*, then just average across trees:
+
+$$\text{MDI}_{\text{forest}}(f) = \frac{\text{income's total in tree 1} + \text{income's total in tree 2} + \dots}{\text{number of trees}}$$
+
+Then all features' scores usually get rescaled so they add up to 1 (so you can say "income accounts for 45% of the model's importance").
+
+## Step 7: Now the bias problem, with a concrete example
+
+Here's the part that trips people up, explained simply. Imagine two features:
+
+- **`is_married`**: only two possible values (yes/no). The tree only ever gets to try **one** possible split point on this feature.
+- **`random_number`**: a totally random, meaningless number attached to each row, but continuous — it could be split at 0.1, or 0.2, or 0.37, or any of a thousand thresholds.
+
+When the tree searches for the best split at some node, it tries *every* possible threshold on `random_number` and keeps whichever one happened to look best on this particular batch of training data — purely by luck, since the feature is meaningless. With a thousand tries, **one of them is likely to look decent purely by chance**, the same way if you flip 1000 coins, some coin is going to land on heads 8 times in a row.
+
+`is_married` only gets one shot — it can't "get lucky" the same way, because there's nowhere to search.
+
+**So `random_number` can end up with a non-trivial MDI score despite predicting nothing real**, purely because it had more chances to roll a lucky number. That's the bias: **MDI systematically favors features with more distinct values, not features that are actually more predictive.**
+
+## The whole thing in one sentence
+
+> MDI is just "add up the purity points each feature earned, weighted by how much of the data it affected" — cheap and intuitive, but a feature with lots of possible split values gets extra free rolls of the dice to look good, so MDI can be fooled into overrating features that just happen to be continuous or high-cardinality, even if they're pure noise.
+
+That's the whole mechanism — no formula needed to understand *why* it works or *why* it's biased, just: **more chances to try a split = more chances to get a lucky-looking number.**
 **One-line summary to remember:** *MDI = free, but biased toward high-cardinality features — good for a first look, not a final decision. Permutation importance = costs a re-score pass per feature, but measures real held-out predictive contribution — the trustworthy number before acting. SHAP = answers a different question entirely (why THIS prediction, not overall ranking), made computationally feasible for trees via TreeSHAP, but the most expensive of the three — use it when you need to explain one specific output, not to replace the other two.*
