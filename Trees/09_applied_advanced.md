@@ -80,3 +80,73 @@ A: With "impute upstream" (sklearn-style), the imputation logic itself has to sh
 ---
 
 **One-line summary to remember:** *SHAP explains one prediction by fairly splitting credit among features (Shapley values, made tractable for trees via TreeSHAP) → monotonic constraints trade a little accuracy for guaranteed common-sense/regulatory-safe direction, enforced during split search itself → XGBoost/LightGBM learn the best default direction for missing values per split, capturing "missingness is informative" instead of erasing it the way manual imputation does.*
+
+
+
+Let's build this the same way — one concrete tree, no formulas until the intuition is solid.
+
+## Step 1: Remember what SHAP is actually trying to compute
+
+For one house, SHAP wants to know: "how much did `size` push this prediction up or down, on average, across every possible order you could reveal features in?" To do that *honestly*, in principle you'd need to compute the model's prediction for every possible subset of "known" features (size known, location unknown / location known, size unknown / both known / neither known...) — and with $p$ features that's $2^p$ subsets. For 20 features, that's over a million evaluations. **That's the problem TreeSHAP solves: getting the exact same answer without paying that exponential cost — by exploiting the fact that it's a tree, not a black box.**
+
+## Step 2: What does "the model's prediction with location unknown" even mean?
+
+This is the key idea to get straight first. Say our tree is:
+
+```
+                  [All 100 houses]
+                  split on: size > 1500?
+                 /                      \
+         size ≤ 1500                size > 1500
+         (70 houses)                 (30 houses)
+         predict: $250K          split on: location = downtown?
+                                 /                          \
+                          location=downtown          location=suburb
+                          (20 houses)                 (10 houses)
+                          predict: $420K              predict: $340K
+```
+
+Now say we want to predict for a house where **size is known (it's large, > 1500)** but **location is unknown**. Walking the tree normally is impossible — we hit the location split and don't know which way to go.
+
+**TreeSHAP's answer:** don't pick a side. Take a **weighted average of both leaves**, weighted by how many training houses went each way at that split.
+
+- 20 of the 30 large houses were downtown, 10 were suburb.
+- Weighted average: $\frac{20}{30}\times420K + \frac{10}{30}\times340K = 280K + 113.3K = \$393.3K$
+
+So "the model's prediction knowing only that size is large" = **$393.3K**. This one trick — *replace an unknown feature's split with a weighted average of its branches, using the training data's own branch proportions as the weights* — is the entire engine of TreeSHAP. No retraining, no black-box queries, just walking the tree once and averaging where you hit an "unknown."
+
+## Step 3: Now compute all 4 subset-values for one house, using this trick
+
+Say our specific house is **large, downtown**, actual prediction $420K. We need $v(S)$ for every subset $S$ of {size, location}:
+
+**$v(\{\})$ — nothing known:** average over *everything*, both splits unresolved.
+- At the root, 70/100 go left ($250K), 30/100 go right into the location split.
+- Within that 30, we already found the "location unknown" average = $393.3K.
+- $v(\{\}) = 0.70\times250K + 0.30\times393.3K = 175K + 118K = \$293K$ (this is just the overall average prediction, $\phi_0$)
+
+**$v(\{\text{size}\})$ — size known (large), location unknown:** walked this already = **$393.3K**
+
+**$v(\{\text{location}\})$ — location known (downtown), size unknown:** now we must average over *size's* branches instead, but only among houses that are downtown... this requires knowing how downtown houses split at the size node. Say of all houses, downtown-labeled ones are only possible on the right branch (size>1500) in this toy tree, so this ends up equal to $393.3K \to 420K$ pathway weighting — for simplicity here say it works out to **$400K** (illustrative).
+
+**$v(\{\text{size, location}\})$ — both known:** just walk the tree normally = **$420K** (the actual leaf)
+
+## Step 4: Plug these into the same Shapley averaging as before
+
+This is identical to the manual 2-feature example from the previous SHAP notes — average the "how much did revealing this feature move the prediction" across both orderings:
+
+- Reveal size first: $293K \to 393.3K$ (size contributes $+100.3K$), then reveal location: $393.3K\to420K$ (location contributes $+26.7K$)
+- Reveal location first: $293K \to 400K$ (location contributes $+107K$), then reveal size: $400K\to420K$ (size contributes $+20K$)
+
+Average: $\phi_{\text{size}} = \frac{100.3+20}{2}=60.2K$, $\phi_{\text{location}}=\frac{26.7+107}{2}=66.8K$. Check: $293K+60.2K+66.8K=420K$ ✓.
+
+**The whole point:** every one of those $v(S)$ values came from *one single style of tree-walk* (weighted-average-at-unknowns), not from querying a separate black-box model four times. That's what makes it fast.
+
+## Step 5: Why this scales to many features without blowing up
+
+With more features, doing this subset-by-subset (compute $v(S)$ separately for every one of $2^p$ subsets, each requiring its own tree walk) would still be exponential — TreeSHAP's actual speedup goes one step further than what we just did by hand: instead of walking the tree once per subset, it walks the tree **once total**, and at each node, it tracks *all* the different subsets that could have led a sample down each branch **simultaneously**, using a bookkeeping trick (each root-to-leaf path carries along a small table of "which features have been fixed so far on this path, and what combinatorial weight that represents"). Because a tree only has as many distinct paths as it has leaves, and each path only has as many decision points as the tree is deep, the total work becomes roughly **(number of trees) × (number of leaves) × (depth)²** — polynomial — instead of exponential in the number of features.
+
+**Why this trick doesn't work for, say, a neural network:** a neural net has no equivalent of "branches with training-data-derived weights" to average over cleanly — every input is fully entangled through the layers, so there's no small, discrete set of decision points to share computation across the way tree splits allow. That's exactly why neural networks fall back to slower approximate methods (KernelSHAP: sample a handful of random subsets, don't check them all, and estimate).
+
+## One-line summary to keep
+
+> TreeSHAP computes exact Shapley values fast by using one trick everywhere: when a feature is "unknown," don't guess — walk both branches and blend them using the training data's own branch proportions as weights. Because it's exploiting the tree's discrete branching structure to share this computation across every possible feature subset in a single pass, it turns an exponential problem into a polynomial one — a shortcut that simply doesn't exist for non-tree models.
