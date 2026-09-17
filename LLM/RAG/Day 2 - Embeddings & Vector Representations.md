@@ -1,4 +1,3 @@
-# RAG Interview Prep — Day 2
 ## Embeddings & Vector Representations
 
 ---
@@ -8,6 +7,8 @@
 An embedding is a dense numerical vector that represents the *meaning* of a piece of text, produced by running it through a trained model, such that semantically similar text ends up close together in vector space and dissimilar text ends up far apart. This single idea is what turns "find documents relevant to this query" from a fuzzy language-understanding problem into a fast geometry problem — nearest-neighbor search — which is the entire foundation retrieval (Day 7+) is built on. Today is about how that vector gets created, how to compare two vectors, and how to choose an embedding model — three decisions that quietly determine the ceiling on your entire RAG system's quality.
 
 **Think of it like a map of meaning.** Every sentence becomes a city with GPS coordinates. Cities about "return policies" cluster in one region of the map; cities about "battery specs" cluster somewhere else entirely. An embedding model's whole job is drawing this map accurately — and a bad map (wrong model, wrong pooling, wrong normalization) means your search will confidently point you to the wrong neighborhood, no matter how good your search algorithm is.
+
+**Google-specific framing worth having ready:** if you're interviewing at Google, it's reasonable for the interviewer to expect you know the ecosystem — Vertex AI's `text-embedding-gecko` / `text-embedding-005` family for generating embeddings, and **ScaNN** (Scalable Nearest Neighbors), Google's own approximate nearest-neighbor library, which is what backs a lot of Google's large-scale vector search internally and is also available via Vertex AI Vector Search. You don't need deep internals, but being able to say "at Google scale, exact nearest-neighbor search over billions of vectors isn't feasible, which is why approximate methods like ScaNN trade a small accuracy loss for massive speed gains" is the kind of connective tissue interviewers like to hear.
 
 ---
 
@@ -26,6 +27,7 @@ An embedding is a dense numerical vector that represents the *meaning* of a piec
 | **MTEB** | Massive Text Embedding Benchmark — the standard leaderboard for comparing embedding models across tasks |
 | **Embedding drift** | The problem where changing embedding models invalidates your existing vector index, since different models' vector spaces aren't compatible |
 | **Quantization** | Compressing embedding vectors (e.g., float32 → int8 or binary) to save memory/storage at some accuracy cost |
+| **ANN (Approximate Nearest Neighbor)** | Search algorithms (e.g., ScaNN, HNSW, IVF) that trade a small amount of recall for large speed/scale gains vs. exact nearest-neighbor search — necessary once you're past a few million vectors |
 
 ---
 
@@ -211,27 +213,29 @@ Roughly a **4x storage reduction**, at the cost of some retrieval accuracy — a
 
 ---
 
-# PHASE 3 — Interview Q&A Practice Set
+## Exact vs. Approximate Nearest Neighbor Search (scale reality check)
 
-*(Answers are separated below each question — cover them and self-test first.)*
+Everything above assumes you can just "find the closest vectors" — worth being explicit about how that actually happens at scale, since it's a natural interview follow-up once you've established cosine similarity as the metric.
+
+- **Exact nearest neighbor (brute force):** compare the query vector against *every* vector in the index. Perfectly accurate, but cost scales linearly with corpus size — fine for thousands of vectors, painful at tens of millions, infeasible at billions.
+- **Approximate nearest neighbor (ANN):** index structures (e.g., HNSW graphs, IVF clustering, or Google's ScaNN, which combines vector quantization with anisotropic loss functions tuned specifically for maximum inner product/cosine search) let you skip comparing against most of the corpus, trading a small, tunable amount of recall for orders-of-magnitude speedups.
+- **The trade-off to name explicitly:** ANN methods expose a recall/latency knob — you can usually get 95%+ of exact-search recall at a small fraction of the latency, and tuning that knob (e.g., how many candidate clusters to search in IVF, or graph traversal depth in HNSW) is itself a real production decision, not a one-time setup step.
+
+**Why it matters in practice:** if an interviewer asks "how would this scale to a billion documents," the answer isn't "just use a bigger cosine similarity loop" — it's naming ANN indexing explicitly and acknowledging the recall/latency trade-off it introduces.
 
 ---
 
+# PHASE 3 — Interview Q&A Practice Set
+
 **Q1 (Easy — conceptual).** What does "pooling" mean in the context of generating a sentence embedding, and why is it necessary?
 
-<details>
-<summary>Show answer</summary>
-
-A transformer encoder produces one vector per input token, not a single vector for the whole sentence. Pooling collapses those per-token vectors into one fixed-length vector representing the entire input — commonly via mean pooling (averaging all token vectors) or CLS-token pooling (using a single designated token's vector). It's necessary because downstream similarity search needs one comparable vector per chunk/query, not a variable-length set of token vectors.
-</details>
+**A1.** A transformer encoder produces one vector per input token, not a single vector for the whole sentence. Pooling collapses those per-token vectors into one fixed-length vector representing the entire input — commonly via mean pooling (averaging all token vectors) or CLS-token pooling (using a single designated token's vector). It's necessary because downstream similarity search needs one comparable vector per chunk/query, not a variable-length set of token vectors.
 
 ---
 
 **Q2 (Easy — calculation).** Compute the cosine similarity between `A = [1, 2]` and `B = [2, 4]`. What do you notice, and why?
 
-<details>
-<summary>Show answer</summary>
-
+**A2.**
 ```
 A · B = (1×2) + (2×4) = 2 + 8 = 10
 ‖A‖ = √(1+4) = √5 ≈ 2.236
@@ -240,51 +244,47 @@ A · B = (1×2) + (2×4) = 2 + 8 = 10
 cosine_similarity = 10 / (2.236 × 4.472) = 10 / 10.0 = 1.0
 ```
 B is exactly A scaled by 2 — same direction, different magnitude. Cosine similarity is a perfect 1.0 because it's magnitude-invariant; only the direction matters.
-</details>
 
 ---
 
 **Q3 (Medium — conceptual).** Why would you choose dot product over cosine similarity in a production system, and what has to be true for that to be safe?
 
-<details>
-<summary>Show answer</summary>
-
-Dot product is cheaper to compute than cosine similarity, since it skips the normalization (dividing by both magnitudes) step. It's safe to use as a drop-in replacement for cosine similarity if and only if the embeddings have already been normalized to unit length at indexing/query time — in that case dot product and cosine similarity are mathematically identical, so you get the speed benefit with no change in ranking behavior. If embeddings aren't normalized, dot product will be skewed by magnitude and won't reflect pure semantic similarity.
-</details>
+**A3.** Dot product is cheaper to compute than cosine similarity, since it skips the normalization (dividing by both magnitudes) step. It's safe to use as a drop-in replacement for cosine similarity if and only if the embeddings have already been normalized to unit length at indexing/query time — in that case dot product and cosine similarity are mathematically identical, so you get the speed benefit with no change in ranking behavior. If embeddings aren't normalized, dot product will be skewed by magnitude and won't reflect pure semantic similarity.
 
 ---
 
 **Q4 (Medium — conceptual).** Your retrieval quality is mediocre on a legal-document RAG system using a general-purpose embedding model. What would you investigate, and why might switching embedding models be a bigger lever than tuning chunk size or k?
 
-<details>
-<summary>Show answer</summary>
-
-I'd investigate whether a domain-specific (legal) embedding model would outperform the general-purpose one — legal text has specialized vocabulary and semantic relationships (e.g., specific statute references, precedent relationships) that a general web-trained embedding model may not represent as accurately in its vector space. Because embedding quality determines whether semantically relevant documents even land close together in vector space in the first place, a poor embedding model creates a ceiling that no amount of downstream tuning (chunk size, k, reranking) can fully overcome — those levers optimize search *within* an already-drawn map, but if the map itself is drawn poorly for this domain, better search algorithms can't fix that. The trade-off to flag: switching embedding models requires re-embedding the entire corpus (embedding drift), which is more disruptive than a chunk-size or k change, but can be the higher-leverage fix.
-</details>
+**A4.** I'd investigate whether a domain-specific (legal) embedding model would outperform the general-purpose one — legal text has specialized vocabulary and semantic relationships (e.g., specific statute references, precedent relationships) that a general web-trained embedding model may not represent as accurately in its vector space. Because embedding quality determines whether semantically relevant documents even land close together in vector space in the first place, a poor embedding model creates a ceiling that no amount of downstream tuning (chunk size, k, reranking) can fully overcome — those levers optimize search *within* an already-drawn map, but if the map itself is drawn poorly for this domain, better search algorithms can't fix that. The trade-off to flag: switching embedding models requires re-embedding the entire corpus (embedding drift), which is more disruptive than a chunk-size or k change, but can be the higher-leverage fix.
 
 ---
 
 **Q5 (Hard — calculation + reasoning).** You have 50 million vectors at 1536 dimensions, stored as float32. Compute the storage size, then compute the storage size if quantized to int8, and explain the accuracy trade-off involved.
 
-<details>
-<summary>Show answer</summary>
-
+**A5.**
 ```
 float32: 50,000,000 × 1536 × 4 bytes = 307,200,000,000 bytes ≈ 286.1 GB
 int8:    50,000,000 × 1536 × 1 byte  =  76,800,000,000 bytes ≈  71.5 GB
 ```
 Roughly a 4x reduction (286 GB → 71.5 GB). The trade-off: int8 quantization reduces the numerical precision of each dimension, which can slightly blur fine-grained similarity distinctions and reduce recall/ranking accuracy compared to full float32 precision. A common mitigation is a two-stage approach: use the cheap quantized vectors for a fast first-pass candidate search over the full 50M vectors, then re-score only the small candidate set (e.g., top 200) using full-precision vectors for the final ranking — recovering most of the accuracy while still getting the bulk of the storage/speed win.
-</details>
 
 ---
 
 **Q6 (Hard — "spot the bug" scenario).** A team upgrades their embedding model mid-quarter, re-embeds only newly ingested documents going forward, and leaves the existing 6 months of indexed documents on the old embeddings to "save time." Similarity search quality degrades unpredictably. What happened?
 
-<details>
-<summary>Show answer</summary>
+**A6.** This is an **embedding drift** bug: different embedding models produce vectors in incompatible vector spaces, even at the same dimensionality — a vector from the old model and a vector from the new model are not meaningfully comparable via cosine similarity. By mixing old-model embeddings (6 months of history) with new-model embeddings (new documents) in the same index, similarity scores become essentially meaningless whenever a query embedding (produced with the new model) is compared against an old-model document embedding — sometimes it'll accidentally still look "close enough," sometimes it won't, producing exactly the unpredictable degradation described. The fix is a full re-embedding of the entire existing corpus with the new model (via a migration strategy such as dual-writing to old and new indexes during a transition window), not a partial/incremental switch.
 
-This is an **embedding drift** bug: different embedding models produce vectors in incompatible vector spaces, even at the same dimensionality — a vector from the old model and a vector from the new model are not meaningfully comparable via cosine similarity. By mixing old-model embeddings (6 months of history) with new-model embeddings (new documents) in the same index, similarity scores become essentially meaningless whenever a query embedding (produced with the new model) is compared against an old-model document embedding — sometimes it'll accidentally still look "close enough," sometimes it won't, producing exactly the unpredictable degradation described. The fix is a full re-embedding of the entire existing corpus with the new model (via a migration strategy such as dual-writing to old and new indexes during a transition window), not a partial/incremental switch.
-</details>
+---
+
+**Q7 (Medium — systems/scale).** A corpus grows from 100,000 documents to 2 billion. What changes about how you do nearest-neighbor search, and why can't you just keep doing what you were doing before?
+
+**A7.** At 100,000 vectors, brute-force exact nearest-neighbor search (comparing the query against every vector) is entirely feasible — it's a small, fast linear scan. At 2 billion vectors, that same linear scan becomes far too slow for any interactive query latency budget, so you need an approximate nearest neighbor (ANN) index — structures like HNSW, IVF, or Google's ScaNN — that avoid comparing against the full corpus by organizing vectors so most of the search space can be skipped. The cost is a small, tunable loss in recall (you might miss a true nearest neighbor occasionally in exchange for orders-of-magnitude faster queries), and that recall/latency trade-off becomes an explicit tuning knob rather than a non-issue. This is also where sharding/distributing the index across machines becomes a real concern, which a 100K-vector system never has to think about.
+
+---
+
+**Q8 (Medium — Google-flavored).** What is Matryoshka representation learning, and why is it useful for a company operating at Google's scale?
+
+**A8.** Matryoshka embeddings are trained so that any prefix of the full vector (e.g., the first 256 of 1536 dimensions) is itself a valid, usable embedding, just at somewhat lower accuracy than the full vector — nested representations, like Russian nesting dolls, hence the name. This is useful at scale because it turns dimensionality from a fixed choice into a *runtime* knob: you can serve a fast, cheap, truncated embedding for an initial high-volume first-pass retrieval step, then use the full-precision embedding for a smaller downstream re-ranking step, without maintaining two separately-trained models or re-embedding the corpus twice. At a scale where billions of queries hit the embedding/retrieval path daily, that flexibility is a meaningful cost and latency lever, not just an academic nicety.
 
 ---
 
@@ -296,6 +296,7 @@ This is an **embedding drift** bug: different embedding models produce vectors i
 - ❌ Mixing embeddings from two different model versions in the same index ("embedding drift") after a partial migration.
 - ❌ Assuming a bigger/higher-dimensional embedding model is automatically better — it's a real cost/latency/storage trade-off, not a free upgrade.
 - ❌ Treating embedding model choice as a "set once, forget it" decision, rather than as a lever worth revisiting when retrieval quality plateaus.
+- ❌ Answering a "how does this scale to billions of vectors" question with brute-force exact search — forgetting to name ANN indexing and its recall/latency trade-off.
 
 ---
 
@@ -308,6 +309,8 @@ This is an **embedding drift** bug: different embedding models produce vectors i
 **Model choice levers:** dimensionality (accuracy vs. cost), general vs. domain-specific (often a bigger lever than people expect), MTEB as a starting filter (not a final answer — validate on your own data), matryoshka embeddings for flexible truncation.
 
 **Operational gotchas:** embedding drift (never mix vector spaces from different models — full re-embed on upgrade), quantization (float32 → int8 ≈ 4x storage savings, pair with a full-precision re-scoring pass on the shortlist to recover accuracy).
+
+**Scale reality:** exact nearest-neighbor search doesn't scale past a few million vectors — production systems at real scale use ANN indexes (HNSW, IVF, ScaNN), trading a small recall loss for large speed gains, with that trade-off exposed as a tunable knob.
 
 ---
 
