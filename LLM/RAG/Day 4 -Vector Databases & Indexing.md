@@ -638,4 +638,218 @@ Having both a "graph overhead is 1.5-2x raw" rule of thumb and a granular per-no
 
 ---
 
-*End of Day 4 (Boosted, Google-Refreshed). Next up — Day 5: Metadata Filtering, Hybrid Storage & Multi-Tenancy.*
+# Vector DB Jargon — Explained Simply, With Examples
+
+Every technical word from the Day 4 doc, broken down in plain English.
+
+---
+
+## Core Concepts
+
+**Vector / Embedding**
+A list of numbers that represents the "meaning" of something (a sentence, image, etc).
+*Example: the sentence "I love pizza" might become `[0.2, -0.5, 0.9, ...]` — 768 numbers long.*
+
+**Embedding model**
+The AI model that turns text into a vector.
+*Example: you feed it "cat", it spits out a vector. Feed it "kitten", you get a very similar vector.*
+
+**Nearest Neighbor Search**
+Finding which stored vectors are closest (most similar) to your query vector.
+*Example: you search "puppy" → the database finds "dog" is close, "airplane" is far.*
+
+**Cosine similarity / Dot product / Euclidean distance**
+Three different math formulas for measuring "how close are two vectors."
+*Example: think of it like measuring how similar two arrows are — do they point the same direction (cosine), or how far apart are their tips (Euclidean)?*
+
+**Curse of dimensionality**
+When you have too many numbers per vector (high dimensions), normal shortcuts for searching stop working — you basically have to check everything.
+*Example: sorting people by height (1 number) is easy. Sorting people by height + weight + age + 765 other traits at once — there's no simple "sorted order" anymore.*
+
+**ANN (Approximate Nearest Neighbor)**
+Instead of finding the *exact* closest match (slow), find one that's *probably* close enough (fast).
+*Example: like asking "roughly where's the nearest coffee shop" instead of calculating the literal closest one down to the meter.*
+
+**Recall@k**
+Out of the top-k results your fast search gave you, what fraction are actually correct (compared to a perfect brute-force search)?
+*Example: Recall@10 = 0.9 means 9 out of the top 10 results match what a perfect search would have found.*
+
+---
+
+## Search-Narrowing (deciding what to even compare)
+
+**Flat / Brute-force search**
+Compare your query against literally every single vector in the database.
+*Example: to find your friend in a crowd, you personally check every single person's face.*
+
+**HNSW (Hierarchical Navigable Small World)**
+A graph where vectors are connected to their "neighbors," with shortcut highways on top so you can jump close fast, then walk locally to fine-tune.
+*Example: like flying into the nearest big airport (highway layer), then taking local trains to your exact street (bottom layer), instead of walking the whole way.*
+
+- **M**: how many "friends" (connections) each vector has in the graph. More friends = better accuracy, more memory.
+  *Example: M=16 means each point is linked to 16 nearby points.*
+- **ef_construction**: how hard the algorithm searches while *building* the graph. Higher = better graph, slower to build.
+- **ef_search**: how hard it searches at *query* time. Higher = more accurate, but slower. This is the main dial you turn when serving.
+  *Example: ef_search=10 is a quick glance; ef_search=200 is a thorough search.*
+
+**IVF (Inverted File Index)**
+Sort all vectors into a handful of labeled buckets (clusters) ahead of time. At search time, only check the buckets closest to your query.
+*Example: like a library sorting books into sections (Fiction, Sci-Fi, History). You only search the sections likely to have your book, not the whole library.*
+
+- **nlist**: how many buckets/clusters you create.
+  *Example: nlist=1000 means you split your data into 1000 groups.*
+- **nprobe**: how many of those buckets you actually check per search.
+  *Example: nprobe=5 means "check the 5 closest sections," even if the book could technically be misfiled in a 6th.*
+- **Centroid**: the "center point" that represents a cluster/bucket.
+  *Example: if a bucket has vectors about "fruit," the centroid is like an average "fruit" vector.*
+- **Staleness (in IVF)**: the buckets were drawn based on old data. As new, different data comes in, the old buckets stop making sense — but nothing tells you it's happening.
+  *Example: you set up library sections in 2020. By 2026 there are tons of new book topics that don't fit any section well — but nobody re-organizes the shelves, so new books get crammed wherever.*
+
+**LSH (Locality-Sensitive Hashing)**
+Hash function designed so *similar* things land in the *same* bucket (a normal hash tries to scatter things randomly instead).
+*Example: like a sorting hat that puts similar wizards in the same house, instead of randomly assigning them.*
+
+---
+
+## Storage-Shrinking (making vectors take less memory)
+
+**Quantization**
+Squishing a precise number into fewer bits, losing a little accuracy to save space.
+*Example: instead of storing someone's exact height as 172.384cm, you round it to "medium height" — much less info to store, close enough for most purposes.*
+
+**float32 / float16 / int8 / binary**
+Different levels of precision for storing each number in a vector — from most detailed (float32) to least (binary, just a single 0 or 1 per number).
+*Example: float32 is writing a temperature as "21.837°C". int8 is rounding to "22°C". Binary is just "hot" (1) or "cold" (0)."*
+
+**PQ (Product Quantization)**
+Chop each vector into small chunks, and for each chunk, replace the actual numbers with "which of 256 pre-learned patterns does this chunk look most like" (just an ID number).
+*Example: imagine describing a face not with an exact photo, but as "eyebrow-shape #14, nose-shape #87, mouth-shape #203" — much smaller to store, and still recognizable.*
+
+- **Codebook**: the list of 256 (or however many) "reference patterns" learned ahead of time.
+  *Example: like a paint store's swatch book — instead of storing an exact custom color, you just note "closest to swatch #45."*
+
+**ScaNN**
+Google's smarter version of PQ. It's extra careful about *not* losing accuracy in the direction that actually affects ranking (which result comes first), and doesn't worry as much about the direction that doesn't matter.
+*Example: when compressing a photo, you keep sharp detail on people's faces (what matters) and blur the background more (what doesn't) — same total file size, but smarter about where you spend it.*
+
+**Binary Quantization**
+The most extreme squish: each number becomes just 1 bit (basically "positive" or "negative").
+*Example: instead of grading an essay 0-100, you just mark it "pass" or "fail." Super fast to compare, but you lose a lot of nuance.*
+
+**Hamming distance**
+How many bits are different between two binary vectors — the "distance" measure used with binary quantization.
+*Example: comparing `1010` and `1000` — they differ in 1 spot, so Hamming distance = 1.*
+
+**MRL / Matryoshka embeddings**
+An embedding model trained so you can *cut off* the end of the vector (use fewer numbers) and it still works okay, just a little less precisely.
+*Example: like Russian nesting dolls (matryoshka) — the small doll inside is a valid, simpler doll on its own, not garbage.*
+
+---
+
+## The "Two-Stage" Pattern (shows up everywhere)
+
+**Two-stage retrieval / re-ranking**
+First do a fast, rough, approximate search to grab a big batch of decent candidates. Then do a slow, precise, expensive check on just that small batch to pick the real winners.
+*Example: a company skims 1,000 resumes quickly for keywords (fast/rough), then only carefully reads the top 20 in detail (slow/precise).*
+
+**Bi-encoder vs cross-encoder**
+Bi-encoder = embed query and document separately, compare with simple math (fast). Cross-encoder = feed query+document together into a model that directly scores how well they match (slow but accurate).
+*Example: bi-encoder is like comparing two people's summary profiles. Cross-encoder is like sitting the two people down together and having them actually talk.*
+
+---
+
+## Advanced Retrieval
+
+**Multi-vector / Late-interaction / ColBERT**
+Instead of one vector per document, store one vector *per word* (token) in the document, and compare word-by-word at search time.
+*Example: instead of summarizing a whole book into one sentence and comparing that, you compare it word-by-word against the query — catches exact matches better, but is way more work.*
+
+**MaxSim**
+The scoring method for ColBERT: for each word in your query, find its best-matching word in the document, then add those best-matches up.
+*Example: query "red sports car" — for "red," find the most similar word in the doc; for "sports," find its best match; for "car," find its best match; total those three best-match scores.*
+
+**Hybrid search**
+Combining old-school keyword search (exact word matching, like Ctrl+F) with vector/semantic search (meaning matching) in one query.
+*Example: searching a legal database where "Section 12.4(b)" needs an *exact* text match, but "documents about liability" needs *meaning*-based matching — hybrid search does both at once.*
+
+**BM25**
+A classic keyword-ranking formula (used before embeddings existed) — scores documents by exact word overlap and rarity of words.
+*Example: if you search "penguin," a document that says "penguin" a lot ranks higher than one that never mentions it — no "meaning," just literal word-counting done smartly.*
+
+---
+
+## Filtering
+
+**Metadata filtering**
+Narrowing results by exact fields (not by meaning) — like a `WHERE` clause in SQL.
+*Example: "find similar articles, but ONLY from the 'legal' department, and ONLY from the last year."*
+
+**Pre-filtering vs post-filtering**
+Pre-filter = narrow down the candidates *before* searching. Post-filter = search everything first, *then* throw out non-matches.
+*Example (post-filter problem): you search 1,000 vectors, get your top 10, then realize only 1 of them is actually in the "legal" department you wanted — you needed to filter first.*
+
+**Filter-aware traversal**
+A smarter approach: the search algorithm skips vectors that fail the filter but still walks *through* them to reach good candidates on the other side, instead of blocking that whole path.
+*Example: GPS routing "through" a closed rest stop parking lot (not stopping there, but still using the road that passes it) to reach your real destination faster.*
+
+---
+
+## Updates & Maintenance
+
+**Incremental insert**
+Adding a new item to the index without rebuilding the whole thing.
+*Example: adding one more book to a library shelf, versus reorganizing the entire library from scratch.*
+
+**Tombstone**
+Instead of actually deleting something (which is expensive/slow), you just mark it "deleted" and quietly skip it when it shows up in search results, then clean up for real later.
+*Example: crossing an item off a to-do list instead of erasing and rewriting the whole page — you'll rewrite the page properly later.*
+
+**Compaction**
+The periodic cleanup where you actually remove the tombstoned (marked-deleted) items and rebuild things tidily.
+*Example: eventually rewriting that messy to-do list clean, once it has too many crossed-off items.*
+
+**Embedding model migration**
+Switching to a new/better embedding model — which is a big deal because old vectors (from the old model) and new vectors (from the new model) are NOT comparable to each other.
+*Example: it's like half your library being catalogued by the Dewey Decimal System and half by a totally different system — searching across both gives nonsense results. You must recatalogue everything with ONE system.*
+
+**Blue-green deployment/cutover**
+Build the new version completely separately, test it, then switch all traffic over at once (instead of changing the live system bit by bit).
+*Example: building a whole new bridge next to the old one, testing it's solid, then closing the old bridge and opening the new one overnight — not repairing planks on the bridge while cars are still driving over it.*
+
+---
+
+## Scaling
+
+**Sharding**
+Splitting your data across multiple machines because it doesn't fit (or isn't fast enough) on one.
+*Example: one Walmart store can't hold all of Walmart's inventory — so they split it across hundreds of stores (shards).*
+
+**Replication**
+Making copies of the same data on multiple machines, so more people can read it at once (and so you have backups if one machine dies).
+*Example: printing extra copies of a popular library book so more people can borrow it simultaneously.*
+
+**Random/hash sharding vs semantic sharding**
+Random = just scatter data evenly by a formula (simple, but every search has to check every machine). Semantic = group similar data together on the same machine (search fewer machines per query, but more complex to set up).
+*Example: random = filing customers alphabetically across 10 drawers (easy, but you check all 10 drawers every time). Semantic = filing customers by region across 10 drawers (harder to set up, but a "West Coast" query only needs 1 drawer).*
+
+**QPS (Queries Per Second)**
+How many searches the system can handle every second.
+*Example: QPS=500 means the system can answer 500 separate search requests each second.*
+
+**p99 latency**
+The response time that 99% of requests are faster than — i.e., your "almost-worst-case" speed, not the average.
+*Example: if p99 = 50ms, it means 99 out of 100 searches finish in under 50ms (only the unluckiest 1% take longer).*
+
+---
+
+## Quick "same idea shows up 3 times" note
+
+These are literally the same concept, just applied to a different layer:
+
+| Layer | Cheap/Fast first step | Expensive/Precise second step |
+|---|---|---|
+| Index/storage | PQ / binary quantization (approximate) | Full-precision re-rank |
+| Embedding dimensions | Matryoshka truncated (short) vector | Full-length vector re-rank |
+| Retrieval scoring | Bi-encoder / single-vector ANN | Cross-encoder / ColBERT re-rank |
+
+*In plain words: always search rough-and-fast first to shrink your options, then spend your expensive precision budget only on that small shortlist.*
